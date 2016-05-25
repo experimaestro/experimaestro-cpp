@@ -290,6 +290,9 @@ final public class Scheduler {
             new Thread("scheduler start") {
                 @Override
                 public void run() {
+                    // Cleanup
+                    cleanup();
+
                     // Loop over resources in state RUNNING
                     try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
                         for (Resource resource : resources) {
@@ -980,5 +983,31 @@ final public class Scheduler {
                 LOGGER.error(e, "Error while checking running jobs");
             }
         }
+    }
+
+    /**
+     * Retrieve jobs that are marked as not running but have processes
+     *
+     * @throws SQLException
+     */
+    void cleanup() {
+        try (final XPMStatement statement = statement("SELECT r.id FROM Processes p, Resources r WHERE p.resource = r.id and status != ?")
+                .setLong(1, ResourceState.RUNNING.value()).execute();
+             final XPMResultSet resultSet = statement.resultSet()) {
+            if (resultSet == null) return;
+            while (resultSet.next()) {
+                final long rid = resultSet.getLong(1);
+                try {
+                    final Resource resource = Resource.getById(rid);
+                    resource.setState(ResourceState.RUNNING);
+                    resource.updateStatus();
+                } catch (Throwable e) {
+                    LOGGER.error(e, "[cleanup] Could not update resource %d", rid);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.warn(e, "Could not cleanup");
+        }
+
     }
 }
