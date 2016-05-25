@@ -223,17 +223,24 @@ $().ready(function () {
         }
 
         else if (name == "copyfolderpath") {
-            var range = document.createRange();
-            var node = r.node.find("a span.locator")[0].childNodes[0];
-            range.setStart(node, 0);
-            range.setEnd(node, node.textContent.lastIndexOf("/"));
-            window.getSelection().addRange(range);
-            if (document.execCommand('copy')) {
-                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
-            } else {
-                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
-            }
-            window.getSelection().removeAllRanges();
+            xpm.request('paths', {
+                params: {id: r.id},
+                success: function (resp) {
+                    var keys = Object.keys(resp);
+                    var dl = $e("dl");
+                    for (var key in resp) {
+                        dl.append($e("dt").append(key)).append($e("dd").append(resp[key]))
+                    }
+                    $("#clipboard-content").replaceWith(dl);
+                    dl.attr("id", "clipboard-content");
+                    $("#clipboard").dialog({
+                        "maxWidth": "600ch",
+                        "width": "70%",
+                        "title": "Select the path"
+                    });
+                }
+            });
+
         }
     };
 
@@ -473,7 +480,9 @@ $().ready(function () {
     };
 
     // When changing, load experiment
-    $("#experiment-chooser").change(function() { load_experiment(0) });
+    $("#experiment-chooser").change(function () {
+        load_experiment(0)
+    });
 
     function showexperiments(element) {
         var width = 960,
@@ -537,8 +546,8 @@ $().ready(function () {
 
                     force.on("tick", function () {
                         link.attr("x1", function (d) {
-                                return d.source.x;
-                            })
+                            return d.source.x;
+                        })
                             .attr("y1", function (d) {
                                 return d.source.y;
                             })
@@ -687,6 +696,30 @@ $().ready(function () {
         // Set host name in title and header
         $("html head title").append("@" + r);
         $("#header").find("div.title").append("@" + r);
+    });
+
+    // Activate clibpoard copy
+    $("#clipboard").click(function (event) {
+
+        var node = event.target;
+        if (node.localName == "dt") {
+            node = node.nextSibling;
+        }
+        if (node.localName == "dd") {
+            var range = document.createRange();
+            range.selectNode(node);
+            window.getSelection().addRange(range);
+
+
+            if (document.execCommand('copy')) {
+                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
+            } else {
+                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        $(this).dialog("close");
     });
 
     // Activate tabs

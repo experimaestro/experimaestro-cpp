@@ -237,7 +237,9 @@ public abstract class Task {
     public final void setParameter(String id, Json value) throws NoSuchParameter {
         try {
             final Value v = getValue(id);
-            if (v == null) throw new XPMRuntimeException("No parameter named %s", id);
+            if (v == null) {
+                throw new XPMRuntimeException("No parameter named %s", id);
+            }
             v.set(value.copy(false));
         } catch (XPMRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());

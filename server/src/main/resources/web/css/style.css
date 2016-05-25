@@ -38,6 +38,11 @@ dd {
     position: fixed;
 }
 
+#clipboard dd:hover {
+    color: white;
+    background: black;
+}
+
 /* Javascript documentation */
 #jsdocumentation dl {
     padding-left: 0.5cm;

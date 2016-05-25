@@ -85,14 +85,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
     Path resolvePath(Path path) {
         XPMPath _path = (XPMPath) path;
 
-        NetworkShare share = null;
-        try {
-            share = NetworkShare.find(_path.getHostName(), _path.getShareName());
-        } catch (SQLException e) {
-            throw new XPMRuntimeException("Could not find shares://%s/%s", _path.getHostName(), _path.getShareName());
-        }
-        NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
-        Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
+        NetworkShareAccess[] accesses = getNetworkShareAccesses(_path);
         for (NetworkShareAccess access : accesses) {
             final SingleHostConnector connector = access.getConnector();
             final String hostPath = access.getPath();
@@ -108,6 +101,18 @@ public class XPMFileSystemProvider extends FileSystemProvider {
             }
         }
         return null;
+    }
+
+    static public NetworkShareAccess[] getNetworkShareAccesses(XPMPath _path) {
+        NetworkShare share = null;
+        try {
+            share = NetworkShare.find(_path.getHostName(), _path.getShareName());
+        } catch (SQLException e) {
+            throw new XPMRuntimeException("Could not find shares://%s/%s", _path.getHostName(), _path.getShareName());
+        }
+        NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
+        Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
+        return accesses;
     }
 
     @Override

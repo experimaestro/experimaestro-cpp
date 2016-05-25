@@ -26,11 +26,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
+import net.bpiwowar.xpm.connectors.NetworkShareAccess;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ContextualException;
 import net.bpiwowar.xpm.exceptions.ExitException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.fs.XPMFileSystemProvider;
+import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
@@ -706,6 +710,39 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
         return updated;
 
+    }
+
+    @RPCMethod
+    public Map<String, String> paths(@RPCArgument(name = "id", required = false) String id) throws SQLException {
+        final Resource resource = getResource(id);
+        final Path locator = resource.getLocator();
+        HashMap<String, String> map = new HashMap<>();
+
+        if (locator instanceof XPMPath) {
+            XPMPath _path = (XPMPath) locator;
+
+            for (NetworkShareAccess access : XPMFileSystemProvider.getNetworkShareAccesses(_path)) {
+                final SingleHostConnector connector = access.getConnector();
+                final String hostPath = access.getPath();
+
+                try {
+                    map.put(connector.getHostName(),
+                            connector.resolveFile(hostPath)
+                                    .resolve(_path.getLocalPath())
+                                    .normalize()
+                                    .toAbsolutePath()
+                                    .toString());
+                } catch (IOException e) {
+                    LOGGER.warn(e, "Cannot get path");
+                }
+
+
+            }
+        } else {
+            map.put("local", locator.getFileName().toString());
+        }
+
+        return map;
     }
 
     /**
