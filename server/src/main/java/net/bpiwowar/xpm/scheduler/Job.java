@@ -598,7 +598,7 @@ abstract public class Job extends Resource {
 
         // Check process
         if (getProcess() != null) {
-            if (!getProcess().isRunning(true)) {
+            if (!getProcess().check(true)) {
                 return true;
             }
         }
