@@ -409,17 +409,20 @@ final public class Scheduler {
      */
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
+            final long deltaMS = units.toMillis(rate);
             try {
                 try (final XPMStatement statement = statement("SELECT last_update FROM Processes WHERE resource=?")
                         .setLong(1, process.getJob().getId()).execute();
                      final XPMResultSet rs = statement.singleResultSet()) {
 
-                    if (rs.getTimeStamp(0).getTime() - System.currentTimeMillis() < units.toMillis(rate)) {
+                    final long lastUpdate = rs.getTimeStamp(1).getTime();
+                    final long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastUpdate < deltaMS) {
                         // Skip update if we got news
                         return;
                     }
                 }
-                process.isRunning(false);
+                process.check(true);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
             } finally {

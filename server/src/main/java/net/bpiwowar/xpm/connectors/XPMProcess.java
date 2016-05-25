@@ -173,7 +173,7 @@ public abstract class XPMProcess {
      */
     public void init(Job job) {
         // TODO: use connector & job dependent times for checking
-        checker = Scheduler.get().schedule(this, 15, TimeUnit.SECONDS);
+        checker = Scheduler.get().schedule(this, 30, TimeUnit.SECONDS);
     }
 
     @Override
@@ -464,11 +464,12 @@ public abstract class XPMProcess {
     public void setProgress(double progress) {
         if (progress != this.progress) {
             try {
-                Scheduler.statement(format("UPDATE Processes SET progress=? AND last_update=? WHERE id=?"))
-                        .setLong(1, job.getId())
-                        .setDouble(2, progress)
-                        .setTimestamp(3, new Timestamp(System.currentTimeMillis()))
+                Scheduler.statement(format("UPDATE Processes SET progress=?, last_update=? WHERE resource=?"))
+                        .setDouble(1, progress)
+                        .setTimestamp(2, new Timestamp(System.currentTimeMillis()))
+                        .setLong(3, job.getId())
                         .execute().close();
+                this.progress = progress;
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e, "Could not set value in database");
             }

@@ -151,9 +151,9 @@ public class JobData {
 
     protected void updateValue(Object object, String sqlField) {
         if (job.inDatabase()) try {
-            Scheduler.statement(format("UPDATE Jobs SET %s=? AND last_update=%s WHERE id=?", sqlField))
+            Scheduler.statement(format("UPDATE Jobs SET %s=? WHERE id=?", sqlField))
                     .setObject(1, object).setLong(2, job.getId())
-                    .setTimestamp(3, new Timestamp(System.currentTimeMillis())).execute().close();
+                    .execute().close();
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not set value in database");
         }
