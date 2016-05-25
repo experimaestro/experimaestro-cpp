@@ -201,8 +201,14 @@ abstract public class Json {
      * @return A new JSON object
      * @param full If true, the copy is complete; otherwise, we stop when an object is immutable
      */
+    @Expose
     public Json copy(boolean full) {
         return this;
+    }
+
+    @Expose
+    public Json copy() {
+        return copy(false);
     }
 
     /**
