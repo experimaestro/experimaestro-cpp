@@ -113,8 +113,8 @@ p_cleanup = subparsers.add_parser("clean", help="Cleanup obsolete experiments")
 p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
 p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
-p_cleanup = subparsers.add_parser("clean-resources", help="Remove obsolete resources")
-p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
+p_cleanup = subparsers.add_parser("process-obsolete", help="Process obsolete resources")
+p_cleanup.add_argument("--command", dest="what", default="list", choices=["list", "delete", "kill"], help="Command to apply")
 
 p_lock_cleanup = subparsers.add_parser("lock-cleanup", help="Cleanup dandling locks")
 p_lock_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
@@ -646,9 +646,9 @@ def command_lock_cleanup(args):
     json.dump(server["cleanup-locks"]({"simulate": not args.run}), sys.stdout)
 
 
-def command_clean_resources(args):
+def command_process_obsolete(args):
     server = Configuration(args).getJsonServer()
-    json.dump(server["experiments.clean-resources"]({"simulate": not args.run}), sys.stdout)
+    json.dump(server["experiments.process-obsolete"]({"command": args.what}), sys.stdout)
 
 
 def command_rm(args):

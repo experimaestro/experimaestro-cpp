@@ -40,6 +40,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -266,7 +267,7 @@ public class Experiment implements Identifiable {
                     try {
                         final Resource resource = resources.getOrCreate(rs.get());
                         list.add(resource);
-                    } catch(SQLException e) {
+                    } catch (SQLException e) {
                         throw new WrappedSQLException(e);
                     }
                 });
@@ -305,12 +306,10 @@ public class Experiment implements Identifiable {
     }
 
     /**
-     * Delete resources that are neither part of an experiment nor a dependency
+     * List resources that are neither part of an experiment nor a dependency
      * of a resource part of an experiment
-     *
-     * @param simulate
      */
-    public static List<String> deleteObsoleteResources(boolean simulate) throws SQLException, CloseException {
+    public static Set<Long> listObsoleteResources() throws SQLException, CloseException {
         // Retrieve resources ids without experiment
 //        final String query = "SELECT DISTINCT r.id " +
 //                "FROM Resources r LEFT JOIN ExperimentResources er ON er.resource = r.id " +
@@ -354,15 +353,7 @@ public class Experiment implements Identifiable {
             }
         }
 
-        ArrayList<String> list = new ArrayList<>();
-
-        for (Long rid : set) {
-            final Resource resource = Resource.getById(rid);
-            list.add(resource.getIdentifier());
-            if (!simulate) resource.delete(false);
-        }
-
-        return list;
+        return set;
     }
 
 }
