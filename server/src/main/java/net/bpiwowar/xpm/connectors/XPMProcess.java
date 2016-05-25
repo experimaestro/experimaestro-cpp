@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.connectors;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ConnectorException;
 import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
@@ -47,10 +48,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
 
 /**
  * A process monitor.
@@ -94,6 +98,11 @@ public abstract class XPMProcess {
      * The connector for this job
      */
     private SingleHostConnector connector;
+
+    /**
+     * Progress
+     */
+    private double progress = -1;
 
     /**
      * The associated locks to release when the process has ended
@@ -373,7 +382,7 @@ public abstract class XPMProcess {
         return connector;
     }
 
-    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data");
+    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data", "progress");
 
     /**
      * Save the process
@@ -382,7 +391,8 @@ public abstract class XPMProcess {
         // Save the process
         final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
-                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder));
+                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid,
+                JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder), progress);
         inDatabase = true;
 
         // Save the locks
@@ -404,7 +414,7 @@ public abstract class XPMProcess {
     }
 
     public static XPMProcess load(Job job) throws SQLException {
-        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data, progress FROM Processes WHERE resource=?")) {
             st.setLong(1, job.getId());
             st.execute();
             final ResultSet rs = st.getResultSet();
@@ -418,6 +428,7 @@ public abstract class XPMProcess {
             final XPMProcess process = REGISTRY.newInstance(type);
             process.connector = (SingleHostConnector) Connector.findById(rs.getLong(2));
             process.pid = rs.getString(3);
+            process.progress = rs.getDouble(5);
             process.job = job;
             process.inDatabase = true;
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));
@@ -439,5 +450,30 @@ public abstract class XPMProcess {
     public long exitTime() {
         // FIXME: implement this
         return System.currentTimeMillis();
+    }
+
+    /**
+     * Progress
+     * <p>
+     * The value is negative if not set
+     */
+    public double getProgress() {
+        return progress;
+    }
+
+    public void setProgress(double progress) {
+        if (progress != this.progress) {
+            try {
+                Scheduler.statement(format("UPDATE Processes SET progress=? AND last_update=? WHERE id=?"))
+                        .setLong(1, job.getId())
+                        .setDouble(2, progress)
+                        .setTimestamp(3, new Timestamp(System.currentTimeMillis()))
+                        .execute().close();
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Could not set value in database");
+            }
+        }
+
+        this.progress = progress;
     }
 }

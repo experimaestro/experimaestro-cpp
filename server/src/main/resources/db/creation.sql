@@ -72,7 +72,6 @@ CREATE TABLE Jobs (
   unsatisfied INT    NOT NULL,
   holding     INT    NOT NULL,
   priority    INT    NOT NULL,
-  progress    DOUBLE NOT NULL,
 
   FOREIGN KEY (id) REFERENCES Resources
     ON DELETE CASCADE
@@ -161,6 +160,10 @@ CREATE TABLE Processes (
   connector BIGINT,
   pid       VARCHAR(255),
   data      BLOB   NOT NULL,
+
+  -- When was the last news from the process
+  progress    DOUBLE NOT NULL,
+  last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
   -- One process per resource
   PRIMARY KEY (resource),

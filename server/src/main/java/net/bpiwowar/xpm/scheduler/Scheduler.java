@@ -175,7 +175,7 @@ final public class Scheduler {
     /**
      * Current version of the database (used to run incremental SQL script updates)
      */
-    final static int DBVERSION = 3;
+    final static int DBVERSION = 4;
 
     private XPMConnector xpmConnector;
 
@@ -410,6 +410,15 @@ final public class Scheduler {
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
             try {
+                try (final XPMStatement statement = statement("SELECT last_update FROM Processes WHERE resource=?")
+                        .setLong(1, process.getJob().getId()).execute();
+                     final XPMResultSet rs = statement.singleResultSet()) {
+
+                    if (rs.getTimeStamp(0).getTime() - System.currentTimeMillis() < units.toMillis(rate)) {
+                        // Skip update if we got news
+                        return;
+                    }
+                }
                 process.isRunning(false);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());

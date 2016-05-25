@@ -35,7 +35,7 @@ import static java.lang.String.format;
 public class JobData {
     final static public Logger LOGGER = Logger.getLogger();
 
-    static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
+    static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding");
 
     private final Job job;
 
@@ -47,8 +47,6 @@ public class JobData {
 
     private int nbHolding = 0;
 
-    private double progress = -1;
-
     private int priority;
 
     private long timestamp = System.currentTimeMillis();
@@ -56,7 +54,7 @@ public class JobData {
     public JobData(Job job) {
         this.job = job;
         if (job.getId() != null) {
-            try (PreparedStatement st = Scheduler.prepareStatement("SELECT priority, submitted, start, end, unsatisfied, holding, progress FROM Jobs WHERE id=?")) {
+            try (PreparedStatement st = Scheduler.prepareStatement("SELECT priority, submitted, start, end, unsatisfied, holding FROM Jobs WHERE id=?")) {
                 st.setLong(1, job.getId());
                 st.execute();
                 final ResultSet rs = st.getResultSet();
@@ -73,8 +71,6 @@ public class JobData {
                 nbUnsatisfied = rs.getInt(5);
                 nbHolding = rs.getInt(6);
 
-                progress = rs.getDouble(7);
-
                 LOGGER.debug("Retrieved job [%s] data: %s", job, this);
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e, "Could not load data");
@@ -84,13 +80,13 @@ public class JobData {
 
     @Override
     public String toString() {
-        return format("submitted=%d, start=%d, end=%d, unsatisfied=%d, holding=%d, progress=%.3f",
-                 timestamp, startTimestamp, endTimestamp, nbUnsatisfied, nbHolding, progress);
+        return format("submitted=%d, start=%d, end=%d, unsatisfied=%d, holding=%d",
+                 timestamp, startTimestamp, endTimestamp, nbUnsatisfied, nbHolding);
     }
 
     public void save(boolean update, long id) throws SQLException {
         JobData.SQL_INSERT.execute(Scheduler.getConnection(), update, id, getPriority(), new Timestamp(getTimestamp()),
-                new Timestamp(getStartTimestamp()), new Timestamp(getEndTimestamp()), getNbUnsatisfied(), getNbHolding(), getProgress());
+                new Timestamp(getStartTimestamp()), new Timestamp(getEndTimestamp()), getNbUnsatisfied(), getNbHolding());
     }
 
     /**
@@ -143,7 +139,7 @@ public class JobData {
                         .execute().close();
                 LOGGER.debug("Updated job %s: unsatisfied=%d, holding=%d", job, nbUnsatisfied, nbHolding);
             } catch (SQLException e) {
-                throw new XPMRuntimeException(e, "Could not set progress in database");
+                throw new XPMRuntimeException(e, "Could not set statistics in database");
             }
             this.nbHolding = nbHolding;
             this.nbUnsatisfied = nbUnsatisfied;
@@ -152,29 +148,14 @@ public class JobData {
         return false;
     }
 
-    /**
-     * Progress
-     * <p>
-     * The value is negative if not set
-     */
-    public double getProgress() {
-        return progress;
-    }
-
-    public void setProgress(double progress) {
-        if (progress != this.progress) {
-            updateValue(progress, "progress");
-        }
-
-        this.progress = progress;
-    }
 
     protected void updateValue(Object object, String sqlField) {
         if (job.inDatabase()) try {
-            Scheduler.statement(format("UPDATE Jobs SET %s=? WHERE id=?", sqlField))
-                    .setObject(1, object).setLong(2, job.getId()).execute().close();
+            Scheduler.statement(format("UPDATE Jobs SET %s=? AND last_update=%s WHERE id=?", sqlField))
+                    .setObject(1, object).setLong(2, job.getId())
+                    .setTimestamp(3, new Timestamp(System.currentTimeMillis())).execute().close();
         } catch (SQLException e) {
-            throw new XPMRuntimeException(e, "Could not set progress in database");
+            throw new XPMRuntimeException(e, "Could not set value in database");
         }
     }
 

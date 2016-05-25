@@ -531,7 +531,7 @@ abstract public class Job extends Resource {
 
             JsonObject events = new JsonObject();
             info.add("process", events);
-            info.addProperty("progress", jobData.getProgress());
+            info.addProperty("progress", getProgress());
 
             events.addProperty("start", longDateFormat.format(new Date(start)));
 
@@ -802,11 +802,20 @@ abstract public class Job extends Resource {
 
 
     public double getProgress() {
-        return jobData().getProgress();
+        final XPMProcess process = getProcess();
+        if (process == null) {
+            return -1;
+        }
+        return process.getProgress();
     }
 
     public void setProgress(double progress) {
-        jobData().setProgress(progress);
+        final XPMProcess process = getProcess();
+        if (process != null) {
+            process.setProgress(progress);
+        } else {
+            LOGGER.warn("Cannot set the process for %s", this);
+        }
     }
 
     /**
