@@ -41,6 +41,7 @@ dd {
 #clipboard dd:hover {
     color: white;
     background: black;
+    pointer: pointer;
 }
 
 /* Javascript documentation */
