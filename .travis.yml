@@ -2,7 +2,9 @@ language: java
 jdk:
   - oraclejdk8
 sudo: false
-cache: bundler
+cache:
+  directories:
+      - $HOME/.gradle
 branches:
   only:
    - master
