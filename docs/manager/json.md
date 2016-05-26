@@ -27,7 +27,7 @@ We will make use of an example of a message
       * Define resources
       * Define the parameters and their values that were used to generate an output
 
-# Reserved names
+# Reserved JSON keys
 
 Some keys have a special meaning in experimaestro:
 

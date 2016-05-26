@@ -9,9 +9,10 @@ pages:
 - Manager:
     - Introduction: manager/index.md
     - JSON: manager/json.md
-    - Tasks: manager/tasks.md
-    - Java tasks: manager/javatask.md
-    - Python tasks: manager/pythontask.md
+    - Tasks:
+        - Intro: manager/tasks.md
+        - Java tasks: manager/javatask.md
+        - Python tasks: manager/pythontask.md
 theme: readthedocs
 extra_javascript:
     - jquery-ui.min.js

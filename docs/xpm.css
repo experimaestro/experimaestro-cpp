@@ -18,3 +18,9 @@ h1 {
 h2 {
 
 }
+
+.ui-widget-header {
+    background: lightblue;
+    border: 0;
+    padding: 0;
+}

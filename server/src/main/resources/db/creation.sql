@@ -235,6 +235,22 @@ CREATE TABLE ExperimentResources (
     ON DELETE CASCADE
 );
 
+CREATE TABLE ExperimentTags (
+  -- The task associated to those tags
+  task     BIGINT NOT NULL,
+  -- The tag name
+  tag      varchar(256) NOT NULL,
+  -- The tag value
+  value    varchar(256) NOT NULL,
+
+  PRIMARY KEY (task, tag),
+
+  -- Remove tags if task goes away...
+  FOREIGN KEY (task) REFERENCES ExperimentTasks
+    ON DELETE CASCADE
+);
+
+
 
 -- Table for cache
 -- key/data
