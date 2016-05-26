@@ -35,7 +35,8 @@ public class ResourceMessage extends Message {
         super(event);
         this.id = resource.getId();
         this.locator = resource.getLocator().toString();
-        this.progress = resource instanceof Job ? ((Job) resource).getProgress() : 0;
+        this.progress = resource instanceof Job && ((Job)resource).getState() == ResourceState.RUNNING ?
+                ((Job) resource).getProgress() : 0;
         this.state = resource.getState();
     }
 

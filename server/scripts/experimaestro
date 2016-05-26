@@ -36,6 +36,24 @@ jarname = "experimaestro-%s.jar" % version
 
 # --- Create the argument parser
 
+class StatesCompleter(object):
+    def __init__(self):
+        self.choices = set(["DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"])
+
+    def __call__(self, prefix, **kwargs):
+        ix = prefix.rfind(",")
+        if ix != -1:
+            search = prefix[ix+1:]
+            prefix = prefix[:ix+1]
+        else:
+            search = prefix
+            prefix = ""
+
+        return (prefix + c for c in self.choices if c.startswith(search))
+
+statesCompleter = StatesCompleter()
+
+
 # create the top-level parser
 
 parser = argparse.ArgumentParser(description='experimaestro script.')
@@ -82,10 +100,11 @@ p_ls.add_argument("--color", action="store_true", default=False, help="Whether t
 
 subparsers.add_parser("list-methods", help="List Json RPC methods")
 
-p_restart = subparsers.add_parser("restart", help="Restart a job")
-p_restart.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be restarted?")
-p_restart.add_argument('--restart-done', dest="restart_done", action="store_true", default=False, help="Should done jobs be restarted?")
-p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
+p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
+p_invalidate.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
+p_invalidate.add_argument('--keep-done', dest="keep_done", action="store_true", default=False, help="Keep done jobs as is")
+p_invalidate.add_argument('--restart', dest="restart", action="store_true", default=False, help="Set the job state to error instead of waiting")
+p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
@@ -94,8 +113,11 @@ p_cleanup = subparsers.add_parser("clean", help="Cleanup obsolete experiments")
 p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
 p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
-p_cleanup = subparsers.add_parser("clean-resources", help="Remove obsolete resources")
-p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
+p_cleanup = subparsers.add_parser("process-obsolete", help="Process obsolete resources")
+p_cleanup.add_argument("--command", dest="what", default="list", choices=["list", "delete", "kill"], help="Command to apply")
+
+p_lock_cleanup = subparsers.add_parser("lock-cleanup", help="Cleanup dandling locks")
+p_lock_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
 p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
@@ -106,6 +128,10 @@ p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 p_kill = subparsers.add_parser("kill", help="Kill a job")
 p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
+p_xp_kill = subparsers.add_parser("experiment-kill", help="Kill jobs from an experiment")
+p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States").completer = statesCompleter
+p_xp_kill.add_argument('experimentid', help="The experiment ID")
 
 p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
 p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
@@ -590,15 +616,21 @@ def command_information(args):
     sys.stdout.write("\n")
 
 
-def command_restart(args):
+def command_invalidate(args):
     server = Configuration(args).getJsonServer()
-    print(server.restart({ "id": args.resourceId[0], "recursive": args.recursive, "restart-done": args.restart_done}))
+    json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
+    print(server.invalidate(json_args))
 
 
 def command_kill(args):
     server = Configuration(args).getJsonServer()
     n = server.kill({"jobs": args.jobid})
-    print("Killed %d jobs" % n)
+    logging.info("Killed %d jobs" % n)
+
+def command_experiment_kill(args):
+    server = Configuration(args).getJsonServer()
+    n = server["experiments.kill"]({"identifier": args.experimentid, "states": get_states(args.states)})
+    logging.info("Killed %d jobs" % n)
 
 def command_generate_files(args):
     client = Configuration(args).getWebSocketServer()
@@ -609,10 +641,14 @@ def command_clean(args):
     server = Configuration(args).getJsonServer()
     json.dump(server["experiments.clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}), sys.stdout)
 
-
-def command_clean_resources(args):
+def command_lock_cleanup(args):
     server = Configuration(args).getJsonServer()
-    json.dump(server["experiments.clean-resources"]({"simulate": not args.run}), sys.stdout)
+    json.dump(server["cleanup-locks"]({"simulate": not args.run}), sys.stdout)
+
+
+def command_process_obsolete(args):
+    server = Configuration(args).getJsonServer()
+    json.dump(server["experiments.process-obsolete"]({"command": args.what}), sys.stdout)
 
 
 def command_rm(args):

@@ -74,13 +74,6 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     }
 
     /**
-     * Sets the notification URL
-     */
-    public void notificationURL(URL url) {
-        this.notificationURL = url;
-    }
-
-    /**
      * Sets the command
      */
     public void command(AbstractCommand command) {

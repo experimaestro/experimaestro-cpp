@@ -1,0 +1,15 @@
+# Vi
+*~
+.*.swp
+ 
+# Eclipse
+/.project
+/.classpath
+/.settings
+/data
+/target
+ 
+# Maven release plugin
+/pom.xml.releaseBackup
+/release.properties
+ 

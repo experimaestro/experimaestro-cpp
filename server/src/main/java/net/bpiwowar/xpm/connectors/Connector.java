@@ -160,17 +160,6 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      */
     public abstract SingleHostConnector getMainConnector();
 
-
-//    /**
-//     * Create a file with a thread safe mechanism
-//     *
-//     * @param path
-//     * @return A lock object
-//     * @throws LockException
-//     */
-//    public abstract Lock createLockFile(String path) throws LockException;
-//
-
     /**
      * Returns true if the connector can execute commands
      */
@@ -220,7 +209,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         save(Scheduler.get().connectors());
     }
 
-    public void save(DatabaseObjects<Connector> connectors) throws SQLException {
+    public void save(DatabaseObjects<Connector, Void> connectors) throws SQLException {
         try (InputStream jsonInputStream = new JsonSerializationInputStream(out -> {
             try (JsonWriter writer = new JsonWriter(out)) {
                 saveJson(writer);
@@ -265,7 +254,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         dataLoaded = true;
     }
 
-    static public Connector create(DatabaseObjects<Connector> db, ResultSet result) {
+    static public Connector create(DatabaseObjects<Connector, Void> db, ResultSet result, Void ignored) {
         try {
             // OK, create connector
             long id = result.getLong(1);
@@ -290,7 +279,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     }
 
     public static Connector findById(long id) throws SQLException {
-        final DatabaseObjects<Connector> connectors = Scheduler.get().connectors();
+        final DatabaseObjects<Connector, Void> connectors = Scheduler.get().connectors();
         final Connector fromCache = connectors.getFromCache(id);
         if (fromCache != null) {
             return fromCache;

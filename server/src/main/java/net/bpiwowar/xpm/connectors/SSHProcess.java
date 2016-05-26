@@ -19,9 +19,13 @@ package net.bpiwowar.xpm.connectors;
  */
 
 import com.jcraft.jsch.ChannelExec;
+import net.bpiwowar.xpm.exceptions.ConnectorException;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,15 +36,17 @@ import java.io.OutputStream;
  */
 @TypeIdentifier("ssh")
 public class SSHProcess extends XPMProcess {
-
+    final static private Logger LOGGER = Logger.getLogger();
     transient private ChannelExec channel;
+    boolean detached = true;
 
     private SSHProcess() {
     }
 
-    public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
+    public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel, boolean detached) {
         super(connector, null, job);
         this.channel = channel;
+        this.detached = detached;
         startWaitProcess();
     }
 
@@ -73,38 +79,61 @@ public class SSHProcess extends XPMProcess {
 
     @Override
     public int waitFor() throws InterruptedException {
-        if (channel != null)
+        // We don't have any open channel
+        if (channel == null)
             return super.waitFor();
 
+        // Use channel
         while (channel.isConnected()) {
             Thread.sleep(1000);
         }
+
+        // Detached mode: don't use the exit status (the channel might be disconnect for various reasons)
+        if (detached) return super.waitFor();
         return channel.getExitStatus();
     }
 
     @Override
     public int exitValue(boolean checkFile) {
-        return channel.getExitStatus();
+        if (channel != null) {
+            if (channel.isConnected()) {
+                throw new IllegalThreadStateException("Process has not ended");
+            }
+            if (!detached) {
+                return channel.getExitStatus();
+            }
+        }
+        return super.exitValue(checkFile);
     }
 
     @Override
     public void destroy() {
+        // Detached: we have to kill the job on the host
+        if (detached) {
+            try {
+                if (isRunning(true)) {
+                    // First check that the job is running
+                    final AbstractProcessBuilder killCommand = getConnector().processBuilder().command("kill", pid);
+                    killCommand.execute(LOGGER);
+                }
+            } catch (LaunchException | ConnectorException | InterruptedException | IOException e) {
+                throw new WrappedException(e);
+            }
+        }
+
+        // Not detached: we just disconnect
         if (channel != null) {
             channel.disconnect();
             channel = null;
-        }
+        } else throw new RuntimeException("Could not destroy process: SSH channel is not defined");
     }
-
-    protected void finalize() throws Throwable {
-        destroy();
-        super.finalize();
-    }
-
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws Exception {
-        if (channel != null)
-            return channel.isConnected();
-        return super.isRunning(checkFiles);
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+        if (channel != null) {
+            // If the channel is not connected, we check if in detached mode using files
+            return channel.isConnected() || (detached && super.isRunning(fullCheck));
+        }
+        return super.isRunning(fullCheck);
     }
 }

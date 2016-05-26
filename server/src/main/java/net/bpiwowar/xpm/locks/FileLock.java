@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.locks;
 
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -47,14 +48,8 @@ public class FileLock extends Lock {
      */
     Path lockFile;
 
-    /**
-     * Used for (de)serialization
-     */
-    protected FileLock() {
-    }
-
     @Override
-    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+    protected void save(DatabaseObjects<Lock, Dependency> locks) throws SQLException {
         super.save(locks);
         saveShare(lockFile);
     }
@@ -66,7 +61,8 @@ public class FileLock extends Lock {
                 '}';
     }
 
-    public FileLock(long id) {
+    /** Create from DB constructor */
+    public FileLock(long id, Dependency dependency) {
         super(id);
     }
 

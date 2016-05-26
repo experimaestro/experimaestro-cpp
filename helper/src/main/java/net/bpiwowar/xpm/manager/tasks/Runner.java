@@ -207,15 +207,16 @@ public class Runner {
                     factory.addClass(registryClass);
                 }
             }
-            final Gson gson = new GsonBuilder()
+            final GsonBuilder gsonBuilder = new GsonBuilder()
                     .setExclusionStrategies(new XPMExclusionStrategy())
                     .setFieldNamingStrategy(new XPMNamingStrategy())
-                    .registerTypeAdapterFactory(factory)
+                    .registerTypeAdapterFactory(factory);
+            final Gson gson = gsonBuilder
                     .create();
 
             // Get the task
             final AbstractTask task = gson.fromJson(json, aClass);
-
+            task.gsonBuilder = gsonBuilder;
             task.workingDirectory = workdir;
 
             // Set the @Path annotated fields
@@ -234,8 +235,8 @@ public class Runner {
             }
 
             try {
-                ProgressListener progressListener = new ProgressListener(System.getenv(Constants.XPM_NOTIFICATION_URL));
-                task.execute(json, progressListener);
+                task.progressListener = new ProgressListener(System.getenv(Constants.XPM_NOTIFICATION_URL));
+                task.execute(json);
                 System.exit(0);
             } catch (Throwable e) {
                 System.err.format("An error occurred while running the task: %s%n", e);

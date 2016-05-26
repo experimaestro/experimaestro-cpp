@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.utils;
 
 import net.bpiwowar.xpm.scheduler.Scheduler;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Writer;
@@ -70,5 +71,9 @@ public class MessageDigestWriter extends Writer implements Closeable {
 
     public byte[] getDigest() {
         return outputStream.getDigest();
+    }
+
+    public String getHexDigest() {
+        return DatatypeConverter.printHexBinary(getDigest());
     }
 }

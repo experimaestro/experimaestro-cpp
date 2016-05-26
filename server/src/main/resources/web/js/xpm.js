@@ -129,8 +129,8 @@ $().ready(function () {
 
         if (name == "restart") {
             var request = function (restartDone) {
-                xpm.request('restart', {
-                    params: {"id": r.id, "restart-done": restartDone, "recursive": true},
+                xpm.request('invalidate', {
+                    params: {"ids": [r.id], "keep-done": !restartDone, "recursive": true, "restart": true},
                     success: function (resp) {
                         noty({
                             text: "Succesful restart (" + resp.result + " jobs restarted)",
@@ -194,18 +194,82 @@ $().ready(function () {
             });
         }
 
+        else if (name == "kill") {
+            $("#kill-confirm").dialog({
+                resizable: false,
+                height: 140,
+                modal: true,
+                open: function () {
+                    $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+                },
+                buttons: {
+                    "Yes, I understand": function () {
+                        $(this).dialog("close");
+                        xpm.request('kill', {
+                            params: {"jobs": [r.id]},
+                            success: function () {
+                                // We just notify - but wait for the server notification to
+                                // remove the job from the interface
+                                noty({text: "Successfully killed job " + r.id, type: 'success', timeout: 5000});
+                            },
+                            error: jsonrpc_error
+                        });
+                    },
+                    "Cancel": function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
         else if (name == "copyfolderpath") {
-            var range = document.createRange();
-            var node = r.node.find("a span.locator")[0].childNodes[0];
-            range.setStart(node, 0);
-            range.setEnd(node, node.textContent.lastIndexOf("/"));
-            window.getSelection().addRange(range);
-            if (document.execCommand('copy')) {
-                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
-            } else {
-                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
-            }
-            window.getSelection().removeAllRanges();
+            xpm.request('paths', {
+                params: {id: r.id},
+                success: function (resp) {
+                    var keys = Object.keys(resp);
+                    var dl = $e("dl");
+                    for (var key in resp) {
+                        dl.append($e("dt").append(key)).append($e("dd").append(resp[key]))
+                    }
+                    $("#clipboard-content").replaceWith(dl);
+                    dl.attr("id", "clipboard-content");
+                    $("#clipboard").dialog({
+                        "maxWidth": "600ch",
+                        "width": "70%",
+                        "title": "Select the path"
+                    });
+                }
+            });
+        } else if (name.startsWith("fileview-")) {
+            var isStdErr = name.endsWith("err");
+
+            var fileview = function(uri) {
+                xpm.request('view-file', {
+                    params: {
+                        uri: uri,
+                        position: -4096,
+                        size: 4096
+                    },
+                    success: function(resp) {
+                        var a = $e("pre");
+                        a.attr("id", "file-viewer-" + r.id);
+                        a.text(resp);
+                        $("body").append(a);
+                        a.dialog({
+                            title: (isStdErr ? "stderr" : "stdout") + " [" + r.id + "] " + uri,
+                            width: "80%"
+                        });
+                    }
+                });
+            };
+
+            xpm.request('resource-path', {
+                params: {
+                    id: r.id,
+                    type: isStdErr ? 'stderr' : 'stdout'
+                },
+                success: function(resp) { fileview(resp) }
+            });
         }
     };
 
@@ -388,8 +452,11 @@ $().ready(function () {
                 .attr("id", "R" + r.id)
                 .append($e("span").addClass("resource-actions")
                     .append($("<span class='resource-id'>" + r.id + "</span>"))
+                    .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
+                    .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
                     .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
                     .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                    .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
                     .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
                 ).append(
                     $e("div")
@@ -444,7 +511,9 @@ $().ready(function () {
     };
 
     // When changing, load experiment
-    $("#experiment-chooser").change(function() { load_experiment(0) });
+    $("#experiment-chooser").change(function () {
+        load_experiment(0)
+    });
 
     function showexperiments(element) {
         var width = 960,
@@ -508,8 +577,8 @@ $().ready(function () {
 
                     force.on("tick", function () {
                         link.attr("x1", function (d) {
-                                return d.source.x;
-                            })
+                            return d.source.x;
+                        })
                             .attr("y1", function (d) {
                                 return d.source.y;
                             })
@@ -660,6 +729,30 @@ $().ready(function () {
         $("#header").find("div.title").append("@" + r);
     });
 
+    // Activate clibpoard copy
+    $("#clipboard").click(function (event) {
+
+        var node = event.target;
+        if (node.localName == "dt") {
+            node = node.nextSibling;
+        }
+        if (node.localName == "dd") {
+            var range = document.createRange();
+            range.selectNode(node);
+            window.getSelection().addRange(range);
+
+
+            if (document.execCommand('copy')) {
+                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
+            } else {
+                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        $(this).dialog("close");
+    });
+
     // Activate tabs
     $(".tab").tabs({
         beforeActivate: function (event, ui) {
@@ -707,6 +800,5 @@ $().ready(function () {
     });
 
 })
-;
 
 

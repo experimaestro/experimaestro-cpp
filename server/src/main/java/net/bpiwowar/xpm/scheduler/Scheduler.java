@@ -114,7 +114,10 @@ final public class Scheduler {
      */
     private final MessengerThread messengerThread;
 
-    private final DatabaseObjects<Lock> locks;
+    /**
+     * Locks database objects manager
+     */
+    private final DatabaseObjects<Lock, Dependency> locks;
 
     private LocalhostConnector localhostConnector;
 
@@ -153,7 +156,7 @@ final public class Scheduler {
     /**
      * Resources
      */
-    private DatabaseObjects<Resource> resources;
+    private DatabaseObjects<Resource, Void> resources;
 
     /**
      * The queue for notifications
@@ -163,16 +166,16 @@ final public class Scheduler {
     /**
      * The network shares
      */
-    private DatabaseObjects<NetworkShare> networkShares;
-    private DatabaseObjects<Experiment> experiments;
-    private DatabaseObjects<TaskReference> taskReferences;
+    private DatabaseObjects<NetworkShare, Void> networkShares;
+    private DatabaseObjects<Experiment, Void> experiments;
+    private DatabaseObjects<TaskReference, Void> taskReferences;
 
-    private DatabaseObjects<Connector> connectors;
+    private DatabaseObjects<Connector, Void> connectors;
 
     /**
      * Current version of the database (used to run incremental SQL script updates)
      */
-    final static int DBVERSION = 1;
+    final static int DBVERSION = 4;
 
     private XPMConnector xpmConnector;
 
@@ -227,6 +230,7 @@ final public class Scheduler {
                     }
                 } else {
                     while (version < DBVERSION) {
+                        LOGGER.info("Upgrading database to version", version + 1);
                         String resourcename = format("/db/update-%04d.sql", version);
                         try (final InputStream stream = Scheduler.class.getResourceAsStream(resourcename);
                              final Reader reader = new InputStreamReader(stream)) {
@@ -282,26 +286,46 @@ final public class Scheduler {
             messengerThread.start();
             runningThreadsCounter.add();
 
-            // Loop over resources in state RUNNING
-            try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
-                for (Resource resource : resources) {
-                    Job job = (Job) resource;
-                    if (job.getProcess() != null) {
-                        job.getProcess().init(job);
-                    } else {
-                        // FIXME: should do something smarter
-                        job.setState(ResourceState.ERROR);
-                        LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
-                    }
-                    job.updateStatus();
-                }
-            }
+            // Scheduler initialization
+            new Thread("scheduler start") {
+                @Override
+                public void run() {
+                    // Cleanup
+                    cleanup();
 
-            // Loop over resources for which we need to notify (Scheduler stopped before or within the process)
-            try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
-                    + " WHERE oldStatus != status", null)) {
-                changed.forEach(r -> addChangedResource(r));
-            }
+                    // Loop over resources in state RUNNING
+                    try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+                        for (Resource resource : resources) {
+                            try {
+                                Job job = (Job) resource;
+                                if (job.getProcess() != null) {
+                                    job.getProcess().init(job);
+                                } else {
+                                    // FIXME: should do something smarter
+                                    job.setState(ResourceState.ERROR);
+                                    LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
+                                }
+                                job.updateStatus();
+
+                            } catch (SQLException e) {
+                                LOGGER.warn(e, "SQL exception while updating job %s", resource);
+                            }
+                        }
+                    } catch (SQLException e) {
+                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                    } catch (CloseException e) {
+                        LOGGER.warn(e, "Error while closing the iterator");
+                    }
+
+                    // Loop over resources for which we need to notify (Scheduler stopped before or during the process)
+                    try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
+                            + " WHERE oldStatus != status", null)) {
+                        changed.forEach(r -> addChangedResource(r));
+                    } catch (SQLException | CloseException e) {
+                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                    }
+                }
+            }.start();
 
 
             // Start the thread that start the jobs
@@ -385,8 +409,20 @@ final public class Scheduler {
      */
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
+            final long deltaMS = units.toMillis(rate);
             try {
-                process.check(false);
+                try (final XPMStatement statement = statement("SELECT last_update FROM Processes WHERE resource=?")
+                        .setLong(1, process.getJob().getId()).execute();
+                     final XPMResultSet rs = statement.singleResultSet()) {
+
+                    final long lastUpdate = rs.getTimeStamp(1).getTime();
+                    final long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastUpdate < deltaMS) {
+                        // Skip update if we got news
+                        return;
+                    }
+                }
+                process.check(true);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
             } finally {
@@ -523,7 +559,7 @@ final public class Scheduler {
         LOGGER.info("Scheduler stopped");
     }
 
-    public DatabaseObjects<Resource> resources() {
+    public DatabaseObjects<Resource, Void> resources() {
         return resources;
     }
 
@@ -549,7 +585,7 @@ final public class Scheduler {
         }
     }
 
-    public DatabaseObjects<NetworkShare> networkShares() {
+    public DatabaseObjects<NetworkShare, Void> networkShares() {
         return networkShares;
     }
 
@@ -590,7 +626,7 @@ final public class Scheduler {
         }
     }
 
-    public DatabaseObjects<Connector> connectors() {
+    public DatabaseObjects<Connector, Void> connectors() {
         return connectors;
     }
 
@@ -621,20 +657,21 @@ final public class Scheduler {
         return new XPMStatement(getConnection(), sql);
     }
 
-    public DatabaseObjects<Lock> locks() {
+    public DatabaseObjects<Lock, Dependency> locks() {
         return locks;
     }
 
-    public DatabaseObjects<Experiment> experiments() {
+    public DatabaseObjects<Experiment, Void> experiments() {
         return experiments;
     }
 
-    public DatabaseObjects<TaskReference> taskReferences() {
+    public DatabaseObjects<TaskReference, Void> taskReferences() {
         return taskReferences;
     }
 
     /**
      * Sets the base URL for the web server
+     *
      * @param URL The base URL
      */
     public void setURL(String URL) {
@@ -644,6 +681,7 @@ final public class Scheduler {
 
     /**
      * Gets the base URL
+     *
      * @return The base URL
      */
     public String getURL() {
@@ -957,5 +995,31 @@ final public class Scheduler {
                 LOGGER.error(e, "Error while checking running jobs");
             }
         }
+    }
+
+    /**
+     * Retrieve jobs that are marked as not running but have processes
+     *
+     * @throws SQLException
+     */
+    void cleanup() {
+        try (final XPMStatement statement = statement("SELECT r.id FROM Processes p, Resources r WHERE p.resource = r.id and status != ?")
+                .setLong(1, ResourceState.RUNNING.value()).execute();
+             final XPMResultSet resultSet = statement.resultSet()) {
+            if (resultSet == null) return;
+            while (resultSet.next()) {
+                final long rid = resultSet.getLong(1);
+                try {
+                    final Resource resource = Resource.getById(rid);
+                    resource.setState(ResourceState.RUNNING);
+                    resource.updateStatus();
+                } catch (Throwable e) {
+                    LOGGER.error(e, "[cleanup] Could not update resource %d", rid);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.warn(e, "Could not cleanup");
+        }
+
     }
 }

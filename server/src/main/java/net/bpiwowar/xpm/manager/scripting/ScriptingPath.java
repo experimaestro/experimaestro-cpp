@@ -65,6 +65,11 @@ public class ScriptingPath extends WrapperObject<Path> {
         return String.format("new Path(%s)", object.toString());
     }
 
+    @Expose("uri")
+    public String uri() {
+        return object.toUri().toString();
+    }
+
 
     @Help(value = "Get the parent file object")
     @Expose("get_parent")

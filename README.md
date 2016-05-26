@@ -15,7 +15,7 @@ Experimaestro is an experiment manager based on a server that contains a job sch
    1. Shell commands
    2. OAR jobs
    3. Hadoop jobs (*planned*)
-   
+
 - A **modular experiment description framework**, that allows easy description of the various parts of experiments:
     - Experiments are written in JavaScript or in Java (with annotations)
     - Tasks describe the components that can be used, take as input json objects and produce json objets as output
@@ -27,3 +27,5 @@ Experimaestro is in a **beta** state - which means that you might experience som
 while using it; but as I use it on a daily basis, their number and importance is
 going down each day.
 
+
+![A screenshot of experimaestro running](docs/xpm-screenshot.png)

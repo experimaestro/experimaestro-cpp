@@ -19,7 +19,9 @@ package net.bpiwowar.xpm.connectors;
  */
 
 import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ConnectorException;
 import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
@@ -46,10 +48,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
 
 /**
  * A process monitor.
@@ -93,6 +98,11 @@ public abstract class XPMProcess {
      * The connector for this job
      */
     private SingleHostConnector connector;
+
+    /**
+     * Progress
+     */
+    private double progress = -1;
 
     /**
      * The associated locks to release when the process has ended
@@ -163,7 +173,7 @@ public abstract class XPMProcess {
      */
     public void init(Job job) {
         // TODO: use connector & job dependent times for checking
-        checker = Scheduler.get().schedule(this, 15, TimeUnit.SECONDS);
+        checker = Scheduler.get().schedule(this, 30, TimeUnit.SECONDS);
     }
 
     @Override
@@ -254,11 +264,10 @@ public abstract class XPMProcess {
     /**
      * Check if the job is running
      *
-     * @param checkFiles
+     * @param fullCheck True if a real check should be done
      * @return True if the job is running
-     * @throws Exception
      */
-    public boolean isRunning(boolean checkFiles) throws Exception {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
         LOGGER.debug("Job %s is running: %s", this.job, exists);
@@ -300,15 +309,18 @@ public abstract class XPMProcess {
      * Asynchronous check the state of the job monitor
      *
      * @param checkFiles Whether files should be checked rather than the process
+     * @return true if the process was stopped
      */
-    synchronized public void check(boolean checkFiles) throws Exception {
+    synchronized public boolean check(boolean checkFiles) throws Exception {
         if (!isRunning(checkFiles)) {
             // We are not running: send a message
             LOGGER.info("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
             Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(checkFiles), time));
+            return true;
         }
+        return false;
     }
 
     /**
@@ -370,7 +382,7 @@ public abstract class XPMProcess {
         return connector;
     }
 
-    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data");
+    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data", "progress");
 
     /**
      * Save the process
@@ -379,7 +391,8 @@ public abstract class XPMProcess {
         // Save the process
         final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
-                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder));
+                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid,
+                JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder), progress);
         inDatabase = true;
 
         // Save the locks
@@ -401,7 +414,7 @@ public abstract class XPMProcess {
     }
 
     public static XPMProcess load(Job job) throws SQLException {
-        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data, progress FROM Processes WHERE resource=?")) {
             st.setLong(1, job.getId());
             st.execute();
             final ResultSet rs = st.getResultSet();
@@ -415,6 +428,7 @@ public abstract class XPMProcess {
             final XPMProcess process = REGISTRY.newInstance(type);
             process.connector = (SingleHostConnector) Connector.findById(rs.getLong(2));
             process.pid = rs.getString(3);
+            process.progress = rs.getDouble(5);
             process.job = job;
             process.inDatabase = true;
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));
@@ -436,5 +450,31 @@ public abstract class XPMProcess {
     public long exitTime() {
         // FIXME: implement this
         return System.currentTimeMillis();
+    }
+
+    /**
+     * Progress
+     * <p>
+     * The value is negative if not set
+     */
+    public double getProgress() {
+        return progress;
+    }
+
+    public void setProgress(double progress) {
+        if (progress != this.progress) {
+            try {
+                Scheduler.statement(format("UPDATE Processes SET progress=?, last_update=? WHERE resource=?"))
+                        .setDouble(1, progress)
+                        .setTimestamp(2, new Timestamp(System.currentTimeMillis()))
+                        .setLong(3, job.getId())
+                        .execute().close();
+                this.progress = progress;
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Could not set value in database");
+            }
+        }
+
+        this.progress = progress;
     }
 }

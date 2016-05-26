@@ -11,19 +11,28 @@ import net.bpiwowar.xpm.manager.experiments.ExperimentReference;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
  * Methods related to experiments
  */
 @JsonRPCMethodsHolder("experiments")
-public class ExperimentsMethods {
+public class ExperimentsMethods extends BaseJsonRPCMethods {
+
+    public ExperimentsMethods(JSONRPCRequest mos) {
+        super(mos);
+    }
+
     /**
      * Delete obsolete experiments
      */
@@ -49,8 +58,8 @@ public class ExperimentsMethods {
             }
 
             if (removeResources) {
-                final CleanResources cleanResources = new CleanResources();
-                cleanResources.simulate = simulate;
+                final ProcessObsolete cleanResources = new ProcessObsolete();
+                cleanResources.command = ProcessCommand.delete;
                 response.add("resources", cleanResources.call());
             }
 
@@ -58,15 +67,41 @@ public class ExperimentsMethods {
         }
     }
 
-    @RPCMethod(name = "clean-resources", help = "Removes resources not belonging to any experiment")
-    static class CleanResources implements JsonCallable {
-        @RPCArgument(name = "simulate", required = false, help = "If true, don't perform the action")
-        boolean simulate = true;
+    public enum ProcessCommand {
+        list, kill, delete
+    }
+
+    @RPCMethod(name = "process-obsolete", help = "Removes resources not belonging to any experiment")
+    static class ProcessObsolete implements JsonCallable {
+        @RPCArgument(name = "command", required = false, help = "Command to apply")
+        ProcessCommand command = ProcessCommand.list;
+
 
         @Override
         public JsonArray call() throws Throwable {
             JsonArray array = new JsonArray();
-            Experiment.deleteObsoleteResources(simulate).forEach(s -> array.add(new JsonPrimitive(s)));
+
+            final Set<Long> set = Experiment.listObsoleteResources();
+
+            for (Long rid : set) {
+                final Resource resource = Resource.getById(rid);
+                array.add(new JsonPrimitive(resource.getIdentifier()));
+                switch (command) {
+                    case kill:
+                        if (resource instanceof Job) {
+                            ((Job)resource).stop();
+                        }
+                        break;
+
+                    case delete:
+                        if (resource instanceof Job && ((Job) resource).checkProcess()) {
+                            ((Job)resource).stop();
+                        }
+                        resource.delete(false);
+                        break;
+                }
+            }
+
             return array;
         }
     }
@@ -213,5 +248,32 @@ public class ExperimentsMethods {
         nodes.add(element);
         element.add("name", new JsonPrimitive(string));
         element.add("group", new JsonPrimitive(1));
+    }
+
+    @RPCMethod(name = "kill", help = "Kill all jobs from an experiment")
+    public class Kill implements JsonCallable {
+        @RPCArgument
+        String identifier;
+
+        @RPCArgument
+        EnumSet<ResourceState> states = ResourceState.RUNNABLE_STATES;
+
+        @Override
+        public Object call() throws Throwable {
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+            int n = 0;
+            for (Resource resource : Experiment.resourcesByIdentifier(identifier, states)) {
+                try {
+                    if (resource instanceof Job) {
+                        if (((Job) resource).stop()) {
+                            n++;
+                        }
+                    }
+                } catch (Throwable throwable) {
+                    logger.error("Error while killing job [%s]", resource);
+                }
+            }
+            return n;
+        }
     }
 }

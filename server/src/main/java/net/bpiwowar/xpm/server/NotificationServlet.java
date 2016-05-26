@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.server;
 
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.scheduler.Job;
-import net.bpiwowar.xpm.scheduler.Message;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
@@ -42,6 +41,9 @@ public class NotificationServlet extends XPMServlet {
     private static final String END_OF_JOB = "eoj";
 
     private static final String PROGRESS = "progress";
+
+    /** On EOJ notification, by default we retry 10 times */
+    final int retries = 10;
 
     final Scheduler scheduler;
 
@@ -83,7 +85,12 @@ public class NotificationServlet extends XPMServlet {
                     final XPMProcess process = job.getProcess();
                     if (process != null) {
                         try {
-                            process.check(true);
+                            int count = 0;
+                            while (!process.check(true) && count++ < retries) {
+                                synchronized (this) {
+                                    Thread.sleep(500);
+                                }
+                            }
                         } catch (Exception e) {
                             LOGGER.error(e, "Error while processing the end of job notification (job %d)", resourceId);
                             // FIXME: what to do here?

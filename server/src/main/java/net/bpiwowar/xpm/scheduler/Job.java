@@ -21,7 +21,6 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LockException;
@@ -34,10 +33,9 @@ import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.hsqldb.persist.LockFile;
-import org.omg.PortableInterceptor.HOLDING;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -130,17 +128,29 @@ abstract public class Job extends Resource {
      * Restart the job
      * <p>
      * Put the state into waiting mode and clean all the output files
+     *
+     * @param restart True if jobs should be restarted, otherwise put it in error
      */
-    synchronized public void restart() throws Exception {
+    synchronized public void invalidate(boolean restart) throws Exception {
         // Don't do anything if the job is already running
         if (!getState().isActive()) {
             // Set state status waiting
-            setState(ResourceState.WAITING);
+            setState(restart ? ResourceState.WAITING : ResourceState.ERROR);
+
             if (getState().isFinished()) {
                 clean(false);
+
+                if (!restart) {
+                    // Put back the error file
+                    try (final BufferedWriter writer = Files.newBufferedWriter(CODE_EXTENSION.transform(getLocator()))) {
+                        writer.write(1);
+                        writer.write('\n');
+                    }
+                }
+
             } else {
                 // Remove blocking files
-                try(FileLock lock = FileLock.of(LOCK_EXTENSION.transform(getLocator()), 5)) {
+                try (FileLock lock = FileLock.of(LOCK_EXTENSION.transform(getLocator()), 5)) {
                     Files.deleteIfExists(DONE_EXTENSION.transform(getLocator()));
                     Files.deleteIfExists(CODE_EXTENSION.transform(getLocator()));
                 }
@@ -520,16 +530,16 @@ abstract public class Job extends Resource {
                     .currentTimeMillis() : getEndTimestamp();
 
             JsonObject events = new JsonObject();
-            info.add("events", events);
-            info.addProperty("progress", jobData.getProgress());
+            info.add("process", events);
+            info.addProperty("progress", getProgress());
 
             events.addProperty("start", longDateFormat.format(new Date(start)));
 
             if (getState() != ResourceState.RUNNING && end >= 0) {
                 events.addProperty("end", longDateFormat.format(new Date(end)));
-                if (getProcess() != null)
-                    events.addProperty("pid", getProcess().getPID());
             }
+            if (getProcess() != null)
+                events.addProperty("pid", getProcess().getPID());
         }
 
         Collection<Dependency> requiredResources = getDependencies();
@@ -543,6 +553,7 @@ abstract public class Job extends Resource {
                 JsonObject dep = new JsonObject();
                 dependencies.add(resource.getId().toString(), dep);
                 dep.addProperty("from-id", resource.getId());
+                dep.addProperty("from", resource.getLocator().toString());
                 dep.addProperty("status", dependency.status.toString());
                 dep.addProperty("locked", dependency.hasLock());
             }
@@ -585,6 +596,13 @@ abstract public class Job extends Resource {
         LOGGER.debug("Updating status for [%s]", this);
         boolean changes = super.doUpdateStatus();
 
+        // Check process
+        if (getProcess() != null) {
+            if (!getProcess().check(true)) {
+                return true;
+            }
+        }
+
         // Check the done file
         final Path path = getLocator();
         final Path codeFile = CODE_EXTENSION.transform(path);
@@ -594,7 +612,13 @@ abstract public class Job extends Resource {
         if (Files.exists(codeFile)) {
             final ResourceState newState;
             try (final BufferedReader bufferedReader = Files.newBufferedReader(codeFile)) {
-                int code = Integer.parseInt(bufferedReader.readLine());
+                int code = 1;
+                final String line = bufferedReader.readLine();
+                try {
+                    code = Integer.parseInt(line);
+                } catch (NumberFormatException e) {
+                    LOGGER.info("Could not isStopped exit code file (number format exception for [%s]) %s", line, this);
+                }
                 newState = code == 0 ? ResourceState.DONE : ResourceState.ERROR;
             }
             if (setState(newState)) {
@@ -624,7 +648,7 @@ abstract public class Job extends Resource {
             }
         }
 
-        // If DONE or ERROR, check that process is removed
+        // If DONE or ERROR, isStopped that process is removed
         if (process != null && (getState() == ResourceState.DONE || getState() == ResourceState.ERROR)) {
             if (process.isRunning(true)) {
                 LOGGER.error("Incoherency: process is running but resource is DONE/ERROR");
@@ -737,7 +761,7 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource, Void> resources, Resource old) throws SQLException {
         // Update status
         boolean update = this.inDatabase() || old != null;
 
@@ -778,11 +802,20 @@ abstract public class Job extends Resource {
 
 
     public double getProgress() {
-        return jobData().getProgress();
+        final XPMProcess process = getProcess();
+        if (process == null) {
+            return -1;
+        }
+        return process.getProgress();
     }
 
     public void setProgress(double progress) {
-        jobData().setProgress(progress);
+        final XPMProcess process = getProcess();
+        if (process != null) {
+            process.setProgress(progress);
+        } else {
+            LOGGER.warn("Cannot set the process for %s", this);
+        }
     }
 
     /**

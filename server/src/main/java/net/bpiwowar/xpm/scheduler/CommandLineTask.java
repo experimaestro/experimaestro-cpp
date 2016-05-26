@@ -233,6 +233,14 @@ public class CommandLineTask extends Job {
     }
 
     @Override
+    public Path errorFile() throws IOException {
+        if (jobErrorPath != null) {
+            return jobErrorPath;
+        }
+        return Resource.ERR_EXTENSION.transform(getLocator());
+    }
+
+    @Override
     public Stream<? extends Dependency> dependencies() {
         return command.dependencies();
     }

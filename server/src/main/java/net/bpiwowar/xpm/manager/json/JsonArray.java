@@ -88,6 +88,18 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof JsonArray)) return false;
+        ArrayList<Json> objArray = ((JsonArray) obj).array;
+        if (objArray.size() != array.size()) return false;
+        for(int i = array.size(); --i >= 0; ) {
+            if (!array.get(i).equals(objArray.get(i)))
+                return false;
+        }
+        return true;
+    }
+
+    @Override
     public Json annotate(String key, Json value) {
         throw new IllegalArgumentException("Cannot annotate a JSON array");
     }

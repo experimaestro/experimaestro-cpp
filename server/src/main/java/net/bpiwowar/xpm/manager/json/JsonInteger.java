@@ -66,5 +66,10 @@ public class JsonInteger extends JsonSimple {
         out.value(value);
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonInteger && ((JsonInteger) obj).value == value;
+    }
+
 
 }

@@ -67,7 +67,7 @@ final public class NetworkShare implements Identifiable {
     }
 
     public NetworkShare(Long id, String host, String name) {
-        this.id = id;
+        this.id = id == null ? -1 : id;
         this.host = host;
         this.name = name;
     }
@@ -157,7 +157,7 @@ final public class NetworkShare implements Identifiable {
 
     public static final String FINDBYNAME_QUERY = SELECT_QUERY + " WHERE hostname=? and name=?";
 
-    static public NetworkShare create(DatabaseObjects<NetworkShare> db, ResultSet result) {
+    static public NetworkShare create(DatabaseObjects<NetworkShare, Void> db, ResultSet result, Void ignored) {
         try {
             long id = result.getLong(1);
             String hostname = result.getString(2);
@@ -178,7 +178,7 @@ final public class NetworkShare implements Identifiable {
      * @return The connector in database or null if none exist
      */
     static public NetworkShare find(String host, String name) throws SQLException {
-        DatabaseObjects<NetworkShare> shares = Scheduler.get().networkShares();
+        DatabaseObjects<NetworkShare, Void> shares = Scheduler.get().networkShares();
         return shares.findUnique(FINDBYNAME_QUERY, st -> {
             st.setString(1, host);
             st.setString(2, name);
@@ -186,7 +186,7 @@ final public class NetworkShare implements Identifiable {
     }
 
     public void save() throws SQLException {
-        DatabaseObjects<NetworkShare> shares = Scheduler.get().networkShares();
+        DatabaseObjects<NetworkShare, Void> shares = Scheduler.get().networkShares();
         shares.save(this, "INSERT INTO NetworkShares(hostname, name) VALUES(?, ?)", st -> {
             st.setString(1, getHost());
             st.setString(2, getName());

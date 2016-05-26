@@ -95,7 +95,7 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource, Void> resources, Resource old) throws SQLException {
         // Update status
         boolean update = this.inDatabase() || old != null;
 

@@ -23,6 +23,7 @@ import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -416,6 +417,11 @@ public class Resource implements Identifiable {
         throw new IllegalAccessError("No output file for resources of type " + this.getClass());
     }
 
+    public Path errorFile() throws IOException {
+        throw new IllegalAccessError("No error file for resources of type " + this.getClass());
+    }
+
+
 
     /**
      * Get a JSON representation of the object
@@ -481,6 +487,52 @@ public class Resource implements Identifiable {
         assert put == null;
         return put;
     }
+
+
+    /**
+     * Cleanup old locks
+     * <p>
+     * Used when database becomes corrupted for whatever reason
+     */
+    static public int cleanupLocks(boolean simulate) throws SQLException {
+        String query = "SELECT r.id, r.type, r.path, r.status FROM Resources r WHERE r.status <> ? "
+                + " AND EXISTS(SELECT * FROM Dependencies d WHERE d.toid = r.id AND lock IS NOT NULL)";
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
+        int count = 0;
+
+        try (XPMStatement st = Scheduler.statement(query).setLong(1, ResourceState.RUNNING.value()).execute();
+             XPMResultSet rs = st.resultSet()) {
+            while (rs.next()) {
+                final Resource resource = resources.getOrCreate(rs.resultSet);
+                synchronized (resource) {
+                    // We are not running, but have locks... remove them!
+                    if (resource.getState() != ResourceState.RUNNING) {
+                        if (resource instanceof Job && ((Job) resource).getProcess() != null) {
+                            LOGGER.error("Job is not running but has a process... not doing anything!");
+                            continue;
+                        }
+
+                        for (Dependency dependency : resource.ingoingDependencies().values()) {
+                            if (dependency.hasLock()) {
+                                try {
+                                    if (!simulate) dependency.unlock();
+                                    ++count;
+                                    LOGGER.info("Unlocked %s", dependency);
+                                } catch(LockException e) {
+                                    LOGGER.error("Could not unlock %s", dependency);
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    ;
+
 
     /**
      * Store a resource
@@ -596,7 +648,7 @@ public class Resource implements Identifiable {
         }
     }
 
-    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource, Void> resources, Resource old) throws SQLException {
         LOGGER.debug("Saving resource %s [old=%s]", this, old);
 
         boolean update = old != null;
@@ -685,7 +737,7 @@ public class Resource implements Identifiable {
         return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
 
-    static protected Resource create(DatabaseObjects<Resource> ignored, ResultSet result) {
+    static protected Resource create(DatabaseObjects<Resource, Void> ignored, ResultSet result, Void ignored2) {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);
@@ -708,13 +760,13 @@ public class Resource implements Identifiable {
      * Iterator on resources
      */
     static public CloseableIterable<Resource> resources() throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         return resources.find(SELECT_BEGIN, st -> {
         });
     }
 
     public static CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         StringBuilder sb = new StringBuilder();
         sb.append(SELECT_BEGIN);
         sb.append(" WHERE status in (");
@@ -736,7 +788,7 @@ public class Resource implements Identifiable {
     }
 
     static public Resource getById(long resourceId) throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         final Resource r = resources.getFromCache(resourceId);
         if (r != null) {
             return r;

@@ -38,6 +38,12 @@ dd {
     position: fixed;
 }
 
+#clipboard dd:hover {
+    color: white;
+    background: black;
+    pointer: pointer;
+}
+
 /* Javascript documentation */
 #jsdocumentation dl {
     padding-left: 0.5cm;
@@ -241,6 +247,12 @@ ul.buttons {
     display: none;
 }
 
+#resources .resource-actions:hover i.fa[name="kill"] {
+    display: none;
+}
+#resources li.state-running .resource-actions:hover i.fa[name="kill"] {
+    display: inline;
+}
 #resources li.state-on_hold .resource-actions:hover i.fa[name="restart"] {
     display: inline;
 }

@@ -146,8 +146,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Adds notification URL to script
             if (notificationURL != null) {
-                final URL url = new URL(notificationURL, format("%d", job.getId()));
-                writer.format("export %s=\"%s\"%n", Constants.XPM_NOTIFICATION_URL, protect(url.toString(), QUOTED_SPECIAL));
+                writer.format("export %s=\"%s/%d\"%n", Constants.XPM_NOTIFICATION_URL,
+                        protect(getNotificationURL().toString(), QUOTED_SPECIAL), job.getId());
             }
 
             if (directory() != null) {

@@ -211,6 +211,21 @@ public class JsonObject extends Json {
         return this;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof JsonObject)) return false;
+
+        final TreeMap<String, Json> map = ((JsonObject) obj).map;
+        if (map.size() != this.map.size()) return false;
+
+        for (Map.Entry<String, Json> entry : this.map.entrySet()) {
+            final Json value = map.get(entry.getKey());
+            if (!entry.getValue().equals(value)) return false;
+        }
+
+        return true;
+    }
+
     public boolean sealed() {
         return sealed;
     }
@@ -220,7 +235,6 @@ public class JsonObject extends Json {
         put(key, value);
         return this;
     }
-
 
 
     @Override

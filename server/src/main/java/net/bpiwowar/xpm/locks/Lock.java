@@ -25,7 +25,9 @@ import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.StatusLock;
 import net.bpiwowar.xpm.scheduler.TokenLock;
@@ -52,7 +54,7 @@ import static java.lang.String.format;
 @JsonAbstract
 public abstract class Lock implements AutoCloseable, Identifiable {
     static protected ConstructorRegistry<Lock> REGISTRY
-            = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
+            = new ConstructorRegistry(new Class[]{ Long.TYPE, Dependency.class }).add(TokenLock.class, FileLock.class, StatusLock.class);
 
     private Long id;
     public static final String SELECT_QUERY = "SELECT id, type, data FROM Locks";
@@ -101,7 +103,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
     static private final SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
 
-    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+    protected void save(DatabaseObjects<Lock, Dependency> locks) throws SQLException {
         locks.save(this, sqlInsert, false,
                 DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder));
     }
@@ -118,14 +120,14 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         }
     }
 
-    public static Lock findById(long id) throws SQLException {
-        return Scheduler.get().locks().findUnique(SELECT_QUERY + " WHERE id=?", st -> st.setLong(1, id));
+    public static Lock findById(long id, Dependency dependency) throws SQLException {
+        return Scheduler.get().locks().findUnique(SELECT_QUERY + " WHERE id=?", st -> st.setLong(1, id), dependency);
     }
 
-    public static Lock create(DatabaseObjects<Lock> db, ResultSet rs) {
+    public static Lock create(DatabaseObjects<Lock, Dependency> db, ResultSet rs, Dependency dependency) {
         try {
             long id = rs.getLong(1);
-            final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id);
+            final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id, dependency);
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, lock, rs.getBinaryStream(3));
             return lock;
         } catch(Throwable e) {

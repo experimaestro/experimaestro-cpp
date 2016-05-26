@@ -224,19 +224,21 @@ public class SSHConnector extends SingleHostConnector {
      * Get the session (creates it if necessary)
      */
     private Session getSession() throws JSchException, IOException {
-        if (_session == null) {
-            _session = this.identifier != null ? sessions.get(this) : null;
+        synchronized (this) {
             if (_session == null) {
-                _session = new SSHSession();
-                if (this.identifier != null) {
-                    sessions.put(this, _session);
+                _session = this.identifier != null ? sessions.get(this) : null;
+                if (_session == null) {
+                    _session = new SSHSession();
+                    if (this.identifier != null) {
+                        sessions.put(this, _session);
+                    }
                 }
             }
-        }
 
-        // If we are not connected, do it now
-        if (!_session.session.isConnected())
-            _session.session.connect();
+            // If we are not connected, do it now
+            if (!_session.session.isConnected())
+                _session.session.connect();
+        }
 
         // Returns
         return _session.session;
@@ -366,13 +368,12 @@ public class SSHConnector extends SingleHostConnector {
                         options().getHostName());
                 channel.setCommand(command);
                 channel.setPty(!detach());
-
                 channel.connect();
             } catch (JSchException | IOException e) {
                 throw new LaunchException(e);
             }
 
-            return new SSHProcess(SSHConnector.this, job(), channel);
+            return new SSHProcess(SSHConnector.this, job(), channel, detach());
         }
     }
 

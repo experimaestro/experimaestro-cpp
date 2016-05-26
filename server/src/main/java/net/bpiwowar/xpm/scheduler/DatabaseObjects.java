@@ -43,7 +43,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
-import java.util.function.BiFunction;
 
 import static java.lang.String.format;
 import static net.bpiwowar.xpm.scheduler.Scheduler.prepareStatement;
@@ -51,7 +50,7 @@ import static net.bpiwowar.xpm.scheduler.Scheduler.prepareStatement;
 /**
  * A set of objects stored in database
  */
-final public class DatabaseObjects<T extends Identifiable> {
+final public class DatabaseObjects<T extends Identifiable, Information> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -61,27 +60,22 @@ final public class DatabaseObjects<T extends Identifiable> {
 
     private final String idFieldName;
 
-    private final BiFunction<DatabaseObjects<T>, ResultSet, T> create;
+    public interface Creator<T extends Identifiable, Information> {
+        T create(DatabaseObjects<T, Information> db, ResultSet rs, Information information);
+    }
+
+    private final Creator<T, Information> create;
 
     /**
      * Keeps a cache of resources
      */
-//    private WeakHashMap<Long, T> map = new WeakHashMap<>();
     Cache<Long, T> map = CacheBuilder.newBuilder()
             .concurrencyLevel(4)
             .softValues()
-//            .expireAfterWrite(1, TimeUnit.MINUTES)
-//            .expireAfterAccess(1, TimeUnit.MICROSECONDS)
-//            .removalListener(new RemovalListener<Long, T>() {
-//                @Override
-//                public void onRemoval(RemovalNotification<Long, T> notification) {
-//                    LOGGER.info("Removed key %s", notification.getKey());
-//                }
-//            })
             .build();
 
 
-    public DatabaseObjects(String tableName, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
+    public DatabaseObjects(String tableName, Creator<T, Information> create) {
         this.tableName = tableName;
         this.idFieldName = "id";
         this.create = create;
@@ -147,6 +141,10 @@ final public class DatabaseObjects<T extends Identifiable> {
     }
 
     public T findUnique(String query, ExceptionalConsumer<PreparedStatement> p) throws SQLException {
+        return findUnique(query, p, null);
+    }
+
+    public T findUnique(String query, ExceptionalConsumer<PreparedStatement> p, Information information) throws SQLException {
         try (PreparedStatement st = Scheduler.getConnection().prepareCall(query)) {
             // Sets the variables
             p.apply(st);
@@ -163,7 +161,7 @@ final public class DatabaseObjects<T extends Identifiable> {
                         }
 
                         // Construct
-                        return getOrCreate(result);
+                        return getOrCreate(result, information);
                     }
                 }
             }
@@ -223,6 +221,10 @@ final public class DatabaseObjects<T extends Identifiable> {
     }
 
     public T getOrCreate(ResultSet result) throws SQLException {
+        return getOrCreate(result, null);
+    }
+
+    public T getOrCreate(ResultSet result, Information information) throws SQLException {
         // Get from cache
         long id = result.getLong(1);
         T object = getFromCache(id);
@@ -231,7 +233,7 @@ final public class DatabaseObjects<T extends Identifiable> {
         }
 
         // Create and cache
-        final T t = create.apply(this, result);
+        final T t = create.create(this, result, information);
         synchronized (map) {
             map.put(t.getId(), t);
         }

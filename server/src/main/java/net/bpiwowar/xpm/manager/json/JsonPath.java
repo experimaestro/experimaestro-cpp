@@ -21,10 +21,10 @@ package net.bpiwowar.xpm.manager.json;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.nio.file.Path;
 
 import static java.lang.String.format;
@@ -72,6 +72,11 @@ public class JsonPath extends JsonSimple {
         }
     }
 
+    @Expose
+    public String uri() {
+        return path.toUri().toString();
+    }
+
     @Override
     public void write(JsonWriter out) throws IOException {
         out.beginObject();
@@ -83,5 +88,10 @@ public class JsonPath extends JsonSimple {
         out.value(Constants.XP_PATH.toString());
 
         out.endObject();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof JsonPath) && path.equals(((JsonPath) obj).path);
     }
 }

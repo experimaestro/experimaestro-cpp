@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.ConnectorException;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Scheduler;
@@ -80,12 +81,12 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws Exception {
-        if (!checkFiles && process != null) {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+        if (process != null) {
             return ProcessUtils.isRunning(process);
         }
 
-        return super.isRunning(checkFiles);
+        return super.isRunning(fullCheck);
     }
 
     @Override

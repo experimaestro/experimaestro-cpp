@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.server.rpc;
  */
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -27,11 +26,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
+import net.bpiwowar.xpm.connectors.NetworkShareAccess;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ContextualException;
 import net.bpiwowar.xpm.exceptions.ExitException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.fs.XPMFileSystemProvider;
+import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
@@ -45,14 +48,11 @@ import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.XPMInformation;
-import net.bpiwowar.xpm.utils.log.DefaultFactory;
 import net.bpiwowar.xpm.utils.log.Logger;
 import net.bpiwowar.xpm.utils.log.Router;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
 import org.eclipse.jetty.server.Server;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptStackElement;
@@ -60,19 +60,18 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
-import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
@@ -86,18 +85,22 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @JsonRPCMethodsHolder("")
-public class JsonRPCMethods extends HttpServlet {
+public class JsonRPCMethods extends BaseJsonRPCMethods {
     final static private Logger LOGGER = Logger.getLogger();
 
     private static Multimap<String, RPCCaller> methods;
 
-    private final JSONRPCRequest mos;
-
     private final JsonRPCSettings settings;
 
-    HashMap<String, BufferedWriter> writers = new HashMap<>();
-
+    /**
+     * Listeners associated to this
+     */
     HashSet<Listener> listeners = new HashSet<>();
+
+    /**
+     * Opened files
+     */
+    Map<String, FileViewer> fileViewers = new HashMap<>();
 
     /**
      * Server
@@ -106,10 +109,10 @@ public class JsonRPCMethods extends HttpServlet {
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
     public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException {
+        super(mos);
         initMethods();
         this.settings = settings;
-        this.mos = mos;
-        addObjects(this, new DocumentationMethods(), new ExperimentsMethods());
+        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos));
     }
 
     public void addObjects(Object... objects) {
@@ -548,64 +551,6 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    private Hierarchy getScriptLogger() {
-//        final RootLogger root = new RootLogger(Level.INFO);
-        final Logger root = new Logger("root");
-        root.setLevel(Level.INFO);
-        final Hierarchy loggerRepository = new Hierarchy(root) {
-            public Logger getLogger(String name) {
-                return (Logger) this.getLogger(name, new DefaultFactory());
-            }
-        };
-        BufferedWriter stringWriter = getRequestErrorStream();
-
-        PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
-        WriterAppender appender = new WriterAppender(layout, stringWriter);
-        root.addAppender(appender);
-        return loggerRepository;
-    }
-
-    /**
-     * Return the output stream for the request
-     */
-    private BufferedWriter getRequestOutputStream() {
-        return getRequestStream("out");
-    }
-
-    /**
-     * Return the error stream for the request
-     */
-    private BufferedWriter getRequestErrorStream() {
-        return getRequestStream("err");
-    }
-
-    /**
-     * Return a stream with the given ID
-     */
-    private BufferedWriter getRequestStream(final String id) {
-        BufferedWriter bufferedWriter = writers.get(id);
-        if (bufferedWriter == null) {
-            bufferedWriter = new BufferedWriter(new Writer() {
-                @Override
-                public void write(char[] cbuf, int off, int len) throws IOException {
-                    ImmutableMap<String, String> map = ImmutableMap.of("stream", id, "value", new String(cbuf, off, len));
-                    mos.message(map);
-                }
-
-                @Override
-                public void flush() throws IOException {
-                }
-
-                @Override
-                public void close() throws IOException {
-                    throw new UnsupportedOperationException();
-                }
-            });
-            writers.put(id, bufferedWriter);
-        }
-        return bufferedWriter;
-    }
-
     /**
      * Shutdown the server
      */
@@ -645,7 +590,7 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     // Restart all the job (recursion)
-    static private int invalidate(Resource resource) throws Exception {
+    static private int invalidate(Resource resource, boolean restart) throws Exception {
         int nbUpdated = 0;
         try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies(false)) {
 
@@ -654,7 +599,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final Resource to = dependency.getTo();
                 LOGGER.info("Invalidating %s", to);
 
-                invalidate(to);
+                invalidate(to, restart);
 
                 final ResourceState state = to.getState();
                 if (state == ResourceState.RUNNING)
@@ -663,51 +608,66 @@ public class JsonRPCMethods extends HttpServlet {
                     nbUpdated++;
                     // We invalidate grand-children if the child was done
                     if (state == ResourceState.DONE) {
-                        invalidate(to);
+                        invalidate(to, restart);
                     }
-                    ((Job) to).restart();
+                    ((Job) to).invalidate(restart);
                 }
             }
         }
         return nbUpdated;
     }
 
-    @RPCMethod(name = "restart", help = "Puts back a job into the waiting queue")
+    @RPCMethod(name = "cleanup-locks")
+    static public void cleanupLocks(@RPCArgument(name = "simulate") boolean simulate) throws SQLException {
+        Resource.cleanupLocks(simulate);
+    }
+
+    @RPCMethod(name = "invalidate", help = "Puts back a job into the waiting queue")
     static public class Restart implements JsonCallable {
-        @RPCArgument(name = "id", help = "The id of the job (string or integer)")
-        String id;
+        @RPCArgument(name = "ids", help = "The id of the job(s) (string or integer)")
+        String[] ids;
 
-        @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated")
-        boolean restartDone;
+        @RPCArgument(name = "keep-done", help = "Whether done jobs should be invalidated")
+        boolean keepDone;
 
-        @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done")
-        boolean recursive;
+        @RPCArgument(name = "recursive", required = false, help = "Whether we should invalidate dependent results when the job was done")
+        boolean recursive = true;
+
+        @RPCArgument(name = "restart", help = "Whether we should restart the job (false = error)")
+        boolean restart = true;
 
         @Override
         public Integer call() throws Throwable {
             int nbUpdated = 0;
-            Resource resource = getResource(id);
-            if (resource == null)
-                throw new XPMRuntimeException("Job not found [%s]", id);
 
-            final ResourceState rsrcState = resource.getState();
+            for (String id : ids) {
+                Resource resource = getResource(id);
+                if (resource == null)
+                    throw new XPMRuntimeException("Job not found [%s]", id);
 
-            if (rsrcState == ResourceState.RUNNING)
-                throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+                final ResourceState rsrcState = resource.getState();
 
-            // The job is active, so we have nothing to do
-            if (rsrcState.isActive())
-                return 0;
+                if (rsrcState == ResourceState.RUNNING)
+                    throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
-            if (!restartDone && rsrcState == ResourceState.DONE)
-                return 0;
+                // The job is active, so we have nothing to do
+                if (rsrcState.isActive()) {
+                    // Just notify in case
+                    Scheduler.notifyRunners();
+                    continue;
+                }
 
-            ((Job) resource).restart();
-            nbUpdated++;
+                if (keepDone && rsrcState == ResourceState.DONE)
+                    continue;
 
-            // If the job was done, we need to restart the dependences
-            if (recursive && rsrcState == ResourceState.DONE) {
-                nbUpdated += invalidate(resource);
+                ((Job) resource).invalidate(restart);
+                nbUpdated++;
+
+                // If the job was done, we need to invalidate the dependences
+                if (recursive && rsrcState == ResourceState.DONE) {
+                    nbUpdated += invalidate(resource, restart);
+                }
+
             }
 
             return nbUpdated;
@@ -759,6 +719,40 @@ public class JsonRPCMethods extends HttpServlet {
 
         return updated;
 
+    }
+
+    @RPCMethod
+    public Map<String, String> paths(@RPCArgument(name = "id", required = false) String id) throws SQLException {
+        final Resource resource = getResource(id);
+        final Path locator = resource.getLocator();
+        HashMap<String, String> map = new HashMap<>();
+
+        if (locator instanceof XPMPath) {
+            XPMPath _path = (XPMPath) locator;
+
+            for (NetworkShareAccess access : XPMFileSystemProvider.getNetworkShareAccesses(_path)) {
+                final SingleHostConnector connector = access.getConnector();
+                final String hostPath = access.getPath();
+
+                try {
+                    map.put(connector.getHostName(),
+                            connector.resolveFile(hostPath)
+                                    .resolve(_path.getLocalPath())
+                                    .normalize()
+                                    .getParent()
+                                    .toAbsolutePath()
+                                    .toString());
+                } catch (IOException e) {
+                    LOGGER.warn(e, "Cannot get path");
+                }
+
+
+            }
+        } else {
+            map.put("local", locator.getFileName().toString());
+        }
+
+        return map;
     }
 
     /**
@@ -835,8 +829,61 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     public void close() {
-        for (Listener listener : listeners)
+        for (Listener listener : listeners) {
             settings.scheduler.removeListener(listener);
+        }
+        for(FileViewer fileViewer: fileViewers.values()) {
+            try {
+                fileViewer.close();
+            } catch (IOException e) {
+                LOGGER.error("Could not close %s", fileViewer);
+            }
+        }
+    }
+
+
+    // File related methods
+    @RPCMethod(name = "resource-path", help = "Get a resource related path")
+    public String resourcePath(
+            @RPCArgument(name = "id", help = "URI for file") String id,
+            @RPCArgument(name = "type") String type
+    ) throws IOException, SQLException {
+        final Resource resource = getResource(id);
+        switch(type) {
+            case "stdout":
+                return resource.outputFile().toAbsolutePath().toUri().toString();
+            case "stderr":
+                return resource.errorFile().toAbsolutePath().toUri().toString();
+        }
+        throw new IllegalArgumentException(format("No file of type %s", type));
+    }
+
+    @RPCMethod(name = "view-file", help = "View a part of a file")
+    public String fileViewer(
+            @RPCArgument(name = "uri", help = "URI for file") String uri,
+            @RPCArgument(name = "position", help="Position in file. If negative, relative to the end") long position,
+            @RPCArgument(name = "size") int size) throws IOException {
+
+        synchronized (fileViewers) {
+            // Get the file viewer
+            FileViewer fileViewer = fileViewers.get(uri);
+            if (fileViewer == null) {
+                fileViewers.put(uri, fileViewer = new FileViewer(uri));
+            }
+
+            final ByteBuffer bytes = fileViewer.read(position, size);
+
+            return new String(bytes.array());
+        }
+    }
+
+    @RPCMethod(name = "close-file")
+    void closeFileViewer(@RPCArgument(name = "uri", help = "URI for file") String uri) throws IOException {
+        synchronized (fileViewers) {
+            final FileViewer fileViewer = fileViewers.get(uri);
+            fileViewer.close();
+            fileViewers.remove(uri);
+        }
     }
 
     /**
@@ -880,23 +927,29 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
-    @RPCMethod(help = "Kill one or more jobs")
-    public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
-        final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
-        int n = 0;
-        for (String id : JobIds) {
-            try {
-                final Resource resource = getResource(id);
-                if (resource instanceof Job) {
-                    if (((Job) resource).stop()) {
-                        n++;
+    @RPCMethod(name = "kill", help = "Kill one or more jobs")
+    public class Kill implements JsonCallable {
+        @RPCArgument
+        String jobs[];
+
+        @Override
+        public Object call() throws Throwable {
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+            int n = 0;
+            for (String id : jobs) {
+                try {
+                    final Resource resource = getResource(id);
+                    if (resource instanceof Job) {
+                        if (((Job) resource).stop()) {
+                            n++;
+                        }
                     }
+                } catch (Throwable throwable) {
+                    logger.error("Error while killing jbo [%s]", id);
                 }
-            } catch (Throwable throwable) {
-                logger.error("Error while killing jbo [%s]", id);
             }
+            return n;
         }
-        return n;
     }
 
     /**
@@ -1053,6 +1106,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     private static class RPCClassCaller extends RPCCaller<ClassArgumentDescriptor> {
         private final Class<?> rpcClass;
+        private final Constructor<?> constructor;
 
         public RPCClassCaller(Class<?> rpcClass) {
             this.rpcClass = rpcClass;
@@ -1060,10 +1114,19 @@ public class JsonRPCMethods extends HttpServlet {
                 throw new AssertionError("An RPC method class should implement the JsonCallable interface");
             }
 
+            try {
+                if (!Modifier.isStatic(rpcClass.getModifiers())) {
+                    constructor = rpcClass.getConstructor(rpcClass.getEnclosingClass());
+                } else {
+                    constructor = null; // rpcClass.getConstructor();
+                }
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+
             for (Field field : rpcClass.getDeclaredFields()) {
                 final RPCArgument annotation = field.getAnnotation(RPCArgument.class);
-                if (!Modifier.isStatic(rpcClass.getModifiers()))
-                    throw new AssertionError("An RPC method class should be static");
+
                 if (annotation != null) {
                     final ClassArgumentDescriptor descriptor = new ClassArgumentDescriptor(annotation, field);
                     final ClassArgumentDescriptor old = arguments.put(descriptor.name, descriptor);
@@ -1077,7 +1140,13 @@ public class JsonRPCMethods extends HttpServlet {
         @Override
         public Object call(Object o, JsonObject p) throws Throwable {
             Gson gson = new Gson();
-            final JsonCallable object = (JsonCallable) rpcClass.newInstance();
+            final JsonCallable object;
+            if (!Modifier.isStatic(rpcClass.getModifiers())) {
+                object = (JsonCallable) constructor.newInstance(o);
+            } else {
+                object = (JsonCallable) rpcClass.newInstance();
+            }
+
             for (ClassArgumentDescriptor descriptor : arguments.values()) {
                 final JsonElement jsonElement = p.get(descriptor.name);
                 final Type type = descriptor.field.getGenericType();
@@ -1100,7 +1169,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         @Override
         public Class<?> getDeclaringClass() {
-            return rpcClass;
+            return rpcClass.getEnclosingClass();
         }
     }
 }

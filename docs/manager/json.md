@@ -74,3 +74,52 @@ The signature will be
 }
 ```
 
+# Tags
+
+Tags are used to mark parameters that are under study, i.e. parameters that the current experiment are interested in looking at.
+When a parameter is tagged, the JSON representation adds a `$tag` entry that gives the name of the parameter
+```json
+{ "$type": "integer", "$value": 13, "$tag": "x" },
+```
+
+This can be achieved by calling the function `tag` from xpm:
+[[[{"language": "python", "title": "Python"}
+from xpm import tag
+tag("x", 1)
+[[[{"language": "javascript", "title": "JS"}
+tag("x", 1)
+]]]
+
+Tags can be retrieved using the `retrieve_tags` function.
+
+This can be achieved by calling the function `tag` from xpm:
+[[[{"language": "python", "title": "Python"}
+from xpm import retrieve_tags
+retrieve_tags(json)
+[[[{"language": "javascript", "title": "JS"}
+retrieve_tags("x", 1)
+]]]
+
+If `json` is
+```json
+json = {
+"x": { "$type": "integer", "$value": 13, "$tag": "x" },
+"y": { "$type": "real", "$value": 1.2, "$tag": "y" },
+}
+```
+
+then the output will be
+```json
+{
+"x": { "$type": "integer", "$value": 13, "$tag": "x" },
+"y": { "$type": "real", "$value": 1.2, "$tag": "y" },
+"tags": { "x": 1, "y": 1.2 }
+}
+```
+
+This allows further tasks to use the tags values for building e.g. tables of results.
+
+
+
+
+

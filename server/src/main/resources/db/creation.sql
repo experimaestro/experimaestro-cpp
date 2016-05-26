@@ -40,7 +40,7 @@ CREATE TABLE Resources (
   path      VARCHAR(4096),
   connector BIGINT,
   status    INT           NOT NULL,
-  -- Used to check if a notification has been done after XPM has been stopped
+  -- Used to isStopped if a notification has been done after XPM has been stopped
   oldStatus INT           NOT NULL,
   type      BIGINT,
   priority  INT DEFAULT 0 NOT NULL,
@@ -72,7 +72,6 @@ CREATE TABLE Jobs (
   unsatisfied INT    NOT NULL,
   holding     INT    NOT NULL,
   priority    INT    NOT NULL,
-  progress    DOUBLE NOT NULL,
 
   FOREIGN KEY (id) REFERENCES Resources
     ON DELETE CASCADE
@@ -162,6 +161,10 @@ CREATE TABLE Processes (
   pid       VARCHAR(255),
   data      BLOB   NOT NULL,
 
+  -- When was the last news from the process
+  progress    DOUBLE NOT NULL,
+  last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
   -- One process per resource
   PRIMARY KEY (resource),
 
@@ -233,3 +236,19 @@ CREATE TABLE ExperimentResources (
 );
 
 
+-- Table for cache
+-- key/data
+CREATE TABLE UserCache (
+   -- The identifier is a qualified name used to retrieve values
+   identifier VARCHAR(512),
+   -- MD5 hash of json key
+   keyhash CHAR(32),
+
+   -- Validity
+   validity TIMESTAMP NOT NULL,
+
+   jsonkey BLOB NOT NULL,
+  jsondata BLOB NOT NULL,
+
+   PRIMARY KEY (identifier, keyhash)
+);

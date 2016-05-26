@@ -70,7 +70,7 @@ public class StatusLock extends Lock {
     private String pid;
 
     @Override
-    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+    protected void save(DatabaseObjects<Lock, Dependency> locks) throws SQLException {
         super.save(locks);
         saveShare(path);
     }
@@ -84,7 +84,7 @@ public class StatusLock extends Lock {
         LOGGER.debug("Created status lock [pid=%s] on %s", pid, path);
     }
 
-    public StatusLock(long id) {
+    public StatusLock(long id, Dependency dependency) {
         super(id);
     }
 
