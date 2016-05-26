@@ -71,6 +71,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
@@ -91,7 +92,15 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     private final JsonRPCSettings settings;
 
+    /**
+     * Listeners associated to this
+     */
     HashSet<Listener> listeners = new HashSet<>();
+
+    /**
+     * Opened files
+     */
+    Map<String, FileViewer> fileViewers = new HashMap<>();
 
     /**
      * Server
@@ -730,6 +739,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                             connector.resolveFile(hostPath)
                                     .resolve(_path.getLocalPath())
                                     .normalize()
+                                    .getParent()
                                     .toAbsolutePath()
                                     .toString());
                 } catch (IOException e) {
@@ -819,8 +829,61 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     public void close() {
-        for (Listener listener : listeners)
+        for (Listener listener : listeners) {
             settings.scheduler.removeListener(listener);
+        }
+        for(FileViewer fileViewer: fileViewers.values()) {
+            try {
+                fileViewer.close();
+            } catch (IOException e) {
+                LOGGER.error("Could not close %s", fileViewer);
+            }
+        }
+    }
+
+
+    // File related methods
+    @RPCMethod(name = "resource-path", help = "Get a resource related path")
+    public String resourcePath(
+            @RPCArgument(name = "id", help = "URI for file") String id,
+            @RPCArgument(name = "type") String type
+    ) throws IOException, SQLException {
+        final Resource resource = getResource(id);
+        switch(type) {
+            case "stdout":
+                return resource.outputFile().toAbsolutePath().toUri().toString();
+            case "stderr":
+                return resource.errorFile().toAbsolutePath().toUri().toString();
+        }
+        throw new IllegalArgumentException(format("No file of type %s", type));
+    }
+
+    @RPCMethod(name = "view-file", help = "View a part of a file")
+    public String fileViewer(
+            @RPCArgument(name = "uri", help = "URI for file") String uri,
+            @RPCArgument(name = "position", help="Position in file. If negative, relative to the end") long position,
+            @RPCArgument(name = "size") int size) throws IOException {
+
+        synchronized (fileViewers) {
+            // Get the file viewer
+            FileViewer fileViewer = fileViewers.get(uri);
+            if (fileViewer == null) {
+                fileViewers.put(uri, fileViewer = new FileViewer(uri));
+            }
+
+            final ByteBuffer bytes = fileViewer.read(position, size);
+
+            return new String(bytes.array());
+        }
+    }
+
+    @RPCMethod(name = "close-file")
+    void closeFileViewer(@RPCArgument(name = "uri", help = "URI for file") String uri) throws IOException {
+        synchronized (fileViewers) {
+            final FileViewer fileViewer = fileViewers.get(uri);
+            fileViewer.close();
+            fileViewers.remove(uri);
+        }
     }
 
     /**

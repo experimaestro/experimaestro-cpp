@@ -240,7 +240,36 @@ $().ready(function () {
                     });
                 }
             });
+        } else if (name.startsWith("fileview-")) {
+            var isStdErr = name.endsWith("err");
 
+            var fileview = function(uri) {
+                xpm.request('view-file', {
+                    params: {
+                        uri: uri,
+                        position: -4096,
+                        size: 4096
+                    },
+                    success: function(resp) {
+                        var a = $e("pre");
+                        a.attr("id", "file-viewer-" + r.id);
+                        a.text(resp);
+                        $("body").append(a);
+                        a.dialog({
+                            title: (isStdErr ? "stderr" : "stdout") + " [" + r.id + "] " + uri,
+                            width: "80%"
+                        });
+                    }
+                });
+            };
+
+            xpm.request('resource-path', {
+                params: {
+                    id: r.id,
+                    type: isStdErr ? 'stderr' : 'stdout'
+                },
+                success: function(resp) { fileview(resp) }
+            });
         }
     };
 
@@ -423,6 +452,8 @@ $().ready(function () {
                 .attr("id", "R" + r.id)
                 .append($e("span").addClass("resource-actions")
                     .append($("<span class='resource-id'>" + r.id + "</span>"))
+                    .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
+                    .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
                     .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
                     .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
                     .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
@@ -769,6 +800,5 @@ $().ready(function () {
     });
 
 })
-;
 
 

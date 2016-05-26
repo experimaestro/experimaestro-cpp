@@ -417,6 +417,11 @@ public class Resource implements Identifiable {
         throw new IllegalAccessError("No output file for resources of type " + this.getClass());
     }
 
+    public Path errorFile() throws IOException {
+        throw new IllegalAccessError("No error file for resources of type " + this.getClass());
+    }
+
+
 
     /**
      * Get a JSON representation of the object
