@@ -1,4 +1,6 @@
 plugins {
+    // Typescript
+    id "de.richsource.gradle.plugins.typescript" version "1.8.0"
 
     // Access to git information
     id 'org.ajoberstar.grgit' version '1.2.0'
@@ -14,6 +16,11 @@ sourceSets {
     main {
         output.resourcesDir = generatedResources
     }
+}
+
+compileTypeScript {
+    outFile = file("${generatedResources}/web/js/xpm.js")
+    target = "ES5"
 }
 
 dependencies {

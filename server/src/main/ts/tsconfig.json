@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "out": "built/out.js", 
-        "sourceMap": true, 
+        "out": "../../../build/classes/main/web/js/xpm.js",
+        "sourceMap": false,
         "target": "es5"
     }, 
     "files": [

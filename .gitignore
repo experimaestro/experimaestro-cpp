@@ -12,3 +12,4 @@ helper/build
 server/build
 .gradle
 build
+server/src/main/ts/built

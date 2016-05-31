@@ -22,10 +22,8 @@ interface JQuery {
     tagit(options:any):void;
 }
 
-interface BlahBlah extends HTMLElement {
-    state:string;
-}
-
+// Resource state
+type State = "waiting" | "ready" | "running" | "on_hold" | "error" | "done";
 
 /** Called when an error occurs with JSON-RPC */
 function jsonrpc_error(r) {
@@ -42,7 +40,7 @@ var $t = function (s) {
     return $(document.createTextNode(s));
 };
 
-function change_counter(state, delta) {
+function change_counter(state:State, delta) {
     var c = $("#state-" + state + "-count");
     c.text(Number(c.text()) + delta);
 }
@@ -57,56 +55,96 @@ var json2html = function (json:any) {
         c.append($e('li').append($e('span').append($e("b").text(key + ": "))).append(json2html(json[key])));
     }
     return c;
-}
+};
+
+var xpm:XPM;
 
 class Resource {
-    node: JQuery;
-    state: string;
-    id: string;
+    node:JQuery;
+    id:string;
+    state:State;
 
-    constructor(li:HTMLElement) {
-        this.node = $(li);
-        this.state = li[0].state;
-        this.id = li.attr("name")
+    constructor(r) {
+        this.state = r.state;
+        this.id = r.id;
+
+        var link = $e("a")
+            .attr("href", "javascript:void(0)")
+            .append($("<span class='locator'>" + r.locator + "</span>"))
+            .on("click", $.proxy(xpm.resource_link_callback, this));
+
+        this.node = $e("li")
+            .addClass("state-" + r.state)
+            .addClass("resource")
+            .attr("name", r.id)
+            .attr("id", "R" + r.id)
+            .append($e("span").addClass("resource-actions")
+                .append($("<span class='resource-id'>" + r.id + "</span>"))
+                .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
+                .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
+                .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
+                .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
+                .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
+            ).append(
+                $e("div")
+                    .addClass("resource-link")
+                    .append(link)
+            );
     }
 
-    static fromElementID(id: string) {
-        var e = document.getElementById(id);
-        if (e != null) {
-            return new Resource(e);
-        }
-    }
-}
+    progress(r) {
+        if (!r.progress) return;
 
-/** Get the resource to which a DOM element "belongs"
- * @param e The DOM element as a jQuery object
- * @return An object with id, state
- */
-function get_resource(e) {
-    var li = e.parentsUntil("li.resource").last().parent();
-    return new Resource(li);
-}
+        var pb = this.node.find("div.progressbar");
 
-function resource_progress(r) {
-    if (!r.progress) return;
-
-    var e = $("#R" + r.id);
-    if (e.length < 1) {
-        console.warn("Resource " + r.id + " does not exist (progress reported)!");
-    } else {
-        var pb = e.find("div.progressbar");
         if (pb.length == 0) {
             pb = $e("div").append($e("div").append($t("Running")).addClass("progress-label"));
             pb.addClass("progressbar");
             pb.progressbar({value: r.progress * 100.});
             pb.progressbar("option", "max", 100);
-            e.prepend(pb);
-            e.addClass("with-progressbar");
+            this.node.prepend(pb);
+            this.node.addClass("with-progressbar");
         } else {
             pb.progressbar("option", "value", r.progress * 100);
         }
     }
-};
+
+    /// Set the resource state
+    set_state(_state:string) {
+        var state = <State>(_state.toLowerCase());
+
+        // Remove progress bars
+        this.node.removeClass("with-progressbar");
+        this.node.find("div.progressbar").remove();
+
+        // Update counters
+        var oldstate = this.state;
+
+        change_counter(oldstate, -1);
+        change_counter(state, +1);
+
+        // Put the item in the list
+        this.node.removeClass("state-" + oldstate)
+            .addClass("state-" + this.state);
+        this.state = state;
+    }
+
+    remove() {
+        this.node.remove();
+    }
+
+}
+
+class Experiment {
+    name:string;
+    timestamp:number;
+
+    constructor(name: string, timestamp: number) {
+        this.name = name;
+        this.timestamp = timestamp;
+    }
+}
 
 class XPM {
     server:any;
@@ -116,7 +154,28 @@ class XPM {
     ping:any;
     xpm_info_loaded:boolean;
 
-    experiment_timestamp:number;
+    // List of resources
+    resources:{ [id:string]:Resource; } = {};
+
+    // Current experiment
+    experiment:Experiment;
+
+    start_websocket() {
+        var websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
+        var websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
+        this.server = new $.JsonRpcClient({
+            ajaxUrl: '/json-rpc',
+            socketUrl: websocket_url,
+            onmessage: $.proxy(this.handle_message, this),
+            onopen: $.proxy(this.handle_ws_open, this),
+            onclose: function () {
+                noty({text: "Web socket closed", type: 'information', timeout: 2000});
+                $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
+                clearInterval(this.ping);
+            }
+        });
+    }
+
 
     request(name, params) {
         this.server.call(name, params.params, params.success, params.error)
@@ -131,13 +190,13 @@ class XPM {
             console.debug("Sent ping");
         }, 120000);
 
-        this.server.call("listen", {}, () => {
-        }, jsonrpc_error);
+        this.server.call("listen", {}, () => {}, jsonrpc_error);
         this.get_experiments();
     };
 
     /** Get the experiments */
     get_experiments() {
+        var _this = this;
         this.server.call('experiments.latest-names', {},
             function (r) {
                 var select = $("#experiment-chooser");
@@ -145,7 +204,7 @@ class XPM {
                 $.each(r, function (ix, e) {
                     select.append($e("option").append($t(e.identifier)));
                 });
-                this.load_experiment(0);
+                _this.load_experiment(0);
             },
 
             jsonrpc_error
@@ -155,12 +214,17 @@ class XPM {
     load_experiment(timestamp:number) {
         var select = $("#experiment-chooser");
         var tasks_chooser = $("#task-chooser");
+
         var experiment = select.find("option:selected").text();
 
         // Remove resources and counts
         $("#resources").children().remove();
         $("#state-chooser").find(".state-count").text(0);
 
+        // Access to xpm in callback
+        var _this = this;
+
+        this.experiment = new Experiment(experiment, timestamp);
 
         this.server.call('experiments.resources', {identifier: experiment, timestamp: timestamp},
             function (r) {
@@ -169,24 +233,24 @@ class XPM {
                 var set = new Set();
                 for (var _tid in tasks) {
                     let tid = Number.parseInt(_tid);
-                    this.task2resource[tid] = []
+                    _this.task2resource[tid] = []
 
                     var tname = tasks[tid];
                     if (!set.has(tname)) {
-                        this.taskname2id[tname] = [tid];
+                        _this.taskname2id[tname] = [tid];
                         set.add(tname);
                         available_tasks.push(tname);
                     } else {
-                        this.taskname2id[tname].push(tid);
+                        _this.taskname2id[tname].push(tid);
                     }
                 }
 
                 function change_state(taskname, display) {
-                    var taskids = this.taskname2id[taskname];
+                    var taskids = _this.taskname2id[taskname];
                     for (var i = 0; i < taskids.length; ++i) {
-                        var resources = this.task2resource[taskids[i]];
-                        if (display) this.filtered_tasks.add(taskids[i]);
-                        else this.filtered_tasks.delete(taskids[i]);
+                        var resources = _this.task2resource[taskids[i]];
+                        if (display) _this.filtered_tasks.add(taskids[i]);
+                        else _this.filtered_tasks.delete(taskids[i]);
                         for (var j = 0; j < resources.length; ++j) {
                             if (display) {
                                 $(resources[j]).removeClass("notintask");
@@ -207,7 +271,7 @@ class XPM {
                         }
                     },
                     beforeTagAdded: function (event, ui) {
-                        return ui.tagLabel in this.taskname2id;
+                        return ui.tagLabel in _this.taskname2id;
                     },
 
                     afterTagAdded: function (event, ui) {
@@ -220,7 +284,7 @@ class XPM {
                     afterTagRemoved: function (event, ui) {
                         --tag_count;
                         if (tag_count == 0) {
-                            this.filtered_tasks.clear();
+                            _this.filtered_tasks.clear();
                             $("#resources").children().removeClass("notintask");
                         } else {
                             change_state(ui.tagLabel, "none");
@@ -233,18 +297,14 @@ class XPM {
                 var ts = $("#experiment-timestamp");
                 ts.text(date.toString());
                 console.log("New timestamp: " + r.experiment.timestamp);
-                this.experiment_timestamp = r.experiment.timestamp;
+                _this.experiment.timestamp = r.experiment.timestamp;
                 $.each(r.resources, function (ix, v) {
-                    var r = this.add_resource(v);
-                    this.task2resource[v.taskid].push(r);
+                    var r = _this.add_resource(v);
+                    _this.task2resource[v.taskid].push(r);
                 });
             },
             jsonrpc_error
         );
-    }
-
-    makelinks(e) {
-        e.find(".link").on("click", this.resource_action_callback);
     }
 
     handle_message(resp) {
@@ -263,23 +323,9 @@ class XPM {
             case "STATE_CHANGED":
             {
                 // Get the resource
-                var e = Resource.fromElementID("#R" + r.id);
+                var e = this.resources[r.id];
                 if (e != null) {
-                    r.state = r.state.toLowerCase();
-
-                    // Remove progress bars
-                    e.node.removeClass("with-progressbar");
-                    e.node.find("div.progressbar").remove();
-
-                    // Update counters
-                    var oldstate = e.get(0).state;
-                    change_counter(oldstate, -1);
-                    change_counter(r.state, +1);
-
-                    // Put the item in the list
-                    e.node.removeClass("state-" + oldstate)
-                        .addClass("state-" + r.state);
-                    e.get(0).state = r.state;
+                    e.set_state(r.state);
                 }
 
                 break;
@@ -288,35 +334,35 @@ class XPM {
             case "RESOURCE_REMOVED":
             {
                 // Get the resource
-                var e = $("#R" + r.id);
-                if (e.length > 0) {
-                    decrement(e);
+                var e = this.resources[r.id];
+                if (e) {
                     e.remove();
+                    delete this.resources[r.id];
                 }
                 break;
             }
 
             case "PROGRESS":
-                resource_progress(r);
+                this.get_resource(r.id).progress(r);
                 break;
 
 
             case "RESOURCE_ADDED":
-                add_resource(r);
+            {
+                this.add_resource(r);
                 break;
+            }
 
             case "EXPERIMENT_RESOURCE_ADDED":
-                var current = current_experiment();
-                if (current.name == r.name && current.time == r.timestamp) {
-                    add_resource(r.resource);
+                if (this.experiment.name == r.name && this.experiment.timestamp == r.timestamp) {
+                    this.add_resource(r);
                 }
                 break;
 
             case "EXPERIMENT_ADDED":
                 // If this is the current experiment, remove everything
-                var current = current_experiment();
-                if (r.name == current.name) {
-                    load_experiment(r.timestamp);
+                if (r.name == this.experiment.name) {
+                    this.load_experiment(r.timestamp);
                 }
                 break;
 
@@ -326,66 +372,78 @@ class XPM {
         }
     }
 
+    /// Returns a resource given its numeric id
+    get_resource(id:number):Resource {
+        var e = this.resources[id];
+        if (!e) {
+            throw new Error("Cannot find resource " + id);
+        }
+        return e;
+    }
 
     add_resource(r) {
-        r.state = r.state.toLowerCase();
         console.log("Adding resource with id " + r.id + " and state " + r.state);
-        var e = $("#R" + r.id);
 
-        if (e.length > 0) {
+        if (r.id in this.resources) {
             console.warn("Resource " + r.id + " already exists!");
         } else {
-            var link = $e("a")
-                .attr("href", "javascript:void(0)")
-                .append($("<span class='locator'>" + r.locator + "</span>"))
-                .on("click", this.resource_link_callback);
-
-            var item = $e("li")
-                .addClass("state-" + r.state)
-                .addClass("resource")
-                .attr("name", r.id)
-                .attr("id", "R" + r.id)
-                .append($e("span").addClass("resource-actions")
-                    .append($("<span class='resource-id'>" + r.id + "</span>"))
-                    .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
-                    .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
-                    .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
-                    .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
-                    .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
-                    .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
-                ).append(
-                    $e("div")
-                        .addClass("resource-link")
-                        .append(link)
-                );
-
-            (<BlahBlah>item.get(0)).state = r.state;
+            var resource = new Resource(r);
 
             if (this.filtered_tasks.size > 0 && !this.filtered_tasks.has(r.taskid)) {
-                item.addClass("notintask");
+                resource.node.addClass("notintask");
             }
 
-            $("#resources").append(item);
-            this.makelinks(item);
+            $("#resources").append(resource.node);
+            resource.node.find(".link").on("click", $.proxy(this.resource_action_callback, this));
 
-            change_counter(r.state, +1);
-            if (r.state == "running" && r.progress > 0) {
-                this.resource_progress(r);
+            change_counter(resource.state, +1);
+            if (resource.state == "running" && r.progress > 0) {
+                resource.progress(r);
             }
-
-            return item;
         }
     };
 
+    /// Click on a link
+    resource_link_callback() {
+        var resourcePath = $(this).text();
+        var resourceID = $(this).parent().parent().attr("name");
+
+        xpm.server.call('getResourceInformation', {id: resourceID},
+            function (r) {
+                $("#resource-detail-title").text("Resource #" + resourceID);
+                $("#resource-detail-path").text(resourcePath);
+
+                // Set the content
+                var rdc = $("#resource-detail-content");
+                rdc.jstree(true).destroy();
+                rdc.empty().append(json2html(r));
+                rdc.jstree();
+
+                $(function () {
+                    $("#resource-detail").dialog({
+                        "maxWidth": 600,
+                        "width": "70%",
+                    });
+                });
+
+            },
+            jsonrpc_error
+        );
+        return false;
+    };
+
+
     // --- actions on jobs: restart, remove
-    resource_action_callback() {
-        var name = this.name ? this.name : this.getAttribute("name");
+    resource_action_callback(event) {
+        var target = event.target;
+
+        var name = target.name ? target.name : target.getAttribute("name");
         if (!name) {
-            alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this) + "]");
+            alert("internal error: no name given for action in [" + target.tagName + "/" + typeof(this) + "]");
             return;
         }
 
-        var r = get_resource($(this));
+        var r = this.get_resource(target.parentElement.parentElement.id);
 
         if (name == "restart") {
             var request = function (restartDone) {
@@ -535,35 +593,6 @@ class XPM {
         }
     };
 
-    resource_link_callback() {
-        var resourcePath = $(this).text();
-        var resourceID = $(this).parent().parent().attr("name");
-
-        this.server.call('getResourceInformation', {id: resourceID},
-            function (r) {
-                $("#resource-detail-title").text("Resource #" + resourceID);
-                $("#resource-detail-path").text(resourcePath);
-
-                // Set the content
-                var rdc = $("#resource-detail-content");
-                rdc.jstree(true).destroy();
-                rdc.empty().append(json2html(r));
-                rdc.jstree();
-
-                $(function () {
-                    $("#resource-detail").dialog({
-                        "maxWidth": 600,
-                        "width": "70%",
-                    });
-                });
-
-            },
-            jsonrpc_error
-        );
-        return false;
-    };
-
-
     show_xpm_info() {
         var e = $("#xpm-info");
         if (this.xpm_info_loaded) return true;
@@ -593,7 +622,8 @@ class XPM {
 
 $().ready(function () {
 
-    let xpm = new XPM();
+    // Create the global xpm object
+    xpm = new XPM();
 
     /**
      * custom css expression for a case-insensitive contains()
@@ -602,7 +632,6 @@ $().ready(function () {
     $.expr[':'].Contains = function (a, i, m) {
         return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
     };
-
 
     function listFilter(list) { // header is any element, list is an unordered list
         // create and add the filter form to the header
@@ -644,15 +673,6 @@ $().ready(function () {
         );
     }
 
-
-    function current_experiment() {
-        return {
-            name: $("#experiment-chooser").find("option:selected").text(),
-            time: xpm.experiment_timestamp
-        };
-    }
-
-
     // When changing, load experiment
     $("#experiment-chooser").change(function () {
         xpm.load_experiment(0)
@@ -669,7 +689,7 @@ $().ready(function () {
 
         var force = d3.layout.force()
             .gravity(.05)
-            .distance(100)
+            .linkDistance(100)
             .charge(-100)
             .size([width, height]);
 
@@ -693,12 +713,12 @@ $().ready(function () {
                         .links(json.links)
                         .start();
 
-                    var link = svg.selectall(".link")
+                    var link = svg.selectAll(".link")
                         .data(json.links)
                         .enter().append("line")
                         .attr("class", "link");
 
-                    var node = svg.selectall(".node")
+                    var node = svg.selectAll(".node")
                         .data(json.nodes)
                         .enter().append("g")
                         .attr("class", "node")
@@ -715,33 +735,31 @@ $().ready(function () {
                         .attr("dx", 12)
                         .attr("dy", ".35em")
                         .text(function (d) {
-                            return d.name
+                            return (<any>d).name
                         });
 
                     force.on("tick", function () {
                         link.attr("x1", function (d) {
-                                return d.source.x;
-                            })
+                            return (<any>d).source.x;
+                        })
                             .attr("y1", function (d) {
-                                return d.source.y;
+                                return (<any>d).source.y;
                             })
                             .attr("x2", function (d) {
-                                return d.target.x;
+                                return (<any>d).target.x;
                             })
                             .attr("y2", function (d) {
-                                return d.target.y;
+                                return (<any>d).target.y;
                             });
 
                         node.attr("transform", function (d) {
-                            return "translate(" + d.x + "," + d.y + ")";
+                            return "translate(" + (<any>d).x + "," + (<any>d).y + ")";
                         });
                     });
                 });
     }
 
     // Links
-    $(".xpm-resource-list .link").on("click", xpm.resource_action_callback);
-    $(".xpm-resource-list a").on("click", xpm.resource_link_callback);
     $("#header").find(".links a").button();
 
     var click_state = function (e) {
@@ -761,22 +779,7 @@ $().ready(function () {
     $("#resource-detail-content").jstree();
 
 
-// Create websocket
-    var websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
-    var websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
-
-
-    xpm.server = new $.JsonRpcClient({
-        ajaxUrl: '/json-rpc',
-        socketUrl: websocket_url,
-        onmessage: xpm.handle_message,
-        onopen: xpm.handle_ws_open,
-        onclose: function () {
-            noty({text: "Web socket closed", type: 'information', timeout: 2000});
-            $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
-            clearInterval(xpm.ping);
-        }
-    });
+    xpm.start_websocket();
 
     // Get hostname and open the web socket
     xpm.server.call("hostname", {}, function (r) {
