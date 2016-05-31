@@ -1,0 +1,11 @@
+{
+  "globalDependencies": {
+    "d3": "registry:dt/d3#0.0.0+20160514171929",
+    "es6-shim": "registry:dt/es6-shim#0.31.2+20160317120654",
+    "jquery": "registry:dt/jquery#1.10.0+20160417213236",
+    "jquery-jsonrpcclient": "registry:dt/jquery-jsonrpcclient#0.0.0+20160316155526",
+    "jquery.noty": "registry:dt/jquery.noty#2.0.0+20160316155526",
+    "jqueryui": "registry:dt/jqueryui#1.9.0+20160509160024",
+    "jstree": "registry:dt/jstree#0.0.0+20160316155526"
+  }
+}

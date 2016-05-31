@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "out": "built/out.js", 
+        "sourceMap": true, 
+        "target": "es5"
+    }, 
+    "files": [
+        "xpm.ts"
+    ]
+}
