@@ -1,3 +1,9 @@
+plugins {
+
+    // Access to git information
+    id 'org.ajoberstar.grgit' version '1.2.0'
+}
+
 description = 'experimaestro server'
 
 apply plugin: 'application'
@@ -54,14 +60,7 @@ dependencies {
     testCompile group: 'com.thetransactioncompany', name: 'jsonrpc2-client', version: '1.15'
 }
 
-buildscript {
-    dependencies {
-        classpath 'org.ajoberstar:gradle-git:1.2.0'
-    }
-    repositories {
-        mavenCentral()
-    }
-}
+
 
 import org.ajoberstar.grgit.Grgit
 
