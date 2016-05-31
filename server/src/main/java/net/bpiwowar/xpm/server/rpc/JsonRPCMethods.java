@@ -749,7 +749,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
             }
         } else {
-            map.put("local", locator.getFileName().toString());
+            map.put("local", locator.toAbsolutePath().toString());
         }
 
         return map;
