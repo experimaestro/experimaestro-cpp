@@ -16,14 +16,16 @@ import java.util.Set;
 
 
 public class UnixSshSeekableByteChannel implements SeekableByteChannel {
+    static final long REFRESH_INTERVAL = 10; // refresh after 10 seconds
     private boolean append;
     private boolean open;
     private UnixSshPath path;
     private long position = 0;
     private UnixSshFileSystemProvider provider;
     private boolean readable;
-    private long size;
+    private PosixFileAttributes attributes;
     private boolean writeable;
+    private long lastUpdate;
 
     public UnixSshSeekableByteChannel( UnixSshPath path, Set<? extends OpenOption> openOptions, FileAttribute<?>... createFileAttributes ) throws IOException {
         this.path = path.toAbsolutePath();
@@ -33,10 +35,10 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
         this.provider = path.getFileSystem().provider();
 
-        PosixFileAttributes attributes = null;
         try {
             provider.checkAccess( path );
             attributes = provider.readAttributes( path, PosixFileAttributes.class );
+            lastUpdate = System.currentTimeMillis();
         }
         catch ( NoSuchFileException e ) {
         }
@@ -61,8 +63,6 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
         if ( create ) {
             attributes = provider.createFile( path, createFileAttributes );
         }
-
-        size = attributes.size();
 
         open = true;
 
@@ -92,19 +92,20 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
     @Override
     public int read( ByteBuffer bytes ) throws IOException {
+        refresh();
+
         if ( !readable ) {
             throw new NonReadableChannelException();
         }
-        if ( position >= size ) {
+        if ( position >= attributes.size() ) {
             return -1;
         }
 
         int read = provider.read( path, position, bytes );
         position += read;
-        if ( position > size ) {
+        if ( position > attributes.size() ) {
             // sucks, means somebody else is also writing this file, bad things
             // are gonna happen here...
-            size = position;
         }
 
         return read;
@@ -112,18 +113,28 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
     @Override
     public long size() throws IOException {
-        return size;
+        refresh();
+        return attributes.size();
+    }
+
+    private void refresh() throws IOException {
+        if (System.currentTimeMillis() > lastUpdate + REFRESH_INTERVAL) {
+            attributes = provider.readAttributes( path, PosixFileAttributes.class );
+            lastUpdate = System.currentTimeMillis();
+        }
     }
 
     @Override
     public UnixSshSeekableByteChannel truncate( long size ) throws IOException {
+        refresh();
+
         if ( !writeable ) {
             throw new NonWritableChannelException();
         }
         if ( size < 0 ) {
             throw new IllegalArgumentException( "size must be positive" );
         }
-        if ( size >= this.size ) {
+        if ( size >= attributes.size() ) {
             return this;
         }
 
@@ -131,12 +142,16 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
         if ( position > size ) {
             position = size;
         }
-        this.size = size;
+
+        // Force refresh next time
+        lastUpdate = 0;
         return this;
     }
 
     @Override
     public int write( ByteBuffer bytes ) throws IOException {
+        refresh();
+
         if ( !writeable ) {
             throw new NonWritableChannelException();
         }
@@ -146,8 +161,8 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
         int written = provider.write( path, position, bytes );
         position += written;
-        if ( position > size ) {
-            size = position;
+        if ( position > attributes.size()) {
+            lastUpdate = 0;
         }
 
         return written;
