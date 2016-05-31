@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager;
  */
 
 import com.google.gson.annotations.JsonAdapter;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -199,6 +200,7 @@ public class TypeName implements Comparable<TypeName> {
     }
 
     @Override
+    @Expose
     public String toString() {
         if (uri == null || "".equals(uri))
             return localName;
