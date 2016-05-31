@@ -108,6 +108,14 @@ public class XPM {
     @Help("Retrieve (or creates) a token resource with a given xpath")
     static public TokenResource token_resource(
             @Argument(name = "path", help = "The path of the resource") String path
+            ) throws ExperimaestroCannotOverwrite, SQLException, URISyntaxException {
+        return token_resource(path, true);
+    }
+
+    @Expose()
+    static public TokenResource token_resource(
+            @Argument(name = "path", help = "The path of the resource") String path,
+            @Argument(name = "post_process", help = "The path of the resource") boolean postProcess
     ) throws ExperimaestroCannotOverwrite, SQLException, URISyntaxException {
         final Resource resource = Resource.getByLocator(NetworkShare.uriToPath(path));
         final TokenResource tokenResource;
@@ -120,8 +128,11 @@ public class XPM {
             tokenResource = (TokenResource) resource;
         }
 
-        // Add to experiment
-        ScriptContext.get().postProcess(null, tokenResource);
+        // Post-process (experiment handling)
+        if (postProcess) {
+            ScriptContext.get().postProcess(null, tokenResource);
+        }
+
         return tokenResource;
     }
 
@@ -189,9 +200,9 @@ public class XPM {
     public void setDefaultLock(
             @NotNull
             @Argument(name = "resource", help = "The resource to be locked")
-            Resource resource,
+                    Resource resource,
             @Argument(name = "parameters", help = "The parameters to be given at lock time")
-            DependencyParameters parameters) {
+                    DependencyParameters parameters) {
 
         context().addDefaultLock(resource, parameters);
     }
