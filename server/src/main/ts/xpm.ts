@@ -63,20 +63,22 @@ class Resource {
     node:JQuery;
     id:string;
     state:State;
+    locator:string;
 
     constructor(r) {
         this.state = r.state;
         this.id = r.id;
+        this.locator = r.locator;
 
         var link = $e("a")
             .attr("href", "javascript:void(0)")
             .append($("<span class='locator'>" + r.locator + "</span>"))
-            .on("click", $.proxy(xpm.resource_link_callback, this));
+            .on("click", $.proxy(xpm.resource_link_callback, xpm));
+
 
         this.node = $e("li")
             .addClass("state-" + r.state)
             .addClass("resource")
-            .attr("name", r.id)
             .attr("id", "R" + r.id)
             .append($e("span").addClass("resource-actions")
                 .append($("<span class='resource-id'>" + r.id + "</span>"))
@@ -91,6 +93,10 @@ class Resource {
                     .addClass("resource-link")
                     .append(link)
             );
+    }
+
+    path():string {
+        return this.locator;
     }
 
     progress(r) {
@@ -140,7 +146,7 @@ class Experiment {
     name:string;
     timestamp:number;
 
-    constructor(name: string, timestamp: number) {
+    constructor(name:string, timestamp:number) {
         this.name = name;
         this.timestamp = timestamp;
     }
@@ -190,7 +196,8 @@ class XPM {
             console.debug("Sent ping");
         }, 120000);
 
-        this.server.call("listen", {}, () => {}, jsonrpc_error);
+        this.server.call("listen", {}, () => {
+        }, jsonrpc_error);
         this.get_experiments();
     };
 
@@ -307,6 +314,7 @@ class XPM {
         );
     }
 
+    /// Handles a message from the server
     handle_message(resp) {
         //console.debug("Received: " + e.data);
         var r = $.parseJSON(resp.data);
@@ -394,6 +402,7 @@ class XPM {
             }
 
             $("#resources").append(resource.node);
+            this.resources[resource.id] = resource;
             resource.node.find(".link").on("click", $.proxy(this.resource_action_callback, this));
 
             change_counter(resource.state, +1);
@@ -403,15 +412,27 @@ class XPM {
         }
     };
 
-    /// Click on a link
-    resource_link_callback() {
-        var resourcePath = $(this).text();
-        var resourceID = $(this).parent().parent().attr("name");
+    /// Get the resource from HTML element
+    find_resource(element:HTMLElement) {
+        var e = $(element);
+        while (!e.is("html")) {
+            if (e.hasClass("resource")) {
+                var elementID = parseInt(e.get(0).id.replace(/R(\d+)/, "$1"));
+                return this.get_resource(elementID);
+            }
+            e = e.parent();
+        }
+        throw new Error("Could not find enclosing resource HTML element");
+    }
 
-        xpm.server.call('getResourceInformation', {id: resourceID},
+    /// Click on a link
+    resource_link_callback(event) {
+        var resource = this.find_resource(event.target);
+
+        this.server.call('getResourceInformation', {id: resource.id},
             function (r) {
-                $("#resource-detail-title").text("Resource #" + resourceID);
-                $("#resource-detail-path").text(resourcePath);
+                $("#resource-detail-title").text("Resource #" + resource.id);
+                $("#resource-detail-path").text(resource.path());
 
                 // Set the content
                 var rdc = $("#resource-detail-content");
@@ -436,6 +457,7 @@ class XPM {
     // --- actions on jobs: restart, remove
     resource_action_callback(event) {
         var target = event.target;
+        var _this = this;
 
         var name = target.name ? target.name : target.getAttribute("name");
         if (!name) {
@@ -443,7 +465,7 @@ class XPM {
             return;
         }
 
-        var r = this.get_resource(target.parentElement.parentElement.id);
+        var r = this.find_resource(target);
 
         if (name == "restart") {
             var request = function (restartDone) {
@@ -562,7 +584,7 @@ class XPM {
             var isStdErr = name.endsWith("err");
 
             var fileview = function (uri) {
-                this.request('view-file', {
+                _this.request('view-file', {
                     params: {
                         uri: uri,
                         position: -4096,
