@@ -494,7 +494,7 @@ public class Functions {
     @Help("Find all tags and return a hash map")
     static public Map<String, Object> find_tags(Json json) {
         HashMap<String, Object> tags = new HashMap<>();
-        find_tags(json, tags);
+        Json.findTags(json, tags);
         return tags;
     }
 
@@ -513,37 +513,6 @@ public class Functions {
         }
         json.put(key != null ? key : Constants.JSON_TAGS_NAME, Json.toJSON(cx, tags));
         return json;
-    }
-
-    private static void find_tags(Json json, HashMap<String, Object> tags) {
-        if (json.is_object()) {
-            final JsonObject object = (JsonObject) json;
-            if (object.containsKey(Constants.JSON_TAG_NAME)) {
-                final Json jsonTags = object.get(Constants.JSON_TAG_NAME);
-                if (jsonTags.isSimple()) {
-                    final String key = jsonTags.get().toString();
-                    try {
-                        tags.put(key, object.get());
-                    } catch (RuntimeException e) {
-                        throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
-                    }
-                } else if (jsonTags.is_object()) {
-                    final JsonObject jsonObject = jsonTags.asObject();
-                    jsonObject.entrySet().forEach(e -> {
-                        tags.put(e.getKey(), e.getValue().get().toString());
-                    });
-                }
-            }
-
-            for (Json v : object.values()) {
-                find_tags(v, tags);
-            }
-
-        } else if (json.is_array()) {
-            for (Json v : ((JsonArray) json)) {
-                find_tags(v, tags);
-            }
-        }
     }
 
     @Expose

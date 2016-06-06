@@ -25,6 +25,7 @@ import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
@@ -44,6 +45,7 @@ import java.io.Writer;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +59,20 @@ import java.util.Map;
 @Exposed
 abstract public class Json {
     public Json() {
+    }
+
+    /**
+     * Find all the tags in a JSON
+     * @param tags The tags
+     */
+    public void findTags(HashMap<String, Object> tags) {
+    }
+
+    @Expose("find_tags")
+    public Map<String, Object> findTags() {
+        HashMap<String, Object> tags = new HashMap<>();
+        findTags(tags);
+        return tags;
     }
 
     /**
@@ -352,4 +368,6 @@ abstract public class Json {
     }
 
     public abstract Json annotate(String key, Json value);
+
+
 }

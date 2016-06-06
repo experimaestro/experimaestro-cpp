@@ -30,6 +30,7 @@ import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -79,6 +80,29 @@ public class JsonObject extends Json {
         return Constants.ATOMIC_TYPES.contains(type());
     }
 
+    @Override
+    public void findTags(HashMap<String, Object> tags) {
+        if (this.containsKey(Constants.JSON_TAG_NAME)) {
+            final Json jsonTags = this.get(Constants.JSON_TAG_NAME);
+            if (jsonTags.isSimple()) {
+                final String key = jsonTags.get().toString();
+                try {
+                    tags.put(key, this.get());
+                } catch (RuntimeException e) {
+                    throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
+                }
+            } else if (jsonTags.is_object()) {
+                final JsonObject jsonObject = jsonTags.asObject();
+                jsonObject.entrySet().forEach(e -> {
+                    tags.put(e.getKey(), e.getValue().get().toString());
+                });
+            }
+        }
+
+        for (Json v : this.values()) {
+            v.findTags(tags);
+        }
+    }
 
     /**
      * Get the value json

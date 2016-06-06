@@ -30,6 +30,7 @@ import net.bpiwowar.xpm.utils.Output;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import static java.lang.String.format;
@@ -165,5 +166,10 @@ public class JsonArray extends Json implements Iterable<Json> {
     @Expose(mode = ExposeMode.LENGTH)
     public int _size() {
         return array.size();
+    }
+
+    @Override
+    public void findTags(HashMap<String, Object> tags) {
+        this.forEach(v -> v.findTags(tags));
     }
 }
