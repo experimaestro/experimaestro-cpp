@@ -78,11 +78,20 @@ CREATE TABLE Jobs (
 );
 
 -- Directories and/or files associated to resources
--- Used for cleanup
+-- Used for cleanup and generation
 CREATE TABLE ResourcePaths (
+  -- Reference to the resource
   id   BIGINT        NOT NULL PRIMARY KEY,
+
+  -- The path
   path VARCHAR(4096) NOT NULL,
 
+  -- The file content (e.g. signature) that will be generated
+  content BLOB,
+
+  -- Primary key is resource + path
+  PRIMARY KEY (id, path),
+  -- Delete if the resource goes away
   FOREIGN KEY (id) REFERENCES Resources
     ON DELETE CASCADE
 );
