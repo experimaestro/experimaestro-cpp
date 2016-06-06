@@ -31,16 +31,16 @@ function jsonrpc_error(r) {
 }
 
 /** Create an element */
-var $e = function (e) {
+var $e = function (e) : JQuery {
     return $(document.createElement(e));
 };
 
 /** Create a text node */
-var $t = function (s) {
+var $t = function (s) : JQuery {
     return $(document.createTextNode(s));
 };
 
-function change_counter(state:State, delta) {
+function change_counter(state:State, delta: number) {
     var c = $("#state-" + state + "-count");
     c.text(Number(c.text()) + delta);
 }
@@ -131,7 +131,8 @@ class Resource {
         change_counter(state, +1);
 
         // Put the item in the list
-        this.node.removeClass("state-" + oldstate)
+        this.node
+            .removeClass("state-" + oldstate)
             .addClass("state-" + this.state);
         this.state = state;
     }
@@ -187,17 +188,20 @@ class XPM {
         this.server.call(name, params.params, params.success, params.error)
     }
 
-    handle_ws_open(event) {
+    handle_ws_open() {
         $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
+        var this_xpm = this;
 
         // Set some pinging...
         this.ping = setInterval(function () {
-            this.server.notify("ping");
+            this_xpm.server.notify("ping");
             console.debug("Sent ping");
         }, 120000);
 
         this.server.call("listen", {}, () => {
         }, jsonrpc_error);
+
+        // Load experiments
         this.get_experiments();
     };
 
@@ -218,6 +222,10 @@ class XPM {
         )
     }
 
+    /**
+     * Load a given experiment
+     * @param timestamp
+     */
     load_experiment(timestamp:number) {
         var select = $("#experiment-chooser");
         var tasks_chooser = $("#task-chooser");
@@ -227,6 +235,10 @@ class XPM {
         // Remove resources and counts
         $("#resources").children().remove();
         $("#state-chooser").find(".state-count").text(0);
+        for (var id in this.resources) {
+            this.resources[id].remove();
+        }
+        this.resources = {};
 
         // Access to xpm in callback
         var _this = this;
@@ -240,7 +252,7 @@ class XPM {
                 var set = new Set();
                 for (var _tid in tasks) {
                     let tid = Number.parseInt(_tid);
-                    _this.task2resource[tid] = []
+                    _this.task2resource[tid] = [];
 
                     var tname = tasks[tid];
                     if (!set.has(tname)) {
@@ -469,7 +481,7 @@ class XPM {
 
         if (name == "restart") {
             var request = function (restartDone) {
-                this.request('invalidate', {
+                _this.request('invalidate', {
                     params: {"ids": [r.id], "keep-done": !restartDone, "recursive": true, "restart": true},
                     success: function (resp) {
                         noty({
@@ -680,11 +692,6 @@ $().ready(function () {
             });
     }
 
-    function safe_tags(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-
     function show_class_documentation() {
         var classname = $(this).find("option:selected").text();
         xpm.server.call("documentation.methods", {classname: classname},
@@ -784,7 +791,8 @@ $().ready(function () {
     // Links
     $("#header").find(".links a").button();
 
-    var click_state = function (e) {
+    // Click on a state filter
+    var click_state = function() {
         var checked = $(this).is(':checked');
         if (checked) {
             $("#resources").addClass(this.id);
@@ -858,6 +866,6 @@ $().ready(function () {
         }
     });
 
-})
+});
 
 
