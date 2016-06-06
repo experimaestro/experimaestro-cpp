@@ -372,16 +372,22 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Post processing of a saved resource
      *
-     * @param task
+     * @param task The corresponding task
      * @param resource The saved resource
      */
     public void postProcess(Task task, Resource resource) {
-        if (task == null) task = this.task.get();
+        // Get the current task if needed
+        if (task == null) {
+            task = this.task.get();
+        }
+
         TaskReference taskReference = null;
         if (getExperiment() == null) {
             throw new XPMScriptRuntimeException("Experiment is not set");
         }
+
         try {
+            // If no task, use a dummy one
             if (task == null) {
                 // Create dummy task
                 task = DummyTask.INSTANCE;
@@ -416,6 +422,7 @@ final public class ScriptContext implements AutoCloseable {
                 if (set.isEmpty()) break;
             }
 
+            // Create a new task reference if necessary
             if (set == null || set.isEmpty()) {
                 taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
                 taskReference.save();

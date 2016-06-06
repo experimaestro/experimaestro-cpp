@@ -52,7 +52,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 
 /**
- * A task which is backed up main a Java class
+ * An external task defined by a JSON
  */
 public class ExternalTask extends Task {
     final static private Logger LOGGER = Logger.getLogger();

@@ -601,17 +601,6 @@ public class XPM {
         return job;
     }
 
-    /**
-     * Get the information about a given task
-     *
-     * @param namespace The namespace
-     * @param id        The ID within the namespace
-     * @return
-     */
-    public TaskFactory getTaskFactory(String namespace, String id) {
-        return ScriptContext.get().getFactory(new TypeName(namespace, id));
-    }
-
 
     /**
      * Get experimaestro namespace
@@ -627,28 +616,7 @@ public class XPM {
     }
 
     public Scheduler getScheduler() {
-
         return context().getScheduler();
-    }
-
-    /**
-     * Creates a unique (up to the collision probability) ID based on the hash
-     *
-     * @param basedir    The base directory
-     * @param prefix     The prefix for the directory
-     * @param id         The task ID or any other QName
-     * @param jsonValues the JSON object from which the hash is computed
-     * @return A unique directory
-     */
-    public Path uniqueDirectory(Scriptable scope, java.nio.file.Path basedir, String prefix, TypeName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
-
-        if (basedir == null) {
-            if ((basedir = ScriptContext.get().getWorkingDirectory()) == null) {
-                throw new XPMRuntimeException("Working directory was not set before unique_directory() is called");
-            }
-        }
-        final Json json = JSUtils.toJSON(scope, jsonValues);
-        return new JsonSignature(basedir, prefix, id, json, true).create().getUniquePath();
     }
 
 
