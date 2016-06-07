@@ -26,6 +26,7 @@ import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
@@ -45,7 +46,7 @@ import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
- * The abstract TaskReference object
+ * The abstract task object
  */
 @Exposed
 public abstract class Task {
@@ -61,7 +62,20 @@ public abstract class Task {
      */
     protected Map<String, Value> values = new TreeMap<>();
 
+    /**
+     * Cache for tags
+     */
+    private Map<String, JsonSimple> tags;
+
     protected Task() {
+    }
+
+    /** Return the tags associated with this task */
+    public Map<String, JsonSimple> tags() {
+        if (tags == null) {
+            tags = getInputsAsJson().findTags();
+        }
+        return tags;
     }
 
     /**
@@ -236,6 +250,9 @@ public abstract class Task {
      */
     public final void setParameter(String id, Json value) throws NoSuchParameter {
         try {
+            // Invalidate tag cache
+            tags = null;
+
             final Value v = getValue(id);
             if (v == null) {
                 throw new XPMRuntimeException("No parameter named %s", id);

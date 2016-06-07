@@ -25,7 +25,6 @@ import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
@@ -65,12 +64,12 @@ abstract public class Json {
      * Find all the tags in a JSON
      * @param tags The tags
      */
-    public void findTags(HashMap<String, Object> tags) {
+    public void findTags(HashMap<String, JsonSimple> tags) {
     }
 
     @Expose("find_tags")
-    public Map<String, Object> findTags() {
-        HashMap<String, Object> tags = new HashMap<>();
+    public Map<String, JsonSimple> findTags() {
+        HashMap<String, JsonSimple> tags = new HashMap<>();
         findTags(tags);
         return tags;
     }

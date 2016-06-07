@@ -81,20 +81,20 @@ public class JsonObject extends Json {
     }
 
     @Override
-    public void findTags(HashMap<String, Object> tags) {
+    public void findTags(HashMap<String, JsonSimple> tags) {
         if (this.containsKey(Constants.JSON_TAG_NAME)) {
             final Json jsonTags = this.get(Constants.JSON_TAG_NAME);
             if (jsonTags.isSimple()) {
                 final String key = jsonTags.get().toString();
                 try {
-                    tags.put(key, this.get());
+                    tags.put(key, (JsonSimple) this.valueAsJson());
                 } catch (RuntimeException e) {
                     throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
                 }
             } else if (jsonTags.is_object()) {
                 final JsonObject jsonObject = jsonTags.asObject();
                 jsonObject.entrySet().forEach(e -> {
-                    tags.put(e.getKey(), e.getValue().get().toString());
+                    tags.put(e.getKey(), (JsonSimple) e.getValue());
                 });
             }
         }

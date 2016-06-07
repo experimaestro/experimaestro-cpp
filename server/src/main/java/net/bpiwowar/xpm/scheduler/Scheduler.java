@@ -175,7 +175,7 @@ final public class Scheduler {
     /**
      * Current version of the database (used to run incremental SQL script updates)
      */
-    final static int DBVERSION = 4;
+    final static int DBVERSION = 5;
 
     private XPMConnector xpmConnector;
 

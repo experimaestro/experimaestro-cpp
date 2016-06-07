@@ -115,7 +115,13 @@ public class Experiment implements Identifiable {
 
     public void save() throws SQLException {
         DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
-        experiments.save(this, "INSERT INTO Experiments(name, timestamp) VALUES(?, ?)", st -> {
+
+        // Update the last flag
+        Scheduler.statement("UPDATE Experiments SET last = FALSE WHERE name=?")
+                .setString(1, identifier)
+                .executeUpdate();
+
+        experiments.save(this, "INSERT INTO Experiments(name, timestamp, last) VALUES(?, ?, TRUE)", st -> {
             st.setString(1, identifier);
             st.setTimestamp(2, new Timestamp(timestamp));
         });
@@ -147,7 +153,7 @@ public class Experiment implements Identifiable {
      */
     static public CloseableIterable<Experiment> experiments(boolean latest) throws SQLException {
         final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
-        String query = latest ? "SELECT max(id), name, max(timestamp) FROM Experiments GROUP BY name "
+        String query = latest ? "id, name, timestamp FROM Experiments WHERE last == true"
                 : "SELECT id, name, timestamp FROM Experiments ORDER BY timestamp DESC";
         return experiments.find(query, st -> {
         });

@@ -96,6 +96,23 @@ CREATE TABLE ResourcePaths (
     ON DELETE CASCADE
 );
 
+-- Tags associated to a given resource
+CREATE TABLE ResourceTags (
+  -- The task associated to those tags
+  resource BIGINT NOT NULL,
+  -- The tag name
+  tag      varchar(256) NOT NULL,
+  -- The tag value
+  value    varchar(256) NOT NULL,
+
+  PRIMARY KEY (resource, tag),
+
+  -- Remove tags if task goes away...
+  FOREIGN KEY (resource) REFERENCES Resources
+    ON DELETE CASCADE
+);
+
+
 --
 -- Other
 --
@@ -207,22 +224,26 @@ CREATE TABLE ProcessLocks (
 CREATE TABLE Experiments (
   id IDENTITY,
   name      VARCHAR(256)                        NOT NULL,
-  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  last       BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 CREATE UNIQUE INDEX experiment_name ON Experiments (name, timestamp);
+CREATE INDEX LastExperiments ON Experiments (last);
 
 
 -- Table containing the list of tasks together with their
 -- dependencies
 CREATE TABLE ExperimentTasks (
   id IDENTITY,
-  identifier VARCHAR(256) NOT NULL,
-  experiment BIGINT       NOT NULL,
+  identifier VARCHAR(256)          NOT NULL,
+  experiment BIGINT                NOT NULL,
 
   FOREIGN KEY (experiment) REFERENCES Experiments
     ON DELETE CASCADE
 );
+
+
 
 CREATE TABLE ExperimentHierarchy (
   parent BIGINT NOT NULL,
@@ -233,7 +254,7 @@ CREATE TABLE ExperimentHierarchy (
     ON DELETE CASCADE
 );
 
-
+-- Resources associated to a task
 CREATE TABLE ExperimentResources (
   task     BIGINT NOT NULL,
   resource BIGINT NOT NULL,
@@ -243,22 +264,6 @@ CREATE TABLE ExperimentResources (
   FOREIGN KEY (resource) REFERENCES Resources
     ON DELETE CASCADE
 );
-
-CREATE TABLE ExperimentTags (
-  -- The task associated to those tags
-  task     BIGINT NOT NULL,
-  -- The tag name
-  tag      varchar(256) NOT NULL,
-  -- The tag value
-  value    varchar(256) NOT NULL,
-
-  PRIMARY KEY (task, tag),
-
-  -- Remove tags if task goes away...
-  FOREIGN KEY (task) REFERENCES ExperimentTasks
-    ON DELETE CASCADE
-);
-
 
 
 -- Table for cache

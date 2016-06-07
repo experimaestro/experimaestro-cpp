@@ -169,7 +169,7 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
-    public void findTags(HashMap<String, Object> tags) {
+    public void findTags(HashMap<String, JsonSimple> tags) {
         this.forEach(v -> v.findTags(tags));
     }
 }

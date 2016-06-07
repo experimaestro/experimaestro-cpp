@@ -39,6 +39,7 @@ import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonArray;
 import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.json.JsonString;
 import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
 import net.bpiwowar.xpm.manager.tasks.TasksLoader;
@@ -492,10 +493,8 @@ public class Functions {
 
     @Expose
     @Help("Find all tags and return a hash map")
-    static public Map<String, Object> find_tags(Json json) {
-        HashMap<String, Object> tags = new HashMap<>();
-        Json.findTags(json, tags);
-        return tags;
+    static public Map<String, JsonSimple> find_tags(Json json) {
+        return json.findTags();
     }
 
     @Expose(context = true, optional = 1, optionalsAtStart = true)
@@ -507,7 +506,7 @@ public class Functions {
             @Argument(name = "json", help = "The JSON to inspect")
                     JsonObject json
     ) {
-        final Map<String, Object> tags = find_tags(json);
+        final Map<String, JsonSimple> tags = find_tags(json);
         if (json.sealed()) {
             json = (JsonObject) json.copy(false);
         }
