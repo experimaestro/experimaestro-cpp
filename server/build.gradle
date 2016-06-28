@@ -1,6 +1,7 @@
 plugins {
     // Typescript
     id "de.richsource.gradle.plugins.typescript" version "1.8.0"
+    id "com.moowork.node" version "0.12"
 
     // Access to git information
     id 'org.ajoberstar.grgit' version '1.2.0'
@@ -113,8 +114,7 @@ task gitVersion(type: Copy) {
 }
 compileJava.dependsOn gitVersion
 
-
-task(server, dependsOn: 'classes', type: JavaExec) {
+task(server, dependsOn: ['classes', 'compileTypeScript'], type: JavaExec) {
     main = 'bpiwowar.experiments.Run'
     classpath = sourceSets.main.runtimeClasspath
     args 'server'

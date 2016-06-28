@@ -81,7 +81,7 @@ CREATE TABLE Jobs (
 -- Used for cleanup and generation
 CREATE TABLE ResourcePaths (
   -- Reference to the resource
-  id   BIGINT        NOT NULL PRIMARY KEY,
+  id   BIGINT        NOT NULL,
 
   -- The path
   path VARCHAR(4096) NOT NULL,
