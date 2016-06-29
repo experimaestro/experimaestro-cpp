@@ -721,8 +721,8 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     }
 
-    @RPCMethod
-    public Map<String, String> paths(@RPCArgument(name = "id", required = false) String id) throws SQLException {
+    @RPCMethod(help = "Returns the list of paths for a given task")
+    public Map<String, String> paths(@RPCArgument(name = "id", required = true) String id) throws SQLException {
         final Resource resource = getResource(id);
         final Path locator = resource.getLocator();
         HashMap<String, String> map = new HashMap<>();
@@ -735,11 +735,11 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 final String hostPath = access.getPath();
 
                 try {
+                    Path path = connector.resolveFile(hostPath)
+                            .resolve(_path.getLocalPath())
+                            .normalize();
                     map.put(connector.getHostName(),
-                            connector.resolveFile(hostPath)
-                                    .resolve(_path.getLocalPath())
-                                    .normalize()
-                                    .getParent()
+                            path.getParent()
                                     .toAbsolutePath()
                                     .toString());
                 } catch (IOException e) {
@@ -749,7 +749,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
             }
         } else {
-            map.put("local", locator.toAbsolutePath().toString());
+            map.put("local", locator.getParent().toAbsolutePath().toString());
         }
 
         return map;
@@ -832,7 +832,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         for (Listener listener : listeners) {
             settings.scheduler.removeListener(listener);
         }
-        for(FileViewer fileViewer: fileViewers.values()) {
+        for (FileViewer fileViewer : fileViewers.values()) {
             try {
                 fileViewer.close();
             } catch (IOException e) {
@@ -849,7 +849,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             @RPCArgument(name = "type") String type
     ) throws IOException, SQLException {
         final Resource resource = getResource(id);
-        switch(type) {
+        switch (type) {
             case "stdout":
                 return resource.outputFile().toAbsolutePath().toUri().toString();
             case "stderr":
@@ -861,7 +861,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     @RPCMethod(name = "view-file", help = "View a part of a file")
     public String fileViewer(
             @RPCArgument(name = "uri", help = "URI for file") String uri,
-            @RPCArgument(name = "position", help="Position in file. If negative, relative to the end") long position,
+            @RPCArgument(name = "position", help = "Position in file. If negative, relative to the end") long position,
             @RPCArgument(name = "size") int size) throws IOException {
 
         synchronized (fileViewers) {
