@@ -382,7 +382,7 @@ final public class ScriptContext implements AutoCloseable {
         if (task != null) {
             final Map<String, JsonSimple> tags = task.tags();
             if (!tags.isEmpty()) {
-                try (XPMStatement st = Scheduler.statement("INSERT INTO Tags(resource,tag,value) VALUES(?,?,?)")) {
+                try (XPMStatement st = Scheduler.statement("INSERT INTO ResourceTags(resource,tag,value) VALUES(?,?,?)")) {
                     st.setLong(1, resource.getId());
                     for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
                         st.setString(2, entry.getKey());
