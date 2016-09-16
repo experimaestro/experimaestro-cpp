@@ -66,22 +66,22 @@ class Resource {
     locator:string;
 
     constructor(r) {
-        this.state = r.state;
+        this.state = r.state.toLowerCase();
         this.id = r.id;
         this.locator = r.locator;
 
         var link = $e("a")
             .attr("href", "javascript:void(0)")
-            .append($("<span class='locator'>" + r.locator + "</span>"))
+            .append($("<span class='locator'>" + this.locator + "</span>"))
             .on("click", $.proxy(xpm.resource_link_callback, xpm));
 
 
         this.node = $e("li")
-            .addClass("state-" + r.state)
+            .addClass("state-" + this.state)
             .addClass("resource")
-            .attr("id", "R" + r.id)
+            .attr("id", "R" + this.id)
             .append($e("span").addClass("resource-actions")
-                .append($("<span class='resource-id'>" + r.id + "</span>"))
+                .append($("<span class='resource-id'>" + this.id + "</span>"))
                 .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
                 .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
                 .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
@@ -133,7 +133,7 @@ class Resource {
         // Put the item in the list
         this.node
             .removeClass("state-" + oldstate)
-            .addClass("state-" + this.state);
+            .addClass("state-" + state);
         this.state = state;
     }
 
@@ -227,6 +227,8 @@ class XPM {
      * @param timestamp
      */
     load_experiment(timestamp:number) {
+        console.log("Loading new experiment");
+
         var select = $("#experiment-chooser");
         var tasks_chooser = $("#task-chooser");
 
@@ -318,6 +320,7 @@ class XPM {
                 console.log("New timestamp: " + r.experiment.timestamp);
                 _this.experiment.timestamp = r.experiment.timestamp;
                 $.each(r.resources, function (ix, v) {
+                    console.log("Adding resource " + v.id + " (load_experiment)")
                     var r = _this.add_resource(v);
                     _this.task2resource[v.taskid].push(r);
                 });
@@ -369,13 +372,15 @@ class XPM {
 
             case "RESOURCE_ADDED":
             {
+                console.log("Adding resource " + r.id + " (resource added)")
                 this.add_resource(r);
                 break;
             }
 
             case "EXPERIMENT_RESOURCE_ADDED":
                 if (this.experiment.name == r.name && this.experiment.timestamp == r.timestamp) {
-                    this.add_resource(r);
+                    console.log("Adding resource " + r.resource.id + " (resource experiment added)")
+                    this.add_resource(r.resource);
                 }
                 break;
 
