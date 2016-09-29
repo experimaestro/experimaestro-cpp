@@ -387,6 +387,7 @@ final public class ScriptContext implements AutoCloseable {
                     for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
                         st.setString(2, entry.getKey());
                         st.setString(3, entry.getValue().get().toString());
+                        st.execute();
                     }
 
                 } catch (SQLException e) {

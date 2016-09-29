@@ -433,6 +433,26 @@ public class Resource implements Identifiable {
         JsonObject object = new JsonObject();
         object.addProperty("id", getId());
         object.addProperty("status", getState().toString());
+
+        // Add tags
+        JsonObject tags = new JsonObject();
+        int count = 0;
+        try(XPMStatement st = Scheduler.statement("SELECT tag, value FROM ResourceTags WHERE resource=?")) {
+            st.setLong(1, getId());
+            st.execute();
+            try(XPMResultSet set = st.resultSet()) {
+                while (set.next()) {
+                    ++count;
+                    tags.addProperty(set.getString(1), set.getString(2));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error(e);
+        }
+        if (count > 0) {
+            object.add("tags", tags);
+        }
+
         return object;
     }
 
