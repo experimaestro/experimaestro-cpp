@@ -143,6 +143,11 @@ public class PythonUtils {
             return new PythonMethod(object, function);
         }
 
+        // No need to check further if the object is null
+        if (object == null) {
+            return null;
+        }
+
         // Search for a property
         final PropertyAccess propertyAccess = description.getFields().get(name);
         if (propertyAccess != null) {

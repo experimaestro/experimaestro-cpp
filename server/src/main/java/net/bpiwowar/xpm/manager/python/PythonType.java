@@ -21,15 +21,7 @@ package net.bpiwowar.xpm.manager.python;
 import net.bpiwowar.xpm.manager.scripting.ClassDescription;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.python.core.Py;
-import org.python.core.PyClass;
-import org.python.core.PyFrame;
-import org.python.core.PyFunction;
-import org.python.core.PyObject;
-import org.python.core.PyString;
-import org.python.core.PyStringMap;
-import org.python.core.PyTuple;
-import org.python.core.PyType;
+import org.python.core.*;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -67,16 +59,36 @@ class PythonType extends PyType {
 
     @Override
     public PyObject __findattr_ex__(String name) {
-        // Search for a function
+        // Search for a function (static function)
         final PyObject attribute = PythonUtils.getAttribute(name, null, description);
         if (attribute == null) {
+
+            switch (name) {
+                case "__instancecheck__":
+                    return IS_INSTANCE;
+            }
+
             noAttributeError(name);
         }
         return attribute;
     }
 
+    class IsInstance extends PyObject {
+        @Override
+        public PyObject __call__(PyObject[] args, String[] keywords) {
+            if (args[0] instanceof PythonObject)
+                return PythonType.this.description.getWrappedClass().isInstance(((PythonObject) args[0]).object)
+                        ? Py.True : Py.False;
+
+            return Py.False;
+        }
+    }
+
+    final private IsInstance IS_INSTANCE = new IsInstance();
+
     /**
      * Get a Python class for a givenjava class
+     *
      * @param clazz The Java class
      * @return
      */

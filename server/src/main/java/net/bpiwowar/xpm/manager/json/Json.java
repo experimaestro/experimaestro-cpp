@@ -77,6 +77,7 @@ abstract public class Json {
     /**
      * Returns true if this Json object is a simple type
      */
+    @Expose
     public boolean isSimple() {
         return true;
     }
@@ -86,6 +87,7 @@ abstract public class Json {
      *
      * @return
      */
+    @Expose
     abstract public Object get();
 
     /**
