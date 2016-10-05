@@ -274,9 +274,9 @@ class XPM {
                         else _this.filtered_tasks.delete(taskids[i]);
                         for (var j = 0; j < resources.length; ++j) {
                             if (display) {
-                                $(resources[j]).removeClass("notintask");
+                                $(resources[j].node).removeClass("notintask");
                             } else {
-                                $(resources[j]).addClass("notintask");
+                                $(resources[j].node).addClass("notintask");
                             }
                         }
                     }
@@ -299,12 +299,14 @@ class XPM {
                         // Remove everything for the first one
                         if (tag_count == 0) $("#resources").children().addClass("notintask");
                         ++tag_count;
+                        // And then filter
                         change_state(ui.tagLabel, true);
                     },
 
                     afterTagRemoved: function (event, ui) {
                         --tag_count;
                         if (tag_count == 0) {
+                            // Show everything
                             _this.filtered_tasks.clear();
                             $("#resources").children().removeClass("notintask");
                         } else {
@@ -322,7 +324,9 @@ class XPM {
                 $.each(r.resources, function (ix, v) {
                     console.log("Adding resource " + v.id + " (load_experiment)")
                     var r = _this.add_resource(v);
-                    _this.task2resource[v.taskid].push(r);
+                    if (r) {
+                        _this.task2resource[v.taskid].push(r);
+                    }
                 });
             },
             jsonrpc_error
@@ -426,6 +430,7 @@ class XPM {
             if (resource.state == "running" && r.progress > 0) {
                 resource.progress(r);
             }
+            return resource;
         }
     };
 
