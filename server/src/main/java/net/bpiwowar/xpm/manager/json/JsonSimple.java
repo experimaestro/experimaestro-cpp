@@ -1,8 +1,11 @@
 package net.bpiwowar.xpm.manager.json;
 
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+
 /**
  * Base class for all simple values
  */
+@Exposed
 public abstract class JsonSimple extends Json {
     @Override
     final public boolean isSimple() {
