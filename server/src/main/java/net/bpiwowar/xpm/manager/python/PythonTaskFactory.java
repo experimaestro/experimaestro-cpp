@@ -2,6 +2,7 @@ package net.bpiwowar.xpm.manager.python;
 
 import org.python.core.PyClass;
 import org.python.core.PyDictionary;
+import org.python.core.PyObject;
 import org.python.core.PyString;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.manager.*;
@@ -18,7 +19,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 class PythonTaskFactory extends TaskFactory {
-    final PyClass pyClass;
+    final PyObject pyClass;
     private Map<String, Input> inputs = new HashMap<>();
     private Type output;
 
@@ -32,7 +33,7 @@ class PythonTaskFactory extends TaskFactory {
         return selected;
     }
 
-    public PythonTaskFactory(Repository repository, TypeName id, String version, String group, PyClass pyClass) throws ValueMismatchException {
+    public PythonTaskFactory(Repository repository, TypeName id, String version, String group, PyObject pyClass) throws ValueMismatchException {
         super(repository, id, version, group);
         this.pyClass = pyClass;
 

@@ -14,7 +14,7 @@ import static net.bpiwowar.xpm.manager.python.PythonType.getPyClass;
  * Python specific functions
  */
 @Exposed
-public class PythonFunctions  {
+public class PythonFunctions {
 
     @Expose
     static public PyObject task(String id) {
@@ -22,7 +22,7 @@ public class PythonFunctions  {
     }
 
     /**
-     * Transforms a class into a task
+     * Transforms a class into an experimaestro task
      */
     private static class TaskAnnotation extends PyObject {
         private final String id;
@@ -33,17 +33,33 @@ public class PythonFunctions  {
 
         @Override
         public PyObject __call__(PyObject[] args, String[] keywords) {
-            if (args.length != 1 && !(args[0] instanceof PyClass)) {
-                throw new IllegalArgumentException("Task annotation expects a class");
+            PyObject arg = args[0];
+            if (args.length != 1) {
+                throw new IllegalArgumentException("Task annotation expects one argument");
             }
 
-            PyClass pyClass = (PyClass) args[0];
+            if (arg instanceof PyClass) {
+                PyClass pyClass = (PyClass) arg;
 
-            final PyObject[] elements = new PyObject[pyClass.__bases__.__len__() + 1];
-            System.arraycopy(pyClass.__bases__.getArray(), 0, elements, 1, elements.length - 1);
-            elements[0] = getPyClass(PythonTask.class);
+                PyTuple bases__ = pyClass.__bases__;
 
-            pyClass.__bases__ = new PyTuple(elements);
+                final PyObject[] elements = new PyObject[bases__.__len__() + 1];
+                System.arraycopy(pyClass.__bases__.getArray(), 0, elements, 1, elements.length - 1);
+                elements[0] = getPyClass(PythonTask.class);
+
+                pyClass.__bases__ = new PyTuple(elements);
+            } else if (arg instanceof PyType) {
+                PyType pyType = (PyType) arg;
+                PyObject[] bases = ((PyTuple)pyType.getBases()).getArray();
+                final PyObject[] elements = new PyObject[bases.length + 1];
+                for(int i = 0; i < elements.length-1; ++i) {
+                    elements[i] = bases[i];
+                }
+                elements[elements.length-1] = getPyClass(PythonTask.class);
+                pyType.setBases(new PyTuple(elements));
+            } else {
+                throw new IllegalArgumentException("Task annotation expects a class");
+            }
 
             ScriptContext sc = ScriptContext.get();
             String version = null;
@@ -51,12 +67,12 @@ public class PythonFunctions  {
 
             final TypeName qid = TypeName.parse(id, new PythonNamespaceContext());
             try {
-                sc.getRepository().addFactory(new PythonTaskFactory(sc.getRepository(), qid, version, group, pyClass));
+                sc.getRepository().addFactory(new PythonTaskFactory(sc.getRepository(), qid, version, group, arg));
             } catch (ValueMismatchException e) {
                 throw new XPMScriptRuntimeException(e);
             }
 
-            return pyClass;
+            return arg;
         }
 
     }
