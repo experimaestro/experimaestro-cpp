@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.DirectLauncher;
 import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.DummyTask;
@@ -110,7 +111,7 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Parameters
      */
-    MapStack<String, String> parameters;
+    MapStack<Object, Object> parameters;
 
     /**
      * Properties set by the script that will be returned
@@ -184,6 +185,7 @@ final public class ScriptContext implements AutoCloseable {
             workingDirectory = parent.workingDirectory;
             defaultLauncher = parent.defaultLauncher;
             defaultLocks = parent.defaultLocks;
+            parameters = parent.parameters;
         }
 
 
@@ -240,7 +242,8 @@ final public class ScriptContext implements AutoCloseable {
         }
 
         if (defaultLauncher.get() != null) {
-            resource.setLauncher(defaultLauncher.get());
+            Launcher launcher = defaultLauncher.get();
+            resource.setLauncher(launcher, (LauncherParameters) parameters.get(launcher));
         }
     }
 
@@ -361,11 +364,11 @@ final public class ScriptContext implements AutoCloseable {
         threadContext.set(sc);
     }
 
-    public void setParameter(String key, String value) {
+    public void setParameter(Object key, Object value) {
         parameters.put(key, value);
     }
 
-    public String getParameter(String key) {
+    public Object getParameter(Object key) {
         return parameters.get(key);
     }
 
@@ -373,16 +376,19 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Post processing of a saved resource
      *
-     * @param task The corresponding task
+     * @param task     The corresponding task
      * @param resource The saved resource
      */
     public void postProcess(Task task, Resource resource) {
         // --- Add tags
-
         if (task != null) {
             final Map<String, JsonSimple> tags = task.tags();
             if (!tags.isEmpty()) {
-                try (XPMStatement st = Scheduler.statement("INSERT INTO ResourceTags(resource,tag,value) VALUES(?,?,?)")) {
+                try (XPMStatement st1 = Scheduler.statement("DELETE FROM ResourceTags WHERE resource=?");
+                     XPMStatement st = Scheduler.statement("INSERT INTO ResourceTags(resource,tag,value) VALUES(?,?,?)")) {
+                    st1.setLong(1, resource.getId());
+                    st1.execute();
+
                     st.setLong(1, resource.getId());
                     for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
                         st.setString(2, entry.getKey());
@@ -486,7 +492,7 @@ final public class ScriptContext implements AutoCloseable {
 
     public static Logger mainLogger() {
         final ScriptContext sc = ScriptContext.get();
-        if (sc  == null) return LOGGER;
+        if (sc == null) return LOGGER;
         return sc.getMainLogger();
     }
 }

@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager.tasks;
  */
 
 import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
@@ -152,36 +153,38 @@ public class ExternalTask extends Task {
                             taskLogger.info(String.format("Overwriting resource [%s]", job));
                         } catch (ExperimaestroCannotOverwrite e) {
                             taskLogger.warn("Cannot override resource [%s]", old);
-                            throw new RuntimeException(e);
+                            job = (CommandLineTask) old;
                         }
                     } else {
                         job.save();
                     }
 
-                    final String uniqueDirString = uniqueDir.toUri().toString();
+                    if (job != old) {
+                        final String uniqueDirString = uniqueDir.toUri().toString();
 
-                    // Retrieve already registered paths
-                    if (old != null) {
-                        try (XPMStatement st = Scheduler.statement("DELETE FROM ResourcePaths WHERE id=? and path <> ?")) {
+                        // Retrieve already registered paths
+                        if (old != null) {
+                            try (XPMStatement st = Scheduler.statement("DELETE FROM ResourcePaths WHERE id=? and path <> ?")) {
+                                st.setLong(1, job.getId());
+                                st.setString(2, uniqueDirString);
+                                st.execute();
+                            }
+                        }
+
+                        try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ResourcePaths(id, path) VALUES(?,?)")) {
                             st.setLong(1, job.getId());
                             st.setString(2, uniqueDirString);
                             st.execute();
+                        } catch (SQLIntegrityConstraintViolationException e) {
+                            taskLogger.debug(e, "constraint violation while storing path for %s", this);
+                        } catch (SQLException e) {
+                            taskLogger.warn(e, "while storing path for resource %s: directory deletion will not work", this);
                         }
-                    }
 
-                    try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ResourcePaths(id, path) VALUES(?,?)")) {
-                        st.setLong(1, job.getId());
-                        st.setString(2, uniqueDirString);
-                        st.execute();
-                    } catch (SQLIntegrityConstraintViolationException e) {
-                        taskLogger.debug(e, "constraint violation while storing path for %s", this);
-                    } catch (SQLException e) {
-                        taskLogger.warn(e, "while storing path for resource %s: directory deletion will not work", this);
+                        taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                     }
-
-                    taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
+                    scriptContext.postProcess(this, job);
                 }
-                scriptContext.postProcess(this, job);
             }
 
         } catch (XPMRuntimeException e) {

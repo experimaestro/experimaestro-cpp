@@ -22,17 +22,43 @@
 package net.bpiwowar.xpm.connectors;
 
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Property;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
+
+import static java.lang.String.format;
 
 /**
  * OAR specific parameters
  */
 @Exposed
 public class OARParameters extends LauncherParameters {
-    int cores = 1;
-    int memory = 0;
+    static final OARParameters DEFAULT = new OARParameters(null);
+
+    @Property
+    public int cores = 1;
+
+    @Property
+    public int nodes = 1;
+
+    @Property
+    public int memory = 0;
+
+    @Property
+    public long jobDuration = 30 * 24 * 60 * 60; // 24 days per default
 
     public OARParameters(OARLauncher launcher) {
         super(launcher);
+    }
+
+    public String oarSpecification() {
+        long hours = this.jobDuration;
+
+        long seconds = hours % 60;
+        hours /= 60;
+
+        long minutes = hours % 60;
+        hours /= 60;
+
+        return format("nodes=%d/core=%d,walltime=%d:%02d:%02d", nodes, cores, hours, minutes, seconds);
     }
 }

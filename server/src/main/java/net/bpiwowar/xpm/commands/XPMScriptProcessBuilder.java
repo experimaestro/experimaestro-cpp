@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.commands;
 
 import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
 
 import java.io.IOException;
 import java.net.URL;
@@ -45,6 +46,11 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     protected Launcher launcher;
 
     /**
+     * Launcher parameters
+     */
+    protected final LauncherParameters parameters;
+
+    /**
      * The script file
      */
     protected Path scriptFile;
@@ -66,11 +72,12 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     protected URL notificationURL;
 
-    public XPMScriptProcessBuilder(Launcher launcher, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
+    public XPMScriptProcessBuilder(Launcher launcher, LauncherParameters parameters, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
         this.launcher = launcher;
+        this.parameters = parameters;
         this.scriptFile = scriptFile;
         this.path = scriptFile;
-        this.processBuilder = processBuilder == null ? launcher.processBuilder() : processBuilder;
+        this.processBuilder = processBuilder == null ? launcher.processBuilder(parameters) : processBuilder;
     }
 
     /**

@@ -20,9 +20,7 @@ package net.bpiwowar.xpm.connectors;
 
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-
-import java.io.IOException;
-import java.nio.file.Path;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
 
 /**
  * A default launcher uses the SingleHostConnector process builders
@@ -37,7 +35,7 @@ public class DirectLauncher extends Launcher {
     }
 
     @Override
-    public AbstractProcessBuilder processBuilder() {
+    public AbstractProcessBuilder processBuilder(LauncherParameters parameters) {
         final AbstractProcessBuilder builder = connector.getMainConnector().processBuilder();
         builder.environment(environment);
         return builder;

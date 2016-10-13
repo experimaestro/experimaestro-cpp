@@ -29,6 +29,7 @@ import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.Output;
@@ -158,13 +159,14 @@ public class OARLauncher extends Launcher {
     }
 
     @Override
-    public AbstractProcessBuilder processBuilder() throws FileSystemException {
-        return new ProcessBuilder(connector.getMainConnector());
+    public AbstractProcessBuilder processBuilder(LauncherParameters parameters) throws FileSystemException {
+        return new ProcessBuilder(connector.getMainConnector(),
+                parameters instanceof OARParameters ? (OARParameters)parameters : null);
     }
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile, LauncherParameters parameters) throws IOException {
-        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this, processBuilder());
+        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this, parameters, processBuilder(parameters));
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
         unixScriptProcessBuilder.environment(environment);
         if (useNotify) {
@@ -246,16 +248,22 @@ public class OARLauncher extends Launcher {
 
         String shortLivedJobDirectory = ".experimaestro/oar";
 
+        // The parameters
+        OARParameters parameters = OARParameters.DEFAULT;
+
         // The associated connector
         private SingleHostConnector connector;
 
-        public ProcessBuilder(SingleHostConnector connector) {
-            this(connector, false);
+        public ProcessBuilder(SingleHostConnector connector, OARParameters parameters) {
+            this(connector, parameters, false);
         }
 
-        public ProcessBuilder(SingleHostConnector connector, boolean shortLived) {
+        public ProcessBuilder(SingleHostConnector connector, OARParameters parameters, boolean shortLived) {
             this.connector = connector;
             this.shortLived = shortLived;
+            if (parameters != null) {
+                this.parameters = parameters;
+            }
             useJobKey = connector instanceof SSHConnector;
         }
 
@@ -337,6 +345,11 @@ public class OARLauncher extends Launcher {
                 ArrayList<String> command = new ArrayList<>();
 
                 command.add(oarCommand);
+
+                // OAR specification
+                command.add("-l");
+                command.add(parameters.oarSpecification());
+
                 command.add("--name");
                 command.add('"' + quotedProtect(name) + '"');
                 if (useNotify) {

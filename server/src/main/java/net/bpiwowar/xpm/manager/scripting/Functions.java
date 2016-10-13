@@ -461,7 +461,7 @@ public class Functions {
     }
 
     @Expose
-    static public String parameters(String key) {
+    static public Object parameters(String key) {
         return ScriptContext.get().getParameter(key);
     }
 
