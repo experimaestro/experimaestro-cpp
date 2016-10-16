@@ -25,12 +25,12 @@ import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.utils.Functional;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -93,15 +93,16 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      *
      * @param file
      * @param launcher
+     * @param parameters
      * @throws IOException
      */
 
-    public UnixScriptProcessBuilder(Path file, Launcher launcher) throws IOException {
-        super(launcher, file, null);
+    public UnixScriptProcessBuilder(Path file, Launcher launcher, LauncherParameters parameters) throws IOException {
+        super(launcher, parameters, file, null);
     }
 
-    public UnixScriptProcessBuilder(Path scriptFile, Launcher launcher, AbstractProcessBuilder processBuilder) throws IOException {
-        super(launcher, scriptFile, processBuilder);
+    public UnixScriptProcessBuilder(Path scriptFile, Launcher launcher, LauncherParameters parameters, AbstractProcessBuilder processBuilder) throws IOException {
+        super(launcher, parameters, scriptFile, processBuilder);
     }
 
     /**

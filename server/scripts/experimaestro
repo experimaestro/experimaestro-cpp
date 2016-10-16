@@ -143,6 +143,10 @@ p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "W
 
 subparsers.add_parser("ping", help="Ping the server")
 
+p_tokenlimit = subparsers.add_parser("set-token-limit", help="Set the token limit")
+p_tokenlimit.add_argument('tokenid', help="The token resource ID (internal or external)")
+p_tokenlimit.add_argument('limit', help="The new limit")
+
 subparsers.add_parser("build-information", help="Returns experimaestro build information")
 
 # Parse arguments
@@ -615,6 +619,12 @@ def command_information(args):
     json.dump(server.getResourceInformation({"id": args.resourceId[0]}), sys.stdout)
     sys.stdout.write("\n")
 
+def Server(function):
+    return lambda args : function(Configuration(args).getJsonServer(), args)
+
+@Server
+def command_set_token_limit(server, args):
+    json.dump(server.setTokenLimit({"tokenId": args.tokenid, "limit": args.limit}), sys.stdout)
 
 def command_invalidate(args):
     server = Configuration(args).getJsonServer()

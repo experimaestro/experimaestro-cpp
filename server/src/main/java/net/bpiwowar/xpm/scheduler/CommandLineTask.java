@@ -98,10 +98,12 @@ public class CommandLineTask extends Job {
      */
     private Path jobErrorPath;
 
+    /** Construct from database */
     public CommandLineTask(long id, Path path) throws SQLException {
         super(id, path);
     }
 
+    /** Construct a new command line object */
     public CommandLineTask(Path path) throws IOException {
         super(path);
     }
@@ -190,8 +192,9 @@ public class CommandLineTask extends Job {
         return info;
     }
 
-    public void setLauncher(Launcher launcher) {
+    public void setLauncher(Launcher launcher, LauncherParameters parameters) {
         this.launcher = launcher;
+        this.parameters = parameters;
     }
 
     /**
@@ -238,6 +241,10 @@ public class CommandLineTask extends Job {
             return jobErrorPath;
         }
         return Resource.ERR_EXTENSION.transform(getLocator());
+    }
+
+    public void setParameters(LauncherParameters parameters) {
+        this.parameters = parameters;
     }
 
     @Override

@@ -907,7 +907,7 @@ public class Resource implements Identifiable {
     /**
      * Does nothing for a resource
      */
-    public void setLauncher(Launcher launcher) {
+    public void setLauncher(Launcher launcher, LauncherParameters launcherParameters) {
     }
 
     public Dependency createDependency() {

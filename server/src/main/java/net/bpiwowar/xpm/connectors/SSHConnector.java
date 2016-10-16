@@ -387,7 +387,7 @@ public class SSHConnector extends SingleHostConnector {
             launcher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         }
         final Logger logger = ScriptContext.get().getMainLogger();
-        AbstractProcessBuilder builder = launcher.processBuilder();
+        AbstractProcessBuilder builder = launcher.processBuilder(null);
         builder.command(command);
         String returned = builder.execute(logger);
         return returned;

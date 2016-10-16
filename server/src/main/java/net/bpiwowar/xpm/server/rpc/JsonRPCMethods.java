@@ -44,6 +44,7 @@ import net.bpiwowar.xpm.scheduler.Listener;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.TokenResource;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -809,6 +810,25 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         }
         return n;
     }
+
+    @RPCMethod(help = "Set token limit")
+    public boolean setTokenLimit(
+            @RPCArgument(name="tokenId") String tokenId,
+            @RPCArgument(name="limit") int limit) throws SQLException {
+        Resource resource = getResource(tokenId);
+        if (resource == null) {
+            throw new IllegalArgumentException(format("Not such resource id [%s]", tokenId));
+        }
+
+        if (!(resource instanceof TokenResource)) {
+            throw new IllegalArgumentException(format("Resource [%s] is not a token", tokenId));
+        }
+
+        TokenResource tokenResource = (TokenResource) resource;
+        tokenResource.setLimit(limit);
+        return true;
+    }
+
 
     @RPCMethod(help = "Listen to XPM events")
     public boolean listen() {

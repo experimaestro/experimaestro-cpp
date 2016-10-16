@@ -40,20 +40,18 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.JsonSignature;
 import net.bpiwowar.xpm.manager.Module;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
-import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonResource;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
@@ -76,7 +74,6 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -388,7 +385,7 @@ public class XPM {
 
         // Run the process and captures the output
 
-        AbstractProcessBuilder builder = launcher.processBuilder();
+        AbstractProcessBuilder builder = launcher.processBuilder(null);
 
         SingleHostConnector commandConnector = launcher.getMainConnector();
         try (CommandContext commandEnv = new CommandContext.Temporary(launcher)) {
@@ -481,7 +478,7 @@ public class XPM {
             if (options.containsKey("launcher")) {
                 final Object launcher = options.get("launcher");
                 if (launcher != null)
-                    job.setLauncher((Launcher) launcher);
+                    job.setLauncher((Launcher) launcher, (LauncherParameters) scriptContext.getParameter(launcher));
 
             }
 

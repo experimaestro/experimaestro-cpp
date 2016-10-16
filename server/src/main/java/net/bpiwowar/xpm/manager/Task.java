@@ -348,8 +348,7 @@ public abstract class Task {
     @Expose("run")
     public Json run(boolean simulate, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
         try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
-            IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
-            Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
+            Stream.of(parameters).forEach(p -> scriptContext.setParameter(p.getKey(), p));
 
             ScriptContext.get().simulate(simulate);
             return run(scriptContext);

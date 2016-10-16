@@ -73,8 +73,9 @@ public abstract class Launcher implements Serializable {
      * Creates and returns a new process builder
      *
      * @return A process builder
+     * @param parameters
      */
-    public abstract AbstractProcessBuilder processBuilder() throws FileSystemException;
+    public abstract AbstractProcessBuilder processBuilder(LauncherParameters parameters) throws FileSystemException;
 
     /**
      * Creates a script builder
@@ -85,7 +86,7 @@ public abstract class Launcher implements Serializable {
      * @throws FileSystemException if an exception occurs while accessing the script file
      */
     public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile, LauncherParameters parameters) throws IOException {
-        UnixScriptProcessBuilder xpmScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this);
+        UnixScriptProcessBuilder xpmScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this, parameters);
         xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
         xpmScriptProcessBuilder.environment(environment);
         return xpmScriptProcessBuilder;
@@ -162,7 +163,7 @@ public abstract class Launcher implements Serializable {
     @Expose()
     public String environment(String key) throws IOException, LaunchException, InterruptedException {
         if (launcherEnvironment == null) {
-            AbstractProcessBuilder builder = processBuilder();
+            AbstractProcessBuilder builder = processBuilder(null);
             builder.command("env");
             final Logger logger = ScriptContext.get().getMainLogger();
             launcherEnvironment = new HashMap<>();
@@ -184,4 +185,10 @@ public abstract class Launcher implements Serializable {
         }
         return launcherEnvironment.get(key);
     }
+
+    @Expose
+    public LauncherParameters parameters() {
+        return new LauncherParameters(this);
+    }
+
 }
