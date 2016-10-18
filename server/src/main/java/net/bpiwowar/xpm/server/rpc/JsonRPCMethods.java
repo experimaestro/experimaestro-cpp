@@ -103,10 +103,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
      */
     Map<String, FileViewer> fileViewers = new HashMap<>();
 
-    /**
-     * Server
-     */
-    private Server server;
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
     public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException {
@@ -568,7 +564,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             public void run() {
                 boolean stopped = false;
                 try {
-                    server.stop();
+                    settings.server.stop();
                     stopped = true;
                 } catch (Exception e) {
                     LOGGER.error(e, "Could not stop properly jetty");

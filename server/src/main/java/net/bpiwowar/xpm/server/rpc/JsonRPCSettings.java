@@ -11,7 +11,7 @@ import org.eclipse.jetty.server.Server;
 public class JsonRPCSettings {
     final Scheduler scheduler;
     final Repositories repository;
-    private final Server server;
+    final Server server;
     final ServerSettings serverSettings;
 
     public JsonRPCSettings(Scheduler scheduler, Repositories repository, Server server, ServerSettings serverSettings) {
