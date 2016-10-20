@@ -644,11 +644,13 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
                 final ResourceState rsrcState = resource.getState();
 
-                if (rsrcState == ResourceState.RUNNING)
-                    throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+                // Stop running jobs
+                if (rsrcState == ResourceState.RUNNING) {
+                    ((Job)resource).stop();
+                }
 
                 // The job is active, so we have nothing to do
-                if (rsrcState.isActive()) {
+                if (rsrcState.isActive() && rsrcState != ResourceState.RUNNING) {
                     // Just notify in case
                     Scheduler.notifyRunners();
                     continue;
