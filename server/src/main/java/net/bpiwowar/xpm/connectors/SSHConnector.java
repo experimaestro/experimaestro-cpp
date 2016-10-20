@@ -226,6 +226,7 @@ public class SSHConnector extends SingleHostConnector {
     private Session getSession() throws JSchException, IOException {
         synchronized (this) {
             if (_session == null) {
+                LOGGER.info("Creating new session for SSH to %s", this.getHostName());
                 _session = this.identifier != null ? sessions.get(this) : null;
                 if (_session == null) {
                     _session = new SSHSession();
@@ -236,8 +237,10 @@ public class SSHConnector extends SingleHostConnector {
             }
 
             // If we are not connected, do it now
-            if (!_session.session.isConnected())
+            if (!_session.session.isConnected()) {
+                LOGGER.info("Opening dropped SSH connection to %s", this.getHostName());
                 _session.session.connect();
+            }
         }
 
         // Returns

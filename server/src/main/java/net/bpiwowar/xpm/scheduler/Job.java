@@ -237,7 +237,7 @@ abstract public class Job extends Resource {
     public boolean checkProcess() throws Exception {
         final XPMProcess process = getProcess();
         if (process != null) {
-            if (process.isRunning(true)) {
+            if (process.isRunning()) {
                 setState(ResourceState.RUNNING);
             } else {
                 Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
@@ -598,7 +598,7 @@ abstract public class Job extends Resource {
 
         // Check process
         if (getProcess() != null) {
-            if (!getProcess().check(true)) {
+            if (!getProcess().check(true, 0)) {
                 return true;
             }
         }
@@ -638,7 +638,7 @@ abstract public class Job extends Resource {
                 this.setState(ResourceState.WAITING);
             } else if (getState() == ResourceState.RUNNING) {
                 if (process != null) {
-                    if (!process.isRunning(true)) {
+                    if (!process.isRunning()) {
                         Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                     }
                 } else {
@@ -650,7 +650,7 @@ abstract public class Job extends Resource {
 
         // If DONE or ERROR, isStopped that process is removed
         if (process != null && (getState() == ResourceState.DONE || getState() == ResourceState.ERROR)) {
-            if (process.isRunning(true)) {
+            if (process.isRunning()) {
                 LOGGER.error("Incoherency: process is running but resource is DONE/ERROR");
                 setState(ResourceState.RUNNING);
                 return true;

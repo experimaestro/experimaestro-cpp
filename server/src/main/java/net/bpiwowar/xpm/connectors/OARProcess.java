@@ -19,17 +19,14 @@ package net.bpiwowar.xpm.connectors;
  */
 
 import net.bpiwowar.xpm.exceptions.ConnectorException;
-import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.commons.lang.NotImplementedException;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.FileSystemException;
 
 /**
  * An OAR process
@@ -66,7 +63,7 @@ public class OARProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+    public boolean isRunning() throws ConnectorException {
         OARStat oarStat = new OARStat(getConnector(), pid, true);
         return oarStat.isRunning();
     }

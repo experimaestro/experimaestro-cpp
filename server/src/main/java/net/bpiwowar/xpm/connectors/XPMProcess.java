@@ -105,6 +105,11 @@ public abstract class XPMProcess {
     private double progress = -1;
 
     /**
+     * Last update (UNIX timestamp)
+     */
+    private long last_update = -1;
+
+    /**
      * The associated locks to release when the process has ended
      */
     private List<Lock> locks = null;
@@ -260,14 +265,38 @@ public abstract class XPMProcess {
         }
     }
 
+    /**
+     * Check if a job is running but allow some latency
+     * @param latency The latency (time to last check) in seconds
+     * @return True if the process is running, false otherwise
+     * @throws ConnectorException If something goes wrong while checking
+     */
+    public boolean isRunning(long latency) throws ConnectorException {
+        if ((System.currentTimeMillis() - last_update) > latency * 1000) {
+            boolean running = isRunning();
+            try (PreparedStatement st = Scheduler.prepareStatement("UPDATE Processes SET last_update=? WHERE resource=?")) {
+                st.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                st.setLong(2, job.getId());
+                final long count = st.executeUpdate();
+                if (count != 1) {
+                    LOGGER.error("Could not update last_update for %s [count is not 1 but %d]", job, count);
+                }
+            } catch (SQLException e) {
+                LOGGER.error("Could not update last_update for %s", job);
+            }
+            return running;
+        }
+
+        // Process is still running since there was a status update
+        return true;
+    }
 
     /**
      * Check if the job is running
      *
-     * @param fullCheck True if a real check should be done
      * @return True if the job is running
      */
-    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+    public boolean isRunning() throws ConnectorException {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
         LOGGER.debug("Job %s is running: %s", this.job, exists);
@@ -309,10 +338,11 @@ public abstract class XPMProcess {
      * Asynchronous check the state of the job monitor
      *
      * @param checkFiles Whether files should be checked rather than the process
+     * @param latency The latency in seconds to check the job
      * @return true if the process was stopped
      */
-    synchronized public boolean check(boolean checkFiles) throws Exception {
-        if (!isRunning(checkFiles)) {
+    synchronized public boolean check(boolean checkFiles, long latency) throws Exception {
+        if (!isRunning(latency)) {
             // We are not running: send a message
             LOGGER.info("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
@@ -349,7 +379,7 @@ public abstract class XPMProcess {
             while (true) {
                 try {
                     try {
-                        if (!isRunning(false)) {
+                        if (!isRunning()) {
                             return exitValue(false);
                         }
                     } catch (Exception e) {
@@ -382,7 +412,7 @@ public abstract class XPMProcess {
         return connector;
     }
 
-    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data", "progress");
+    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data", "progress", "last_update");
 
     /**
      * Save the process
@@ -392,7 +422,8 @@ public abstract class XPMProcess {
         final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
                 DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid,
-                JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder), progress);
+                JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder),
+                progress, new Timestamp(last_update));
         inDatabase = true;
 
         // Save the locks
@@ -414,7 +445,7 @@ public abstract class XPMProcess {
     }
 
     public static XPMProcess load(Job job) throws SQLException {
-        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data, progress FROM Processes WHERE resource=?")) {
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data, progress, last_update FROM Processes WHERE resource=?")) {
             st.setLong(1, job.getId());
             st.execute();
             final ResultSet rs = st.getResultSet();
@@ -429,6 +460,7 @@ public abstract class XPMProcess {
             process.connector = (SingleHostConnector) Connector.findById(rs.getLong(2));
             process.pid = rs.getString(3);
             process.progress = rs.getDouble(5);
+            process.last_update = rs.getTimestamp(6).getTime();
             process.job = job;
             process.inDatabase = true;
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));

@@ -117,7 +117,7 @@ class WaitingJobProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean fullCheck) {
+    public boolean isRunning() {
         return action.duration < System.currentTimeMillis() - timestamp;
     }
 

@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.FileSystemException;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -81,12 +80,12 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+    public boolean isRunning() throws ConnectorException {
         if (process != null) {
             return ProcessUtils.isRunning(process);
         }
 
-        return super.isRunning(fullCheck);
+        return super.isRunning();
     }
 
     @Override

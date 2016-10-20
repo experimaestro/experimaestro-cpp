@@ -83,6 +83,7 @@ final public class Scheduler {
     static final long RESCHEDULING_DELTA_TIME = 250;
 
     final static private Logger LOGGER = Logger.getLogger();
+    public static final int JOB_CHECKING_LATENCY = 60;
 
     /**
      * Thread local instance (there should be only one scheduler per thread)
@@ -422,7 +423,7 @@ final public class Scheduler {
                         return;
                     }
                 }
-                process.check(true);
+                process.check(true, Scheduler.JOB_CHECKING_LATENCY);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
             } finally {
@@ -983,7 +984,7 @@ final public class Scheduler {
                         Job job = (Job) resource;
                         try {
                             XPMProcess process = job.getProcess();
-                            if (process != null && !process.isRunning(true)) {
+                            if (process != null && !process.isRunning(JOB_CHECKING_LATENCY)) {
                                 Scheduler.this.sendMessage(job, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                             }
                         } catch (Throwable e) {

@@ -111,7 +111,7 @@ public class SSHProcess extends XPMProcess {
         // Detached: we have to kill the job on the host
         if (detached) {
             try {
-                if (isRunning(true)) {
+                if (isRunning()) {
                     // First check that the job is running
                     final AbstractProcessBuilder killCommand = getConnector().processBuilder().command("kill", pid);
                     killCommand.execute(LOGGER);
@@ -129,11 +129,11 @@ public class SSHProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+    public boolean isRunning() throws ConnectorException {
         if (channel != null) {
             // If the channel is not connected, we check if in detached mode using files
-            return channel.isConnected() || (detached && super.isRunning(fullCheck));
+            return channel.isConnected() || (detached && super.isRunning());
         }
-        return super.isRunning(fullCheck);
+        return super.isRunning();
     }
 }
