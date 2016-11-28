@@ -182,7 +182,11 @@ class JsonRPCMethod:
         }
         headers = {'content-type': 'application/json'}
 
-        response = requests.post(self.url, data=json.dumps(payload), headers=headers).json()
+        answer = requests.post(self.url, data=json.dumps(payload), headers=headers)
+        try:
+            response = answer.json()
+        except:
+            logging.error("Could not decode answer: %s" % answer.text)
         assert response["jsonrpc"] == "2.0"
         assert response["id"] == str(self.jsonid)
 

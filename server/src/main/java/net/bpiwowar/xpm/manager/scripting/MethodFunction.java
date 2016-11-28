@@ -55,7 +55,7 @@ public class MethodFunction extends GenericFunction {
     }
 
     @Override
-    protected Iterable<MethodDeclaration> declarations() {
+    public Iterable<MethodDeclaration> declarations() {
         return Iterables.concat(new AbstractList<Iterable<MethodDeclaration>>() {
             @Override
             public Iterable<MethodDeclaration> get(final int index) {
@@ -114,6 +114,7 @@ public class MethodFunction extends GenericFunction {
             Documentation.methodDeclaration(method).text(new PrintWriter(stringWriter));
             return stringWriter.toString();
         }
+
 
         @Override
         public Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {

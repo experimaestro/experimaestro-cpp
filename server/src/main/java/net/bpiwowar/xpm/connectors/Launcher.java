@@ -22,6 +22,7 @@ import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.WrappedIOException;
+import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
@@ -72,8 +73,8 @@ public abstract class Launcher implements Serializable {
     /**
      * Creates and returns a new process builder
      *
-     * @return A process builder
      * @param parameters
+     * @return A process builder
      */
     public abstract AbstractProcessBuilder processBuilder(LauncherParameters parameters) throws FileSystemException;
 
@@ -161,7 +162,7 @@ public abstract class Launcher implements Serializable {
     transient HashMap<String, String> launcherEnvironment;
 
     @Expose()
-    public String environment(String key) throws IOException, LaunchException, InterruptedException {
+    public String environment(@Argument(name = "key") String key) throws IOException, LaunchException, InterruptedException {
         if (launcherEnvironment == null) {
             AbstractProcessBuilder builder = processBuilder(null);
             builder.command("env");
@@ -180,7 +181,7 @@ public abstract class Launcher implements Serializable {
                 }
             }).waitFor();
             if (code != 0) {
-                throw new IOException("Error while retrieving environment [code "+code+"]");
+                throw new IOException("Error while retrieving environment [code " + code + "]");
             }
         }
         return launcherEnvironment.get(key);

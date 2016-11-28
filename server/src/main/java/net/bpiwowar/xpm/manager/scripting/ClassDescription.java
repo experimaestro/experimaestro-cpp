@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.reflect.TypeToken;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.Functional;
 
@@ -25,6 +26,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,7 +70,12 @@ public class ClassDescription {
         }
         classname = exposed.value().isEmpty() ? aClass.getSimpleName() : exposed.value();
 
+
         this.wrappedClass = aClass;
+        if (WrapperObject.class.isAssignableFrom(aClass)) {
+            final TypeToken<? extends WrapperObject> wrapperType = TypeToken.of((Class<? extends WrapperObject>) aClass);
+            aClass = (Class) wrapperType.resolveType(WrapperObject.class.getTypeParameters()[0]).getType();
+        }
 
         // Add fields
         for (Field field : aClass.getDeclaredFields()) {
@@ -241,5 +248,9 @@ public class ClassDescription {
             return superDescription.getMethod(key);
         }
         return methodFunction;
+    }
+
+    public boolean hasConstructor() {
+        return constructors.declarations().iterator().hasNext();
     }
 }

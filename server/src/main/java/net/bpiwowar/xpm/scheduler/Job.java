@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -56,7 +57,7 @@ import java.util.stream.Stream;
 @Exposed
 abstract public class Job extends Resource {
 
-    final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
+    final static DateFormat longDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     final static private Logger LOGGER = Logger.getLogger();
     public static final ImmutableList<String> KILLED_ERROR_LINE = ImmutableList.of("1");

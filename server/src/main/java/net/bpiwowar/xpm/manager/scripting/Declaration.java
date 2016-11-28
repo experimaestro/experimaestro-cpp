@@ -5,6 +5,8 @@ import org.apache.commons.lang.ClassUtils;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
@@ -32,6 +34,8 @@ abstract public class Declaration<T extends Executable> {
 
     boolean[] javaize;
     boolean[] nullable;
+
+    String[] parameterNames;
 
     /**
      * Construct a new declaration
@@ -132,6 +136,45 @@ abstract public class Declaration<T extends Executable> {
         return nullable[i];
     }
 
+    public Type[] getGenericParameterTypes() {
+        return executable.getGenericParameterTypes();
+    }
+
+    public Annotation[][] getParameterAnnotations() {
+        return executable.getParameterAnnotations();
+    }
+
+    public int getParameterCount() {
+        return executable.getParameterCount();
+    }
+
+    public String[] getParameterNames() {
+        if (parameterNames == null) {
+            parameterNames = new String[getParameterCount()];
+            Parameter[] parameters = executable.getParameters();
+
+            for (int i = 0; i < parameterNames.length; ++i) {
+                parameterNames[i] = name(parameters[i]);
+            }
+        }
+        return parameterNames;
+    }
+
+    static private String name(Parameter p) {
+        final Argument arg = p.getAnnotation(Argument.class);
+        if (arg != null) {
+            return arg.name();
+        }
+
+        if (!p.getName().startsWith("arg"))
+            return p.getName();
+
+        String base = p.getType().getSimpleName();
+        base = base.substring(0, 1).toLowerCase() + base.substring(1);
+        return base;
+    }
+
+
     private static class ConverterContext implements Function<Arguments, Object> {
         public static final Function<Arguments, Object> INSTANCE = new ConverterContext();
 
@@ -144,8 +187,8 @@ abstract public class Declaration<T extends Executable> {
     /**
      * Gives a score to a given declaration
      *
-     * @param arguments  The arguments
-     * @param fullCheck  If all arguments should be checked (even if the method does not match)
+     * @param arguments The arguments
+     * @param fullCheck If all arguments should be checked (even if the method does not match)
      * @return An arguments converter, containing a score and a list of converter functions
      */
     public Converter score(LanguageContext lcx, Arguments arguments, boolean fullCheck) {
@@ -163,7 +206,6 @@ abstract public class Declaration<T extends Executable> {
         int position = 0;
 
         Function<Integer, Integer> nextPosition = x -> x + 1;
-
 
 
         // Get the number of needed argument, that the number of arguments in the Java declaration

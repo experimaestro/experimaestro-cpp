@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.server.rpc;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -54,7 +53,6 @@ import net.bpiwowar.xpm.utils.log.Router;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.eclipse.jetty.server.Server;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
@@ -65,13 +63,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -126,6 +120,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             addRPCMethods(JsonRPCMethods.class);
             addRPCMethods(DocumentationMethods.class);
             addRPCMethods(ExperimentsMethods.class);
+            RPCObjects.addRPCMethods(methods);
         }
     }
 
@@ -206,19 +201,10 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             int max = Integer.MIN_VALUE;
             RPCCaller argmax = null;
 
-            candidateLoop:
             for (RPCCaller candidate : candidates) {
-                int score = Integer.MAX_VALUE;
-                for (Object _argument : candidate.arguments.values()) {
-                    ArgumentDescriptor argument = (ArgumentDescriptor) _argument;
-                    final boolean has = p.has(argument.name);
-                    if (argument.required && !has) {
-                        continue candidateLoop;
-                    }
-                    if (!has) --score;
-                }
+                int score = candidate.score(p);
 
-                if (score > max) {
+                if (score > max && score > Integer.MIN_VALUE) {
                     max = score;
                     argmax = candidate;
                 }
@@ -620,7 +606,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     @RPCMethod(name = "invalidate", help = "Puts back a job into the waiting queue")
-    static public class Restart implements JsonCallable {
+    public class Restart implements JsonCallable {
         @RPCArgument(name = "ids", help = "The id of the job(s) (string or integer)")
         String[] ids;
 
@@ -636,37 +622,44 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         @Override
         public Integer call() throws Throwable {
             int nbUpdated = 0;
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
 
             for (String id : ids) {
-                Resource resource = getResource(id);
-                if (resource == null)
-                    throw new XPMRuntimeException("Job not found [%s]", id);
+                try {
+                    Resource resource = getResource(id);
+                    if (resource == null) {
+                        logger.error("Job not found [%s]", id);
+                        continue;
+                    }
+                    LOGGER.info("Invalidating resource %s", resource);
 
-                final ResourceState rsrcState = resource.getState();
+                    final ResourceState rsrcState = resource.getState();
 
-                // Stop running jobs
-                if (rsrcState == ResourceState.RUNNING) {
-                    ((Job)resource).stop();
+                    // Stop running jobs
+                    if (rsrcState == ResourceState.RUNNING) {
+                        ((Job) resource).stop();
+                    }
+
+                    // The job is active, so we have nothing to do
+                    if (rsrcState.isActive() && rsrcState != ResourceState.RUNNING) {
+                        // Just notify in case
+                        Scheduler.notifyRunners();
+                        continue;
+                    }
+
+                    if (keepDone && rsrcState == ResourceState.DONE)
+                        continue;
+
+                    ((Job) resource).invalidate(restart);
+                    nbUpdated++;
+
+                    // If the job was done, we need to invalidate the dependences
+                    if (recursive && rsrcState == ResourceState.DONE) {
+                        nbUpdated += invalidate(resource, restart);
+                    }
+                } catch(Throwable t) {
+                    logger.error("Could not invalidate job %s: %s", id, t);
                 }
-
-                // The job is active, so we have nothing to do
-                if (rsrcState.isActive() && rsrcState != ResourceState.RUNNING) {
-                    // Just notify in case
-                    Scheduler.notifyRunners();
-                    continue;
-                }
-
-                if (keepDone && rsrcState == ResourceState.DONE)
-                    continue;
-
-                ((Job) resource).invalidate(restart);
-                nbUpdated++;
-
-                // If the job was done, we need to invalidate the dependences
-                if (recursive && rsrcState == ResourceState.DONE) {
-                    nbUpdated += invalidate(resource, restart);
-                }
-
             }
 
             return nbUpdated;
@@ -1028,166 +1021,4 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
 
-    public static class ArgumentDescriptor {
-        String name;
-        boolean required;
-
-        ArgumentDescriptor(RPCArgument annotation) {
-            this.required = annotation.required();
-            this.name = annotation.name();
-        }
-    }
-
-    public abstract static class RPCCaller<T extends ArgumentDescriptor> {
-        public abstract Object call(Object o, JsonObject p) throws Throwable;
-
-        public abstract Class<?> getDeclaringClass();
-
-        /**
-         * Arguments
-         */
-        HashMap<String, T> arguments = new HashMap<>();
-
-    }
-
-    public static class MethodArgumentDescriptor extends ArgumentDescriptor {
-        int position;
-
-        public MethodArgumentDescriptor(RPCArgument annotation, int position) {
-            super(annotation);
-            this.position = position;
-        }
-    }
-
-    static public class RPCMethodCaller extends RPCCaller<MethodArgumentDescriptor> {
-        /**
-         * Method
-         */
-        Method method;
-
-
-        public RPCMethodCaller(Method method) {
-            this.method = method;
-            final Type[] types = method.getGenericParameterTypes();
-            Annotation[][] annotations = method.getParameterAnnotations();
-            mainLoop:
-            for (int i = 0; i < annotations.length; i++) {
-                for (int j = 0; j < annotations[i].length; j++) {
-                    if (annotations[i][j] instanceof RPCArgument) {
-                        final RPCArgument annotation = (RPCArgument) annotations[i][j];
-                        final String name = annotation.name();
-                        arguments.put(name, new MethodArgumentDescriptor(annotation, i));
-                        continue mainLoop;
-                    }
-                }
-
-                throw new XPMRuntimeException("No annotation for %dth argument of %s", i + 1, method);
-            }
-        }
-
-        @Override
-        public Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException {
-            Object[] args = new Object[method.getParameterCount()];
-            Gson gson = new Gson();
-            final Type[] types = method.getGenericParameterTypes();
-            for (MethodArgumentDescriptor descriptor : arguments.values()) {
-                final JsonElement jsonElement = p.get(descriptor.name);
-                final Type type = types[descriptor.position];
-                try {
-                    args[descriptor.position] = gson.fromJson(jsonElement, type);
-                } catch (RuntimeException e) {
-                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
-                }
-            }
-
-            return method.invoke(o, args);
-        }
-
-        @Override
-        public Class<?> getDeclaringClass() {
-            return method.getDeclaringClass();
-        }
-    }
-
-
-    public static class ClassArgumentDescriptor extends ArgumentDescriptor {
-
-        private final Field field;
-
-        public ClassArgumentDescriptor(RPCArgument annotation, Field field) {
-            super(annotation);
-            final String name = annotation.name();
-            this.name = name.isEmpty() ? field.getName() : name;
-            this.field = field;
-        }
-    }
-
-    private static class RPCClassCaller extends RPCCaller<ClassArgumentDescriptor> {
-        private final Class<?> rpcClass;
-        private final Constructor<?> constructor;
-
-        public RPCClassCaller(Class<?> rpcClass) {
-            this.rpcClass = rpcClass;
-            if (!JsonCallable.class.isAssignableFrom(rpcClass)) {
-                throw new AssertionError("An RPC method class should implement the JsonCallable interface");
-            }
-
-            try {
-                if (!Modifier.isStatic(rpcClass.getModifiers())) {
-                    constructor = rpcClass.getConstructor(rpcClass.getEnclosingClass());
-                } else {
-                    constructor = null; // rpcClass.getConstructor();
-                }
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
-
-            for (Field field : rpcClass.getDeclaredFields()) {
-                final RPCArgument annotation = field.getAnnotation(RPCArgument.class);
-
-                if (annotation != null) {
-                    final ClassArgumentDescriptor descriptor = new ClassArgumentDescriptor(annotation, field);
-                    final ClassArgumentDescriptor old = arguments.put(descriptor.name, descriptor);
-                    if (old != null) {
-                        throw new XPMRuntimeException("Parameter %s was already defined for %s", descriptor.name, rpcClass);
-                    }
-                }
-            }
-        }
-
-        @Override
-        public Object call(Object o, JsonObject p) throws Throwable {
-            Gson gson = new Gson();
-            final JsonCallable object;
-            if (!Modifier.isStatic(rpcClass.getModifiers())) {
-                object = (JsonCallable) constructor.newInstance(o);
-            } else {
-                object = (JsonCallable) rpcClass.newInstance();
-            }
-
-            for (ClassArgumentDescriptor descriptor : arguments.values()) {
-                final JsonElement jsonElement = p.get(descriptor.name);
-                final Type type = descriptor.field.getGenericType();
-                try {
-                    Object value = gson.fromJson(jsonElement, type);
-                    if (!descriptor.field.isAccessible()) {
-                        descriptor.field.setAccessible(true);
-                        descriptor.field.set(object, value);
-                        descriptor.field.setAccessible(false);
-                    } else {
-                        descriptor.field.set(object, value);
-                    }
-                } catch (RuntimeException e) {
-                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
-                }
-            }
-
-            return object.call();
-        }
-
-        @Override
-        public Class<?> getDeclaringClass() {
-            return rpcClass.getEnclosingClass();
-        }
-    }
 }

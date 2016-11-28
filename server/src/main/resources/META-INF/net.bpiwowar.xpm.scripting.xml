@@ -43,11 +43,17 @@
         <class>net.bpiwowar.xpm.connectors.SSHOptions</class>
         <class>net.bpiwowar.xpm.connectors.ConnectorOptions</class>
         <class>net.bpiwowar.xpm.connectors.Connector</class>
+        <class>net.bpiwowar.xpm.connectors.SingleHostConnector</class>
         <class>net.bpiwowar.xpm.connectors.SSHConnector</class>
         <class>net.bpiwowar.xpm.connectors.LocalhostConnector</class>
 
+        <class>net.bpiwowar.xpm.scheduler.LauncherParameters</class>
+
+        <class>net.bpiwowar.xpm.connectors.Launcher</class>
         <class>net.bpiwowar.xpm.connectors.OARLauncher</class>
         <class>net.bpiwowar.xpm.connectors.DirectLauncher</class>
+        <class>net.bpiwowar.xpm.connectors.OARParameters</class>
+
 
         <!-- Scripting -->
         <class>net.bpiwowar.xpm.manager.scripting.XPM</class>

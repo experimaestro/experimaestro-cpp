@@ -46,7 +46,7 @@ public abstract class GenericFunction {
      * @param <T>
      * @return
      */
-    protected abstract <T extends Declaration> Iterable<T> declarations();
+    public abstract <T extends Declaration> Iterable<T> declarations();
 
     /**
      * Call this method
