@@ -6,7 +6,7 @@ import java.util.function.Function;
 /**
  * Access to a property for a given object
  */
-@Exposed
+@Exposed(useInRPC = false)
 public class ObjectPropertyReference implements ScriptingReference {
     private final Object object;
     private Function<Object, Object> getter;
@@ -18,7 +18,7 @@ public class ObjectPropertyReference implements ScriptingReference {
         this.setter = setter;
     }
 
-//    @Expose(mode = ExposeMode.PROPERTY)
+    //    @Expose(mode = ExposeMode.PROPERTY)
     public Object get(LanguageContext cx) {
         return getter.apply(object);
     }

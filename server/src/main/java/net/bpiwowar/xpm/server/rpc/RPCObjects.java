@@ -2,32 +2,24 @@ package net.bpiwowar.xpm.server.rpc;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.internal.Primitives;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
-import net.bpiwowar.xpm.manager.scripting.Argument;
-import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
-import net.bpiwowar.xpm.manager.scripting.Declaration;
-import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
-import net.bpiwowar.xpm.manager.scripting.Scripting;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Executable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * Expose @Exposed objects to remote calls
@@ -53,7 +45,8 @@ public class RPCObjects {
 
             // Retrieve all declared objects
             for (Class<?> aClass : Scripting.getTypes()) {
-                types.put(aClass, ClassDescription.analyzeClass(aClass));
+                ClassDescription cd = ClassDescription.analyzeClass(aClass);
+                types.put(cd.getWrappedClass(), cd);
             }
         }
     }
@@ -74,7 +67,6 @@ public class RPCObjects {
                 if (key instanceof String) {
                     for (MethodDeclaration declaration : entry.getValue().declarations()) {
                         methods.put(prefix, new ExposedCaller(declaration));
-
                     }
                 }
             }
@@ -175,40 +167,16 @@ public class RPCObjects {
 
     }
 
-    static public void main(String[] args) {
+    static public void main(String[] args) throws IOException {
         RPCObjects.init();
-        PrintStream out = System.out;
 
-        out.println("#ifndef _XPM_RPCOBJECTS_H");
-        out.println("#define _XPM_RPCOBJECTS_H");
-        out.println();
-        out.println("#include <string>");
-        out.println("#include <vector>");
-        out.println();
-        out.println("namespace xpm {");
-
-
-        out.format("%n%n// Pre-declaration%n");
-
-        // --- Outputs
+        String basepath = args[0];
 
         HashMap<Class<?>, ClassNode> nodes = new HashMap<>();
         for (ClassDescription classDescription : RPCObjects.types.values()) {
-            out.format("class %s;%n", classDescription.getClassName());
             nodes.put(classDescription.getWrappedClass(), new ClassNode(classDescription));
         }
 
-        // --- Outputs classes
-
-        out.println("class ServerObject {");
-        out.println("protected:");
-        out.println("  int serverId;");
-        out.println("  ServerObject();");
-        out.println("};");
-
-        out.format("%n%n// Classes%n");
-
-        // Create the class hierarchy
         for (Map.Entry<Class<?>, ClassNode> entry : nodes.entrySet()) {
             Class<?> aClass = entry.getKey();
             for (aClass = aClass.getSuperclass(); !Object.class.equals(aClass); aClass = aClass.getSuperclass()) {
@@ -222,54 +190,152 @@ public class RPCObjects {
         }
 
         final ArrayList<ClassNode> sorted = Sort.topologicalSort(new ArrayList<>(nodes.values()));
-        RPCObjects.types.values();
 
-        for (ClassNode classNode : Lists.reverse(sorted)) {
-            final ClassDescription description = classNode.classDescription;
-            out.format("class %s", classNode.classDescription.getClassName());
-            for (int i = 0; i < classNode.parents.size(); ++i) {
-                if (i == 0) out.print(" : ");
-                else out.print(", ");
-                out.print("public ");
-                out.print(classNode.parents.get(i).classDescription.getClassName());
+        try (FileOutputStream fos = new FileOutputStream(basepath + ".hpp");
+             PrintStream out = new PrintStream(fos)) {
+
+            out.println("#ifndef _XPM_RPCOBJECTS_H");
+            out.println("#define _XPM_RPCOBJECTS_H");
+            out.println();
+            out.println("#include <string>");
+            out.println("#include <vector>");
+            out.println();
+            out.println("namespace xpm {");
+
+
+            out.format("%n%n// Pre-declaration%n");
+
+            // --- Outputs
+
+            for (ClassDescription classDescription : RPCObjects.types.values()) {
+                out.format("class %s;%n", classDescription.getClassName());
             }
-            if (classNode.parents.isEmpty())
-                out.print(" : ServerObject");
-            out.format(" {%n");
-            out.format("public:%n");
 
-            for (MethodFunction methods : description.getMethods().values()) {
-                if (methods == null) {
-                    continue;
+            // --- Outputs classes
+
+            out.println("class ServerObject {");
+            out.println("protected:");
+            out.println("  int serverId;");
+            out.println("  ServerObject();");
+            out.println("};");
+
+            out.format("%n%n// Classes%n");
+
+
+            for (ClassNode classNode : Lists.reverse(sorted)) {
+                final ClassDescription description = classNode.classDescription;
+                out.format("class %s", classNode.classDescription.getClassName());
+                for (int i = 0; i < classNode.parents.size(); ++i) {
+                    if (i == 0) out.print(" : ");
+                    else out.print(", ");
+                    out.print("public ");
+                    out.print(classNode.parents.get(i).classDescription.getClassName());
+                }
+                if (classNode.parents.isEmpty())
+                    out.print(" : public ServerObject");
+                out.format(" {%n");
+                out.format("public:%n");
+
+                for (ConstructorDeclaration c : description.getConstructors().declarations()) {
+                    outputSignature(out, null, description.getClassName(), c);
+                    out.println(";");
                 }
 
-                final Iterable<MethodDeclaration> declarations = methods.declarations();
-                if (declarations == null) {
-                    continue;
-                }
-
-                for (MethodDeclaration method : declarations) {
-                    final Executable executable = method.executable();
-
-                    out.format("  %s %s(", cppname(executable.getAnnotatedReturnType().getType()), methods.getKey());
-                    final String[] parameterNames = method.getParameterNames();
-
-                    for (int i = 0; i < method.executable().getParameterCount(); ++i) {
-                        if (i > 0) out.print(", ");
-                        out.format("%s const &%s", cppname(executable.getParameterTypes()[i]), parameterNames[i]);
+                for (MethodFunction methods : description.getMethods().values()) {
+                    if (methods == null) {
+                        continue;
                     }
-                    out.println(");");
+
+                    final Iterable<MethodDeclaration> declarations = methods.declarations();
+                    if (declarations == null) {
+                        continue;
+                    }
+
+                    for (MethodDeclaration method : declarations) {
+                        outputSignature(out, null, methods.getKey(), method);
+                        out.println(";");
+                    }
+
                 }
 
+
+                out.format("};%n%n");
             }
 
+            out.println("} // xpm namespace");
+            out.println("#endif");
 
-            out.format("};%n%n");
         }
 
-        out.println("} // xpm namespace");
-        out.println("#endif");
+        // Outputs c++ definition file
+        try (FileOutputStream fos = new FileOutputStream(basepath + ".cpp");
+             PrintStream out = new PrintStream(fos)) {
 
+            out.format("#include <xpm/rpc/objects.hpp>%n%nnamespace xpm {%n");
+            for (ClassNode classNode : Lists.reverse(sorted)) {
+                final ClassDescription description = classNode.classDescription;
+
+                for (ConstructorDeclaration c : description.getConstructors().declarations()) {
+                    out.print("  ");
+                    outputSignature(out, null, description.getClassName(), c);
+                    generateRPCCall(out, c);
+                }
+
+                for (MethodFunction methods : description.getMethods().values()) {
+                    if (methods == null) {
+                        continue;
+                    }
+
+                    final Iterable<MethodDeclaration> declarations = methods.declarations();
+                    if (declarations == null) {
+                        continue;
+                    }
+
+                    for (MethodDeclaration method : declarations) {
+                        out.print("  ");
+                        outputSignature(out, description, methods.getKey(), method);
+                        generateRPCCall(out, method);
+                    }
+                }
+            }
+            out.println("}");
+
+        }
+    }
+
+    private static void generateRPCCall(PrintStream out, Declaration<?> declaration) {
+        String[] parameterNames = declaration.getParameterNames();
+
+        out.print(" {");
+        out.println("  json params = json::object();");
+        int n = declaration.getParameterCount();
+        for (int i = 0; i < n; ++i) {
+            out.format("  params[\"%s\"] = %s;%n", parameterNames[i], parameterNames[i]);
+        }
+        out.println("  rpc.call(params); ");
+        out.print("  }");
+    }
+
+    private static void outputSignature(PrintStream out, ClassDescription description,
+                                        String name, Declaration<?> declaration) {
+        final Executable executable = declaration.executable();
+        if (declaration.executable() instanceof Method) {
+            out.print(cppname(executable.getAnnotatedReturnType().getType()));
+            out.print(' ');
+        }
+
+        if (description == null)
+            out.format("%s(", name);
+        else
+            out.format("%s::%s(", description.getClassName(), name);
+
+        final String[] parameterNames = declaration.getParameterNames();
+
+        for (int i = 0; i < declaration.executable().getParameterCount(); ++i) {
+            if (i > 0) out.print(", ");
+            out.format("%s const &%s", cppname(executable.getParameterTypes()[i]), parameterNames[i]);
+        }
+        out.print(")");
     }
 
     static final HashMap<Type, String> type2cppType = new HashMap<>();
@@ -299,10 +365,20 @@ public class RPCObjects {
         if (type instanceof ParameterizedType) {
             return "UNKNOWN_PTYPE(" + type.toString() + ")";
         }
+        if (type instanceof TypeVariable) {
+            return "UNKNOWN_TypeVariable(" + type.toString() + ")";
+        }
 
-        Class<?> aClass = (Class)type;
+        Class<?> aClass = (Class) type;
         if (aClass.isArray()) {
             return "std::array<" + cppname(aClass.getComponentType()) + ">";
+        }
+
+        if (List.class.isAssignableFrom(aClass)) {
+            final TypeToken<? extends List> wrapperType = TypeToken.of((Class<? extends List>) aClass);
+
+            return "std::vector<" + cppname(wrapperType.resolveType(List.class.getTypeParameters()[0]).getType()) + ">";
+
         }
 
         return "UNKNOWN(" + type.toString() + ")";

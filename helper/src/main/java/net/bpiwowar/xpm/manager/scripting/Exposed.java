@@ -34,4 +34,7 @@ public @interface Exposed {
      * @return The name of the class or an empty string if the class is the class name
      */
     String value() default "";
+
+    /** True if used only for scripting */
+    boolean useInRPC() default true;
 }

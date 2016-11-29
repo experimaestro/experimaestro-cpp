@@ -24,6 +24,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShareAccess;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
@@ -37,13 +38,7 @@ import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
-import net.bpiwowar.xpm.scheduler.Dependency;
-import net.bpiwowar.xpm.scheduler.Job;
-import net.bpiwowar.xpm.scheduler.Listener;
-import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.scheduler.ResourceState;
-import net.bpiwowar.xpm.scheduler.Scheduler;
-import net.bpiwowar.xpm.scheduler.TokenResource;
+import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -59,10 +54,9 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.StringWriter;
+import java.io.*;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -127,6 +121,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     public static void addRPCMethods(Class<?> jsonRPCMethodsClass) {
         final JsonRPCMethodsHolder def = jsonRPCMethodsClass.getAnnotation(JsonRPCMethodsHolder.class);
 
+        // Add methods
         for (Method method : jsonRPCMethodsClass.getDeclaredMethods()) {
             final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
             if (rpcMethod != null) {
@@ -137,6 +132,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             }
         }
 
+        // Add classes
         for (Class<?> aClass : jsonRPCMethodsClass.getDeclaredClasses()) {
             if (JsonCallable.class.isAssignableFrom(aClass)) {
                 final RPCMethod rpcMethod = aClass.getAnnotation(RPCMethod.class);
@@ -804,8 +800,8 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     @RPCMethod(help = "Set token limit")
     public boolean setTokenLimit(
-            @RPCArgument(name="tokenId") String tokenId,
-            @RPCArgument(name="limit") int limit) throws SQLException {
+            @RPCArgument(name = "tokenId") String tokenId,
+            @RPCArgument(name = "limit") int limit) throws SQLException {
         Resource resource = getResource(tokenId);
         if (resource == null) {
             throw new IllegalArgumentException(format("Not such resource id [%s]", tokenId));
@@ -840,9 +836,12 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     public void close() {
+        // Close all listeners
         for (Listener listener : listeners) {
             settings.scheduler.removeListener(listener);
         }
+
+        // Close file viewers
         for (FileViewer fileViewer : fileViewers.values()) {
             try {
                 fileViewer.close();
@@ -850,6 +849,18 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 LOGGER.error("Could not close %s", fileViewer);
             }
         }
+
+        // Close other RPC handlers
+        for (Object o : objects.values()) {
+            if (o instanceof Closeable) {
+                try {
+                    ((Closeable) o).close();
+                } catch (IOException e) {
+                    LOGGER.error(e, "while closing %s", o);
+                }
+            }
+        }
+
     }
 
 
