@@ -120,7 +120,7 @@ public abstract class Launcher implements Serializable {
 
     @Expose("env")
     @Help("Sets an environment variable and returns the old value (if any)")
-    public String env(String key, String value) {
+    public String env(@Argument(name = "key") String key, @Argument(name = "value") String value) {
         return environment.put(key, value);
     }
 

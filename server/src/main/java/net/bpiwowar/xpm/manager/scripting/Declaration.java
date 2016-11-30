@@ -3,12 +3,11 @@ package net.bpiwowar.xpm.manager.scripting;
 import org.apache.commons.lang.ClassUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Executable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -150,17 +149,28 @@ abstract public class Declaration<T extends Executable> {
 
     public String[] getParameterNames() {
         if (parameterNames == null) {
+            Set<String> set = new HashSet<>();
+
             parameterNames = new String[getParameterCount()];
             Parameter[] parameters = executable.getParameters();
 
             for (int i = 0; i < parameterNames.length; ++i) {
-                parameterNames[i] = name(parameters[i]);
+                String s = parameterNames[i] = name(parameters[i], set);
+                set.add(s);
             }
         }
         return parameterNames;
     }
 
-    static private String name(Parameter p) {
+    static private final HashSet<String> RESERVED_CPP_NAMES = new HashSet<>();
+    static {
+        RESERVED_CPP_NAMES.add("int");
+        RESERVED_CPP_NAMES.add("long");
+        RESERVED_CPP_NAMES.add("float");
+        RESERVED_CPP_NAMES.add("double");
+    }
+
+    static private String name(Parameter p, Set<String> taken) {
         final Argument arg = p.getAnnotation(Argument.class);
         if (arg != null) {
             return arg.name();
@@ -169,9 +179,27 @@ abstract public class Declaration<T extends Executable> {
         if (!p.getName().startsWith("arg"))
             return p.getName();
 
-        String base = p.getType().getSimpleName();
+        Class<?> type = p.getType();
+        if (type.isArray())
+            type = type.getComponentType();
+
+        String base = type.getSimpleName();
         base = base.substring(0, 1).toLowerCase() + base.substring(1);
-        return base;
+        String proposed = base;
+
+        int count = 0;
+        while (taken.contains(proposed) || RESERVED_CPP_NAMES.contains(proposed)) {
+            proposed = base + "_" + (++count);
+        }
+        return proposed;
+    }
+
+    public Type getReturnType() {
+        return executable.getAnnotatedReturnType().getType();
+    }
+
+    public boolean isStatic() {
+        return executable instanceof Constructor || Modifier.isStatic(executable.getModifiers());
     }
 
 

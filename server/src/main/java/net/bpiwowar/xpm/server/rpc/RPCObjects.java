@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.server.rpc;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
@@ -12,6 +13,7 @@ import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclara
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,6 +29,7 @@ import java.util.*;
 public class RPCObjects {
 
     public static final String OBJECTS = "objects";
+    private static final Logger LOGGER = Logger.getLogger();
     static private boolean initialized = false;
     static private final HashMap<Class<?>, ClassDescription> types = new HashMap<>();
 
@@ -38,6 +41,46 @@ public class RPCObjects {
     public RPCObjects() {
     }
 
+    static public class ClassDescription {
+        final Class<?> wrappedClass;
+        final Class<?> aClass;
+        final ArrayList<Constructor> constructors = new ArrayList<>();
+        final ArrayList<Method> methods = new ArrayList<>();
+        public String className;
+
+        public ClassDescription(Class<?> aClass) {
+            this.aClass = aClass;
+            if (WrapperObject.class.isAssignableFrom(aClass)) {
+                final TypeToken<? extends WrapperObject> wrapperType = TypeToken.of((Class<? extends WrapperObject>) aClass);
+                wrappedClass = (Class) wrapperType.resolveType(WrapperObject.class.getTypeParameters()[0]).getType();
+            } else {
+                wrappedClass = aClass;
+            }
+
+            // Gather constructors
+            for (Constructor<?> constructor : aClass.getDeclaredConstructors()) {
+                if (constructor.getAnnotation(Exposed.class) != null) {
+                    constructors.add(constructor);
+                }
+            }
+
+            // Gather methods
+            for (Method method : aClass.getDeclaredMethods()) {
+                if (method.getAnnotation(Exposed.class) != null) {
+                    methods.add(method);
+                }
+            }
+
+            Exposed exposed = aClass.getAnnotation(Exposed.class);
+            className = exposed.value().isEmpty() ? aClass.getSimpleName() : exposed.value();
+
+        }
+
+        public String getClassName() {
+            return className;
+        }
+    }
+
     private static void init() {
         if (!initialized) {
             // Initialize flag set
@@ -45,8 +88,8 @@ public class RPCObjects {
 
             // Retrieve all declared objects
             for (Class<?> aClass : Scripting.getTypes()) {
-                ClassDescription cd = ClassDescription.analyzeClass(aClass);
-                types.put(cd.getWrappedClass(), cd);
+                ClassDescription cd = new ClassDescription(aClass);
+                types.put(cd.wrappedClass, cd);
             }
         }
     }
@@ -57,20 +100,22 @@ public class RPCObjects {
         for (ClassDescription classDescription : types.values()) {
             final String prefix = OBJECTS + "." + classDescription.getClassName() + ".";
 
-            for (ConstructorDeclaration constructor : classDescription.getConstructors().declarations()) {
+            for (Constructor constructor : classDescription.constructors) {
                 methods.put(prefix + "__init__", new ExposedCaller(constructor));
             }
-
-            // Go through methods
-            for (Map.Entry<Object, MethodFunction> entry : classDescription.getMethods().entrySet()) {
-                final Object key = entry.getKey();
-                if (key instanceof String) {
-                    for (MethodDeclaration declaration : entry.getValue().declarations()) {
-                        methods.put(prefix, new ExposedCaller(declaration));
-                    }
-                }
+            for (Method method : classDescription.methods) {
+                methods.put(prefix, new ExposedCaller(method));
             }
         }
+    }
+
+    private static String getMethodName(Method method) {
+        Expose expose = method.getAnnotation(Expose.class);
+        String name = null;
+        if (expose != null) name = expose.value();
+        if (name != null && !name.isEmpty())
+            return name;
+        return method.getName();
     }
 
     private long store(Object object) {
@@ -89,10 +134,10 @@ public class RPCObjects {
         /**
          * Method
          */
-        Declaration<?> method;
+        Executable method;
 
 
-        public ExposedCaller(Declaration<?> callable) {
+        public ExposedCaller(Executable callable) {
             this.method = callable;
 
             Annotation[][] annotations = callable.getParameterAnnotations();
@@ -174,7 +219,7 @@ public class RPCObjects {
 
         HashMap<Class<?>, ClassNode> nodes = new HashMap<>();
         for (ClassDescription classDescription : RPCObjects.types.values()) {
-            nodes.put(classDescription.getWrappedClass(), new ClassNode(classDescription));
+            nodes.put(classDescription.wrappedClass, new ClassNode(classDescription));
         }
 
         for (Map.Entry<Class<?>, ClassNode> entry : nodes.entrySet()) {
@@ -197,8 +242,8 @@ public class RPCObjects {
             out.println("#ifndef _XPM_RPCOBJECTS_H");
             out.println("#define _XPM_RPCOBJECTS_H");
             out.println();
-            out.println("#include <string>");
             out.println("#include <vector>");
+            out.println("#include <xpm/rpc/utils.hpp>");
             out.println();
             out.println("namespace xpm {");
 
@@ -208,16 +253,11 @@ public class RPCObjects {
             // --- Outputs
 
             for (ClassDescription classDescription : RPCObjects.types.values()) {
-                out.format("class %s;%n", classDescription.getClassName());
+                out.format("class %s;%n", classDescription.className);
             }
 
             // --- Outputs classes
 
-            out.println("class ServerObject {");
-            out.println("protected:");
-            out.println("  int serverId;");
-            out.println("  ServerObject();");
-            out.println("};");
 
             out.format("%n%n// Classes%n");
 
@@ -237,6 +277,12 @@ public class RPCObjects {
                 out.format("public:%n");
 
                 for (ConstructorDeclaration c : description.getConstructors().declarations()) {
+                    if (!isRegistered(c)) {
+                        LOGGER.error("Unregistered type for %s", c);
+                        continue;
+                    }
+
+                    out.print("  ");
                     outputSignature(out, null, description.getClassName(), c);
                     out.println(";");
                 }
@@ -251,7 +297,13 @@ public class RPCObjects {
                         continue;
                     }
 
+
                     for (MethodDeclaration method : declarations) {
+                        if (!isRegistered(method)) {
+                            LOGGER.error("Unregistered type for %s", method);
+                            continue;
+                        }
+                        out.print("  ");
                         outputSignature(out, null, methods.getKey(), method);
                         out.println(";");
                     }
@@ -271,13 +323,17 @@ public class RPCObjects {
         try (FileOutputStream fos = new FileOutputStream(basepath + ".cpp");
              PrintStream out = new PrintStream(fos)) {
 
-            out.format("#include <xpm/rpc/objects.hpp>%n%nnamespace xpm {%n");
+            out.println("#include <xpm/rpc/objects.hpp>");
+            out.println();
+
+            out.format("namespace xpm {%n");
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
 
                 for (ConstructorDeclaration c : description.getConstructors().declarations()) {
-                    out.print("  ");
-                    outputSignature(out, null, description.getClassName(), c);
+                    if (!isRegistered(c)) continue;
+
+                    outputSignature(out, description, description.getClassName(), c);
                     generateRPCCall(out, c);
                 }
 
@@ -292,7 +348,7 @@ public class RPCObjects {
                     }
 
                     for (MethodDeclaration method : declarations) {
-                        out.print("  ");
+                        if (!isRegistered(method)) continue;
                         outputSignature(out, description, methods.getKey(), method);
                         generateRPCCall(out, method);
                     }
@@ -303,31 +359,60 @@ public class RPCObjects {
         }
     }
 
+    private static boolean isRegistered(Declaration<?> declaration) {
+        if (!isRegistered(declaration.getReturnType())) {
+            LOGGER.warn("Unregistered %s", declaration.getReturnType());
+            return false;
+        }
+        Type[] types = declaration.getGenericParameterTypes();
+        for (int i = declaration.getParameterCount(); --i >= 0; ) {
+            if (!isRegistered(types[i])) {
+                LOGGER.warn("Unregistered %s", types[i]);
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static void generateRPCCall(PrintStream out, Declaration<?> declaration) {
         String[] parameterNames = declaration.getParameterNames();
 
-        out.print(" {");
+        out.println(" {");
         out.println("  json params = json::object();");
         int n = declaration.getParameterCount();
         for (int i = 0; i < n; ++i) {
-            out.format("  params[\"%s\"] = %s;%n", parameterNames[i], parameterNames[i]);
+            out.format("  params[\"%s\"] = cpp2rpc(%s);%n", parameterNames[i], parameterNames[i]);
         }
-        out.println("  rpc.call(params); ");
-        out.print("  }");
+
+        String _static = declaration.isStatic() ? "__static_call__" : "__call__";
+
+        if (declaration.executable() instanceof Constructor) {
+            out.format("  __set__(%s(params));%n", _static);
+        } else {
+            Type returnType = declaration.executable().getAnnotatedReturnType().getType();
+            if (returnType == Void.TYPE) {
+                out.format("  %s(params);%n", _static);
+            } else {
+                out.format("  return rpc2cpp<%s>(%s(params));%n", cppname(returnType), _static);
+            }
+        }
+        out.format("}%n%n");
     }
 
     private static void outputSignature(PrintStream out, ClassDescription description,
                                         String name, Declaration<?> declaration) {
         final Executable executable = declaration.executable();
-        if (declaration.executable() instanceof Method) {
+        if (executable instanceof Method) {
+            if (declaration.isStatic()) out.print("static ");
             out.print(cppname(executable.getAnnotatedReturnType().getType()));
             out.print(' ');
         }
 
-        if (description == null)
+        if (description == null) {
             out.format("%s(", name);
-        else
+        } else {
             out.format("%s::%s(", description.getClassName(), name);
+        }
 
         final String[] parameterNames = declaration.getParameterNames();
 
@@ -351,6 +436,10 @@ public class RPCObjects {
         type2cppType.put(Double.TYPE, "double");
     }
 
+    private static boolean isRegistered(Type type) {
+        return cppname(type) != null;
+    }
+
     private static String cppname(Type type) {
         final String s = type2cppType.get(type);
         if (s != null) {
@@ -363,25 +452,27 @@ public class RPCObjects {
         }
 
         if (type instanceof ParameterizedType) {
-            return "UNKNOWN_PTYPE(" + type.toString() + ")";
+            return null;
         }
         if (type instanceof TypeVariable) {
-            return "UNKNOWN_TypeVariable(" + type.toString() + ")";
+            return null;
         }
 
         Class<?> aClass = (Class) type;
         if (aClass.isArray()) {
-            return "std::array<" + cppname(aClass.getComponentType()) + ">";
+            String cppname = cppname(aClass.getComponentType());
+            return cppname == null ? null : "std::vector<" + cppname + ">";
         }
 
         if (List.class.isAssignableFrom(aClass)) {
             final TypeToken<? extends List> wrapperType = TypeToken.of((Class<? extends List>) aClass);
 
-            return "std::vector<" + cppname(wrapperType.resolveType(List.class.getTypeParameters()[0]).getType()) + ">";
+            String cppname = cppname(wrapperType.resolveType(List.class.getTypeParameters()[0]).getType());
+
+            return cppname == null ? null : "std::vector<" + cppname + ">";
 
         }
 
-        return "UNKNOWN(" + type.toString() + ")";
-//        throw new AssertionError("Cannot handle type: " + type);
+        return null;
     }
 }
