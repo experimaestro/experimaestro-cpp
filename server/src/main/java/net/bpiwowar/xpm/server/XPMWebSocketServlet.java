@@ -43,7 +43,7 @@ public class XPMWebSocketServlet extends WebSocketServlet {
         factory.setCreator((req, resp) -> {
             try {
                 return new XPMWebSocketListener(settings);
-            } catch (IOException e) {
+            } catch (IOException | NoSuchMethodException e) {
                 throw new WrappedException(e);
             }
         });

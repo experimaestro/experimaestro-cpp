@@ -6,10 +6,12 @@ find_package(SWIG REQUIRED)
 FIND_PACKAGE(PythonInterp 3 REQUIRED)
 add_definitions("-Wall")
 enable_testing()
-set(SOURCES xpm/JsonRPCClient.cpp xpm/xpm.cpp xpm/Client.cpp xpm/rpc/objects.cpp)
 
-include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
-add_executable(xpmcpp ${SOURCES})
+set(EXTERNAL_HEADERS include/xpm/xpm.h)
+set(SOURCES src/JsonRPCClient.cpp src/xpm.cpp src/Client.cpp src/rpc/objects.cpp src/rpc/utils.cpp)
+
+include_directories("${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
+add_executable(xpmcpp ${SOURCES} clienttest.cpp)
 set_property(TARGET xpmcpp PROPERTY CXX_STANDARD 11)
 
 
@@ -25,7 +27,7 @@ add_custom_command(
         COMMAND touch index.xml
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating XML documentation with Doxygen" VERBATIM
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/xpm.h ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+        DEPENDS ${EXTERNAL_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
 )
 add_custom_target(documentation_index DEPENDS index.xml)
 
@@ -44,31 +46,33 @@ add_custom_target(documentation DEPENDS documentation.i)
 
 if (true)
     FIND_PACKAGE(PythonLibs 3 REQUIRED)
-    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR})
+    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
     SET_SOURCE_FILES_PROPERTIES(swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
-    set(CMAKE_SWIG_OUTDIR "python")
+    set(CMAKE_SWIG_OUTDIR "python/experimaestro")
+    file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
+    file(COPY swig/python/__init__.py DESTINATION ${CMAKE_SWIG_OUTDIR})
+
     set(CMAKE_SWIG_FLAGS "-builtin")
 
-    SET(SWIG_MODULE_xpm_python_EXTRA_DEPS ${CMAKE_SOURCE_DIR}/xpm.h ${CMAKE_SOURCE_DIR}/swig/xpm.swig.py)
-    swig_add_module(xpm_python python swig/xpm.i ${SOURCES})
-    swig_link_libraries(xpm_python ${PYTHON_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
+    SET(SWIG_MODULE_xpm_python_EXTRA_DEPS ${EXTERNAL_HEADERS} ${CMAKE_SOURCE_DIR}/swig/xpm.swig.py)
+    swig_add_module(experimaestro_python python swig/xpm.i ${SOURCES})
+    swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
 
     # C++11 features
-    set_target_properties(_xpm_python PROPERTIES CXX_STANDARD 11)
+    set_target_properties(_experimaestro_python PROPERTIES CXX_STANDARD 11)
 
     # Set output name and path
-    SET_TARGET_PROPERTIES(_xpm_python PROPERTIES
+    SET_TARGET_PROPERTIES(_experimaestro_python PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
-            LIBRARY_OUTPUT_NAME _xpm)
+            LIBRARY_OUTPUT_NAME _experimaestro)
 
-    add_dependencies(_xpm_python documentation)
+    add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
-    #    add_dependencies(run-tests DEPENDS _xpm_python)
+    #    add_dependencies(run-tests DEPENDS _experimaestro_python)
 
     add_test(python_test ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test/python/test.py")
     set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_SWIG_OUTDIR}")
-
 endif ()

@@ -42,7 +42,7 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     private final JsonRPCMethods methods;
 
 
-    public XPMWebSocketListener(JsonRPCSettings settings) throws IOException {
+    public XPMWebSocketListener(JsonRPCSettings settings) throws IOException, NoSuchMethodException {
         this.methods = new JsonRPCMethods(settings, new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {

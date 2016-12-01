@@ -11,10 +11,6 @@
 
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
-#include <websocketpp/base64/base64.hpp>
-
-#include <iostream>
-#include "json.hpp"
 
 using nlohmann::json;
 typedef websocketpp::frame::opcode::value OpValue;
@@ -50,6 +46,7 @@ class _JSONRPCClient {
   // Opened connection
   std::mutex m_open;
   std::condition_variable cv_open;
+  bool connected;
 
   // Incoming messages
   std::mutex m_incoming_message;
@@ -93,7 +90,7 @@ class _JSONRPCClient {
 
   void start(std::string const &username, std::string const &password) {
     try {
-
+      connected = false;
       if (debug) {
         // Set logging to be pretty verbose (everything except message payloads)
         c.set_access_channels(websocketpp::log::alevel::none);
@@ -118,19 +115,21 @@ class _JSONRPCClient {
           this->hdl = hdl;
         }
         std::cerr << "Connection opened, notifying" << std::endl;
+        connected = true;
         cv_open.notify_all();
       });
 
       c.set_fail_handler([&](websocketpp::connection_hdl hdl) {
         auto connection = c.get_con_from_hdl(hdl);
-        std::cerr << "ERROR  : " << connection->get_state() << " "
+        std::cerr << "[ERROR/RPC] " << connection->get_state() << " "
                   << connection->get_local_close_code() << " "
                   << connection->get_local_close_reason() << " "
                   << connection->get_remote_close_code() << " "
                   << connection->get_remote_close_reason() << ": "
                   << connection->get_ec() << " - " << connection->get_ec().message() << std::endl;
+
         // Close connection
-        connection->close(0, "finished");
+        connection->close(connection->get_local_close_code(), connection->get_local_close_reason());
       });
 
       c.set_close_handler([&](websocketpp::connection_hdl hdl) {
@@ -141,6 +140,7 @@ class _JSONRPCClient {
         }
         std::cerr << "Connection closed, notifying" << std::endl;
         cv_open.notify_all();
+        connected = false;
       });
 
       websocketpp::lib::error_code ec;
@@ -170,7 +170,7 @@ class _JSONRPCClient {
   void send(json const &message) {
     while (true) {
       std::unique_lock<std::mutex> lk(m_open);
-      cv_open.wait(lk);
+      cv_open.wait(lk, [&] { return connected; });
       if (auto ptr = hdl.lock()) {
         c.send(hdl, message.dump(), OpValue::text);
         return;
@@ -266,7 +266,12 @@ bool JsonMessage::error() const {
 }
 
 nlohmann::json const &JsonMessage::result() const {
-  return _message["result"];
+  if (_message.count("result") > 0) {
+    return _message["result"];
+  }
+
+  static const json nulljson;
+  return nulljson;
 }
 
 int JsonMessage::errorCode() const {

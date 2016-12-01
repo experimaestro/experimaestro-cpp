@@ -1,6 +1,5 @@
 package net.bpiwowar.xpm.server.rpc;
 
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
@@ -8,20 +7,37 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
-import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
+import net.bpiwowar.xpm.manager.scripting.Declaration;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
+import net.bpiwowar.xpm.manager.scripting.Scripting;
+import net.bpiwowar.xpm.manager.scripting.WrapperObject;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.sun.javafx.binding.StringFormatter.format;
 
 /**
  * Expose @Exposed objects to remote calls
@@ -44,8 +60,8 @@ public class RPCObjects {
     static public class ClassDescription {
         final Class<?> wrappedClass;
         final Class<?> aClass;
-        final ArrayList<Constructor> constructors = new ArrayList<>();
-        final ArrayList<Method> methods = new ArrayList<>();
+        final ArrayList<ConstructorDeclaration> constructors = new ArrayList<>();
+        final ArrayList<MethodDeclaration> methods = new ArrayList<>();
         public String className;
 
         public ClassDescription(Class<?> aClass) {
@@ -57,22 +73,26 @@ public class RPCObjects {
                 wrappedClass = aClass;
             }
 
+            // Get class name
+            Exposed exposed = aClass.getAnnotation(Exposed.class);
+            className = exposed.value().isEmpty() ? aClass.getSimpleName() : exposed.value();
+
             // Gather constructors
             for (Constructor<?> constructor : aClass.getDeclaredConstructors()) {
-                if (constructor.getAnnotation(Exposed.class) != null) {
-                    constructors.add(constructor);
+                if (constructor.getAnnotation(Expose.class) != null) {
+                    constructors.add(new ConstructorDeclaration(constructor));
                 }
             }
 
             // Gather methods
             for (Method method : aClass.getDeclaredMethods()) {
-                if (method.getAnnotation(Exposed.class) != null) {
-                    methods.add(method);
+                // Avoid co-variants
+                if (method.isBridge()) continue;
+                if (method.getAnnotation(Expose.class) != null) {
+                    methods.add(new MethodDeclaration(method));
                 }
             }
 
-            Exposed exposed = aClass.getAnnotation(Exposed.class);
-            className = exposed.value().isEmpty() ? aClass.getSimpleName() : exposed.value();
 
         }
 
@@ -94,35 +114,34 @@ public class RPCObjects {
         }
     }
 
-    public static void addRPCMethods(Multimap<String, RPCCaller> methods) {
+    public static void addRPCMethods(Multimap<String, RPCCaller> methods) throws NoSuchMethodException {
         init();
+        methods.put(OBJECTS + ".__delete__", new RPCMethodCaller(
+                RPCObjects.class.getMethod("deleteObject", new Class[]{Integer.TYPE}))
+        );
 
         for (ClassDescription classDescription : types.values()) {
             final String prefix = OBJECTS + "." + classDescription.getClassName() + ".";
 
-            for (Constructor constructor : classDescription.constructors) {
+            for (Declaration<Constructor> constructor : classDescription.constructors) {
                 methods.put(prefix + "__init__", new ExposedCaller(constructor));
             }
-            for (Method method : classDescription.methods) {
-                methods.put(prefix, new ExposedCaller(method));
+            for (Declaration<Method> method : classDescription.methods) {
+                methods.put(prefix + method.getName(), new ExposedCaller(method));
             }
         }
     }
 
-    private static String getMethodName(Method method) {
-        Expose expose = method.getAnnotation(Expose.class);
-        String name = null;
-        if (expose != null) name = expose.value();
-        if (name != null && !name.isEmpty())
-            return name;
-        return method.getName();
+    public void deleteObject(@RPCArgument(name = "__this__") int id) {
+        object2id.remove(objects.get(id));
+        objects.set(id, null);
     }
 
     private long store(Object object) {
         final Integer id = object2id.get(object);
         if (id == null) {
             long newId = objects.size();
-            objects.add(id);
+            objects.add(object);
             object2id.put(object, id);
             return newId;
         }
@@ -134,10 +153,10 @@ public class RPCObjects {
         /**
          * Method
          */
-        Executable method;
+        Declaration<?> method;
 
 
-        public ExposedCaller(Executable callable) {
+        public ExposedCaller(Declaration<?> callable) {
             this.method = callable;
 
             Annotation[][] annotations = callable.getParameterAnnotations();
@@ -148,9 +167,9 @@ public class RPCObjects {
             }
 
 
-            if (isConstructor()) {
+            if (!isConstructor() && !method.isStatic()) {
                 // Add self parameter
-                arguments.put("__self__", new MethodArgumentDescriptor("__self__", true, -1));
+                arguments.put("__this__", new MethodArgumentDescriptor("__this__", true, -1));
             }
         }
 
@@ -165,18 +184,31 @@ public class RPCObjects {
             Object[] args = new Object[method.getParameterCount()];
             Gson gson = new Gson();
             final Type[] types = method.getGenericParameterTypes();
+            Object thisObject = null;
 
             for (MethodArgumentDescriptor descriptor : arguments.values()) {
                 final JsonElement jsonElement = p.get(descriptor.name);
-                final Type type = types[descriptor.position];
-                try {
-                    args[descriptor.position] = gson.fromJson(jsonElement, type);
-                } catch (RuntimeException e) {
-                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
+                if (descriptor.position == -1) {
+                    // This
+                    try {
+                        int objectId = gson.fromJson(jsonElement, Integer.TYPE);
+                        thisObject = objects.objects.get(objectId);
+                    } catch (RuntimeException e) {
+                        throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
+                    }
+                } else {
+                    final Type type = types[descriptor.position];
+                    try {
+                        args[descriptor.position] = gson.fromJson(jsonElement, type);
+                    } catch (RuntimeException e) {
+                        throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
+                    }
                 }
             }
 
-            final Object result = method.invoke(null, o, args);
+            final Object result = method.invoke(null, thisObject, args);
+            if (result == null) return null;
+
             if (result.getClass().getAnnotation(Exposed.class) != null) {
                 return objects.store(result);
             }
@@ -223,7 +255,7 @@ public class RPCObjects {
         }
 
         for (Map.Entry<Class<?>, ClassNode> entry : nodes.entrySet()) {
-            Class<?> aClass = entry.getKey();
+            Class<?> aClass = entry.getValue().classDescription.aClass;
             for (aClass = aClass.getSuperclass(); !Object.class.equals(aClass); aClass = aClass.getSuperclass()) {
                 final ClassNode parentNode = nodes.get(aClass);
                 if (parentNode != null) {
@@ -274,40 +306,30 @@ public class RPCObjects {
                 if (classNode.parents.isEmpty())
                     out.print(" : public ServerObject");
                 out.format(" {%n");
+                out.format("protected:%n  virtual std::string const &__name__() const override;%n%n");
                 out.format("public:%n");
 
-                for (ConstructorDeclaration c : description.getConstructors().declarations()) {
+                for (ConstructorDeclaration c : description.constructors) {
                     if (!isRegistered(c)) {
                         LOGGER.error("Unregistered type for %s", c);
                         continue;
                     }
 
+                    outputHelp(out, c);
                     out.print("  ");
-                    outputSignature(out, null, description.getClassName(), c);
+                    outputSignature(out, false, description.getClassName(), c);
                     out.println(";");
                 }
 
-                for (MethodFunction methods : description.getMethods().values()) {
-                    if (methods == null) {
+                for (Declaration<Method> method : description.methods) {
+                    if (!isRegistered(method)) {
+                        LOGGER.error("Unregistered type for %s", method);
                         continue;
                     }
-
-                    final Iterable<MethodDeclaration> declarations = methods.declarations();
-                    if (declarations == null) {
-                        continue;
-                    }
-
-
-                    for (MethodDeclaration method : declarations) {
-                        if (!isRegistered(method)) {
-                            LOGGER.error("Unregistered type for %s", method);
-                            continue;
-                        }
-                        out.print("  ");
-                        outputSignature(out, null, methods.getKey(), method);
-                        out.println(";");
-                    }
-
+                    outputHelp(out, method);
+                    out.print("  ");
+                    outputSignature(out, false, description.getClassName(), method);
+                    out.println(";");
                 }
 
 
@@ -329,34 +351,63 @@ public class RPCObjects {
             out.format("namespace xpm {%n");
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
+                final String className = description.getClassName();
 
-                for (ConstructorDeclaration c : description.getConstructors().declarations()) {
+                String prefix = OBJECTS + "." + className;
+                for (Declaration<Constructor> c : description.constructors) {
                     if (!isRegistered(c)) continue;
 
-                    outputSignature(out, description, description.getClassName(), c);
-                    generateRPCCall(out, c);
+                    outputSignature(out, true, description.getClassName(), c);
+                    generateRPCCall(out, prefix, c);
                 }
 
-                for (MethodFunction methods : description.getMethods().values()) {
-                    if (methods == null) {
-                        continue;
-                    }
+                out.format("std::string const &%s::__name__() const { static std::string name = \"%s\"; return name; }%n",
+                        className, className);
 
-                    final Iterable<MethodDeclaration> declarations = methods.declarations();
-                    if (declarations == null) {
-                        continue;
-                    }
 
-                    for (MethodDeclaration method : declarations) {
-                        if (!isRegistered(method)) continue;
-                        outputSignature(out, description, methods.getKey(), method);
-                        generateRPCCall(out, method);
-                    }
+                for (MethodDeclaration method : description.methods) {
+                    if (!isRegistered(method)) continue;
+                    outputSignature(out, true, className, method);
+                    generateRPCCall(out, prefix, method);
+
                 }
             }
             out.println("}");
 
         }
+    }
+
+    public static void outputHelp(PrintStream out, Declaration<?> d) {
+        final Help help = d.executable().getAnnotation(Help.class);
+        StringBuilder sb = new StringBuilder();
+
+        if (help != null) {
+            sb.append(help.value());
+            sb.append('\n');
+        }
+
+        final Annotation[][] parameterAnnotations = d.getParameterAnnotations();
+        final String[] parameterNames = d.getParameterNames();
+
+        for (int i = 0, parameterAnnotationsLength = parameterAnnotations.length; i < parameterAnnotationsLength; i++) {
+            Annotation[] parameterAnnotation = parameterAnnotations[i];
+            for (Annotation annotation : parameterAnnotation) {
+                if (annotation instanceof Argument) {
+                    String helpString = ((Argument) annotation).help();
+                    if (!helpString.isEmpty()) {
+                        sb.append(format("    @param %s %s%n", parameterNames[i], helpString));
+                    }
+                    break;
+                }
+            }
+
+        }
+
+        final String s = sb.toString();
+        out.print("  /** ");
+        out.print(s);
+        out.println("  */");
+
     }
 
     private static boolean isRegistered(Declaration<?> declaration) {
@@ -374,44 +425,47 @@ public class RPCObjects {
         return true;
     }
 
-    private static void generateRPCCall(PrintStream out, Declaration<?> declaration) {
+    private static void generateRPCCall(PrintStream out, String prefix, Declaration<?> declaration) {
+        final Executable executable = declaration.executable();
         String[] parameterNames = declaration.getParameterNames();
 
         out.println(" {");
-        out.println("  json params = json::object();");
+        out.println("  nlohmann::json params = nlohmann::json::object();");
         int n = declaration.getParameterCount();
         for (int i = 0; i < n; ++i) {
-            out.format("  params[\"%s\"] = cpp2rpc(%s);%n", parameterNames[i], parameterNames[i]);
+            out.format("  params[\"%s\"] = RPCConverter<%s>::toJson(%s);%n", parameterNames[i],
+                    cppname(executable.getParameterTypes()[i]), parameterNames[i]);
         }
 
-        String _static = declaration.isStatic() ? "__static_call__" : "__call__";
+        String callName = declaration.isStatic() ? "__static_call__" : "__call__";
 
-        if (declaration.executable() instanceof Constructor) {
-            out.format("  __set__(%s(params));%n", _static);
+        if (executable instanceof Constructor) {
+            out.format("  __set__(%s(\"%s.__init__\", params));%n", callName, prefix);
         } else {
-            Type returnType = declaration.executable().getAnnotatedReturnType().getType();
+            Type returnType = executable.getAnnotatedReturnType().getType();
             if (returnType == Void.TYPE) {
-                out.format("  %s(params);%n", _static);
+                out.format("  %s(\"%s.%s\", params);%n", callName, prefix, declaration.getName());
             } else {
-                out.format("  return rpc2cpp<%s>(%s(params));%n", cppname(returnType), _static);
+                out.format("  return RPCConverter<%s>::toCPP(%s(\"%s.%s\", params));%n", cppname(returnType),
+                        callName, prefix, declaration.getName());
             }
         }
         out.format("}%n%n");
     }
 
-    private static void outputSignature(PrintStream out, ClassDescription description,
-                                        String name, Declaration<?> declaration) {
+    private static void outputSignature(PrintStream out, boolean definition, String className, Declaration<?> declaration) {
         final Executable executable = declaration.executable();
         if (executable instanceof Method) {
-            if (declaration.isStatic()) out.print("static ");
+            if (declaration.isStatic() && !definition) out.print("static ");
             out.print(cppname(executable.getAnnotatedReturnType().getType()));
             out.print(' ');
         }
 
-        if (description == null) {
-            out.format("%s(", name);
+        String name = declaration instanceof MethodDeclaration ? declaration.getName() : className;
+        if (definition) {
+            out.format("%s::%s(", className, name);
         } else {
-            out.format("%s::%s(", description.getClassName(), name);
+            out.format("%s(", name);
         }
 
         final String[] parameterNames = declaration.getParameterNames();

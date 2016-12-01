@@ -35,6 +35,7 @@ abstract public class Declaration<T extends Executable> {
     boolean[] nullable;
 
     String[] parameterNames;
+    String name;
 
     /**
      * Construct a new declaration
@@ -43,6 +44,11 @@ abstract public class Declaration<T extends Executable> {
      */
     public Declaration(T executable) {
         this.executable = executable;
+
+        // Get the name
+        Expose expose = executable.getAnnotation(Expose.class);
+        name = expose != null && !expose.value().isEmpty() ? expose.value()
+                : (executable instanceof Constructor ? null : executable.getName());
     }
 
     private static <T extends Annotation> T getAnnotation(Class<T> annotationClass, Annotation[] annnotations) {
@@ -167,7 +173,8 @@ abstract public class Declaration<T extends Executable> {
         RESERVED_CPP_NAMES.add("int");
         RESERVED_CPP_NAMES.add("long");
         RESERVED_CPP_NAMES.add("float");
-        RESERVED_CPP_NAMES.add("double");
+        RESERVED_CPP_NAMES.add("float");
+        RESERVED_CPP_NAMES.add("json");
     }
 
     static private String name(Parameter p, Set<String> taken) {
@@ -200,6 +207,10 @@ abstract public class Declaration<T extends Executable> {
 
     public boolean isStatic() {
         return executable instanceof Constructor || Modifier.isStatic(executable.getModifiers());
+    }
+
+    public String getName() {
+        return name;
     }
 
 

@@ -1,0 +1,14 @@
+global-exclude .DS_Store
+
+include CMakeLists.txt
+include Doxyfile.in
+include config.ini
+include doxy2swig.py
+include clienttest.cpp
+
+graft asio
+graft swig
+graft xpm
+graft test
+graft websocketpp
+

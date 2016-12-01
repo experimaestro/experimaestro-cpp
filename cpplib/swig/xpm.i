@@ -1,7 +1,7 @@
-%module(directors="1") xpm
+%module(directors="1") experimaestro
 
 %{
-#include "xpm.h"
+#include <xpm/xpm.h>
 %}
 
 // Useful imports
@@ -71,7 +71,7 @@
 %feature("director") xpm::Type;
 
 // Include file
-%include "xpm.h"
+%include <xpm/xpm.h>
 
 %template(set) xpm::Object::set<std::string>;
 %template(set) xpm::Object::set<long>;
@@ -84,4 +84,4 @@
     }
 }
 */
-%pythoncode "swig/xpm.swig.py"
+/*%pythoncode "swig/python/xpm.swig.py"*/

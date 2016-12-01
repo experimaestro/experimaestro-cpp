@@ -3,16 +3,28 @@
 //
 #include <functional>
 
-#include "Client.h"
+#include "Client.hpp"
 
 namespace xpm {
 
 using nlohmann::json;
 
+Client *Client::DEFAULT_CLIENT = nullptr;
+
 Client::Client(const std::string &wsURL, const std::string &username, const std::string &password)
     : _client(wsURL, username, password, true) {
   _client.setHandler(std::bind(&Client::handler, this, std::placeholders::_1));
+  DEFAULT_CLIENT = this;
 }
+
+Client::~Client() {
+  if (DEFAULT_CLIENT == this) DEFAULT_CLIENT = nullptr;
+}
+
+JsonMessage Client::call(std::string const &name, json const &params) {
+  return _client.request(name, params);
+}
+
 
 bool Client::ping() {
   auto response = _client.request("ping", json::object());
@@ -25,12 +37,11 @@ bool Client::ping() {
 void Client::handler(nlohmann::json const &message) {
   std::cerr << "[notification] " << message.dump() << std::endl;
 }
+Client &Client::defaultClient() {
+  if (DEFAULT_CLIENT == nullptr) {
+    throw std::runtime_error("Default RPC client is not defined");
+  }
+  return *DEFAULT_CLIENT;
+}
 
 } // xpm ns
-
-// Just to try...
-int main(int ac, char const **av) {
-  xpm::Client client(av[1], av[2], av[3]);
-
-  std::cerr << "Ping: " << client.ping() << std::endl;
-}

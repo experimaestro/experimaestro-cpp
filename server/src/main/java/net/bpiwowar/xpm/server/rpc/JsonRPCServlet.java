@@ -64,7 +64,7 @@ public class JsonRPCServlet extends HttpServlet {
             }
             JsonParser parser = new JsonParser();
             handler.handleJSON(parser.parse(queryString).getAsJsonObject());
-        } catch (RuntimeException e) {
+        } catch (RuntimeException |NoSuchMethodException e) {
             LOGGER.error(e, "Error while handling request");
         } finally {
             ServletOutputStream outputStream = resp.getOutputStream();
@@ -83,6 +83,8 @@ public class JsonRPCServlet extends HttpServlet {
             JsonParser parser = new JsonParser();
             final JsonObject message = parser.parse(reader).getAsJsonObject();
             handler.handleJSON(message);
+        } catch (NoSuchMethodException e) {
+            LOGGER.error(e, "Error while handling request");
         } finally {
             ServletOutputStream outputStream = resp.getOutputStream();
             outputStream.flush();
@@ -94,7 +96,7 @@ public class JsonRPCServlet extends HttpServlet {
     private class JsonCallHandler {
         private final JsonRPCMethods jsonRPCMethods;
 
-        private JsonCallHandler(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
+        private JsonCallHandler(final HttpServletRequest req, final HttpServletResponse resp) throws IOException, NoSuchMethodException {
             ServletOutputStream outputStream = resp.getOutputStream();
             final PrintWriter pw = new PrintWriter(outputStream);
 

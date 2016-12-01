@@ -93,11 +93,11 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
-    public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException {
+    public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException, NoSuchMethodException {
         super(mos);
         initMethods();
         this.settings = settings;
-        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos));
+        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos), new RPCObjects());
     }
 
     public void addObjects(Object... objects) {
@@ -106,7 +106,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         }
     }
 
-    public static void initMethods() throws IOException {
+    public static void initMethods() throws IOException, NoSuchMethodException {
         if (methods == null) {
             methods = HashMultimap.create();
 
