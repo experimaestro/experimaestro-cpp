@@ -10,7 +10,7 @@ enable_testing()
 set(EXTERNAL_HEADERS include/xpm/xpm.h)
 set(SOURCES src/JsonRPCClient.cpp src/xpm.cpp src/Client.cpp src/rpc/objects.cpp src/rpc/utils.cpp)
 
-include_directories("${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
+include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
 add_executable(xpmcpp ${SOURCES} clienttest.cpp)
 set_property(TARGET xpmcpp PROPERTY CXX_STANDARD 11)
 

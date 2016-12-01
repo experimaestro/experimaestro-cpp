@@ -3,7 +3,7 @@
 //
 #include <functional>
 
-#include "Client.hpp"
+#include <xpm/Client.hpp>
 
 namespace xpm {
 

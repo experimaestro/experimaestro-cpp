@@ -3,9 +3,9 @@
 #include <functional>
 #include <iostream>
 
-#include "xpm.h"
+#include <xpm/xpm.h>
+#include <xpm/json.hpp>
 
-#include "json.hpp"
 using nlohmann::json;
 
 namespace xpm {

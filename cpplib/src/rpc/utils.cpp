@@ -2,7 +2,7 @@
 // Created by Benjamin Piwowarski on 29/11/2016.
 //
 
-#include "utils.hpp"
+#include <xpm/rpc/utils.hpp>
 #include <xpm/Client.hpp>
 
 namespace xpm {

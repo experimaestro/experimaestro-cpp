@@ -5,7 +5,7 @@
 #ifndef XPM_JSONRPCCLIENT_H
 #define XPM_JSONRPCCLIENT_H
 
-#include "json.hpp"
+#include <xpm/json.hpp>
 
 namespace xpm {
 
