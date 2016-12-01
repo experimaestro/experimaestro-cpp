@@ -131,7 +131,12 @@ void StructuredValue::value(Value const &scalar) {
 }
 
 void StructuredValue::seal() {
-  throw std::runtime_error("not implemented");
+  if (_sealed) return;
+
+  _sealed = true;
+  for(auto &item: _content) {
+    item.second->seal();
+  }
 }
 
 bool StructuredValue::isSealed() const {
@@ -456,12 +461,20 @@ std::string Object::json() const {
   return _value->toJson();
 }
 
+void Object::seal() {
+  _value->seal();
+}
 
 // ---- Task
 
 Task::Task(std::shared_ptr<Type> const &type) : _type(type) {
 }
 
+std::shared_ptr<Object> Task::execute(std::shared_ptr<Object> const &object) {
+  object->seal();
+
+  return object;
+}
 
 // ---- REGISTER
 

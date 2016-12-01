@@ -41,7 +41,7 @@ logger.info(json.dumps(tojson()))
 # params = {"$type": xpmcpp("A2"), "size": 1, "model": { "$type": xpmcpp("A") }, "path": ":shares:big:home:yo"}
 # print(register.build(params))
 
-
+print(Task.__dict__)
 # Create from arguments
 logger.info("Build from JSON")
 model = A.create()

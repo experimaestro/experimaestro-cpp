@@ -23,7 +23,11 @@ class JsonEncoder(json.JSONEncoder):
 
 JSON_ENCODER = JsonEncoder()
 
-class PyObject(Object):
+_SwigPyType = type(Object)
+class PyObjectType(_SwigPyType):
+    pass
+    
+class PyObject(Object, metaclass=PyObjectType):
     """Base type"""
     def __init__(self):
         Object.__init__(self)
@@ -95,13 +99,21 @@ class PythonRegister(Register):
 
 register = PythonRegister()
 
-def create(t, args, options):
+def create(t, args, options, execute=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
     o = xpmType.create()
     for k, v in options.items():
         setattr(o, k, v)
+    if execute:
+        return t.__task__.execute(o)
     return o
+        
+def wrap(self, function, **options):
+    def _wrapped(*args, **opts):
+        return function(self, args, opts, **options)
+    return _wrapped
+
 
 class RegisterType:
     """Declares an experimaestro type"""
@@ -118,18 +130,15 @@ class RegisterType:
         # Register type
         if self.qname is not None and register.getType(self.qname) is not None:
             raise Exception("XPM type %s is already declared" % qname)
-
-        # Add the create method
-        _dict = dict(t.__dict__)
-        def _create(*args, **options):
-            return create(t, args, options)
-        _dict["create"] = staticmethod(_create)
-
+        
         # Add XPM object if needed
         bases = t.__bases__ if issubclass(t, PyObject) else (PyObject,) + t.__bases__
 
         # Re-create a new type
-        t = type(t.__name__, bases, _dict) 
+        t = type(t.__name__, bases, dict(t.__dict__))
+
+        # Add the create method
+        t.create = wrap(t, create)
 
         # Find first registered ancestor
         parentinfo = None
@@ -145,6 +154,7 @@ class RegisterType:
 
         return t
 
+
 class RegisterTask():
     """Register a task"""
     def __init__(self, scriptpath=None, pythonpath=None):
@@ -159,8 +169,10 @@ class RegisterTask():
             self.scriptpath = op.abspath(inspect.getfile(t))
             
         logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
-        task = Task(register.getType(t))
-        register.addTask(task)
+        t.__task__ = Task(register.getType(t))
+        register.addTask(t.__task__)
+        
+        t.execute = wrap(t, create, execute=True)
         return t
 
 class AbstractArgument:

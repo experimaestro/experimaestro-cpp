@@ -67,11 +67,13 @@ if (true)
 
     SET_SOURCE_FILES_PROPERTIES(swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
-    file(COPY swig/python/__init__.py DESTINATION ${CMAKE_SWIG_OUTDIR})
-
+	add_custom_target(copy_init_py
+	      ${CMAKE_COMMAND} -E copy_if_different
+	      ${CMAKE_SOURCE_DIR}/swig/python/__init__.py ${CMAKE_SWIG_OUTDIR})
+	
     set(CMAKE_SWIG_FLAGS "-builtin")
 
-    SET(SWIG_MODULE_xpm_python_EXTRA_DEPS ${EXTERNAL_HEADERS} ${CMAKE_SOURCE_DIR}/swig/xpm.swig.py)
+    SET(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS})
     swig_add_module(experimaestro_python python swig/xpm.i ${SOURCES})
     swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -83,7 +85,7 @@ if (true)
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
             LIBRARY_OUTPUT_NAME _experimaestro)
 
-    add_dependencies(_experimaestro_python documentation)
+    add_dependencies(_experimaestro_python documentation copy_init_py)
 
     # Test examples (compilation only)
     #    add_dependencies(run-tests DEPENDS _experimaestro_python)

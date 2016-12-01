@@ -322,6 +322,13 @@ class Task {
    */
   Task(std::shared_ptr<Type> const &type);
 
+  /**
+   * Execute a task
+   * @param object The object corresponding to the task type
+   */
+  std::shared_ptr<Object> execute(std::shared_ptr<Object> const &object);
+
+  /** Returns the type of this task */
   inline TypeName typeName() const { return _type->typeName(); }
 };
 
@@ -377,6 +384,11 @@ class Object {
 
   /** String representation of the object */
   virtual std::string toString() const;
+
+  /**
+   * Seal the object
+   */
+  void seal();
 
   /** Set a value */
   template<typename _Value>
