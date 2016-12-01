@@ -46,12 +46,24 @@ add_custom_target(documentation DEPENDS documentation.i)
 
 if (true)
     FIND_PACKAGE(PythonLibs 3 REQUIRED)
+	if (DEFINED PYTHON_BUILD_LOCATION)
+	    set(CMAKE_SWIG_OUTDIR "${PYTHON_BUILD_LOCATION}/experimaestro")
+	else()
+	    set(CMAKE_SWIG_OUTDIR "python/experimaestro")
+	endif()
+	
+	file(GENERATE OUTPUT install_manifest.txt CONTENT 
+	"${CMAKE_SWIG_OUTDIR}/_experimaestro.so
+		${CMAKE_SWIG_OUTDIR}/experimaestro.py
+		${CMAKE_SWIG_OUTDIR}/_init_.py")
+	
+    file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
+	message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR}")
+	
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
     SET_SOURCE_FILES_PROPERTIES(swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
-    set(CMAKE_SWIG_OUTDIR "python/experimaestro")
-    file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
     file(COPY swig/python/__init__.py DESTINATION ${CMAKE_SWIG_OUTDIR})
 
     set(CMAKE_SWIG_FLAGS "-builtin")

@@ -23,7 +23,10 @@ author = config["author"]
 
 from cmake_pip.cmake_extension import ExtensionCMake, setup
 
-extension = ExtensionCMake(name="experimaestro", cmake_file="CMakeLists.txt", cmake_target="_experimaestro_python")
+extension = ExtensionCMake(name="experimaestro", 
+    cmake_file="CMakeLists.txt", 
+    cmake_target="_experimaestro_python",
+    cmake_install=True)
 
 setup(name='experimaestro',
       version=informations["version"],
@@ -32,12 +35,4 @@ setup(name='experimaestro',
       author_email=author["email"],
       url=informations["url"],
       ext_modules=[extension]
-      # packages = ['experimaestro'],
-      # package_dir = {'experimaestro': 'build/python/experimaestro'},
-      # package_data = { 'experimaestro': [ '_experimaestro.so', '__init__.py' ] },
-
-      # cmdclass={
-      #     'build': build,
-      #     'install': install
-      # }
 )

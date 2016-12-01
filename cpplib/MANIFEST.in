@@ -6,9 +6,11 @@ include config.ini
 include doxy2swig.py
 include clienttest.cpp
 
+graft cmake_pip
 graft asio
 graft swig
-graft xpm
+graft include
+graft src
 graft test
 graft websocketpp
 
