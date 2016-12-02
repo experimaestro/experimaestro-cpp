@@ -7,6 +7,7 @@
 
 // Useful imports
 %include "std_string.i"
+%include "std_vector.i"
 %include "exception.i"
 %include "std_shared_ptr.i"
 
@@ -79,6 +80,7 @@
 %template(set) xpm::Object::set<double>;
 %template(set) xpm::Object::set<std::shared_ptr<xpm::Object>>;
 
+%template(StringList) std::vector<std::string>;
 /*%extend xpm::Object {
     std::shared_ptr<Object> __getitem__(std::string const & key) {
       return (*($self))[key];

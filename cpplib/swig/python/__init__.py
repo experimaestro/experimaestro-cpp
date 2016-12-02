@@ -91,6 +91,11 @@ class PythonRegister(Register):
             return self.types.get(key, None)
 
         return super().getType(key)
+        
+    def parse(self, arguments=None):
+        if arguments is None:
+            arguments = sys.argv[1:]
+        super().parse(StringList(arguments))
 
 
     def build(self, params):

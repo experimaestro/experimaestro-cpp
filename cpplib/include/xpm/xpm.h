@@ -274,7 +274,7 @@ class Register;
  * An object type is composed of:
  * <ul>
  * <li>A unique type name</li>
- * <li>A list of arguments</li>
+ * <li>A list of typed arguments</li>
  * <li>A parent type</li>
  * </ul>
  */
@@ -282,11 +282,21 @@ class Type {
   const TypeName _type;
   std::shared_ptr<Type> _parent;
   std::map<std::string, std::shared_ptr<Argument>> arguments;
+  bool _predefined;
   friend class Register;
  public:
-  Type(TypeName const &type, std::shared_ptr<Type> const &_parent = nullptr);
+  /**
+   * Creates a new type
+   * @param type The typename
+   * @param _parent The parent type (or null pointer)
+   */
+  Type(TypeName const &type, std::shared_ptr<Type> const &_parent = nullptr, bool predefined = false);
   virtual ~Type();
 
+  /**
+   * Add new arguments for this type
+   * @param argument
+   */
   void addArgument(std::shared_ptr<Argument> const &argument);
 
   /// Returns the JSON string corresponding to this type
@@ -300,6 +310,9 @@ class Type {
 
   /// Returns hash code (only based on type name)
   int hash() const;
+
+  /// Predefined types
+  inline bool predefined() const { return _predefined; }
 
   /** Creates an object with a given type */
   virtual std::shared_ptr<Object> create() const {
@@ -323,7 +336,7 @@ class Task {
   Task(std::shared_ptr<Type> const &type);
 
   /**
-   * Execute a task
+   * Execute a task given a configuration object
    * @param object The object corresponding to the task type
    */
   std::shared_ptr<Object> execute(std::shared_ptr<Object> const &object);
@@ -426,6 +439,19 @@ class Register {
 
   virtual ~Register();
 
+  /** Parse command line
+   * <pre>[general options] command [command options]</pre>
+   * where command can be :
+   * <ul>
+   *    <li><code>help</code> that generates help</li>
+   *    <li><code>describe [type] [id]</code> that generates human readable information</li>
+   *    <li><code>generate</code> that generates the JSON corresponding to the registry</li>
+   *    <li><code>run <task-id> [task arguments...]</code> that runs a task</li>
+   * </ul>
+   * @param args
+   */
+  void parse(std::vector<std::string> const &args);
+
   /// Register a new task
   void addTask(std::shared_ptr<Task> const &task);
 
@@ -445,9 +471,5 @@ class Register {
   std::shared_ptr<Object> build(std::shared_ptr<StructuredValue> const &value) const;
 };
 
-
-/// Parser
-class Parser {
-};
 
 }

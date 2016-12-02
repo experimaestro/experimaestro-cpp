@@ -36,7 +36,7 @@ struct ToJson {
 
   static json convert(StructuredValue const &sv) {
     json o = json::object();
-    for(auto const &entry: sv._content) {
+    for (auto const &entry: sv._content) {
       o[entry.first] = convert(*entry.second);
     }
     return o;
@@ -134,7 +134,7 @@ void StructuredValue::seal() {
   if (_sealed) return;
 
   _sealed = true;
-  for(auto &item: _content) {
+  for (auto &item: _content) {
     item.second->seal();
   }
 }
@@ -150,21 +150,17 @@ std::string StructuredValue::toJson() const {
 std::shared_ptr<StructuredValue> parse(json const &jsonValue) {
   std::shared_ptr<StructuredValue> value = std::make_shared<StructuredValue>();
   switch (jsonValue.type()) {
-    case
-      nlohmann::json::value_t::null:break;
+    case nlohmann::json::value_t::null:break;
 
-    case
-      nlohmann::json::value_t::discarded:break;
+    case nlohmann::json::value_t::discarded:break;
 
-    case
-      nlohmann::json::value_t::object:
+    case nlohmann::json::value_t::object:
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         (*value)[it.key()] = parse(it.value());
       }
       break;
 
-    case
-      nlohmann::json::value_t::array: {
+    case nlohmann::json::value_t::array: {
       ValueArray array;
       for (size_t i = 0; i < jsonValue.size(); ++i) {
         array[i] = parse(jsonValue[i]);
@@ -173,30 +169,19 @@ std::shared_ptr<StructuredValue> parse(json const &jsonValue) {
       break;
     }
 
-    case
-      nlohmann::json::value_t::string: {
+    case nlohmann::json::value_t::string: {
       std::string s = jsonValue;
       value->value(s);
+      break;
     }
+
+    case nlohmann::json::value_t::boolean:value->value((bool) jsonValue);
       break;
 
-    case
-      nlohmann::json::value_t::boolean:
-      value
-          ->value((
-                      bool) jsonValue);
-      break;
+    case nlohmann::json::value_t::number_integer:
+    case nlohmann::json::value_t::number_unsigned:value->value((long) jsonValue); // TODO: check this is OK
 
-    case
-      nlohmann::json::value_t::number_integer:
-    case
-      nlohmann::json::value_t::number_unsigned:
-      value
-          ->value((
-                      long) jsonValue); // TODO: check this is OK
-
-    case
-      nlohmann::json::value_t::number_float:break;
+    case nlohmann::json::value_t::number_float:break;
   }
   return
       value;
@@ -374,15 +359,15 @@ void Argument::help(const std::string &help) {
   _help = help;
 }
 
-const std::shared_ptr<Type> BooleanType = std::make_shared<Type>(BOOLEAN_TYPE);
-const std::shared_ptr<Type> IntegerType = std::make_shared<Type>(INTEGER_TYPE);
-const std::shared_ptr<Type> RealType = std::make_shared<Type>(REAL_TYPE);
-const std::shared_ptr<Type> StringType = std::make_shared<Type>(STRING_TYPE);
-const std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE);
-const std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE);
+const std::shared_ptr<Type> BooleanType = std::make_shared<Type>(BOOLEAN_TYPE, nullptr, true);
+const std::shared_ptr<Type> IntegerType = std::make_shared<Type>(INTEGER_TYPE, nullptr, true);
+const std::shared_ptr<Type> RealType = std::make_shared<Type>(REAL_TYPE, nullptr, true);
+const std::shared_ptr<Type> StringType = std::make_shared<Type>(STRING_TYPE, nullptr, true);
+const std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
+const std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true);
 
-Type::Type(TypeName const &type, std::shared_ptr<Type> const &parent)
-    : _type(type), _parent(parent) {}
+Type::Type(TypeName const &type, std::shared_ptr<Type> const &parent, bool predefined)
+    : _type(type), _parent(parent), _predefined(predefined) {}
 
 Type::~Type() {}
 
@@ -564,6 +549,44 @@ std::shared_ptr<Object> Register::build(std::shared_ptr<StructuredValue> const &
   }
 
   return object;
+}
+
+void Register::parse(std::vector<std::string> const &args) {
+// TODO implement command line parsing
+  if (args.size() < 1) {
+    throw argument_error("Expected at least one argument (use help to get some help)");
+  }
+
+  if (args[0] == "help") {
+    return;
+  }
+
+  if (args[0] == "generate") {
+    std::cout << "{";
+    std::cout << R"("types": [)" << std::endl;
+    bool first = true;
+    for (auto const &type: _types) {
+      if (!type.second->predefined()) {
+        if (!first) std::cout << ","; else first = false;
+        std::cout << type.second->toJson() << std::endl;
+      }
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << R"("tasks": [)" << std::endl;
+    first = true;
+    for (auto const &type: _types) {
+      if (!type.second->predefined()) {
+        if (!first) std::cout << ","; else first = false;
+        std::cout << type.second->toJson() << std::endl;
+      }
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "}" << std::endl;
+    return;
+  }
+
 }
 
 } // xpm namespace
