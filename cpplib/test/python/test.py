@@ -24,33 +24,31 @@ class A1():
 @RegisterType(xpmcpp("A2"))
 class A2(A1): 
     X = 1
-    
-    
+
+
+v = StructuredValue()
+v.setValue("a", 1)
+print("UUID [%s]" % v.uniqueIdentifier())
+
+v = StructuredValue()
+print("UUID [%s]" % v.uniqueIdentifier())
+sys.exit()
+# --- Run a specific task
+
 register.parse()
-#
-# # a = A()
-# # a = None
-#
-# # Outputs JSON definitions
-# logger.info("Outputs to JSON")
-# logger.info(json.dumps(tojson()))
-#
-# # Builds from JSON
-# # logger.info("Build from JSON")
-# # params = {"$type": xpmcpp("A2"), "size": 1, "model": { "$type": xpmcpp("A") }, "path": ":shares:big:home:yo"}
-# # print(register.build(params))
-#
-# print(Task.__dict__)
-# # Create from arguments
-# logger.info("Build from JSON")
-# model = A.create()
-#
-# # Configure and run
-# a2 = A2.execute(size=5, model=model)
-# print(a2.json())
-#
-# # Create and then run
-# a2 = A2.create(size=5)
-# a2.model = model
-# a2.run()
-# print(a2.json())
+
+
+# --- Build experiments
+
+# Create from arguments
+model = A.create()
+
+# Configure and run
+for size in  [5, 10]:
+    a2 = A2.execute(size=5, model=model)
+
+# Create and then run
+for size in  [5, 10]:
+    a2 = A2.create(size=5)
+    a2.model = model
+    a2.run()

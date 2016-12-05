@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.0.0)
 include(UseSWIG)
 find_package(SWIG REQUIRED)
 
+find_package(OpenSSL REQUIRED)
+
 FIND_PACKAGE(PythonInterp 3 REQUIRED)
 add_definitions("-Wall")
 enable_testing()

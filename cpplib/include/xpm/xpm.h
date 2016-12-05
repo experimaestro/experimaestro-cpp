@@ -6,6 +6,9 @@
 
 namespace xpm {
 
+// SHA-1 digest lenght
+static const int DIGEST_LENGTH = 20;
+
 // Forward declarations
 class StructuredValue;
 class AbstractObjectHolder;
@@ -90,7 +93,7 @@ enum class ValueType {
 
 class StructuredValue;
 typedef std::vector<std::shared_ptr<xpm::StructuredValue>> ValueArray;
-class toJson;
+struct Helper;
 
 class Value {
   union Union {
@@ -124,7 +127,7 @@ class Value {
 
   bool defined() const;
 
-  friend struct ToJson;
+  friend struct Helper;
 };
 
 /**
@@ -182,7 +185,22 @@ class StructuredValue : public std::enable_shared_from_this<StructuredValue> {
   /// Returns JSON string
   std::string toJson() const;
 
+  /**
+   * Returns a almost-unique identifier using a
+   * hash function (SHA-1)
+   */
+  std::string uniqueIdentifier() const;
+
+
  private:
+  /**
+   *  Whether this element can be ignored for digest computation
+   */
+  bool canIgnore() const;
+
+  /// Internal digest function
+  std::array<unsigned char, DIGEST_LENGTH> digest() const;
+
   /// Whether this value is sealed or not
   bool _sealed;
 
@@ -192,7 +210,7 @@ class StructuredValue : public std::enable_shared_from_this<StructuredValue> {
   /// Sub-values
   std::map<std::string, Ptr> _content;
 
-  friend struct ToJson;
+  friend struct Helper;
 };
 
 

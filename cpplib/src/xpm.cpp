@@ -6,16 +6,45 @@
 #include <xpm/xpm.h>
 #include <xpm/json.hpp>
 
+#include <openssl/sha.h>
+
 using nlohmann::json;
+namespace {
+
+/// Format a string
+template<typename ... Args>
+std::string stringFormat(const std::string &format, Args ... args) {
+  size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+  std::unique_ptr<char[]> buf(new char[size]);
+  snprintf(buf.get(), size, format.c_str(), args ...);
+  return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+}
+
+template<typename T>
+void updateDigest(SHA_CTX &context, T const &value) {
+//  static_assert(std::is_pod<T>::value, "Expected a POD value");
+
+  if (!SHA1_Update(&context, &value, sizeof(T))) {
+    throw std::runtime_error("Error while computing SHA-1");
+  }
+}
+
+void digest(SHA_CTX &context, std::string &value) {
+  if (!SHA1_Update(&context, value.c_str(), value.size())) {
+    throw std::runtime_error("Error while computing SHA-1");
+  }
+}
+}
 
 namespace xpm {
 
-static const char *const VALUE_TYPE = "$type";
+static const std::string ARGUMENT_TYPE = "$type";
+static const std::string ARGUMENT_PATH = "$path";
 
 sealed_error::sealed_error() {}
 argument_error::argument_error(const std::string &message) : exception(message) {}
 
-struct ToJson {
+struct Helper {
   static json convert(Value const &value) {
     switch (value.scalarType()) {
       case ValueType::STRING:return json(value._value.string);
@@ -42,6 +71,35 @@ struct ToJson {
     return o;
 
   }
+
+  static void updateDigest(SHA_CTX &context, Value value) {
+    switch (value.scalarType()) {
+      case ValueType::STRING: ::updateDigest(context, value._value.string);
+        break;
+
+      case ValueType::INTEGER: ::updateDigest(context, value._value.integer);
+        break;
+
+      case ValueType::REAL: ::updateDigest(context, value._value.real);
+        break;
+
+      case ValueType::BOOLEAN: ::updateDigest(context, value._value.boolean);
+
+      case ValueType::ARRAY:
+        for (const auto &x: value._value.array) {
+          auto xDigest = x->digest();
+          ::updateDigest(context, xDigest);
+        }
+        break;
+
+      case ValueType::OBJECT:
+      case ValueType::NONE:
+        // Do nothing
+        break;
+
+    }
+  }
+
 };
 
 // ---
@@ -87,11 +145,11 @@ bool StructuredValue::hasValue() const {
 }
 
 void StructuredValue::type(TypeName const &typeName) {
-  (*this)[VALUE_TYPE] = std::make_shared<StructuredValue>(Value(typeName.toString()));
+  (*this)[ARGUMENT_TYPE] = std::make_shared<StructuredValue>(Value(typeName.toString()));
 }
 
 TypeName StructuredValue::type() const {
-  auto value_ptr = _content.find(VALUE_TYPE);
+  auto value_ptr = _content.find(ARGUMENT_TYPE);
   if (value_ptr != _content.end()) {
     auto _object = value_ptr->second;
     if (_object->hasValue()) {
@@ -143,8 +201,73 @@ bool StructuredValue::isSealed() const {
   return _sealed;
 }
 
+// Use SHA_DIGEST_LENGTH to have a compilation error if there is no match
+std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
+  SHA_CTX context;
+
+  if (!SHA1_Init(&context)) {
+    throw std::runtime_error("Error while initializing SHA-1");
+  }
+
+  if (_scalar.defined()) {
+    // Signal a scalar
+    Helper::updateDigest(context, (uint8_t) 0);
+
+    // Hash value
+    Helper::updateDigest(context, _scalar);
+
+  } else {
+    for (auto &item: _content) {
+      auto const &key = item.first;
+
+      if (canIgnore()) continue;
+
+      if (key == ARGUMENT_TYPE || key == ARGUMENT_PATH) {
+        continue;
+      }
+
+      // Hash key
+      ::updateDigest(context, key);
+
+      // Hash value
+      auto const &shaValue = item.second->digest();
+      if (!SHA1_Update(&context, shaValue.__elems_, shaValue.size())) {
+        throw std::runtime_error("Error while computing SHA-1");
+      }
+    }
+  }
+
+  std::array<unsigned char, SHA_DIGEST_LENGTH> md;
+  if (!SHA1_Final(md.__elems_, &context)) {
+    throw std::runtime_error("Error while retrieving SHA-1");
+  }
+
+  return md;
+}
+
+bool StructuredValue::canIgnore() const {
+  return false;
+}
+
+std::string StructuredValue::uniqueIdentifier() const {
+  // Compute the digest
+  auto array = digest();
+
+  // Transform into hexadecimal string
+  std::string s;
+  s.reserve(2 * array.size());
+
+  std::array<char, 3> b;
+  for (size_t i = 0; i < array.size(); ++i) {
+    sprintf(b.__elems_, "%02x", array[i]);
+    s += b.__elems_;
+  }
+
+  return s;
+}
+
 std::string StructuredValue::toJson() const {
-  return ToJson::convert(*this).dump();
+  return Helper::convert(*this).dump();
 }
 
 std::shared_ptr<StructuredValue> parse(json const &jsonValue) {
@@ -388,7 +511,7 @@ std::string Type::toJson() {
     };
 
     if (arg.defaultValue().defined())
-      definition["default"] = ToJson::convert(arg.defaultValue());
+      definition["default"] = Helper::convert(arg.defaultValue());
 
     jsonArguments[entry.first] = definition;
   }

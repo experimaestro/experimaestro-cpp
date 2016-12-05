@@ -1,2 +1,5 @@
 .idea
 .pypirc
+MANIFEST
+cmake-build-*
+dist
