@@ -7,6 +7,7 @@
 #include <xpm/json.hpp>
 
 #include <openssl/sha.h>
+#include <unordered_set>
 
 using nlohmann::json;
 namespace {
@@ -22,14 +23,14 @@ std::string stringFormat(const std::string &format, Args ... args) {
 
 template<typename T>
 void updateDigest(SHA_CTX &context, T const &value) {
-//  static_assert(std::is_pod<T>::value, "Expected a POD value");
+  static_assert(std::is_pod<T>::value, "Expected a POD value");
 
   if (!SHA1_Update(&context, &value, sizeof(T))) {
     throw std::runtime_error("Error while computing SHA-1");
   }
 }
 
-void digest(SHA_CTX &context, std::string &value) {
+void updateDigest(SHA_CTX &context, std::string const &value) {
   if (!SHA1_Update(&context, value.c_str(), value.size())) {
     throw std::runtime_error("Error while computing SHA-1");
   }
@@ -40,6 +41,17 @@ namespace xpm {
 
 static const std::string ARGUMENT_TYPE = "$type";
 static const std::string ARGUMENT_PATH = "$path";
+
+static const TypeName STRING_TYPE("string");
+static const TypeName BOOLEAN_TYPE("boolean");
+static const TypeName INTEGER_TYPE("integer");
+static const TypeName REAL_TYPE("real");
+static const TypeName ARRAY_TYPE("array");
+
+static const TypeName PATH_TYPE("path");
+static const TypeName RESOURCE_TYPE("resource");
+
+static const std::unordered_set<TypeName> IGNORED_TYPES = { PATH_TYPE, RESOURCE_TYPE };
 
 sealed_error::sealed_error() {}
 argument_error::argument_error(const std::string &message) : exception(message) {}
@@ -211,7 +223,7 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
 
   if (_scalar.defined()) {
     // Signal a scalar
-    Helper::updateDigest(context, (uint8_t) 0);
+    ::updateDigest(context, (uint8_t) 0);
 
     // Hash value
     Helper::updateDigest(context, _scalar);
@@ -220,7 +232,12 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
     for (auto &item: _content) {
       auto const &key = item.first;
 
-      if (canIgnore()) continue;
+      if (key[0] == '$' && key != ARGUMENT_TYPE) {
+        // Skip all keys begining by "$s" but $type and $task
+        continue;
+      }
+
+      if (item.second->canIgnore()) continue;
 
       if (key == ARGUMENT_TYPE || key == ARGUMENT_PATH) {
         continue;
@@ -246,7 +263,7 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
 }
 
 bool StructuredValue::canIgnore() const {
-  return false;
+  return IGNORED_TYPES.count(type()) > 0;
 }
 
 std::string StructuredValue::uniqueIdentifier() const {
@@ -430,12 +447,6 @@ std::string Value::toString() const {
   }
 }
 
-static const TypeName STRING_TYPE("string");
-static const TypeName BOOLEAN_TYPE("boolean");
-static const TypeName INTEGER_TYPE("integer");
-static const TypeName REAL_TYPE("real");
-static const TypeName PATH_TYPE("path");
-static const TypeName ARRAY_TYPE("array");
 
 TypeName const &Value::type() const {
   switch (_type) {

@@ -526,12 +526,5 @@ protected:
 public:
 };
 
-class Task : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
 } // xpm namespace
 #endif

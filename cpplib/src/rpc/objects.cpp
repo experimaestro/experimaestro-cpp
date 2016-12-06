@@ -502,5 +502,4 @@ std::shared_ptr<Json> JsonObject::getField(std::string const &string) {
 }
 
 std::string const &OARParameters::__name__() const { static std::string name = "OARParameters"; return name; }
-std::string const &Task::__name__() const { static std::string name = "Task"; return name; }
 }

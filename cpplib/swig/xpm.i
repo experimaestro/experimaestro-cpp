@@ -3,6 +3,7 @@
 
 %{
 #include <xpm/xpm.h>
+#include <xpm/rpc/objects.hpp>
 %}
 
 // Useful imports
@@ -74,6 +75,8 @@
 
 // Include file
 %include <xpm/xpm.h>
+%include <xpm/rpc/utils.hpp>
+%include <xpm/rpc/objects.hpp>
 
 %template(set) xpm::Object::set<std::string>;
 %template(set) xpm::Object::set<long>;

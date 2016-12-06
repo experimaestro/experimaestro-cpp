@@ -44,7 +44,9 @@ class argument_error : public exception {
 // --- Namespace and type names
 // ---
 
-// Qualified name
+/**
+ * Qualified name
+ */
 class TypeName {
   std::string name;
  public:
