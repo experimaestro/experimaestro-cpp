@@ -1,6 +1,5 @@
 
 #include <sstream>
-#include <functional>
 #include <iostream>
 
 #include <xpm/xpm.h>
@@ -8,6 +7,7 @@
 
 #include <openssl/sha.h>
 #include <unordered_set>
+#include <Python.h>
 
 using nlohmann::json;
 namespace {
@@ -41,6 +41,7 @@ namespace xpm {
 
 static const std::string ARGUMENT_TYPE = "$type";
 static const std::string ARGUMENT_PATH = "$path";
+static const std::string ARGUMENT_IGNORE = "$ignore";
 
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
@@ -51,7 +52,7 @@ static const TypeName ARRAY_TYPE("array");
 static const TypeName PATH_TYPE("path");
 static const TypeName RESOURCE_TYPE("resource");
 
-static const std::unordered_set<TypeName> IGNORED_TYPES = { PATH_TYPE, RESOURCE_TYPE };
+static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE, RESOURCE_TYPE};
 
 sealed_error::sealed_error() {}
 argument_error::argument_error(const std::string &message) : exception(message) {}
@@ -221,14 +222,18 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
     throw std::runtime_error("Error while initializing SHA-1");
   }
 
-  if (_scalar.defined()) {
+  // If this is a scalar, just ignores everything below
+  if (_scalar.defined() && _scalar.scalarType() != ValueType::OBJECT) {
     // Signal a scalar
-    ::updateDigest(context, (uint8_t) 0);
+    ::updateDigest(context, _scalar.scalarType());
 
     // Hash value
     Helper::updateDigest(context, _scalar);
 
   } else {
+    // Signal a full object
+    ::updateDigest(context, ValueType::NONE);
+
     for (auto &item: _content) {
       auto const &key = item.first;
 
@@ -237,20 +242,16 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
         continue;
       }
 
-      if (item.second->canIgnore()) continue;
-
-      if (key == ARGUMENT_TYPE || key == ARGUMENT_PATH) {
+      if (item.second->canIgnore()) {
+        // Remove keys that can be ignored (e.g. paths)
         continue;
       }
 
-      // Hash key
+      // Update digest with key
       ::updateDigest(context, key);
 
-      // Hash value
-      auto const &shaValue = item.second->digest();
-      if (!SHA1_Update(&context, shaValue.__elems_, shaValue.size())) {
-        throw std::runtime_error("Error while computing SHA-1");
-      }
+      // Update digest with *value digest* (this allows digest caching)
+      ::updateDigest(context, item.second->digest());
     }
   }
 
@@ -263,7 +264,18 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
 }
 
 bool StructuredValue::canIgnore() const {
-  return IGNORED_TYPES.count(type()) > 0;
+  if (IGNORED_TYPES.count(type()) > 0) {
+    return true;
+  }
+
+  auto const it = _content.find(ARGUMENT_IGNORE);
+  if (it != _content.end()) {
+    if (it->second->value().scalarType() == ValueType::BOOLEAN) {
+      return it->second->value().getBoolean();
+    }
+  }
+
+  return false;
 }
 
 std::string StructuredValue::uniqueIdentifier() const {
@@ -447,7 +459,6 @@ std::string Value::toString() const {
   }
 }
 
-
 TypeName const &Value::type() const {
   switch (_type) {
     case ValueType::STRING:return STRING_TYPE;
@@ -472,6 +483,16 @@ bool Value::defined() const {
 
 ValueType const Value::scalarType() const {
   return _type;
+}
+
+bool Value::getBoolean() const {
+  if (_type != ValueType::BOOLEAN) throw std::runtime_error("Value is not a boolean");
+  return _value.boolean;
+}
+
+std::string const & Value::getString() const {
+  if (_type != ValueType::STRING) throw std::runtime_error("Value is not a string");
+  return _value.string;
 }
 
 

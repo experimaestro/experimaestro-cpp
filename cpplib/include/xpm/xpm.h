@@ -89,7 +89,7 @@ namespace xpm {
 // --- Structured values
 // ---
 
-enum class ValueType {
+enum class ValueType : int8_t {
   NONE, INTEGER, REAL, STRING, BOOLEAN, ARRAY, OBJECT
 };
 
@@ -128,6 +128,10 @@ class Value {
   ValueType const scalarType() const;
 
   bool defined() const;
+
+  /// Get the value
+  bool getBoolean() const;
+  std::string const & getString() const;
 
   friend struct Helper;
 };
