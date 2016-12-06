@@ -16,11 +16,23 @@ find_package (Threads)
 
 include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
 
+# --- experimaestro library
+
+add_library(experimaestro-library STATIC ${SOURCES})
+target_link_libraries(experimaestro-library ${LINKED_LIBRARIES})
+set_property(TARGET experimaestro-library PROPERTY CXX_STANDARD 11)
+
+# ---- experimaestro executable
+
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-add_executable(experimaestro ${SOURCES} src/experimaestro.cpp)
-target_link_libraries(experimaestro ${LINKED_LIBRARIES})
+add_executable(experimaestro src/experimaestro.cpp)
+target_link_libraries(experimaestro experimaestro-library ${LINKED_LIBRARIES})
 set_property(TARGET experimaestro PROPERTY CXX_STANDARD 11)
 
+
+# --- Add googletest
+
+add_subdirectory(test)
 
 # --- Generate documentation
 
@@ -78,8 +90,8 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
     SET(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS})
-    swig_add_module(experimaestro_python python swig/xpm.i ${SOURCES})
-    swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} ${LINKED_LIBRARIES})
+    swig_add_module(experimaestro_python python swig/xpm.i)
+    swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} experimaestro-library ${LINKED_LIBRARIES})
 
     # C++11 features
     set_target_properties(_experimaestro_python PROPERTIES CXX_STANDARD 11)

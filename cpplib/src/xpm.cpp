@@ -97,6 +97,7 @@ struct Helper {
         break;
 
       case ValueType::BOOLEAN: ::updateDigest(context, value._value.boolean);
+        break;
 
       case ValueType::ARRAY:
         for (const auto &x: value._value.array) {
@@ -139,13 +140,13 @@ TypeName TypeName::call(std::string const &localname) const {
 
 const TypeName ANY_TYPE("any");
 
-StructuredValue::StructuredValue() : _sealed(false), _scalar() {
+StructuredValue::StructuredValue() : _sealed(false), _value() {
   std::cerr << "[create] Structured value " << this << std::endl;
 }
-StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _scalar(scalar) {
+StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _value(scalar) {
   std::cerr << "[create] Structured value " << this << std::endl;
 }
-StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _scalar(scalar) {
+StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
   std::cerr << "[create] Structured value " << this << std::endl;
 }
 //StructuredValue::~StructuredValue() {
@@ -154,7 +155,7 @@ StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _scalar(
 
 
 bool StructuredValue::hasValue() const {
-  return _scalar.defined();
+  return _value.defined();
 }
 
 void StructuredValue::type(TypeName const &typeName) {
@@ -170,8 +171,8 @@ TypeName StructuredValue::type() const {
     }
   }
 
-  if (_scalar.defined()) {
-    return _scalar.type();
+  if (_value.defined()) {
+    return _value.type();
   }
 
   // Type not defined
@@ -193,12 +194,12 @@ std::shared_ptr<StructuredValue const> StructuredValue::operator[](const std::st
 }
 
 Value StructuredValue::value() const {
-  return _scalar;
+  return _value;
 }
 
 void StructuredValue::value(Value const &scalar) {
   if (_sealed) throw sealed_error();
-  _scalar = scalar;
+  _value = scalar;
 }
 
 void StructuredValue::seal() {
@@ -223,12 +224,12 @@ std::array<unsigned char, SHA_DIGEST_LENGTH> StructuredValue::digest() const {
   }
 
   // If this is a scalar, just ignores everything below
-  if (_scalar.defined() && _scalar.scalarType() != ValueType::OBJECT) {
+  if (_value.defined() && _value.scalarType() != ValueType::OBJECT) {
     // Signal a scalar
-    ::updateDigest(context, _scalar.scalarType());
+    ::updateDigest(context, _value.scalarType());
 
     // Hash value
-    Helper::updateDigest(context, _scalar);
+    Helper::updateDigest(context, _value);
 
   } else {
     // Signal a full object
@@ -490,7 +491,7 @@ bool Value::getBoolean() const {
   return _value.boolean;
 }
 
-std::string const & Value::getString() const {
+std::string const &Value::getString() const {
   if (_type != ValueType::STRING) throw std::runtime_error("Value is not a string");
   return _value.string;
 }

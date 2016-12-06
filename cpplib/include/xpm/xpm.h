@@ -211,7 +211,7 @@ class StructuredValue : public std::enable_shared_from_this<StructuredValue> {
   bool _sealed;
 
   /// Scalar value
-  Value _scalar;
+  Value _value;
 
   /// Sub-values
   std::map<std::string, Ptr> _content;
