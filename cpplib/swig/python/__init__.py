@@ -23,34 +23,42 @@ class JsonEncoder(json.JSONEncoder):
 
 JSON_ENCODER = JsonEncoder()
 
+# Used as a metaclass for C++ classes that can be extended
 _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
     pass
     
 class PyObject(Object, metaclass=PyObjectType):
-    """Base type"""
+    """Base type for all objects"""
+
     def __init__(self):
         Object.__init__(self)
-                
-    def __setattr__(self, key, value):
-        """Called by Python when setting an attribute value"""
-        logger.debug("Setting %s to %s" % (key, value))
-        super().set(key, value)
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
         logger.debug("Really setting %s to %s" % (key, sv))
         dict.__setattr__(self, key, sv.value())
+        
+__StructuredValue = StructuredValue
+class StructuredValue(__StructuredValue):
+    def __init__(self, *args, **argv):
+        __StructuredValue.__init__(self, *args, **argv)
 
-class PythonType(Type):
-    def __init__(self, pythonType, *args):
-        Type.__init__(self, *args)
+# HACK: preserve factories and objects since SWIG cannot handle smart pointers properly
+FACTORIES = []
+OBJECTS = []
+
+class PythonObjectFactory(ObjectFactory):
+    """An experimaestro type in Python"""
+    def __init__(self, pythonType):
+        ObjectFactory.__init__(self)
         self.pythonType = pythonType
 
     def create(self):
-        o = self.pythonType()
-        o.type(self)
-        return o
+        newObject = self.pythonType()
+        OBJECTS.append(newObject)
+        return newObject
+
 
 class PythonRegister(Register):
     def __init__(self):
@@ -59,17 +67,19 @@ class PythonRegister(Register):
 
         """Mapping for some built-in types"""
         self.builtins = {
-            int: IntegerType,
-            bool: BooleanType,
-            str: StringType,
-            float: RealType
+            int: cvar.IntegerType,
+            bool: cvar.BooleanType,
+            str: cvar.StringType,
+            float: cvar.RealType
         }
 
         self.types = {}
 
     def addType(self, pythonType, typeName, parentType):
-        pyType = PythonType(pythonType, typeName, parentType)
-        self.types[pythonType] = pyType
+        pyType = self.types[pythonType] = Type(typeName, parentType)
+        factory = PythonObjectFactory(pythonType)
+        FACTORIES.append(factory)
+        pyType.objectFactory(factory)
         super().addType(pyType)
 
     def getType(self, key):
@@ -107,11 +117,20 @@ register = PythonRegister()
 def create(t, args, options, execute=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
+    
+    # Create the type and set the arguments
     o = xpmType.create()
+    logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
-        setattr(o, k, v)
+        logger.debug("Setting attribute [%s]", k)
+        o.set(k, v)
+        
+    if hasattr(t, "__task__"):
+        o.task(t.__task__)
+
     if execute:
-        return t.__task__.execute(o)
+        logger.debug("Running task")
+        return o.run()
     return o
         
 def wrap(self, function, **options):
@@ -133,8 +152,9 @@ class RegisterType:
             raise Exception("Error: type %s is an old style Python 2 class" % t)
 
         # Register type
-        if self.qname is not None and register.getType(self.qname) is not None:
-            raise Exception("XPM type %s is already declared" % qname)
+        if self.qname is not None and register.getType(self.qname).hasValue():
+            print(register.getType(self.qname))
+            raise Exception("XPM type %s is already declared" % self.qname)
         
         # Add XPM object if needed
         bases = t.__bases__ if issubclass(t, PyObject) else (PyObject,) + t.__bases__
@@ -179,6 +199,8 @@ class RegisterTask():
         
         t.execute = wrap(t, create, execute=True)
         return t
+
+        
 
 class AbstractArgument:
     def __init__(self, name, type, help=""):

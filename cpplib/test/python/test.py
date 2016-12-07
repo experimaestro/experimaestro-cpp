@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 xpmcpp = TypeName("xpmcpplib")
     
-@RegisterType(xpmcpp("representation.model"))
+@RegisterType(xpmcpp("A"))
 class A():
     pass
 
@@ -24,19 +24,14 @@ class A1():
 @RegisterType(xpmcpp("A2"))
 class A2(A1): 
     X = 1
+    
+    def yo(self): print("yo")
 
 
-v = StructuredValue()
-v.setValue("a", 1)
-print("UUID [%s]" % v.uniqueIdentifier())
-
-v = StructuredValue()
-print("UUID [%s]" % v.uniqueIdentifier())
-sys.exit()
-# --- Run a specific task
-
-register.parse()
-
+# # --- Run a specific task
+#
+# register.parse()
+#
 
 # --- Build experiments
 
@@ -46,9 +41,12 @@ model = A.create()
 # Configure and run
 for size in  [5, 10]:
     a2 = A2.execute(size=5, model=model)
+    
+    print(a2.getValue())
 
 # Create and then run
 for size in  [5, 10]:
     a2 = A2.create(size=5)
     a2.model = model
-    a2.run()
+    print(a2.getValue())
+    print(a2.run().getValue())
