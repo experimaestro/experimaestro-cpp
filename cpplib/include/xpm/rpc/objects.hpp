@@ -5,8 +5,7 @@
 #include <xpm/rpc/utils.hpp>
 
 namespace xpm {
-
-
+namespace rpc {
 // Pre-declaration
 class Dependency;
 class LauncherParameters;
@@ -52,26 +51,27 @@ class TokenResource;
 class SingleHostConnector;
 class JsonString;
 
-
 // Classes
 class Connector : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string resolve(std::shared_ptr<Path> const &path);
   /**   */
-  static std::shared_ptr<Connector> create(std::string const &string, std::string const &string_1, std::shared_ptr<ConnectorOptions> const &connectorOptions);
+  static std::shared_ptr<Connector> create(std::string const &string,
+                                           std::string const &string_1,
+                                           std::shared_ptr<ConnectorOptions> const &connectorOptions);
   /**   */
   std::shared_ptr<Launcher> default_launcher();
 };
 
 class Resource : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string toString();
   /**   */
@@ -83,10 +83,10 @@ public:
 };
 
 class Launcher : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::shared_ptr<LauncherParameters> parameters();
   /**   */
@@ -105,24 +105,24 @@ public:
 };
 
 class LauncherParameters : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class SingleHostConnector : public Connector {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Json : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::shared_ptr<Json> copy();
   /**   */
@@ -141,28 +141,29 @@ public:
   std::string get_descriptor();
   /** Creates a parameter file from this JSON
   */
-  std::shared_ptr<ParameterFile> as_parameter_file(std::string const &string, std::shared_ptr<SingleHostConnector> const &singleHostConnector);
+  std::shared_ptr<ParameterFile> as_parameter_file(std::string const &string,
+                                                   std::shared_ptr<SingleHostConnector> const &singleHostConnector);
 };
 
 class ConnectorOptions : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Dependency : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class OARLauncher : public Launcher {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   OARLauncher(std::shared_ptr<Connector> const &connector);
   /**   */
@@ -175,77 +176,77 @@ public:
 };
 
 class JsonReal : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class JsonPath : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string uri();
 };
 
 class DirectLauncher : public Launcher {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   DirectLauncher(std::shared_ptr<Connector> const &connector);
 };
 
 class ScriptingLogger : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /** Sets the level
   */
   void set_level(std::string const &level);
 };
 
 class SSHConnector : public SingleHostConnector {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string env(std::shared_ptr<Launcher> const &launcher, std::string const &string);
 };
 
 class LocalhostConnector : public SingleHostConnector {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string env(std::string const &string);
 };
 
 class ObjectPropertyReference : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Pipe : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Command : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   Command();
   /**   */
@@ -255,24 +256,24 @@ public:
 };
 
 class Job : public Resource {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class ScriptingMap : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Path : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string toString();
   /**   */
@@ -299,10 +300,10 @@ com.sun.javafx.binding.StringConstant@1018bde2  */
 };
 
 class SSHOptions : public ConnectorOptions {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   SSHOptions();
   /**   */
@@ -328,33 +329,33 @@ public:
 };
 
 class Module : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class Tasks : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   Tasks();
 };
 
 class JsonNull : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class TokenResource : public Resource {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   int32_t used();
   /**   */
@@ -364,10 +365,10 @@ public:
 };
 
 class Namespace : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   Namespace(std::string const &string, std::string const &string_1);
   /**   */
@@ -375,24 +376,24 @@ public:
 };
 
 class ParameterFile : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class CommandOutput : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class JsonArray : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::shared_ptr<Json> get(int32_t const &int_1);
   /**   */
@@ -404,10 +405,10 @@ public:
 };
 
 class XPM : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /** Returns a file relative to the current connector
   */
   std::shared_ptr<Path> file(std::string const &filepath);
@@ -438,81 +439,81 @@ com.sun.javafx.binding.StringConstant@574b560f  */
 };
 
 class JavaTaskFactory : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class JsonParameterFile : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   JsonParameterFile(std::string const &string, std::shared_ptr<Json> const &json_1);
 };
 
 class JsonBoolean : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class JsonString : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::string toString();
 };
 
 class SubCommand : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class ScriptingList : public ServerObject {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   int32_t length();
 };
 
 class JsonTask : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   std::shared_ptr<JsonObject> json();
 };
 
 class JsonResource : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class ReadWriteDependency : public Dependency {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
 
 class JsonObject : public Json {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
   /**   */
   void put(std::string const &string, std::shared_ptr<Json> const &json_1);
   /**   */
@@ -520,11 +521,11 @@ public:
 };
 
 class OARParameters : public LauncherParameters {
-protected:
+ protected:
   virtual std::string const &__name__() const override;
 
-public:
+ public:
 };
-
+}
 } // xpm namespace
 #endif

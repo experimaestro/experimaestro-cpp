@@ -9,8 +9,21 @@ FIND_PACKAGE(PythonInterp 3 REQUIRED)
 add_definitions("-Wall")
 enable_testing()
 
-set(EXTERNAL_HEADERS include/xpm/xpm.h)
-set(SOURCES src/JsonRPCClient.cpp src/xpm.cpp src/Client.cpp src/rpc/objects.cpp src/rpc/utils.cpp include/Context.cpp include/Context.h)
+set(EXTERNAL_HEADERS
+        include/xpm/xpm.hpp
+        include/xpm/rpc/objects.hpp
+        include/xpm/context.hpp
+        include/xpm/filesystem.hpp)
+
+set(SOURCES
+        src/jsonrpcclient.cpp
+        src/xpm.cpp
+        src/filesystem.cpp
+        src/context.cpp
+        src/client.cpp
+        src/rpc/objects.cpp
+        src/rpc/utils.cpp
+        ${EXTERNAL_HEADERS})
 
 find_package (Threads)
 
@@ -38,6 +51,7 @@ add_subdirectory(test)
 
 find_package(Doxygen REQUIRED)
 
+set(DOXYGEN_INPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 
 add_custom_command(
@@ -70,26 +84,26 @@ if (true)
 	else()
 	    set(CMAKE_SWIG_OUTDIR "python/experimaestro")
 	endif()
-	
-	file(GENERATE OUTPUT install_manifest.txt CONTENT 
+
+	file(GENERATE OUTPUT install_manifest.txt CONTENT
 	"${CMAKE_SWIG_OUTDIR}/_experimaestro.so
 		${CMAKE_SWIG_OUTDIR}/experimaestro.py
 		${CMAKE_SWIG_OUTDIR}/_init_.py")
-	
+
     file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
 	message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR}")
-	
+
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
-    SET_SOURCE_FILES_PROPERTIES(swig/xpm.i PROPERTIES CPLUSPLUS ON)
+    set_source_files_properties(swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
 	add_custom_target(copy_init_py
 	      ${CMAKE_COMMAND} -E copy_if_different
 	      ${CMAKE_SOURCE_DIR}/swig/python/__init__.py ${CMAKE_SWIG_OUTDIR})
-	
+
     set(CMAKE_SWIG_FLAGS "-builtin")
 
-    SET(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS})
+    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
     swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} experimaestro-library ${LINKED_LIBRARIES})
 

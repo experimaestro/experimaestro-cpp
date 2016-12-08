@@ -5,7 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#include <xpm/JsonRPCClient.h>
+#include <xpm/jsonrpcclient.hpp>
 
 #define ASIO_STANDALONE
 

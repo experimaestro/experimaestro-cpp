@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iostream>
 
-#include <xpm/xpm.h>
+#include <xpm/xpm.hpp>
 #include <xpm/json.hpp>
 
 #include <openssl/sha.h>

@@ -3,7 +3,7 @@
 //
 
 #include <xpm/rpc/utils.hpp>
-#include <xpm/Client.hpp>
+#include <xpm/client.hpp>
 
 namespace xpm {
 

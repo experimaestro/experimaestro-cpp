@@ -5,17 +5,16 @@
 #ifndef PROJECT_CONTEXT_H
 #define PROJECT_CONTEXT_H
 
-#include <xpm/filesystem.h>
+#include <xpm/filesystem.hpp>
 
 namespace xpm {
-
-class _Context;
 
 /**
  * Context when running tasks
  */
-class Context {
-  std::shared_ptr<_Context> _this;
+class Context : public Pimpl<Context> {
+  Context(ThisPtr const &);
+  static Context CURRENT_CONTEXT;
  public:
   /// Get the current context
   static Context &current();

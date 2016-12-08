@@ -7,7 +7,7 @@
 
 #include <string>
 #include <xpm/json.hpp>
-#include <xpm/JsonRPCClient.h>
+#include <xpm/jsonrpcclient.hpp>
 
 namespace xpm {
 class Client {

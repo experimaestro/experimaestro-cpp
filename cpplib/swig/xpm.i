@@ -2,9 +2,11 @@
 
 
 %{
-#include <xpm/xpm.h>
-#include <xpm/rpc/objects.hpp>
-
+#include <xpm/xpm.hpp>
+#include <xpm/context.hpp>
+#include <xpm/filesystem.hpp>
+// #include <xpm/rpc/objects.hpp>
+/*using xpm::Path;*/
 %}
 
 // Support for standard C++ structures
@@ -81,7 +83,7 @@ PyObject *swigGetSelf(xpm::Object const *p) {
 }
 %}
 %extend xpm::Object {
-    PyObject *self() const {
+    PyObject *_self() const {
       return swigGetSelf($self);
     } 
 };
@@ -97,10 +99,11 @@ PyObject *swigGetSelf(xpm::Object const *p) {
 
 
 // Include file
-%include <xpm/xpm.h>
-%include <xpm/Context.hpp>
-%include <xpm/rpc/utils.hpp>
-%include <xpm/rpc/objects.hpp>
+%include <xpm/xpm.hpp>
+%include <xpm/filesystem.hpp>
+%include <xpm/context.hpp>
+/*%include <xpm/rpc/utils.hpp>*/
+/*%include <xpm/rpc/objects.hpp>*/
 
 // Optional
 %extend xpm::optional {

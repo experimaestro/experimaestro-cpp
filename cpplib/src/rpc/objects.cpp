@@ -1,6 +1,7 @@
 #include <xpm/rpc/objects.hpp>
 
 namespace xpm {
+namespace rpc {
 std::string const &Connector::__name__() const { static std::string name = "Connector"; return name; }
 std::string Connector::resolve(std::shared_ptr<Path> const &path) {
   nlohmann::json params = nlohmann::json::object();
@@ -502,4 +503,6 @@ std::shared_ptr<Json> JsonObject::getField(std::string const &string) {
 }
 
 std::string const &OARParameters::__name__() const { static std::string name = "OARParameters"; return name; }
+}
+
 }
