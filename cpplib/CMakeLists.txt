@@ -10,7 +10,7 @@ add_definitions("-Wall")
 enable_testing()
 
 set(EXTERNAL_HEADERS include/xpm/xpm.h)
-set(SOURCES src/JsonRPCClient.cpp src/xpm.cpp src/Client.cpp src/rpc/objects.cpp src/rpc/utils.cpp)
+set(SOURCES src/JsonRPCClient.cpp src/xpm.cpp src/Client.cpp src/rpc/objects.cpp src/rpc/utils.cpp include/Context.cpp include/Context.h)
 
 find_package (Threads)
 

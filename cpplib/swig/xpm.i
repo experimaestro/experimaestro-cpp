@@ -98,6 +98,7 @@ PyObject *swigGetSelf(xpm::Object const *p) {
 
 // Include file
 %include <xpm/xpm.h>
+%include <xpm/Context.hpp>
 %include <xpm/rpc/utils.hpp>
 %include <xpm/rpc/objects.hpp>
 

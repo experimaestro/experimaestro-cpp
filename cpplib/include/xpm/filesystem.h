@@ -6,10 +6,15 @@
 #ifndef PROJECT_FILESYSTEM_H
 #define PROJECT_FILESYSTEM_H
 
+namespace xpm {
+  class _Share;
+  class _Path;
+
 /**
  * Represents a file system access point
  */
 class Share {
+  std::shared_ptr<_Share> _this;
 
 };
 
@@ -19,5 +24,6 @@ class Share {
 class Path {
 
 };
+}
 
 #endif //PROJECT_FILESYSTEM_H
