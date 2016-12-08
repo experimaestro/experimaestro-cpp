@@ -4,6 +4,7 @@
 %{
 #include <xpm/xpm.h>
 #include <xpm/rpc/objects.hpp>
+
 %}
 
 // Support for standard C++ structures
@@ -69,6 +70,21 @@
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 %ignore xpm::Argument::type;
 %ignore xpm::StructuredValue::operator[];
+
+// FIXME: hack to get access to the real object -> we should use typemap or patch...
+%{
+PyObject *swigGetSelf(xpm::Object const *p) {
+    if (Swig::Director const *d = dynamic_cast<Swig::Director const *>(p)) {
+        return d->swig_get_self();
+    }
+    return nullptr;
+}
+%}
+%extend xpm::Object {
+    PyObject *self() const {
+      return swigGetSelf($self);
+    } 
+};
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::ObjectFactory)

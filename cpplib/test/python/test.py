@@ -48,5 +48,5 @@ for size in  [5, 10]:
 for size in  [5, 10]:
     a2 = A2.create(size=5)
     a2.model = model
-    print(a2.getValue())
-    print(a2.run().getValue())
+    a2.run()
+    

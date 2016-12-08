@@ -37,7 +37,8 @@ class PyObject(Object, metaclass=PyObjectType):
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
         logger.debug("Really setting %s to %s" % (key, sv))
-        dict.__setattr__(self, key, sv.value())
+        setattr(self, key, sv.value())
+        # dict.__setattr__(self, key, sv.value())
         
 __StructuredValue = StructuredValue
 class StructuredValue(__StructuredValue):
@@ -119,7 +120,7 @@ def create(t, args, options, execute=False):
     xpmType = register.getType(t)
     
     # Create the type and set the arguments
-    o = xpmType.create()
+    o = xpmType.create()._self()
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
         logger.debug("Setting attribute [%s]", k)
@@ -130,7 +131,7 @@ def create(t, args, options, execute=False):
 
     if execute:
         logger.debug("Running task")
-        return o.run()
+        o.run()
     return o
         
 def wrap(self, function, **options):
