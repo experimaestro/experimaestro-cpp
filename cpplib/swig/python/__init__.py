@@ -33,12 +33,16 @@ class PyObject(Object, metaclass=PyObjectType):
 
     def __init__(self):
         Object.__init__(self)
+        
+    def __setattr__(self, name, value):
+        super().set(name, value)
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
-        logger.debug("Really setting %s to %s" % (key, sv))
-        setattr(self, key, sv.value())
-        # dict.__setattr__(self, key, sv.value())
+        if key.startswith("$"):
+            key = key[1:]
+        logger.debug("Really setting %s to %s" % (key, sv.value()))
+        dict.__setattr__(self, key, sv.value())
         
 __StructuredValue = StructuredValue
 class StructuredValue(__StructuredValue):
@@ -124,7 +128,7 @@ def create(t, args, options, execute=False):
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
         logger.debug("Setting attribute [%s]", k)
-        o.set(k, v)
+        setattr(o, k, v)
         
     if hasattr(t, "__task__"):
         o.task(t.__task__)
@@ -224,7 +228,7 @@ class TypeArgument(AbstractArgument):
         if default is not None:
             self.argument.defaultValue = Value(default)
 
-class JsonPath(AbstractArgument):
+class PathArgument(AbstractArgument):
     def __init__(self, name, path, help=""):
         AbstractArgument.__init__(self, name, PathType, help=help)
         self.argument.generator = pathGenerator

@@ -13,33 +13,36 @@ set(EXTERNAL_HEADERS
         include/xpm/xpm.hpp
         include/xpm/rpc/objects.hpp
         include/xpm/context.hpp
-        include/xpm/filesystem.hpp)
+        include/xpm/filesystem.hpp
+        include/xpm/commandline.hpp)
 
 set(SOURCES
-        src/jsonrpcclient.cpp
+        ${EXTERNAL_HEADERS}
+        src/rpc/jsonrpcclient.cpp
         src/xpm.cpp
         src/filesystem.cpp
         src/context.cpp
-        src/client.cpp
+        src/rpc/client.cpp
         src/rpc/objects.cpp
         src/rpc/utils.cpp
-        ${EXTERNAL_HEADERS})
+        src/commandline.cpp)
 
 find_package (Threads)
+set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+
 
 include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
 
 # --- experimaestro library
 
-add_library(experimaestro-library STATIC ${SOURCES})
-target_link_libraries(experimaestro-library ${LINKED_LIBRARIES})
-set_property(TARGET experimaestro-library PROPERTY CXX_STANDARD 11)
+add_library(experimaestro_shared SHARED ${SOURCES})
+target_link_libraries(experimaestro_shared ${LINKED_LIBRARIES})
+set_property(TARGET experimaestro_shared PROPERTY CXX_STANDARD 11)
 
 # ---- experimaestro executable
 
-set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_executable(experimaestro src/experimaestro.cpp)
-target_link_libraries(experimaestro experimaestro-library ${LINKED_LIBRARIES})
+target_link_libraries(experimaestro experimaestro_shared ${LINKED_LIBRARIES})
 set_property(TARGET experimaestro PROPERTY CXX_STANDARD 11)
 
 
@@ -94,7 +97,7 @@ if (true)
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
-    set_source_files_properties(swig/xpm.i PROPERTIES CPLUSPLUS ON)
+    set_source_files_properties(swig/xpm.i swig/xpm_rpc.i PROPERTIES CPLUSPLUS ON)
 
 	add_custom_target(copy_init_py
 	      ${CMAKE_COMMAND} -E copy_if_different
@@ -102,19 +105,28 @@ if (true)
 
     set(CMAKE_SWIG_FLAGS "-builtin")
 
+
+    # Build module experimaestro    
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
-    swig_link_libraries(experimaestro_python ${PYTHON_LIBRARIES} experimaestro-library ${LINKED_LIBRARIES})
 
-    # C++11 features
-    set_target_properties(_experimaestro_python PROPERTIES CXX_STANDARD 11)
+    # Build module experimaestro.rpc 
+    set(SWIG_MODULE_experimaestro_rpc_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    swig_add_module(experimaestro_rpc_python python swig/xpm_rpc.i)
 
     # Set output name and path
-    SET_TARGET_PROPERTIES(_experimaestro_python PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
-            LIBRARY_OUTPUT_NAME _experimaestro)
-
-    add_dependencies(_experimaestro_python documentation copy_init_py)
+    foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
+        # set(swigtargetlist ${swigtarget})
+        list(GET swigtargetlist 0 swigtargetname)
+        list(GET swigtargetlist 1 swigpythonname)
+        message(STATUS "${swigtargetname} and ${swigpythonname}")
+        set_target_properties("_${swigtargetname}_python" PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
+                LIBRARY_OUTPUT_NAME "_${swigpythonname}"
+                CXX_STANDARD 11)
+        swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
+    endforeach()
+    add_dependencies(_experimaestro_python documentation copy_init_py _experimaestro_rpc_python)
 
     # Test examples (compilation only)
     #    add_dependencies(run-tests DEPENDS _experimaestro_python)

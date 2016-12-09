@@ -25,12 +25,19 @@ void Context::current(Context &&context) {
 Context::Context(ThisPtr const &ptr) : Pimpl(ptr) {
 }
 
-Path const Context::basepath() const {
+Path const Context::workdir() const {
   return _this->basepath;
 }
 
-void Context::basepath(Path &&path) {
+void Context::workdir(Path const&path) {
   _this->basepath = path;
+}
+
+
+// --- Global methods
+
+void set_workdir(Path const &path) {
+  Context::current().workdir(path);
 }
 
 

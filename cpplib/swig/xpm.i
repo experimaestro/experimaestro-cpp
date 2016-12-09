@@ -1,10 +1,15 @@
 %module(directors="1") experimaestro
 
+#define SWIG_IGNORE %ignore
+#define SWIG_REMOVE(x)
+#define XPM_PIMPL(x) x
+#define XPM_PIMPL_CHILD(name, parent) name: public parent
 
 %{
 #include <xpm/xpm.hpp>
 #include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
+#include <xpm/commandline.hpp>
 // #include <xpm/rpc/objects.hpp>
 /*using xpm::Path;*/
 %}
@@ -19,10 +24,12 @@
 // Handle attributes for languages supporting this (Python)
 %include "attribute.i"
 
+%import "xpm_rpc.i"
 
 // Implicit conversions
 %implicitconv;
-
+%implicitconv xpm::Path;
+  
 // Documentation
 %include "documentation.i"
 
@@ -45,7 +52,7 @@
 
 
 // Ignores
-%import "ignores.i"
+%import "ignores.i";
 
 // Python slots
 // See https://docs.python.org/3/c-api/typeobj.html
@@ -82,11 +89,29 @@
 
 %template(String2StructuredValue) std::map<std::string, xpm::StructuredValue>;
 
+// Returns the wrapped python object rather than the director object
+#ifdef SWIGPYTHON
+%typemap(out) std::shared_ptr<xpm::Object> {
+    if ($1) {
+        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
+            Py_INCREF(d->swig_get_self());
+            $result = d->swig_get_self();
+        } else {
+            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >(result SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
+            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);            
+        }
+    } else {
+        $result = SWIG_Py_Void();
+    }
+}
+#endif
+
 
 // Include file
 %include <xpm/xpm.hpp>
 %include <xpm/filesystem.hpp>
 %include <xpm/context.hpp>
+%include <xpm/commandline.hpp>
 /*%include <xpm/rpc/utils.hpp>*/
 /*%include <xpm/rpc/objects.hpp>*/
 
@@ -94,6 +119,7 @@
 %extend xpm::optional {
     bool hasValue() const { return *$self; }
 }
+
 %template(ConstTaskOptional) xpm::optional<xpm::Task const>;
 %template(ConstTypeOptional) xpm::optional<xpm::Type const>;
 %template(TaskOptional) xpm::optional<xpm::Task>;
@@ -122,19 +148,3 @@
 }
 
 
-// Returns the wrapped python object rather than the director object
-#ifdef SWIGPYTHON
-%typemap(out) std::shared_ptr<xpm::Object> {
-    if ($1) {
-        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
-            Py_INCREF(d->swig_get_self());
-            $result = d->swig_get_self();
-        } else {
-            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >(result SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
-            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);            
-        }
-    } else {
-        $result = SWIG_Py_Void();
-    }
-}
-#endif

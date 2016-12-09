@@ -8,7 +8,7 @@
 #include <xpm/json.hpp>
 
 namespace xpm {
-
+namespace rpc {
 template<typename T>
 struct RPCConverter;
 
@@ -48,5 +48,6 @@ struct RPCConverter<std::shared_ptr<T>> {
   }
 };
 
+}
 }
 #endif //XPM_UTILS_HPP

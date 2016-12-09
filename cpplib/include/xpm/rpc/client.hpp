@@ -7,9 +7,11 @@
 
 #include <string>
 #include <xpm/json.hpp>
-#include <xpm/jsonrpcclient.hpp>
+#include <include/xpm/rpc/jsonrpcclient.hpp>
 
 namespace xpm {
+namespace rpc {
+
 class Client {
   JsonRPCClient _client;
 
@@ -28,7 +30,11 @@ class Client {
   /// Returns true if the server is alive
   bool ping();
 
+  /// Returns the default client
   static Client &defaultClient();
 };
+
 }
+}
+
 #endif //PROJECT_XPMCLIENT_H

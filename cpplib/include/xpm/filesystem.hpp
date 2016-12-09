@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "utils.hpp"
 
 namespace xpm {
@@ -25,13 +26,20 @@ class Share : public Pimpl<Share> {
  */
 class Path : public Pimpl<Path> {
  public:
-  Path(std::string const &pathstring);
   Path();
 
+  /// Constructs a path from a string representation
+  Path(std::string const &pathstring);
+
+  /// Constructs a path from a triplet (share, node, path)
   Path(std::string const &share, std::string const &node, std::string const &path);
 
+#ifndef SWIG
+  Path(Path const &parent, std::initializer_list<std::string> const &relative);
+#endif
+
   /// Construct relatively to a path
-  Path(Path const &parent, std::string &relativePath);
+  Path(Path const &parent, std::vector<std::string> const &relative);
 
   /// Returns the parent path
   Path parent() const;

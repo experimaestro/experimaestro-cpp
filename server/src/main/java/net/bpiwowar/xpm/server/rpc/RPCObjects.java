@@ -247,7 +247,8 @@ public class RPCObjects {
     static public void main(String[] args) throws IOException {
         RPCObjects.init();
 
-        String basepath = args[0];
+        String hppPath = args[0];
+        String cppPath = args[1];
 
         HashMap<Class<?>, ClassNode> nodes = new HashMap<>();
         for (ClassDescription classDescription : RPCObjects.types.values()) {
@@ -268,7 +269,7 @@ public class RPCObjects {
 
         final ArrayList<ClassNode> sorted = Sort.topologicalSort(new ArrayList<>(nodes.values()));
 
-        try (FileOutputStream fos = new FileOutputStream(basepath + ".hpp");
+        try (FileOutputStream fos = new FileOutputStream(hppPath);
              PrintStream out = new PrintStream(fos)) {
 
             out.println("#ifndef _XPM_RPCOBJECTS_H");
@@ -277,7 +278,14 @@ public class RPCObjects {
             out.println("#include <vector>");
             out.println("#include <xpm/rpc/utils.hpp>");
             out.println();
-            out.println("namespace xpm {");
+
+            out.format("#ifdef SWIG%n");
+            for (ClassDescription classDescription : RPCObjects.types.values()) {
+                out.format("%%shared_ptr(xpm::rpc::%s);%n", classDescription.className);
+            }
+            out.format("#endif%n");
+
+            out.println("namespace xpm { namespace rpc {");
 
 
             out.format("%n%n// Pre-declaration%n");
@@ -336,19 +344,19 @@ public class RPCObjects {
                 out.format("};%n%n");
             }
 
-            out.println("} // xpm namespace");
+            out.println("} }// xpm::rpc namespace");
             out.println("#endif");
 
         }
 
         // Outputs c++ definition file
-        try (FileOutputStream fos = new FileOutputStream(basepath + ".cpp");
+        try (FileOutputStream fos = new FileOutputStream(cppPath);
              PrintStream out = new PrintStream(fos)) {
 
             out.println("#include <xpm/rpc/objects.hpp>");
             out.println();
 
-            out.format("namespace xpm {%n");
+            out.format("namespace xpm {%nnamespace rpc{%n");
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
                 final String className = description.getClassName();
@@ -372,7 +380,7 @@ public class RPCObjects {
 
                 }
             }
-            out.println("}");
+            out.println("}} // namespace xpm::rpc");
 
         }
     }

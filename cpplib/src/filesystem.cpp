@@ -2,6 +2,8 @@
 // Created by Benjamin Piwowarski on 19/11/2016.
 //
 
+#include <numeric>
+#include <vector>
 #include <xpm/filesystem.hpp>
 
 namespace xpm {
@@ -33,8 +35,16 @@ Path::Path(std::string const &pathstring) : Pimpl("", "", pathstring) {
 Path::Path() : Pimpl("", "", "/")  {
 }
 
-Path::Path(Path const &parent, std::string &relative) :
-    Pimpl(parent._this->share, parent._this->node, parent._this->path + "/" + relative ) {
+Path::Path(Path const &parent, std::initializer_list<std::string> const &relative) :
+    Pimpl(parent._this->share, parent._this->node,
+          std::accumulate(relative.begin(), relative.end(), parent._this->path,
+                          [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
+
+}
+Path::Path(Path const &parent, std::vector<std::string> const &relative) :
+    Pimpl(parent._this->share, parent._this->node,
+          std::accumulate(relative.begin(), relative.end(), parent._this->path,
+                          [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
 
 }
 

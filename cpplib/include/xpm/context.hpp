@@ -23,11 +23,17 @@ class Context : public Pimpl<Context> {
   static void current(Context &&context);
 
   /// Get the basepath
-  Path const basepath() const;
+  Path const workdir() const;
 
   /// Sets the base path
-  void basepath(Path &&path);
+  void workdir(Path const &path);
 };
+
+/** Sets the working directory for the current context
+ *
+ * @param path The path to the new working directory
+ */
+void set_workdir(Path const &path);
 
 }
 

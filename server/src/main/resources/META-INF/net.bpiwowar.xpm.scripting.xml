@@ -23,6 +23,8 @@
         <class>net.bpiwowar.xpm.scheduler.TokenResource</class>
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
         <class>net.bpiwowar.xpm.commands.Command</class>
+        <class>net.bpiwowar.xpm.commands.AbstractCommand</class>
+        <class>net.bpiwowar.xpm.scheduler.Scheduler</class>
         <class>net.bpiwowar.xpm.commands.Pipe</class>
         <class>net.bpiwowar.xpm.commands.CommandOutput</class>
         <class>net.bpiwowar.xpm.commands.SubCommand</class>

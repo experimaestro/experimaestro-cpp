@@ -16,37 +16,31 @@ class A1():
     pass
 
 # @JsonInputStream("samples", mg4j("position-sample"), help="Samples")
-@JsonPath("path", "model.dat", help="The filename where the model is serialized")
+@PathArgument("path", "model.dat", help="The filename where the model is serialized")
 @TypeArgument("$seed", default=1, required=False, type=int, help="Random seed")
 @TypeArgument("size", type=int, required=True, help="A size")
 @TypeArgument("any", type=AnyType, required=True, help="Any type")
-@RegisterTask()
+@RegisterTask("task-a2.py")
 @RegisterType(xpmcpp("A2"))
-class A2(A1): 
-    X = 1
+class A2(A1): pass
     
-    def yo(self): print("yo")
 
 
-# # --- Run a specific task
-#
-# register.parse()
-#
-
-# --- Build experiments
-
-# Create from arguments
-model = A.create()
-
-# Configure and run
-for size in  [5, 10]:
-    a2 = A2.execute(size=5, model=model)
+if __name__ == '__main__':
+    import os.path as osp
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("workdir", type=str, help="Working directory")
+    args = parser.parse_args()
     
-    print(a2.getValue())
+    # Create from arguments
+    set_workdir(osp.realpath(args.workdir))
+    
+    model = A.create()
 
-# Create and then run
-for size in  [5, 10]:
-    a2 = A2.create(size=5)
-    a2.model = model
-    a2.run()
+    # Create and then run
+    for size in  [5, 10]:
+        a2 = A2.create(size=size, any=1)
+        a2.model = model
+        a2.run()
     

@@ -7,6 +7,10 @@
 
 #include <openssl/sha.h>
 #include <unordered_set>
+#include <include/xpm/filesystem.hpp>
+#include <include/xpm/context.hpp>
+#include <include/xpm/rpc/objects.hpp>
+#include <include/xpm/rpc/client.hpp>
 
 using nlohmann::json;
 namespace {
@@ -658,7 +662,7 @@ TypeName const &Type::typeName() const { return _this->_type; }
 std::string Type::toString() const { return "type(" + _this->_type.toString() + ")"; }
 
 /// Predefined types
-inline bool Type::predefined() const { return _this->_predefined; }
+bool Type::predefined() const { return _this->_predefined; }
 
 std::string Type::toJson() const {
   json response;
@@ -691,20 +695,19 @@ int Type::hash() const {
 
 // ---- Generators
 
-StructuredValue PathGenerator::generate(StructuredValue &object) const {
-  std::cerr << "LONDON CALLING\n";
-  return StructuredValue(object.uniqueIdentifier());
-}
 
 const PathGenerator PathGenerator::SINGLETON = PathGenerator();
 const PathGenerator &pathGenerator = PathGenerator::SINGLETON;
 
+StructuredValue PathGenerator::generate(StructuredValue &object) const {
+  auto p = Path(Context::current().workdir(), {"yo", object.uniqueIdentifier()});
+  return StructuredValue(p.toString());
+}
 
 // ---- Object
 
 
 Object::Object()  {
-  std::cerr << "[create] New object " << this << std::endl;
 }
 
 Object::~Object() {
@@ -721,17 +724,7 @@ void Object::setValue(StructuredValue & value) {
   _value = value;
 }
 
-void Object::set(std::string const &key, StructuredValue &&value) {
-  std::cerr << "Setting value && [" << key << "]" << std::endl;
-  // Set the value in the map
-  _value[key] = value;
-
-  // And for the object
-  setValue(key, value);
-}
-
-void Object::set(std::string const &key, StructuredValue &value) {
-  std::cerr << "Setting value & [" << key << "]" << std::endl;
+void Object::set(std::string const &key, StructuredValue value) {
   // Set the value in the map
   _value[key] = value;
 
@@ -771,12 +764,26 @@ void Object::seal() {
 
 void Object::generate() {
   for(auto entry: _type.arguments()) {
-    Generator const * generator = entry.second.generator();
+    const Argument &argument = entry.second;
+    Generator const * generator = argument.generator();
     if (generator) {
-      _value[entry.second.name()] = generator->generate(_value);
+      if (!_value.hasKey(argument.name())) {
+        set(argument.name(), generator->generate(_value));
+      }
+    } else if (argument.required()) {
+      if (!_value.hasKey(argument.name())) {
+        throw argument_error("Argument " + argument.name() + " was required but not given for " + this->type().toString());
+      }
+    } else {
+      // Not required and no generator: check if it has a value
+      if (!_value.hasKey(argument.name())) {
+        set(argument.name(), argument.defaultValue());
+      }
     }
+
   }
 }
+
 
 // ---- Task
 
@@ -789,8 +796,15 @@ Task::Task() : _type(ANY_TYPE) {
 TypeName Task::typeName() const { return _type.typeName(); }
 
 std::shared_ptr<Object> Task::run(std::shared_ptr<Object> const &object) {
+  // Validate and seal the task object
   object->generate();
   object->seal();
+
+  // Prepare the command line
+  rpc::Scheduler::submitJob(commandLine.rpc());
+
+  std::cerr << "[JSON] " << object->getValue().toJson() << std::endl;
+
   return object;
 }
 

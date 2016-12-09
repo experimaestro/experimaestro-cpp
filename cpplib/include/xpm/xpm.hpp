@@ -4,6 +4,9 @@
 #include <vector>
 #include <unordered_map>
 
+#include <xpm/utils.hpp>
+#include <xpm/commandline.hpp>
+
 namespace xpm {
 
 #ifdef SWIG
@@ -45,6 +48,7 @@ class sealed_error : public exception {
  public:
   sealed_error();
 };
+
 
 /** Thrown when the argument is invalid */
 class argument_error : public exception {
@@ -398,6 +402,8 @@ class Type {
 class Task {
   /// The type for this task
   Type _type;
+  /// Command line
+  CommandLine commandLine;
  public:
   Task();
 
@@ -451,7 +457,11 @@ SWIG_MUTABLE;
  *
  * Objects are constructed, and linked to, structured values.
  */
-class Object : public std::enable_shared_from_this<Object> {
+class Object
+#ifndef SWIG
+    : public std::enable_shared_from_this<Object>
+#endif
+{
  public:
   /** Creates a new object */
   Object();
@@ -496,8 +506,7 @@ class Object : public std::enable_shared_from_this<Object> {
   }
 
   /** Set a value */
-  void set(std::string const &key, StructuredValue &&value);
-  void set(std::string const &key, StructuredValue &value);
+  void set(std::string const &key, StructuredValue value);
 
   /** Get type */
   Type type() const;

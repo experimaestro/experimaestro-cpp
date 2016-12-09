@@ -3,10 +3,10 @@
 //
 #include <functional>
 
-#include <xpm/client.hpp>
+#include <include/xpm/rpc/client.hpp>
 
 namespace xpm {
-
+namespace rpc {
 using nlohmann::json;
 
 Client *Client::DEFAULT_CLIENT = nullptr;
@@ -24,7 +24,6 @@ Client::~Client() {
 JsonMessage Client::call(std::string const &name, json const &params) {
   return _client.request(name, params);
 }
-
 
 bool Client::ping() {
   auto response = _client.request("ping", json::object());
@@ -45,3 +44,4 @@ Client &Client::defaultClient() {
 }
 
 } // xpm ns
+} // rpc ns

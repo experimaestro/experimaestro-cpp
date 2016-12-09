@@ -4,9 +4,8 @@ from xpm import parse
 
 @MergeClass(A2)
 class _A2:
-    def run():
-        pass
-        
+    def execute():
+        print("Hello world")
 
 a2 = register.parse()
 a2.execute()
