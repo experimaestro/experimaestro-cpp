@@ -142,7 +142,7 @@ struct _StructuredValue {
   /// Scalar value
   Value _value;
 
-  /// Sub-values
+  /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
   std::map<std::string, StructuredValue> _content;
 
   // Construct from JSON object

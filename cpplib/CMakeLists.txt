@@ -39,6 +39,13 @@ add_library(experimaestro_shared SHARED ${SOURCES})
 target_link_libraries(experimaestro_shared ${LINKED_LIBRARIES})
 set_property(TARGET experimaestro_shared PROPERTY CXX_STANDARD 11)
 
+# get_property(experimaestro_shared_location
+# 	TARGET experimaestro_shared
+# 	PROPERTY LOCATION_${CMAKE_BUILD_TYPE})
+# message (STATUS "experimaestro_shared_location == ${experimaestro_shared_location}")
+#
+# message(STATUS $<TARGET_FILE:experimaestro_shared>)
+
 # ---- experimaestro executable
 
 add_executable(experimaestro src/experimaestro.cpp)
@@ -120,9 +127,11 @@ if (true)
         list(GET swigtargetlist 0 swigtargetname)
         list(GET swigtargetlist 1 swigpythonname)
         message(STATUS "${swigtargetname} and ${swigpythonname}")
+		set(CMAKE_INSTALL_RPATH .)
         set_target_properties("_${swigtargetname}_python" PROPERTIES
                 LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
+				CMAKE_INSTALL_RPATH .
                 CXX_STANDARD 11)
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
     endforeach()

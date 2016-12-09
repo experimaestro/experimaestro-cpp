@@ -6,11 +6,28 @@
 #define PROJECT_XPMCLIENT_H
 
 #include <string>
+#include <unordered_map>
 #include <xpm/json.hpp>
 #include <include/xpm/rpc/jsonrpcclient.hpp>
 
 namespace xpm {
 namespace rpc {
+
+struct HostConfiguration {
+  std::string id;
+  std::string host;
+  int port;
+  std::string username;
+  std::string password;
+};
+
+class Configuration {
+  std::unordered_map<std::string, HostConfiguration> configurations;
+  std::string defaultHost;
+ public:
+  Configuration(std::string const &path = "");
+  HostConfiguration const &defaultConfiguration() const;
+};
 
 class Client {
   JsonRPCClient _client;

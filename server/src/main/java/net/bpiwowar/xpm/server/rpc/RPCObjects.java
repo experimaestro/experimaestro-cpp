@@ -4,8 +4,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
@@ -16,6 +19,7 @@ import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
 import net.bpiwowar.xpm.manager.scripting.Scripting;
 import net.bpiwowar.xpm.manager.scripting.WrapperObject;
+import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -182,7 +186,9 @@ public class RPCObjects {
             RPCObjects objects = (RPCObjects) o;
 
             Object[] args = new Object[method.getParameterCount()];
-            Gson gson = new Gson();
+            final GsonBuilder builder = new GsonBuilder();
+            builder.registerTypeAdapterFactory(new RootAbstractCommandAdapter());
+            Gson gson = builder.create();
             final Type[] types = method.getGenericParameterTypes();
             Object thisObject = null;
 

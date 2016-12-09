@@ -163,7 +163,7 @@ class _JSONRPCClient {
       // will exit when this connection is closed.
       c.run();
     } catch (websocketpp::exception const &e) {
-      throw std::runtime_error(e.what());
+      throw std::runtime_error(std::string("Caught exception: ") + e.what());
     }
   }
 
