@@ -55,14 +55,13 @@ set(DOXYGEN_INPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 
 add_custom_command(
-        OUTPUT index.xml
+        OUTPUT xml/index.xml
         COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-        COMMAND touch index.xml
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating XML documentation with Doxygen" VERBATIM
         DEPENDS ${EXTERNAL_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
 )
-add_custom_target(documentation_index DEPENDS index.xml)
+add_custom_target(documentation_index DEPENDS xml/index.xml)
 
 add_custom_command(
         OUTPUT documentation.i
