@@ -120,7 +120,7 @@ def create(t, args, options, execute=False):
     xpmType = register.getType(t)
     
     # Create the type and set the arguments
-    o = xpmType.create()._self()
+    o = xpmType.create()
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
         logger.debug("Setting attribute [%s]", k)

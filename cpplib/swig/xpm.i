@@ -73,21 +73,6 @@
 %ignore xpm::Argument::type;
 %ignore xpm::StructuredValue::operator[];
 
-// FIXME: hack to get access to the real object -> we should use typemap or patch...
-%{
-PyObject *swigGetSelf(xpm::Object const *p) {
-    if (Swig::Director const *d = dynamic_cast<Swig::Director const *>(p)) {
-        return d->swig_get_self();
-    }
-    return nullptr;
-}
-%}
-%extend xpm::Object {
-    PyObject *_self() const {
-      return swigGetSelf($self);
-    } 
-};
-
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::ObjectFactory)
 
@@ -136,3 +121,20 @@ PyObject *swigGetSelf(xpm::Object const *p) {
     }
 }
 
+
+// Returns the wrapped python object rather than the director object
+#ifdef SWIGPYTHON
+%typemap(out) std::shared_ptr<xpm::Object> {
+    if ($1) {
+        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
+            Py_INCREF(d->swig_get_self());
+            $result = d->swig_get_self();
+        } else {
+            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >(result SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
+            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);            
+        }
+    } else {
+        $result = SWIG_Py_Void();
+    }
+}
+#endif
