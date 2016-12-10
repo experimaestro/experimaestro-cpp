@@ -6,6 +6,7 @@ include config.ini
 include doxy2swig.py
 include clienttest.cpp
 
+graft googletest
 graft cmake_pip
 graft asio
 graft swig

@@ -23,10 +23,26 @@ author = config["author"]
 
 from cmake_pip.cmake_extension import ExtensionCMake, setup
 
-extension = ExtensionCMake(name="experimaestro", 
-    cmake_file="CMakeLists.txt", 
+extensions = [ExtensionCMake(name="experimaestro",
+    cmake_file="CMakeLists.txt",
     cmake_target="_experimaestro_python",
-    cmake_install=True)
+    cmake_install_component="python")]
+
+# DEBUG: Compare with another behavior
+# from distutils.core import Extension
+# extensions.append(Extension('_experimaestro_foo', ['_experimaestro_foo.i'], swig_opts=['-modern', '-I../include']))
+# with open("_experimaestro_foo.i", "w") as f:
+#     f.write("""%module foo
+#
+# %{
+#     int a() {
+#         return 1;
+#     }
+# %}
+#
+# int a();
+# """)
+#
 
 setup(name='experimaestro',
       version=informations["version"],
@@ -34,5 +50,5 @@ setup(name='experimaestro',
       author=author["name"],
       author_email=author["email"],
       url=informations["url"],
-      ext_modules=[extension]
+      ext_modules=extensions
 )

@@ -263,10 +263,24 @@ class build_cmake(_Command):
         # install if this is part of the procedure
         # TODO !
 
+        log.error("CMAKE INSTALL: %s or %s", ext.cmake_install, ext.cmake_install_component)
         if ext.cmake_install or ext.cmake_install_component:
-            # run the installer with build/lib/ (without the hash) as prefix
-            # TODO
-            pass
+            cmake_install_cmd = ['cmake']
+            if ext.cmake_install_component:
+                cmake_install_cmd.append('-DCOMPONENT=%s' % ext.cmake_install_component)
+            cmake_install_cmd.extend(["-P", "cmake_install.cmake"])
+            log.info("Install command: %s" % cmake_install_cmd)
+            install_proc = subprocess.Popen(cmake_install_cmd, cwd=build_location)
+            install_proc.wait()
+
+            if(install_proc.returncode != 0):
+                log.error('#[CMAKE-PIP] install cmake returned an error code %d', build_proc.returncode)
+                log.error('#[CMAKE-PIP] stopping the build')
+                log.error('#[CMAKE-PIP] STDERR')
+                log.error('\n'.join(install_proc.stderr.readlines()))
+                log.error('#[CMAKE-PIP] STDOUT')
+                log.error('\n'.join(install_proc.stdout.readlines()))
+                raise Exception('Error produced by cmake_configure_and_build')
 
         elif ext.cmake_locate_extensions:
             import imp
@@ -386,7 +400,7 @@ class build_cmake(_Command):
                         for l in f.readlines():
                             l = l.strip()
                             if len(l) == 0: continue
-                            list_installed_files.append(os.path.relpath(l.strip(), self.build_lib))
+                            list_installed_files.append(os.path.relpath(l.strip(), os.curdir))
 
                 elif ext.cmake_locate_extensions:
                     # if the component is not specified, and this one is specified instead,
@@ -437,7 +451,6 @@ class build_ext(_build_ext):
         return _build_ext.build_extensions(self)
 
     def build_extension(self, ext):
-        log.info("glaglaglaglaglga %s", ext.name)
         if(not isinstance(ext, ExtensionCMake)):
             return _build_ext.build_extension(self, ext)
 
@@ -474,6 +487,8 @@ class build_ext(_build_ext):
         build_cmd = self.get_finalized_command('build_cmake')
         build_files = build_cmd.get_outputs()
         build_dir = getattr(build_cmd, 'build_platlib')
+        
+        log.warn("returning build files %s", '\n\t'.join(r + build_files))
 
         return r + build_files
 

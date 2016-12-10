@@ -2,7 +2,7 @@
 // Digest-related test on structured values
 //
 
-#include <xpm/xpm.h>
+#include <xpm/xpm.hpp>
 #include <gtest/gtest.h>
 
 //using nlohmann::json;
