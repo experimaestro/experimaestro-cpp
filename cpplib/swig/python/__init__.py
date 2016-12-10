@@ -49,10 +49,6 @@ class StructuredValue(__StructuredValue):
     def __init__(self, *args, **argv):
         __StructuredValue.__init__(self, *args, **argv)
 
-# HACK: preserve factories and objects since SWIG cannot handle smart pointers properly
-FACTORIES = []
-OBJECTS = []
-
 class PythonObjectFactory(ObjectFactory):
     """An experimaestro type in Python"""
     def __init__(self, pythonType):
@@ -61,7 +57,6 @@ class PythonObjectFactory(ObjectFactory):
 
     def create(self):
         newObject = self.pythonType()
-        OBJECTS.append(newObject)
         return newObject
 
 
@@ -83,7 +78,6 @@ class PythonRegister(Register):
     def addType(self, pythonType, typeName, parentType):
         pyType = self.types[pythonType] = Type(typeName, parentType)
         factory = PythonObjectFactory(pythonType)
-        FACTORIES.append(factory)
         pyType.objectFactory(factory)
         super().addType(pyType)
 
