@@ -610,7 +610,7 @@ public class OARLauncher extends Launcher {
         this.email = email;
     }
 
-    @Expose
+    @Expose("oarParameters")
     public OARParameters parameters() {
         return new OARParameters(this);
     }

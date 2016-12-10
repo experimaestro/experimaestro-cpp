@@ -31,7 +31,7 @@ import java.util.List;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Exposed
+@Exposed(useInRPC = false)
 public class ScriptingList extends WrapperObject<List> {
     final static Logger LOGGER = Logger.getLogger();
 

@@ -2,6 +2,7 @@ package net.bpiwowar.xpm.commands;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.UUIDObject;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.util.UUID;
 /**
  *
  */
+@Exposed
 public class CommandComponent implements AbstractCommandComponent {
     /**
      * Command UUID

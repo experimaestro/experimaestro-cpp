@@ -5,160 +5,131 @@
 #include <xpm/rpc/utils.hpp>
 
 #ifdef SWIG
-%shared_ptr(xpm::rpc::Dependency);
-%shared_ptr(xpm::rpc::ConnectorOptions);
-%shared_ptr(xpm::rpc::Json);
-%shared_ptr(xpm::rpc::JsonResource);
-%shared_ptr(xpm::rpc::Tasks);
-%shared_ptr(xpm::rpc::JsonParameterFile);
-%shared_ptr(xpm::rpc::JsonString);
-%shared_ptr(xpm::rpc::ReadWriteDependency);
-%shared_ptr(xpm::rpc::SingleHostConnector);
-%shared_ptr(xpm::rpc::LauncherParameters);
-%shared_ptr(xpm::rpc::ScriptingList);
-%shared_ptr(xpm::rpc::Job);
-%shared_ptr(xpm::rpc::Namespace);
-%shared_ptr(xpm::rpc::Path);
-%shared_ptr(xpm::rpc::JsonArray);
-%shared_ptr(xpm::rpc::XPM);
-%shared_ptr(xpm::rpc::Connector);
-%shared_ptr(xpm::rpc::JsonNull);
-%shared_ptr(xpm::rpc::Task);
-%shared_ptr(xpm::rpc::AbstractCommand);
-%shared_ptr(xpm::rpc::CommandOutput);
-%shared_ptr(xpm::rpc::SSHOptions);
-%shared_ptr(xpm::rpc::Launcher);
-%shared_ptr(xpm::rpc::JsonObject);
-%shared_ptr(xpm::rpc::JsonReal);
-%shared_ptr(xpm::rpc::JsonPath);
-%shared_ptr(xpm::rpc::ScriptingLogger);
-%shared_ptr(xpm::rpc::Module);
-%shared_ptr(xpm::rpc::Command);
-%shared_ptr(xpm::rpc::JsonBoolean);
-%shared_ptr(xpm::rpc::Pipe);
-%shared_ptr(xpm::rpc::ObjectPropertyReference);
-%shared_ptr(xpm::rpc::JavaTaskFactory);
-%shared_ptr(xpm::rpc::ParameterFile);
-%shared_ptr(xpm::rpc::Resource);
-%shared_ptr(xpm::rpc::Scheduler);
-%shared_ptr(xpm::rpc::LocalhostConnector);
 %shared_ptr(xpm::rpc::DirectLauncher);
-%shared_ptr(xpm::rpc::ScriptingMap);
-%shared_ptr(xpm::rpc::OARParameters);
+%shared_ptr(xpm::rpc::ObjectPropertyReference);
+%shared_ptr(xpm::rpc::CommandOutput);
+%shared_ptr(xpm::rpc::Commands);
+%shared_ptr(xpm::rpc::ScriptingList);
+%shared_ptr(xpm::rpc::AbstractCommandComponent);
+%shared_ptr(xpm::rpc::JsonReal);
 %shared_ptr(xpm::rpc::SSHConnector);
+%shared_ptr(xpm::rpc::Module);
+%shared_ptr(xpm::rpc::Json);
+%shared_ptr(xpm::rpc::LocalhostConnector);
+%shared_ptr(xpm::rpc::JsonString);
+%shared_ptr(xpm::rpc::JsonNull);
+%shared_ptr(xpm::rpc::JsonParameterFile);
+%shared_ptr(xpm::rpc::ScriptingLogger);
 %shared_ptr(xpm::rpc::OARLauncher);
-%shared_ptr(xpm::rpc::TokenResource);
 %shared_ptr(xpm::rpc::SubCommand);
+%shared_ptr(xpm::rpc::SSHOptions);
+%shared_ptr(xpm::rpc::Resource);
+%shared_ptr(xpm::rpc::JsonResource);
+%shared_ptr(xpm::rpc::AbstractCommand);
+%shared_ptr(xpm::rpc::XPM);
+%shared_ptr(xpm::rpc::Launcher);
+%shared_ptr(xpm::rpc::Pipe);
+%shared_ptr(xpm::rpc::LauncherParameters);
+%shared_ptr(xpm::rpc::Path);
+%shared_ptr(xpm::rpc::ParameterFile);
+%shared_ptr(xpm::rpc::Dependency);
+%shared_ptr(xpm::rpc::Namespace);
+%shared_ptr(xpm::rpc::Job);
+%shared_ptr(xpm::rpc::JsonPath);
+%shared_ptr(xpm::rpc::JsonBoolean);
+%shared_ptr(xpm::rpc::Tasks);
+%shared_ptr(xpm::rpc::Command);
+%shared_ptr(xpm::rpc::JsonObject);
+%shared_ptr(xpm::rpc::ReadWriteDependency);
+%shared_ptr(xpm::rpc::Task);
+%shared_ptr(xpm::rpc::CommandComponent);
+%shared_ptr(xpm::rpc::Scheduler);
+%shared_ptr(xpm::rpc::SingleHostConnector);
+%shared_ptr(xpm::rpc::OARParameters);
+%shared_ptr(xpm::rpc::JsonArray);
+%shared_ptr(xpm::rpc::ScriptingMap);
 %shared_ptr(xpm::rpc::JsonTask);
+%shared_ptr(xpm::rpc::ConnectorOptions);
+%shared_ptr(xpm::rpc::JavaTaskFactory);
+%shared_ptr(xpm::rpc::Connector);
+%shared_ptr(xpm::rpc::TokenResource);
+%shared_ptr(xpm::rpc::CommandString);
 #endif
 namespace xpm { namespace rpc {
 
 
 // Pre-declaration
-class Dependency;
-class ConnectorOptions;
-class Json;
-class JsonResource;
-class Tasks;
-class JsonParameterFile;
-class JsonString;
-class ReadWriteDependency;
-class SingleHostConnector;
-class LauncherParameters;
-class ScriptingList;
-class Job;
-class Namespace;
-class Path;
-class JsonArray;
-class XPM;
-class Connector;
-class JsonNull;
-class Task;
-class AbstractCommand;
-class CommandOutput;
-class SSHOptions;
-class Launcher;
-class JsonObject;
-class JsonReal;
-class JsonPath;
-class ScriptingLogger;
-class Module;
-class Command;
-class JsonBoolean;
-class Pipe;
-class ObjectPropertyReference;
-class JavaTaskFactory;
-class ParameterFile;
-class Resource;
-class Scheduler;
-class LocalhostConnector;
 class DirectLauncher;
-class ScriptingMap;
-class OARParameters;
+class ObjectPropertyReference;
+class CommandOutput;
+class Commands;
+class ScriptingList;
+class AbstractCommandComponent;
+class JsonReal;
 class SSHConnector;
+class Module;
+class Json;
+class LocalhostConnector;
+class JsonString;
+class JsonNull;
+class JsonParameterFile;
+class ScriptingLogger;
 class OARLauncher;
-class TokenResource;
 class SubCommand;
+class SSHOptions;
+class Resource;
+class JsonResource;
+class AbstractCommand;
+class XPM;
+class Launcher;
+class Pipe;
+class LauncherParameters;
+class Path;
+class ParameterFile;
+class Dependency;
+class Namespace;
+class Job;
+class JsonPath;
+class JsonBoolean;
+class Tasks;
+class Command;
+class JsonObject;
+class ReadWriteDependency;
+class Task;
+class CommandComponent;
+class Scheduler;
+class SingleHostConnector;
+class OARParameters;
+class JsonArray;
+class ScriptingMap;
 class JsonTask;
+class ConnectorOptions;
+class JavaTaskFactory;
+class Connector;
+class TokenResource;
+class CommandString;
 
 
 // Classes
-class Connector : public ServerObject {
+class Connector : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  Connector() {}
+
 public:
   /**   */
-  std::string resolve(std::shared_ptr<Path> const &path);
+  virtual std::string resolve(std::shared_ptr<Path> const &path);
   /**   */
   static std::shared_ptr<Connector> create(std::string const &string, std::string const &string_1, std::shared_ptr<ConnectorOptions> const &connectorOptions);
   /**   */
-  std::shared_ptr<Launcher> default_launcher();
+  virtual std::shared_ptr<Launcher> default_launcher();
 };
 
-class LauncherParameters : public ServerObject {
+class AbstractCommandComponent : public virtual ServerObject {
 protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class Json : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  std::shared_ptr<Json> copy();
-  /**   */
-  std::shared_ptr<Json> copy(bool const &boolean);
-  /**   */
-  bool isSimple();
-  /**   */
-  bool is_array();
-  /**   */
-  std::string toSource();
-  /**   */
-  std::string get_descriptor();
-  /** Creates a parameter file from this JSON
-  */
-  std::shared_ptr<ParameterFile> as_parameter_file(std::string const &string, std::shared_ptr<SingleHostConnector> const &singleHostConnector);
-  /**   */
-  std::shared_ptr<JsonObject> as_object();
-  /**   */
-  bool is_object();
-};
-
-class Dependency : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class ConnectorOptions : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
+  AbstractCommandComponent() {}
 
 public:
 };
@@ -167,78 +138,213 @@ class SingleHostConnector : public Connector {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  SingleHostConnector() {}
+
 public:
 };
 
-class Resource : public ServerObject {
+class Json : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  Json() {}
+
 public:
   /**   */
-  std::string toString();
+  virtual std::shared_ptr<Json> copy();
   /**   */
-  std::shared_ptr<Path> resolve(std::string const &string);
+  virtual std::shared_ptr<Json> copy(bool const &boolean);
   /**   */
-  std::shared_ptr<Path> file();
+  virtual std::string get_descriptor();
   /**   */
-  std::shared_ptr<Path> output();
+  virtual bool is_array();
+  /**   */
+  virtual bool isSimple();
+  /**   */
+  virtual std::string toSource();
+  /** Creates a parameter file from this JSON
+  */
+  virtual std::shared_ptr<ParameterFile> as_parameter_file(std::string const &string, std::shared_ptr<SingleHostConnector> const &singleHostConnector);
+  /**   */
+  virtual std::shared_ptr<JsonObject> as_object();
+  /**   */
+  virtual bool is_object();
 };
 
-class Launcher : public ServerObject {
+class CommandComponent : public AbstractCommandComponent {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  CommandComponent() {}
+
+public:
+};
+
+class Launcher : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Launcher() {}
+
 public:
   /**   */
-  std::shared_ptr<LauncherParameters> parameters();
+  virtual std::shared_ptr<LauncherParameters> parameters();
   /**   */
-  std::string environment(std::string const &key);
+  virtual std::string environment(std::string const &key);
   /** Gets the value of the environment variable
   */
-  std::string env(std::string const &string);
+  virtual std::string env(std::string const &string);
   /** Sets an environment variable and returns the old value (if any)
   */
-  std::string env(std::string const &key, std::string const &value);
+  virtual std::string env(std::string const &key, std::string const &value);
   /**   */
-  void set_notification_url(std::string const &string);
+  virtual void set_notification_url(std::string const &string);
   /** Sets the temporary directory for this launcher
   */
-  void set_tmpdir(std::shared_ptr<Path> const &path);
+  virtual void set_tmpdir(std::shared_ptr<Path> const &path);
 };
 
-class AbstractCommand : public ServerObject {
+class ConnectorOptions : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
-public:
-  /**   */
-  void add_dependency(std::shared_ptr<Dependency> const &dependency);
-  /**   */
-  std::shared_ptr<CommandOutput> output();
-};
-
-class JsonObject : public Json {
 protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  void put(std::string const &string, std::shared_ptr<Json> const &json_1);
-  /**   */
-  std::shared_ptr<Json> getField(std::string const &string);
-};
-
-class OARParameters : public LauncherParameters {
-protected:
-  virtual std::string const &__name__() const override;
+  ConnectorOptions() {}
 
 public:
 };
 
-class Job : public Resource {
+class Dependency : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
+
+protected:
+  Dependency() {}
+
+public:
+};
+
+class LauncherParameters : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  LauncherParameters() {}
+
+public:
+};
+
+class AbstractCommand : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  AbstractCommand() {}
+
+public:
+  /**   */
+  virtual std::shared_ptr<CommandOutput> output();
+  /**   */
+  virtual void add_dependency(std::shared_ptr<Dependency> const &dependency);
+};
+
+class Resource : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Resource() {}
+
+public:
+  /**   */
+  virtual std::string toString();
+  /**   */
+  virtual std::shared_ptr<Path> resolve(std::string const &string);
+  /**   */
+  virtual std::shared_ptr<Path> file();
+  /**   */
+  virtual std::shared_ptr<Path> output();
+};
+
+class XPM : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  XPM() {}
+
+public:
+  /** Returns a file relative to the current connector
+  */
+  virtual std::shared_ptr<Path> file(std::string const &filepath);
+  /** Publish the repository on the web server
+  */
+  virtual void publish();
+  /** Retrieve (or creates) a token resource with a given xpath
+com.sun.javafx.binding.StringConstant@68e965f5  */
+  static std::shared_ptr<TokenResource> token_resource(std::string const &path);
+  /** com.sun.javafx.binding.StringConstant@f381794com.sun.javafx.binding.StringConstant@2cdd0d4b  */
+  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
+  /** Sets the logger debug level
+  */
+  virtual void log_level(std::string const &name, std::string const &level);
+  /**   */
+  virtual std::string get_script_path();
+  /** Set the simulate flag: When true, the jobs are not submitted but just output
+  */
+  virtual bool simulate(bool const &boolean);
+  /**   */
+  virtual bool simulate();
+  /**   */
+  virtual std::string ns();
+  /**   */
+  virtual std::shared_ptr<Task> get_task(std::string const &string, std::string const &string_1);
+  /** com.sun.javafx.binding.StringConstant@776b83cc  */
+  static std::shared_ptr<TokenResource> token(std::string const &path);
+};
+
+class ScriptingMap : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  ScriptingMap() {}
+
+public:
+};
+
+class ObjectPropertyReference : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  ObjectPropertyReference() {}
+
+public:
+};
+
+class JsonString : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonString() {}
+
+public:
+  /**   */
+  virtual std::string toString();
+};
+
+class Pipe : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Pipe() {}
 
 public:
 };
@@ -247,57 +353,321 @@ class JsonTask : public Json {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  JsonTask() {}
+
 public:
   /**   */
-  std::shared_ptr<AbstractCommand> command();
+  virtual std::shared_ptr<JsonObject> json();
   /**   */
-  std::shared_ptr<JsonObject> json();
+  virtual std::shared_ptr<AbstractCommand> command();
+};
+
+class ReadWriteDependency : public Dependency {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  ReadWriteDependency() {}
+
+public:
+};
+
+class LocalhostConnector : public SingleHostConnector {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  LocalhostConnector() {}
+
+public:
+  /**   */
+  virtual std::string env(std::string const &string);
 };
 
 class JsonResource : public Json {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  JsonResource() {}
+
 public:
 };
 
-class Path : public ServerObject {
+class ScriptingLogger : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /** Sets the level
+  */
+  virtual void set_level(std::string const &level);
+};
+
+class SSHConnector : public SingleHostConnector {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  SSHConnector() {}
+
+public:
+  /**   */
+  virtual std::string env(std::shared_ptr<Launcher> const &launcher, std::string const &string);
+};
+
+class Namespace : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  std::string toString();
+  Namespace(std::string const &string, std::string const &string_1);
   /**   */
-  bool exists();
-  /** Creates this folder, if it does not exist.  Also creates any ancestor
-folders which do not exist.  This method does nothing if the folder
-already exists.
-  */
-  void mkdirs();
+  virtual std::string uri();
+};
+
+class CommandString : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
   /**   */
-  std::string read_all();
+  CommandString(std::string const &string);
   /**   */
-  int64_t get_size();
-  /** Find all the matching files within this folder
-com.sun.javafx.binding.StringConstant@1fb700ee  */
-  std::shared_ptr<JsonArray> find_matching_files(std::string const &regexp);
-  /** Get the file path, ignoring the file scheme
-  */
-  std::string get_path();
-  /**   */
-  std::string toSource();
-  /**   */
-  std::string uri();
+  virtual std::string toString();
 };
 
 class JsonPath : public Json {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  JsonPath() {}
+
 public:
   /**   */
-  std::string uri();
+  virtual std::string uri();
+};
+
+class Commands : public AbstractCommand {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  Commands();
+  /**   */
+  Commands(std::vector<std::shared_ptr<AbstractCommand>> const &abstractCommand);
+  /**   */
+  virtual void add(std::shared_ptr<AbstractCommand> const &abstractCommand);
+};
+
+class Job : public Resource {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Job() {}
+
+public:
+};
+
+class Tasks : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  Tasks();
+};
+
+class Task : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Task() {}
+
+public:
+};
+
+class SubCommand : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  SubCommand() {}
+
+public:
+};
+
+class ScriptingList : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  ScriptingList() {}
+
+public:
+  /**   */
+  virtual int32_t length();
+};
+
+class OARParameters : public LauncherParameters {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  OARParameters() {}
+
+public:
+};
+
+class JsonArray : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonArray() {}
+
+public:
+  /**   */
+  virtual std::shared_ptr<Json> get(int32_t const &int_1);
+  /**   */
+  virtual std::string join(std::string const &string);
+  /**   */
+  virtual int32_t length();
+  /**   */
+  virtual int32_t _size();
+};
+
+class OARLauncher : public Launcher {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  OARLauncher(std::shared_ptr<Connector> const &connector);
+  /**   */
+  virtual std::shared_ptr<OARParameters> oarParameters();
+  /** Send a notification email. Process it to notify experimaestro when a job status changes.
+  */
+  virtual void email(std::string const &string);
+  /**   */
+  virtual void use_notify(bool const &boolean);
+};
+
+class Module : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Module() {}
+
+public:
+};
+
+class JsonReal : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonReal() {}
+
+public:
+};
+
+class JsonNull : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonNull() {}
+
+public:
+};
+
+class Command : public AbstractCommandComponent, public AbstractCommand {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  Command();
+  /**   */
+  virtual void add(std::vector<std::string> const &string);
+  /**   */
+  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
+  /**   */
+  virtual void add_subcommand(std::shared_ptr<Commands> const &commands);
+  /**   */
+  static std::shared_ptr<Command> getCommand(std::shared_ptr<ScriptingList> const &list);
+};
+
+class CommandOutput : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  CommandOutput() {}
+
+public:
+};
+
+class ParameterFile : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  ParameterFile(std::string const &key, std::string const &content);
+};
+
+class Scheduler : public virtual ServerObject {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  Scheduler() {}
+
+public:
+  /**   */
+  static void submitJob(std::shared_ptr<AbstractCommand> const &abstractCommand);
+};
+
+class JsonBoolean : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonBoolean() {}
+
+public:
+};
+
+class JsonParameterFile : public CommandComponent {
+protected:
+  virtual std::string const &__name__() const override;
+
+public:
+  /**   */
+  JsonParameterFile(std::string const &string, std::shared_ptr<Json> const &json_1);
+};
+
+class JsonObject : public Json {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  JsonObject() {}
+
+public:
+  /**   */
+  virtual void put(std::string const &string, std::shared_ptr<Json> const &json_1);
+  /**   */
+  virtual std::shared_ptr<Json> getField(std::string const &string);
 };
 
 class DirectLauncher : public Launcher {
@@ -309,15 +679,30 @@ public:
   DirectLauncher(std::shared_ptr<Connector> const &connector);
 };
 
-class Namespace : public ServerObject {
+class JavaTaskFactory : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
+protected:
+  JavaTaskFactory() {}
+
+public:
+};
+
+class TokenResource : public Resource {
+protected:
+  virtual std::string const &__name__() const override;
+
+protected:
+  TokenResource() {}
+
 public:
   /**   */
-  Namespace(std::string const &string, std::string const &string_1);
+  virtual int32_t used();
   /**   */
-  std::string uri();
+  virtual int32_t getLimit();
+  /**   */
+  virtual void set_limit(int32_t const &int_1);
 };
 
 class SSHOptions : public ConnectorOptions {
@@ -328,280 +713,55 @@ public:
   /**   */
   SSHOptions();
   /**   */
-  std::string hostname();
+  virtual std::string hostname();
   /**   */
-  std::shared_ptr<SSHOptions> check_host(bool const &boolean);
+  virtual void set_use_ssh_agent(bool const &boolean);
   /**   */
-  void set_use_ssh_agent(bool const &boolean);
+  virtual void set_stream_proxy(std::shared_ptr<SSHConnector> const &proxy);
   /**   */
-  void set_stream_proxy(std::string const &uri, std::shared_ptr<SSHOptions> const &options);
+  virtual void set_stream_proxy(std::string const &uri, std::shared_ptr<SSHOptions> const &options);
   /**   */
-  void set_stream_proxy(std::shared_ptr<SSHConnector> const &proxy);
+  virtual std::shared_ptr<SSHOptions> check_host(bool const &boolean);
   /**   */
-  void hostname(std::string const &string);
+  virtual void hostname(std::string const &string);
   /**   */
-  void port(int32_t const &int_1);
+  virtual void port(int32_t const &int_1);
   /**   */
-  void username(std::string const &string);
+  virtual void username(std::string const &string);
   /**   */
-  void password(std::string const &string);
+  virtual void password(std::string const &string);
   /**   */
-  std::string username();
+  virtual std::string username();
 };
 
-class Pipe : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class JavaTaskFactory : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class JsonParameterFile : public ServerObject {
+class Path : public virtual ServerObject {
 protected:
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  JsonParameterFile(std::string const &string, std::shared_ptr<Json> const &json_1);
-};
-
-class ObjectPropertyReference : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class ScriptingLogger : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /** Sets the level
+  virtual std::string toString();
+  /**   */
+  virtual bool exists();
+  /** Creates this folder, if it does not exist.  Also creates any ancestor
+folders which do not exist.  This method does nothing if the folder
+already exists.
   */
-  void set_level(std::string const &level);
-};
-
-class ScriptingMap : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class Task : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class JsonString : public Json {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
+  virtual void mkdirs();
   /**   */
-  std::string toString();
-};
-
-class TokenResource : public Resource {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
+  virtual std::string toSource();
   /**   */
-  int32_t getLimit();
+  virtual std::string read_all();
   /**   */
-  int32_t used();
-  /**   */
-  void set_limit(int32_t const &int_1);
-};
-
-class OARLauncher : public Launcher {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  OARLauncher(std::shared_ptr<Connector> const &connector);
-  /**   */
-  std::shared_ptr<OARParameters> parameters();
-  /** Send a notification email. Process it to notify experimaestro when a job status changes.
+  virtual int64_t get_size();
+  /** Find all the matching files within this folder
+com.sun.javafx.binding.StringConstant@5939a379  */
+  virtual std::shared_ptr<JsonArray> find_matching_files(std::string const &regexp);
+  /** Get the file path, ignoring the file scheme
   */
-  void email(std::string const &string);
+  virtual std::string get_path();
   /**   */
-  void use_notify(bool const &boolean);
-};
-
-class SubCommand : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class JsonNull : public Json {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class ScriptingList : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  int32_t length();
-};
-
-class JsonArray : public Json {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  std::shared_ptr<Json> get(int32_t const &int_1);
-  /**   */
-  std::string join(std::string const &string);
-  /**   */
-  int32_t length();
-  /**   */
-  int32_t _size();
-};
-
-class Scheduler : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  static void submitJob(std::shared_ptr<AbstractCommand> const &abstractCommand);
-};
-
-class JsonBoolean : public Json {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class Tasks : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  Tasks();
-};
-
-class Command : public AbstractCommand {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  Command();
-  /**   */
-  void add(std::vector<std::string> const &string);
-  /**   */
-  static std::shared_ptr<Command> getCommand(std::shared_ptr<ScriptingList> const &list);
-};
-
-class CommandOutput : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class SSHConnector : public SingleHostConnector {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  std::string env(std::shared_ptr<Launcher> const &launcher, std::string const &string);
-};
-
-class ParameterFile : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class XPM : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /** Returns a file relative to the current connector
-  */
-  std::shared_ptr<Path> file(std::string const &filepath);
-  /**   */
-  std::shared_ptr<Task> get_task(std::string const &string, std::string const &string_1);
-  /** com.sun.javafx.binding.StringConstant@2525ff7ecom.sun.javafx.binding.StringConstant@524d6d96  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
-  /** Retrieve (or creates) a token resource with a given xpath
-com.sun.javafx.binding.StringConstant@152aa092  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path);
-  /** Sets the logger debug level
-  */
-  void log_level(std::string const &name, std::string const &level);
-  /**   */
-  std::string get_script_path();
-  /** Publish the repository on the web server
-  */
-  void publish();
-  /**   */
-  std::string ns();
-  /** Set the simulate flag: When true, the jobs are not submitted but just output
-  */
-  bool simulate(bool const &boolean);
-  /**   */
-  bool simulate();
-  /** com.sun.javafx.binding.StringConstant@37858383  */
-  static std::shared_ptr<TokenResource> token(std::string const &path);
-};
-
-class LocalhostConnector : public SingleHostConnector {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-  /**   */
-  std::string env(std::string const &string);
-};
-
-class ReadWriteDependency : public Dependency {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class JsonReal : public Json {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
-};
-
-class Module : public ServerObject {
-protected:
-  virtual std::string const &__name__() const override;
-
-public:
+  virtual std::string uri();
 };
 
 } }// xpm::rpc namespace

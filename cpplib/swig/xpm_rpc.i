@@ -5,10 +5,14 @@
     #include <xpm/rpc/objects.hpp>
 %}
 
+%include "std_shared_ptr.i"
+
 namespace xpm {
     namespace rpc {
 }
 }
+
+%shared_ptr(xpm::rpc::ServerObject);
 
 %include <xpm/rpc/utils.hpp>
 %include <xpm/rpc/objects.hpp>

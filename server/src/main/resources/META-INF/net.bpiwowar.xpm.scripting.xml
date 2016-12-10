@@ -22,14 +22,23 @@
         <class>net.bpiwowar.xpm.scheduler.Resource</class>
         <class>net.bpiwowar.xpm.scheduler.TokenResource</class>
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
-        <class>net.bpiwowar.xpm.commands.Command</class>
-        <class>net.bpiwowar.xpm.commands.AbstractCommand</class>
         <class>net.bpiwowar.xpm.scheduler.Scheduler</class>
+
+        <!-- Commands -->
         <class>net.bpiwowar.xpm.commands.Pipe</class>
-        <class>net.bpiwowar.xpm.commands.CommandOutput</class>
         <class>net.bpiwowar.xpm.commands.SubCommand</class>
         <class>net.bpiwowar.xpm.scheduler.Job</class>
 
+        <class>net.bpiwowar.xpm.commands.CommandOutput</class>
+        <class>net.bpiwowar.xpm.commands.Command</class>
+        <class>net.bpiwowar.xpm.commands.Commands</class>
+        <class>net.bpiwowar.xpm.commands.AbstractCommand</class>
+        <class>net.bpiwowar.xpm.commands.AbstractCommandComponent</class>
+        <class>net.bpiwowar.xpm.commands.ParameterFile</class>
+        <class>net.bpiwowar.xpm.commands.CommandComponent</class>
+        <class>net.bpiwowar.xpm.commands.CommandString</class>
+
+        <!-- Dependencies -->
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
         <class>net.bpiwowar.xpm.scheduler.ReadWriteDependency</class>
 

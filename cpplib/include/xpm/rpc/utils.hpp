@@ -42,11 +42,28 @@ struct RPCConverter {
 
 template<typename T>
 struct RPCConverter<std::shared_ptr<T>> {
-  static inline nlohmann::json toJson(std::shared_ptr<T> const &x) { return x->_identifier; }
+  static inline nlohmann::json toJson(std::shared_ptr<T> const &x) {
+    return x->_identifier;
+  }
   static inline std::shared_ptr<T> toCPP(nlohmann::json const &x) {
-    return nullptr;
+    return nullptr; // FIXME?
   }
 };
+
+template<typename T>
+struct RPCConverter<std::vector<T>> {
+  static inline nlohmann::json toJson(std::vector<T> const &list) {
+    nlohmann::json array = nlohmann::json::array();
+    for(auto &el: list) {
+      array.push_back(RPCConverter<T>::toJson(el));
+    }
+    return array;
+  }
+  static inline std::vector<T> toCPP(nlohmann::json const &x) {
+    return nullptr; // FIXME?
+  }
+};
+
 
 }
 }

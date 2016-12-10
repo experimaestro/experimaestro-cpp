@@ -801,9 +801,9 @@ std::shared_ptr<Object> Task::run(std::shared_ptr<Object> const &object) {
   object->seal();
 
   // Prepare the command line
-  rpc::Scheduler::submitJob(commandLine.rpc());
-
-  std::cerr << "[JSON] " << object->getValue().toJson() << std::endl;
+  CommandContext context;
+  context.parameters = object->getValue().toString();
+  rpc::Scheduler::submitJob(commandLine.rpc(context));
 
   return object;
 }

@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.commands;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.UUIDObject;
@@ -51,12 +52,14 @@ public class Commands extends AbstractCommand {
     /**
      * Default constructor (for DB serialization)
      */
+    @Expose
     public Commands() {
     }
 
     /**
      * Construct with a set of command
      */
+    @Expose
     public Commands(AbstractCommand... commands) {
         this.commands = new ArrayList<>(Arrays.asList(commands));
     }
@@ -83,6 +86,7 @@ public class Commands extends AbstractCommand {
                 '}';
     }
 
+    @Expose
     public void add(AbstractCommand command) {
         if (command.outputRedirect == null) {
             command.outputRedirect = Redirect.INHERIT;

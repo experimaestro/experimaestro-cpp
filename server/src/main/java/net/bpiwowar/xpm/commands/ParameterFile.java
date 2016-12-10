@@ -1,5 +1,7 @@
 package net.bpiwowar.xpm.commands;
 
+import net.bpiwowar.xpm.manager.scripting.Argument;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
@@ -20,9 +22,16 @@ public class ParameterFile extends CommandComponent implements Serializable {
     private ParameterFile() {
     }
 
+    @Expose
     public ParameterFile(String key, byte[] content) {
         this.key = key;
         this.content = content;
+    }
+
+    @Expose
+    public ParameterFile(@Argument(name="key") String key, @Argument(name="content")String content) {
+        this.key = key;
+        this.content = content.getBytes();
     }
 
     @Override

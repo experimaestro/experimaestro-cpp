@@ -9,16 +9,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
+import net.bpiwowar.xpm.exceptions.ExperimaestroException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
-import net.bpiwowar.xpm.manager.scripting.Argument;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
-import net.bpiwowar.xpm.manager.scripting.Declaration;
-import net.bpiwowar.xpm.manager.scripting.Expose;
-import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
-import net.bpiwowar.xpm.manager.scripting.Scripting;
-import net.bpiwowar.xpm.manager.scripting.WrapperObject;
 import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
@@ -187,7 +183,6 @@ public class RPCObjects {
 
             Object[] args = new Object[method.getParameterCount()];
             final GsonBuilder builder = new GsonBuilder();
-            builder.registerTypeAdapterFactory(new RootAbstractCommandAdapter());
             Gson gson = builder.create();
             final Type[] types = method.getGenericParameterTypes();
             Object thisObject = null;
@@ -204,6 +199,18 @@ public class RPCObjects {
                     }
                 } else {
                     final Type type = types[descriptor.position];
+                    if (type instanceof Class<?>) {
+                        Annotation annotation = ((Class) type).getAnnotation(Exposed.class);
+                        if (annotation != null) {
+                            int objectId = gson.fromJson(jsonElement, Integer.TYPE);
+                            if (objectId < 0 || objectId > objects.objects.size()) {
+                                throw new XPMCommandException("Object ID out of bound (%d)", objectId)
+                                        .addContext("while processing parameter %s", descriptor.name);
+                            }
+                            args[descriptor.position] = objects.objects.get(objectId);
+                            continue;
+                        }
+                    }
                     try {
                         args[descriptor.position] = gson.fromJson(jsonElement, type);
                     } catch (RuntimeException e) {
@@ -261,15 +268,14 @@ public class RPCObjects {
             nodes.put(classDescription.wrappedClass, new ClassNode(classDescription));
         }
 
+        // Build the hierarchy
         for (Map.Entry<Class<?>, ClassNode> entry : nodes.entrySet()) {
-            Class<?> aClass = entry.getValue().classDescription.aClass;
-            for (aClass = aClass.getSuperclass(); !Object.class.equals(aClass); aClass = aClass.getSuperclass()) {
-                final ClassNode parentNode = nodes.get(aClass);
-                if (parentNode != null) {
-                    parentNode.children.add(entry.getValue());
-                    entry.getValue().parents.add(parentNode);
-                    break;
-                }
+            ClassNode node = entry.getValue();
+            Class<?> aClass = node.classDescription.aClass;
+            addInterfaces(nodes, node, aClass);
+
+            for (aClass = aClass.getSuperclass(); aClass != null && !Object.class.equals(aClass); aClass = aClass.getSuperclass()) {
+                if (addParent(nodes, node, aClass)) break;
             }
         }
 
@@ -310,6 +316,8 @@ public class RPCObjects {
 
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
+                boolean isInterface = description.aClass.isInterface();
+
                 out.format("class %s", classNode.classDescription.getClassName());
                 for (int i = 0; i < classNode.parents.size(); ++i) {
                     if (i == 0) out.print(" : ");
@@ -317,33 +325,23 @@ public class RPCObjects {
                     out.print("public ");
                     out.print(classNode.parents.get(i).classDescription.getClassName());
                 }
-                if (classNode.parents.isEmpty())
-                    out.print(" : public ServerObject");
+                if (classNode.parents.isEmpty()) {
+                    out.print(" : public virtual ServerObject");
+                }
                 out.format(" {%n");
-                out.format("protected:%n  virtual std::string const &__name__() const override;%n%n");
+                if (!isInterface)
+                    out.format("protected:%n  virtual std::string const &__name__() const override;%n%n");
+                if (description.constructors.isEmpty()) {
+                    out.format("protected:%n  %s() {}%n%n", description.getClassName());
+                }
                 out.format("public:%n");
 
                 for (ConstructorDeclaration c : description.constructors) {
-                    if (!isRegistered(c)) {
-                        LOGGER.error("Unregistered type for %s", c);
-                        continue;
-                    }
-
-                    outputHelp(out, c);
-                    out.print("  ");
-                    outputSignature(out, false, description.getClassName(), c);
-                    out.println(";");
+                    outputDeclaration(out, description, c);
                 }
 
                 for (Declaration<Method> method : description.methods) {
-                    if (!isRegistered(method)) {
-                        LOGGER.error("Unregistered type for %s", method);
-                        continue;
-                    }
-                    outputHelp(out, method);
-                    out.print("  ");
-                    outputSignature(out, false, description.getClassName(), method);
-                    out.println(";");
+                    outputDeclaration(out, description, method);
                 }
 
 
@@ -365,6 +363,7 @@ public class RPCObjects {
             out.format("namespace xpm {%nnamespace rpc{%n");
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
+                boolean isInterface = description.aClass.isInterface();
                 final String className = description.getClassName();
 
                 String prefix = OBJECTS + "." + className;
@@ -374,13 +373,13 @@ public class RPCObjects {
                     outputSignature(out, true, description.getClassName(), c);
                     generateRPCCall(out, prefix, c);
                 }
-
-                out.format("std::string const &%s::__name__() const { static std::string name = \"%s\"; return name; }%n",
-                        className, className);
-
+                if (!isInterface) {
+                    out.format("std::string const &%s::__name__() const { static std::string name = \"%s\"; return name; }%n",
+                            className, className);
+                }
 
                 for (MethodDeclaration method : description.methods) {
-                    if (!isRegistered(method)) continue;
+                    if (!isRegistered(method) || method.isPureVirtual()) continue;
                     outputSignature(out, true, className, method);
                     generateRPCCall(out, prefix, method);
 
@@ -388,6 +387,37 @@ public class RPCObjects {
             }
             out.println("}} // namespace xpm::rpc");
 
+        }
+    }
+
+    private static void outputDeclaration(PrintStream out, ClassDescription description, Declaration<?> c) {
+        if (!isRegistered(c)) {
+            LOGGER.error("Unregistered type for %s", c);
+            return;
+        }
+
+        outputHelp(out, c);
+        out.print("  ");
+        outputSignature(out, false, description.getClassName(), c);
+        out.println(";");
+    }
+
+    private static boolean addParent(HashMap<Class<?>, ClassNode> nodes, ClassNode node, Class<?> aClass) {
+        final ClassNode parentNode = nodes.get(aClass);
+        if (parentNode != null) {
+            parentNode.children.add(node);
+            node.parents.add(parentNode);
+            return true;
+        }
+        return false;
+    }
+
+    private static void addInterfaces(HashMap<Class<?>, ClassNode> nodes, ClassNode node, Class<?> current) {
+        for (Class<?> anInterface : current.getInterfaces()) {
+            if (!addParent(nodes, node, anInterface)) {
+                // Go up in the hierarchy
+                addInterfaces(nodes, node, anInterface);
+            }
         }
     }
 
@@ -469,8 +499,15 @@ public class RPCObjects {
 
     private static void outputSignature(PrintStream out, boolean definition, String className, Declaration<?> declaration) {
         final Executable executable = declaration.executable();
+
         if (executable instanceof Method) {
-            if (declaration.isStatic() && !definition) out.print("static ");
+            if (!definition) {
+                if (declaration.isStatic()) {
+                    out.print("static ");
+                } else {
+                    out.print("virtual ");
+                }
+            }
             out.print(cppname(executable.getAnnotatedReturnType().getType()));
             out.print(' ');
         }
@@ -489,6 +526,11 @@ public class RPCObjects {
             out.format("%s const &%s", cppname(executable.getParameterTypes()[i]), parameterNames[i]);
         }
         out.print(")");
+
+        if (declaration.isPureVirtual()) {
+            assert !definition;
+            out.print(" = 0");
+        }
     }
 
     static final HashMap<Type, String> type2cppType = new HashMap<>();

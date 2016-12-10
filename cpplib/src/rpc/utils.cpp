@@ -19,6 +19,7 @@ json ServerObject::__call__(std::string const &name, json &params) {
 }
 
 json ServerObject::__static_call__(std::string const &name, json const &params) {
+  std::cerr << "[rpc call] " << name << std::endl;
   auto response = Client::defaultClient().call(name, params);
   if (response.error()) {
     throw std::runtime_error("Error with RPC call: " + response.errorMessage());
@@ -27,6 +28,7 @@ json ServerObject::__static_call__(std::string const &name, json const &params) 
 }
 
 void ServerObject::__set__(json const &params) {
+  std::cerr << "[identifier] " << params << std::endl;
   _identifier = params;
 }
 

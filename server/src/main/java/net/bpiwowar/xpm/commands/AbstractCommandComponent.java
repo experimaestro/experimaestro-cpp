@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.UUIDObject;
@@ -43,6 +44,7 @@ import java.util.stream.Stream;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @JsonAbstract
+@Exposed
 public interface AbstractCommandComponent extends UUIDObject {
 
     /**

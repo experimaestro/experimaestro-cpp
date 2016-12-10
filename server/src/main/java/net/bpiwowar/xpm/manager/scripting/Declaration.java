@@ -213,6 +213,11 @@ abstract public class Declaration<T extends Executable> {
         return name;
     }
 
+    public boolean isPureVirtual() {
+        return executable.getDeclaringClass().isInterface()
+                && !((Method)executable).isDefault();
+    }
+
 
     private static class ConverterContext implements Function<Arguments, Object> {
         public static final Function<Arguments, Object> INSTANCE = new ConverterContext();

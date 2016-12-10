@@ -1,17 +1,22 @@
 package net.bpiwowar.xpm.commands;
 
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+
 import java.io.Serializable;
 import java.util.Objects;
 
 /**
  *
  */
+@Exposed
 public class CommandString extends CommandComponent implements Serializable {
     String string;
 
     protected CommandString() {
     }
 
+    @Expose
     public CommandString(String string) {
         this.string = string;
     }
@@ -21,6 +26,7 @@ public class CommandString extends CommandComponent implements Serializable {
         return string;
     }
 
+    @Expose
     @Override
     public String toString() {
         return string;
