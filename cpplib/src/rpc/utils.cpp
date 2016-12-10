@@ -37,6 +37,8 @@ ServerObject::ServerObject() : _identifier(-1) {
 
 ServerObject::~ServerObject() {
   if (_identifier >= 0) {
+    std::cerr << "[identifier/delete] " << _identifier << std::endl;
+
     auto response = Client::defaultClient().call("objects.__delete__", {{"__this__", _identifier}});
     if (response.error()) {
       std::cerr << "Error while destroying object on server: " << response.errorMessage() << std::endl;

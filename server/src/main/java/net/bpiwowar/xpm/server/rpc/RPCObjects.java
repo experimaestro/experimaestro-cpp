@@ -7,15 +7,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.bpiwowar.xpm.commands.AbstractCommand;
-import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
-import net.bpiwowar.xpm.exceptions.ExperimaestroException;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
-import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -24,18 +20,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.*;
+import java.util.*;
 
 import static com.sun.javafx.binding.StringFormatter.format;
 
@@ -51,8 +37,8 @@ public class RPCObjects {
 
     IdentityHashMap<Object, Integer> object2id = new IdentityHashMap<>();
 
-    ArrayList<Object> objects = new ArrayList<>();
-
+    Int2ObjectLinkedOpenHashMap<Object> objects = new Int2ObjectLinkedOpenHashMap<>();
+    int currentId = 0;
 
     public RPCObjects() {
     }
@@ -132,17 +118,18 @@ public class RPCObjects {
         }
     }
 
-    public void deleteObject(@RPCArgument(name = "__this__") int id) {
-        object2id.remove(objects.get(id));
-        objects.set(id, null);
+    synchronized public void deleteObject(@RPCArgument(name = "__this__") int id) {
+        Object object = objects.get(id);
+        object2id.remove(object);
+        objects.remove(id);
     }
 
     private long store(Object object) {
         final Integer id = object2id.get(object);
         if (id == null) {
-            long newId = objects.size();
-            objects.add(object);
-            object2id.put(object, id);
+            int newId = currentId++;
+            objects.put(newId, object);
+            object2id.put(object, newId);
             return newId;
         }
         return id;
@@ -203,11 +190,13 @@ public class RPCObjects {
                         Annotation annotation = ((Class) type).getAnnotation(Exposed.class);
                         if (annotation != null) {
                             int objectId = gson.fromJson(jsonElement, Integer.TYPE);
-                            if (objectId < 0 || objectId > objects.objects.size()) {
-                                throw new XPMCommandException("Object ID out of bound (%d)", objectId)
+
+                            Object storedObject = objects.objects.get(objectId);
+                            if (storedObject == null) {
+                                throw new XPMCommandException("Object ID not registered (%d)", objectId)
                                         .addContext("while processing parameter %s", descriptor.name);
                             }
-                            args[descriptor.position] = objects.objects.get(objectId);
+                            args[descriptor.position] = storedObject;
                             continue;
                         }
                     }
