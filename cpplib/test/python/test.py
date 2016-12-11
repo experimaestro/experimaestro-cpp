@@ -25,7 +25,6 @@ class A1():
 class A2(A1): pass
     
 
-
 if __name__ == '__main__':
     import os.path as osp
     import argparse
@@ -44,3 +43,5 @@ if __name__ == '__main__':
         a2.model = model
         a2.run()
     
+
+

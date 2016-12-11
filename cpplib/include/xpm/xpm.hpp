@@ -403,7 +403,7 @@ class Task {
   /// The type for this task
   Type _type;
   /// Command line
-  CommandLine commandLine;
+  CommandLine _commandLine;
  public:
   Task();
 
@@ -423,6 +423,8 @@ class Task {
 
   /** Returns the type of this task */
   TypeName typeName() const;
+
+  void commandline(CommandLine command);
 };
 
 } // namespace xpm

@@ -9,6 +9,7 @@
 #include <xpm/utils.hpp>
 #include <include/xpm/rpc/objects.hpp>
 #include "json.hpp"
+#include "filesystem.hpp"
 
 namespace xpm {
 
@@ -23,7 +24,7 @@ class XPM_PIMPL(AbstractCommandComponent) {
   AbstractCommandComponent();
  public:
   virtual ~AbstractCommandComponent();
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context);
+  std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context);
 };
 
 /** A command argument */
@@ -31,7 +32,14 @@ class XPM_PIMPL_CHILD(CommandString, AbstractCommandComponent) {
  public:
   CommandString(const std::string &value);
   virtual ~CommandString();
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override;
+  std::string toString() const;
+};
+
+/** A command argument as a path */
+class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
+ public:
+  CommandPath(Path path);
+  virtual ~CommandPath();
   std::string toString() const;
 };
 
@@ -40,22 +48,22 @@ class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
  public:
   CommandContent(const std::string &key, const std::string &value);
   virtual ~CommandContent();
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override;
   std::string toString() const;
 };
 
 /** Just a placeholder */
-class CommandParameters : public AbstractCommandComponent {
+class XPM_PIMPL_CHILD(CommandParameters, AbstractCommandComponent) {
  public:
+  CommandParameters();
   virtual ~CommandParameters();
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override;
 };
+
 
 class Command {
   std::vector<AbstractCommandComponent> components;
  public:
   void add(AbstractCommandComponent component);
-  std::shared_ptr<rpc::Command> rpc(CommandContext &context);
+  std::shared_ptr<rpc::Command> rpc(CommandContext &context) ;
 };
 
 class CommandLine {
@@ -64,6 +72,7 @@ class CommandLine {
   CommandLine();
 
   std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context);
+  void add(Command command);
 };
 }
 

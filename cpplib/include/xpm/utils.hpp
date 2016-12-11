@@ -19,8 +19,6 @@ namespace xpm {
 template<typename T>
 struct Reference;
 template<typename T, typename Parent>
-struct ChildReference;
-template<typename T, typename Parent>
 class PimplChild;
 
 template<typename T, typename Parent>

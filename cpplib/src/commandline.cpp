@@ -11,6 +11,9 @@ namespace xpm {
 template<>
 struct Reference<AbstractCommandComponent> {
   virtual ~Reference<AbstractCommandComponent>() {}
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) {
+    throw std::runtime_error("Pure virtual function for " + std::string(typeid(*this).name()));
+  }
 };
 
 CommandLine::CommandLine() {
@@ -24,10 +27,17 @@ std::shared_ptr<rpc::AbstractCommand> CommandLine::rpc(CommandContext &context) 
   return rpcCommand;
 }
 
+void CommandLine::add(Command command) {
+  commands.push_back(command);
+}
+
 template<>
 struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   std::string value;
   Reference(const std::string &value) : value(value) {}
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override {
+    return std::make_shared<rpc::CommandString>(value);
+  }
 };
 
 CommandString::CommandString(const std::string &value)
@@ -36,9 +46,6 @@ CommandString::CommandString(const std::string &value)
 
 std::string CommandString::toString() const {
   return self(this).value;
-}
-std::shared_ptr<rpc::AbstractCommandComponent> CommandString::rpc(CommandContext &context) {
-  return std::make_shared<rpc::CommandString>(self(this).value);
 }
 
 CommandString::~CommandString() {
@@ -50,7 +57,7 @@ void Command::add(AbstractCommandComponent component) {
 }
 
 std::shared_ptr<rpc::Command> Command::rpc(CommandContext &context) {
-  auto rpc = std::shared_ptr<rpc::Command>();
+  auto rpc = std::make_shared<rpc::Command>();
   for (auto &component: components) {
     rpc->add({component.rpc(context)});
   }
@@ -60,7 +67,7 @@ AbstractCommandComponent::AbstractCommandComponent() {
 
 }
 std::shared_ptr<rpc::AbstractCommandComponent> AbstractCommandComponent::rpc(CommandContext &context) {
-  throw std::runtime_error("AbstractCommandComponent::rpc is virtual");
+  return self(this).rpc(context);
 }
 AbstractCommandComponent::~AbstractCommandComponent() {
 
@@ -71,6 +78,9 @@ struct Reference<CommandContent> : public Reference<AbstractCommandComponent> {
   std::string key;
   std::string content;
   Reference(std::string const &key, std::string const &content) : key(key), content(content) {}
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override {
+    return std::make_shared<rpc::ParameterFile>(key, content);
+  }
 };
 
 CommandContent::CommandContent(std::string const &key, std::string const &value) : PimplChild(key, value) {
@@ -78,20 +88,40 @@ CommandContent::CommandContent(std::string const &key, std::string const &value)
 std::string CommandContent::toString() const {
   return std::string();
 }
-std::shared_ptr<rpc::AbstractCommandComponent> CommandContent::rpc(CommandContext &context) {
-  return std::make_shared<rpc::ParameterFile>(self(this).key, self(this).content);
-}
 CommandContent::~CommandContent() {
 
 }
 
+template<>
+struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override {
+    return std::make_shared<rpc::ParameterFile>("params.json", context.parameters);
+  }
 
+};
 
 CommandParameters::~CommandParameters() {
 
 }
-std::shared_ptr<rpc::AbstractCommandComponent> CommandParameters::rpc(CommandContext &context) {
-  return std::make_shared<rpc::ParameterFile>("params.json", context.parameters);
+CommandParameters::CommandParameters() {
 }
 
+template<>
+struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
+  Path path;
+  Reference(const Path &path) : path(path) {}
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) override {
+    return std::make_shared<rpc::CommandPath>(path.toString());
+  }
+};
+
+CommandPath::CommandPath(Path path) : PimplChild(path) {
+
+}
+CommandPath::~CommandPath() {
+
+}
+std::string CommandPath::toString() const {
+  return std::string();
+}
 }

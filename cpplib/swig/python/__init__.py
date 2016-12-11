@@ -49,16 +49,20 @@ class StructuredValue(__StructuredValue):
     def __init__(self, *args, **argv):
         __StructuredValue.__init__(self, *args, **argv)
 
+# FIXME: Hack to deal with smart pointers objects released by SWIG
+FACTORIES = []
+OBJECTS = []
+
 class PythonObjectFactory(ObjectFactory):
     """An experimaestro type in Python"""
     def __init__(self, pythonType):
-        ObjectFactory.__init__(self)
-        self.pythonType = pythonType
+      ObjectFactory.__init__(self)
+      self.pythonType = pythonType
 
     def create(self):
-        newObject = self.pythonType()
-        return newObject
-
+      newObject = self.pythonType()
+      OBJECTS.append(newObject)
+      return newObject
 
 class PythonRegister(Register):
     def __init__(self):
@@ -78,6 +82,7 @@ class PythonRegister(Register):
     def addType(self, pythonType, typeName, parentType):
         pyType = self.types[pythonType] = Type(typeName, parentType)
         factory = PythonObjectFactory(pythonType)
+        FACTORIES.append(factory)
         pyType.objectFactory(factory)
         super().addType(pyType)
 
@@ -193,9 +198,18 @@ class RegisterTask():
             self.scriptpath = op.abspath(inspect.getfile(t))
             
         logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
-        t.__task__ = Task(register.getType(t))
-        register.addTask(t.__task__)
-        
+        task = Task(register.getType(t))
+        t.__task__ = task
+        register.addTask(task)
+
+        command = Command()
+        command.add(CommandPath(op.realpath(self.pythonpath)))
+        command.add(CommandPath(op.realpath(self.scriptpath)))
+        command.add(CommandParameters())
+        commandLine = CommandLine()
+        commandLine.add(command)
+        task.commandline(commandLine)
+
         t.execute = wrap(t, create, execute=True)
         return t
 
@@ -234,4 +248,3 @@ def tojson(t=None):
             types.append(json.loads(t.toJson()))
         return types
     return register.types[t].toJson()
-

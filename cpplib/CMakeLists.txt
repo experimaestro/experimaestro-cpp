@@ -37,7 +37,9 @@ include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/include" "${CMAKE
 
 add_library(experimaestro_shared SHARED ${SOURCES})
 target_link_libraries(experimaestro_shared ${LINKED_LIBRARIES})
-set_property(TARGET experimaestro_shared PROPERTY CXX_STANDARD 11)
+set_target_properties(experimaestro_shared PROPERTIES
+    CXX_STANDARD 11
+    OUTPUT_NAME experimaestro)
 
 # ---- experimaestro executable
 
@@ -83,13 +85,13 @@ add_custom_target(documentation DEPENDS documentation.i)
 if (true)
     FIND_PACKAGE(PythonLibs 3 REQUIRED)
     set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/python/experimaestro")
-	if(NOT PYTHON_BUILD_LOCATION)
-		set(PYTHON_BUILD_LOCATION ${CMAKE_INSTALL_PREFIX}/python/experimaestro)
+	if(NOT PYTHON_INSTALL_LOCATION)
+		set(PYTHON_INSTALL_LOCATION ${CMAKE_INSTALL_PREFIX}/python/experimaestro)
 	else()
-		set(PYTHON_BUILD_LOCATION ${PYTHON_BUILD_LOCATION}/experimaestro)
+		set(PYTHON_INSTALL_LOCATION ${PYTHON_INSTALL_LOCATION}/experimaestro)
 	endif()
     file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
-	message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR}")
+	message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and installed in ${PYTHON_INSTALL_LOCATION}")
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
@@ -120,11 +122,11 @@ if (true)
 				CXX_STANDARD 11)
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
-		INSTALL(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_BUILD_LOCATION})
-		INSTALL(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_BUILD_LOCATION})
+		INSTALL(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+		INSTALL(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     endforeach()
-	INSTALL(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_BUILD_LOCATION})
-	INSTALL(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_BUILD_LOCATION})
+	INSTALL(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+	INSTALL(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation _experimaestro_rpc_python)
 
     # Test examples (compilation only)
@@ -132,4 +134,11 @@ if (true)
 
     add_test(python_test ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test/python/test.py")
     set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_SWIG_OUTDIR}")
+	
+	# Add install target
+	add_custom_target(install-python
+	  DEPENDS _experimaestro_python
+	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  	)
+	
 endif ()

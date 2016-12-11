@@ -140,7 +140,7 @@ class build_cmake(_Command):
         # this python executable should be inherited
         options += ['-DPYTHON_EXECUTABLE=%s' % sys.executable]
         
-        options += ['-DPYTHON_BUILD_LOCATION=%s' % self.cmake_platlib]
+        options += ['-DPYTHON_INSTALL_LOCATION=%s' % self.cmake_platlib]
 
         # stabilizing the options
         options.sort()

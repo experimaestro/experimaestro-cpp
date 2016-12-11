@@ -36,6 +36,7 @@
         <class>net.bpiwowar.xpm.commands.AbstractCommandComponent</class>
         <class>net.bpiwowar.xpm.commands.ParameterFile</class>
         <class>net.bpiwowar.xpm.commands.CommandComponent</class>
+        <class>net.bpiwowar.xpm.commands.CommandPath</class>
         <class>net.bpiwowar.xpm.commands.CommandString</class>
 
         <!-- Dependencies -->

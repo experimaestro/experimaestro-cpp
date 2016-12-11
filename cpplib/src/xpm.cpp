@@ -803,9 +803,13 @@ std::shared_ptr<Object> Task::run(std::shared_ptr<Object> const &object) {
   // Prepare the command line
   CommandContext context;
   context.parameters = object->getValue().toString();
-  rpc::Scheduler::submitJob(commandLine.rpc(context));
+  rpc::Scheduler::submitJob(_commandLine.rpc(context));
 
   return object;
+}
+
+void Task::commandline(CommandLine command) {
+  _commandLine = command;
 }
 
 // ---- REGISTER

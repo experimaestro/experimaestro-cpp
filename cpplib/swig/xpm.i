@@ -108,10 +108,10 @@
 
 
 // Include file
-%include <xpm/xpm.hpp>
 %include <xpm/filesystem.hpp>
-%include <xpm/context.hpp>
 %include <xpm/commandline.hpp>
+%include <xpm/context.hpp>
+%include <xpm/xpm.hpp>
 /*%include <xpm/rpc/utils.hpp>*/
 /*%include <xpm/rpc/objects.hpp>*/
 

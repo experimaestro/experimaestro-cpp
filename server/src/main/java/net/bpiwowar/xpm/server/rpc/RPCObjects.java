@@ -3,10 +3,9 @@ package net.bpiwowar.xpm.server.rpc;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.manager.scripting.*;
@@ -170,6 +169,28 @@ public class RPCObjects {
 
             Object[] args = new Object[method.getParameterCount()];
             final GsonBuilder builder = new GsonBuilder();
+            builder.registerTypeAdapterFactory(new AnnotatedTypeAdapterFactory() {
+                @Override
+                public <T> TypeAdapter<T> create(Gson gson, TypeAttributes attributes, com.google.gson.reflect.TypeToken<T> type) {
+                    Annotation annotation = type.getRawType().getAnnotation(Exposed.class);
+                    if (annotation == null) {
+                        return null;
+                    }
+                    return new TypeAdapter<T>() {
+                        @Override
+                        public void write(JsonWriter out, T value) throws IOException {
+                            throw new RuntimeException("Not writable object");
+                        }
+
+                        @Override
+                        public T read(JsonReader in) throws IOException {
+                            int objectId = in.nextInt();
+                            Object storedObject = objects.objects.get(objectId);
+                            return (T)storedObject;
+                        }
+                    };
+                }
+            });
             Gson gson = builder.create();
             final Type[] types = method.getGenericParameterTypes();
             Object thisObject = null;

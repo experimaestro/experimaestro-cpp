@@ -19,6 +19,8 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -64,7 +66,9 @@ public class ConstructorFunction extends GenericFunction {
             try {
                 return constructor.newInstance(transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
-                throw cx.runtimeException(e, "Could not construct object with %s", constructor);
+                if (cx != null)
+                    throw cx.runtimeException(e, "Could not construct object with %s", constructor);
+                throw new XPMRuntimeException(e, "Could not construct object with %s", constructor);
             }
 
         }
