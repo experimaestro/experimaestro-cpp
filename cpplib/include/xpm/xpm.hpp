@@ -256,7 +256,7 @@ class StructuredValue {
  */
 class Generator {
  public:
-  virtual StructuredValue generate(StructuredValue &object) const = 0;
+  virtual StructuredValue generate(StructuredValue object) const = 0;
   virtual ~Generator() {}
 };
 
@@ -267,7 +267,7 @@ class PathGenerator : public Generator {
  public:
   static const PathGenerator SINGLETON;
 
-  virtual StructuredValue generate(StructuredValue &object) const;
+  virtual StructuredValue generate(StructuredValue object) const;
 };
 
 extern const PathGenerator &pathGenerator;
@@ -365,7 +365,10 @@ class Type {
   bool predefined() const;
 
   /// Sets the object factory
-  void objectFactory(std::shared_ptr<ObjectFactory> &factory);
+  void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
+
+  /// Gets the object factory
+  std::shared_ptr<ObjectFactory> const &objectFactory();
 
   /** Creates an object with a given type */
   std::shared_ptr<Object> create() const;
@@ -374,11 +377,7 @@ class Type {
 /**
  * A task can be executed
  */
-class Task {
-  /// The type for this task
-  Type _type;
-  /// Command line
-  CommandLine _commandLine;
+class XPM_PIMPL(Task) {
  public:
   Task();
 
@@ -391,15 +390,28 @@ class Task {
   Task(Type &type);
 
   /**
-   * Execute a task given a configuration object
+   * Configure the object
    * @param object The object corresponding to the task type
    */
-  std::shared_ptr<Object> run(std::shared_ptr<Object> const &object);
+  void submit(std::shared_ptr<Object> const &object);
 
   /** Returns the type of this task */
   TypeName typeName() const;
 
+  /** Sets the command line for the task */
   void commandline(CommandLine command);
+
+  /** Gets the task identifier */
+  TypeName const &identifier();
+
+  /** Executes */
+  void execute(StructuredValue value) const;
+
+  /// Sets the object factory
+  void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
+
+  /** Creates an object with a given type */
+  std::shared_ptr<Object> create() const;
 };
 
 } // namespace xpm
@@ -464,17 +476,12 @@ class Object
   /**
    * Generate values
    */
-  void generate();
+  void validate();
 
   /**
    * Seal the object
    */
   void seal();
-
-  /**
-   * Runs the underlying task with the current value
-   */
-  std::shared_ptr<Object> run();
 
   /** Set a value */
   template<typename _Value>
@@ -494,6 +501,26 @@ class Object
   /** Transform to JSON */
   std::string json() const;
 
+  /** Configure the object
+   * <ol>
+   * <li>Sets the value</li>
+   * <li>Validate and generate values</li>
+   * <li>Seal the object</li>
+   * </ol>
+   */
+  void configure(StructuredValue value);
+
+  /**
+   * Submit the underlying task to experimaestro server
+   */
+  void submit();
+
+  /**
+   * Execute the underlying task
+  */
+  virtual void execute();
+
+
  private:
   /// The associated structured value
   StructuredValue _value;
@@ -504,8 +531,6 @@ class Object
   /// Associated task, if any
   optional<Task> _task;
 };
-
-
 
 // --- Building objects
 

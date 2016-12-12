@@ -68,4 +68,15 @@ public class XPMRuntimeException extends RuntimeException implements ContextualE
         }
         return new WrappedException(e).addContext(s);
     }
+
+    @Override
+    public String toString() {
+        String s = super.toString();
+        if (context.isEmpty()) return s;
+
+        for (String contextString : context) {
+            s = s + " [context] " + context;
+        }
+        return s;
+    }
 }

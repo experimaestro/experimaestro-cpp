@@ -38,6 +38,8 @@ import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.StaticContext;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
@@ -97,7 +99,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         super(mos);
         initMethods();
         this.settings = settings;
-        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos), new RPCObjects());
+        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos), new RPCObjects(this, settings));
     }
 
     public void addObjects(Object... objects) {
@@ -244,7 +246,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             } catch (IOException e2) {
                 LOGGER.error(e2, "Could not send the return code");
             }
-        } catch (XPMCommandException t) {
+        } catch (XPMRuntimeException t) {
             try {
                 mos.error(requestID, 1, "Error while running request: " + t.toString());
             } catch (IOException e) {
@@ -852,15 +854,17 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
         // Close other RPC handlers
         for (Object o : objects.values()) {
-            if (o instanceof Closeable) {
+            if (o instanceof AutoCloseable) {
                 try {
-                    ((Closeable) o).close();
-                } catch (IOException e) {
+                    ((AutoCloseable) o).close();
+                } catch (Exception e) {
                     LOGGER.error(e, "while closing %s", o);
                 }
             }
         }
 
+        // Close streams
+        super.close();
     }
 
 

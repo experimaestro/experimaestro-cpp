@@ -351,7 +351,7 @@ public class Functions {
         return get_resource(json);
     }
 
-    @Expose(value = "$$")
+    @Expose(value = "$$", useInRPC = false)
     @Help("Get the resource associated with the json object")
     static public Resource get_resource(Json json) throws SQLException {
         Resource resource;

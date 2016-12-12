@@ -4,16 +4,20 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
+import com.google.gson.internal.Primitives;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclaration;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Hierarchy;
+import sun.font.Script;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -27,20 +31,32 @@ import static com.sun.javafx.binding.StringFormatter.format;
 /**
  * Expose @Exposed objects to remote calls
  */
-public class RPCObjects {
+public class RPCObjects implements AutoCloseable {
 
     public static final String OBJECTS = "objects";
     private static final Logger LOGGER = Logger.getLogger();
     static private boolean initialized = false;
     static private final HashMap<Class<?>, ClassDescription> types = new HashMap<>();
+    private final ScriptContext scriptContext;
+    private final StaticContext staticContext;
 
     IdentityHashMap<Object, Integer> object2id = new IdentityHashMap<>();
 
     Int2ObjectLinkedOpenHashMap<Object> objects = new Int2ObjectLinkedOpenHashMap<>();
     int currentId = 0;
 
-    public RPCObjects() {
+    public RPCObjects(JsonRPCMethods mos, JsonRPCSettings settings) {
+        final Hierarchy loggerRepository = mos.getScriptLogger();
+        staticContext = new StaticContext(settings.scheduler, loggerRepository);
+        scriptContext = new ScriptContext(staticContext);
     }
+
+    @Override
+    public void close() throws Exception {
+        scriptContext.close();
+        staticContext.close();
+    }
+
 
     static public class ClassDescription {
         final Class<?> wrappedClass;
@@ -73,7 +89,8 @@ public class RPCObjects {
             for (Method method : aClass.getDeclaredMethods()) {
                 // Avoid co-variants
                 if (method.isBridge()) continue;
-                if (method.getAnnotation(Expose.class) != null) {
+                final Expose annotation = method.getAnnotation(Expose.class);
+                if (annotation != null && annotation.useInRPC()) {
                     methods.add(new MethodDeclaration(method));
                 }
             }
@@ -165,75 +182,37 @@ public class RPCObjects {
 
         @Override
         public Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException, InstantiationException {
-            RPCObjects objects = (RPCObjects) o;
+            RPCObjects rpcObjects = (RPCObjects) o;
 
             Object[] args = new Object[method.getParameterCount()];
             final GsonBuilder builder = new GsonBuilder();
-            builder.registerTypeAdapterFactory(new AnnotatedTypeAdapterFactory() {
-                @Override
-                public <T> TypeAdapter<T> create(Gson gson, TypeAttributes attributes, com.google.gson.reflect.TypeToken<T> type) {
-                    Annotation annotation = type.getRawType().getAnnotation(Exposed.class);
-                    if (annotation == null) {
-                        return null;
-                    }
-                    return new TypeAdapter<T>() {
-                        @Override
-                        public void write(JsonWriter out, T value) throws IOException {
-                            throw new RuntimeException("Not writable object");
-                        }
-
-                        @Override
-                        public T read(JsonReader in) throws IOException {
-                            int objectId = in.nextInt();
-                            Object storedObject = objects.objects.get(objectId);
-                            return (T)storedObject;
-                        }
-                    };
-                }
-            });
+            builder.registerTypeAdapterFactory(rpcObjects.adapterFactory);
             Gson gson = builder.create();
             final Type[] types = method.getGenericParameterTypes();
             Object thisObject = null;
 
             for (MethodArgumentDescriptor descriptor : arguments.values()) {
                 final JsonElement jsonElement = p.get(descriptor.name);
-                if (descriptor.position == -1) {
-                    // This
-                    try {
+                try {
+                    if (descriptor.position == -1) {
+                        // This
                         int objectId = gson.fromJson(jsonElement, Integer.TYPE);
-                        thisObject = objects.objects.get(objectId);
-                    } catch (RuntimeException e) {
-                        throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
+                        thisObject = rpcObjects.objects.get(objectId);
+                    } else {
+                        args[descriptor.position] = gson.fromJson(jsonElement, types[descriptor.position]);
                     }
-                } else {
-                    final Type type = types[descriptor.position];
-                    if (type instanceof Class<?>) {
-                        Annotation annotation = ((Class) type).getAnnotation(Exposed.class);
-                        if (annotation != null) {
-                            int objectId = gson.fromJson(jsonElement, Integer.TYPE);
-
-                            Object storedObject = objects.objects.get(objectId);
-                            if (storedObject == null) {
-                                throw new XPMCommandException("Object ID not registered (%d)", objectId)
-                                        .addContext("while processing parameter %s", descriptor.name);
-                            }
-                            args[descriptor.position] = storedObject;
-                            continue;
-                        }
-                    }
-                    try {
-                        args[descriptor.position] = gson.fromJson(jsonElement, type);
-                    } catch (RuntimeException e) {
-                        throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
-                    }
+                } catch (XPMRuntimeException e) {
+                    throw e.addContext("while processing parameter %s", descriptor.name);
+                } catch (RuntimeException e) {
+                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
                 }
             }
 
+            ScriptContext.force(rpcObjects.scriptContext);
             final Object result = method.invoke(null, thisObject, args);
-            if (result == null) return null;
 
-            if (result.getClass().getAnnotation(Exposed.class) != null) {
-                return objects.store(result);
+            if (result != null && rpcObjects.isManaged(result.getClass())) {
+                return rpcObjects.store(result);
             }
 
             return result;
@@ -243,7 +222,73 @@ public class RPCObjects {
         public Class<?> getDeclaringClass() {
             return RPCObjects.class;
         }
+
     }
+
+    static HashSet<Class<?>> UNMANAGED_TYPES = new HashSet<>();
+
+    static {
+        UNMANAGED_TYPES.add(boolean.class);
+        UNMANAGED_TYPES.add(Boolean.class);
+        UNMANAGED_TYPES.add(byte.class);
+        UNMANAGED_TYPES.add(Byte.class);
+        UNMANAGED_TYPES.add(char.class);
+        UNMANAGED_TYPES.add(Character.class);
+        UNMANAGED_TYPES.add(double.class);
+        UNMANAGED_TYPES.add(Double.class);
+        UNMANAGED_TYPES.add(float.class);
+        UNMANAGED_TYPES.add(Float.class);
+        UNMANAGED_TYPES.add(int.class);
+        UNMANAGED_TYPES.add(Integer.class);
+        UNMANAGED_TYPES.add(long.class);
+        UNMANAGED_TYPES.add(Long.class);
+        UNMANAGED_TYPES.add(short.class);
+        UNMANAGED_TYPES.add(Short.class);
+        UNMANAGED_TYPES.add(void.class);
+        UNMANAGED_TYPES.add(Void.class);
+        UNMANAGED_TYPES.add(String.class);
+    }
+
+    /**
+     * Checks whether the type is managed by RPC objects
+     *
+     * @param aClass Class
+     * @return
+     */
+    private boolean isManaged(Class<?> aClass) {
+        return !UNMANAGED_TYPES.contains(aClass)
+                && !aClass.isArray()
+                && !(List.class.isAssignableFrom(aClass));
+    }
+
+    class RPCAdapterFactory implements AnnotatedTypeAdapterFactory {
+        @Override
+        public <T> TypeAdapter<T> create(Gson gson, TypeAttributes attributes, com.google.gson.reflect.TypeToken<T> type) {
+            if (!isManaged(type.getRawType())) {
+                return null;
+            }
+            return new TypeAdapter<T>() {
+                @Override
+                public void write(JsonWriter out, T value) throws IOException {
+                    throw new RuntimeException("Not writable object");
+                }
+
+                @Override
+                public T read(JsonReader in) throws IOException {
+                    int objectId = in.nextInt();
+                    if (objectId < 0) return null;
+
+                    Object storedObject = RPCObjects.this.objects.get(objectId);
+                    if (storedObject == null) {
+                        throw new XPMCommandException("Object ID not registered (%d)", objectId);
+                    }
+                    return (T) storedObject;
+                }
+            };
+        }
+    }
+
+    RPCAdapterFactory adapterFactory = new RPCAdapterFactory();
 
     static public class ClassNode implements Node {
         private final ClassDescription classDescription;
@@ -339,10 +384,13 @@ public class RPCObjects {
                     out.print(" : public virtual ServerObject");
                 }
                 out.format(" {%n");
+                out.println("protected:");
+                out.format("  friend struct RPCConverter<std::shared_ptr<%s>>;%n", description.getClassName());
+                out.format("  explicit %s(ObjectIdentifier o);%n", description.getClassName());
                 if (!isInterface)
-                    out.format("protected:%n  virtual std::string const &__name__() const override;%n%n");
+                    out.format("  virtual std::string const &__name__() const override;%n%n");
                 if (description.constructors.isEmpty()) {
-                    out.format("protected:%n  %s() {}%n%n", description.getClassName());
+                    out.format("  %s() {}%n%n", description.getClassName());
                 }
                 out.format("public:%n");
 
@@ -387,6 +435,11 @@ public class RPCObjects {
                     out.format("std::string const &%s::__name__() const { static std::string name = \"%s\"; return name; }%n",
                             className, className);
                 }
+
+                final ClassNode parentNode = classNode.parents.isEmpty() ? null : classNode.parents.get(0);
+                out.format("%s::%s(ObjectIdentifier o) : %s(o) {} %n",
+                        description.getClassName(), description.getClassName(),
+                        parentNode == null ? "ServerObject" : parentNode.classDescription.getClassName());
 
                 for (MethodDeclaration method : description.methods) {
                     if (!isRegistered(method) || method.isPureVirtual()) continue;
@@ -549,9 +602,12 @@ public class RPCObjects {
         type2cppType.put(String.class, "std::string");
         type2cppType.put(Void.TYPE, "void");
 
-        type2cppType.put(Boolean.TYPE, "bool");
-        type2cppType.put(Long.TYPE, "int64_t");
-        type2cppType.put(Integer.TYPE, "int32_t");
+        type2cppType.put(Boolean.class, "bool");
+        type2cppType.put(boolean.class, "bool");
+        type2cppType.put(long.class, "int64_t");
+        type2cppType.put(Long.class, "int64_t");
+        type2cppType.put(Integer.class, "int32_t");
+        type2cppType.put(int.class, "int32_t");
         type2cppType.put(Float.TYPE, "float");
         type2cppType.put(Double.TYPE, "double");
     }

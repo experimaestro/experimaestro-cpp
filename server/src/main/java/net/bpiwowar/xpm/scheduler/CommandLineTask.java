@@ -21,14 +21,21 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.JsonAdapter;
 import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.StaticContext;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Level;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -40,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
 import static net.bpiwowar.xpm.utils.PathUtils.protect;
 
@@ -98,12 +106,16 @@ public class CommandLineTask extends Job {
      */
     private Path jobErrorPath;
 
-    /** Construct from database */
+    /**
+     * Construct from database
+     */
     public CommandLineTask(long id, Path path) throws SQLException {
         super(id, path);
     }
 
-    /** Construct a new command line object */
+    /**
+     * Construct a new command line object
+     */
     public CommandLineTask(Path path) throws IOException {
         super(path);
     }
@@ -261,4 +273,79 @@ public class CommandLineTask extends Job {
         this.command = command;
     }
 
+    /**
+     * Submit a new command line job
+     */
+    @Expose("submitJob")
+    static public Resource submit(Path path, AbstractCommand command) throws IOException, SQLException, ExperimaestroCannotOverwrite {
+        ScriptContext scriptContext = ScriptContext.get();
+
+        if (path == null) {
+            throw new XPMScriptRuntimeException("Locator was null for command line job");
+        }
+
+        CommandLineTask job = null;
+        // --- XPMProcess arguments: convert the javascript array into a Java array
+        // of String
+        LOGGER.debug("Adding command line job");
+
+        // --- Create the task
+        job = new CommandLineTask(path);
+
+        // Inherit output for main commands
+        command.setOutputRedirect(Redirect.INHERIT);
+        if (command instanceof Commands) {
+            for (AbstractCommand subcommand : command) {
+                subcommand.setOutputRedirect(Redirect.INHERIT);
+            }
+        }
+
+        job.setCommand(command);
+//        if (scriptContext.getSubmittedJobs().containsKey(path)) {
+//            rootLogger.info("Not submitting %s [duplicate]", path);
+//            if (simulate()) {
+//                return job;
+//            }
+//
+//            return Resource.getByLocator(connector.resolve((java.nio.file.Path) path));
+//        }
+
+
+        // --- Environment
+        ArrayList<Dependency> dependencies = new ArrayList<>();
+
+        // --- Set defaults
+        scriptContext.prepare(job);
+
+
+        job.setState(ResourceState.WAITING);
+
+        // Add dependencies
+        dependencies.forEach(job::addDependency);
+
+        final Resource old = Resource.getByLocator(job.getLocator());
+
+        job.updateStatus();
+
+        // Replace old if necessary
+        if (old != null) {
+            if (!old.canBeReplaced()) {
+                LOGGER.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
+                        "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                scriptContext.postProcess(null, old);
+                return old;
+            } else {
+                LOGGER.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
+                old.replaceBy(job);
+            }
+        } else {
+            // Store in scheduler
+            job.save();
+        }
+
+
+        scriptContext.postProcess(null, job);
+
+        return job;
+    }
 }

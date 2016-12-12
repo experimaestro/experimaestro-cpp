@@ -276,7 +276,7 @@ JsonRPCClient::JsonRPCClient(std::string const &uri, std::string const &username
 }
 
 JsonRPCClient::~JsonRPCClient() {
-  std::cerr << "Closing connection...\n";
+  LOGGER->info("Closing RPC client");
   // Delete connection
   if (_client) delete _client;
 }

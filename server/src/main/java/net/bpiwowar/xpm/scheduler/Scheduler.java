@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShare;
@@ -34,8 +33,6 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import net.bpiwowar.xpm.manager.scripting.Expose;
-import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.Heap;
@@ -79,7 +76,6 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Exposed
 final public class Scheduler {
     /**
      * Time added when rescheduling
@@ -1028,12 +1024,4 @@ final public class Scheduler {
 
     }
 
-
-    /**
-     * Submit a new command line job
-     */
-    @Expose("submitJob")
-    static public void submit(AbstractCommand command) {
-        LOGGER.error("submit job not implemented");
-    }
 }

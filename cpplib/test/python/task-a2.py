@@ -1,11 +1,9 @@
-import test.A2 as A2
-
-from xpm import parse
+from test import A2 as A2
+from experimaestro import register, MergeClass
 
 @MergeClass(A2)
 class _A2:
-    def execute():
-        print("Hello world")
+    def execute(self):
+        print("Hello world %s" % (self.seed))
 
-a2 = register.parse()
-a2.execute()
+register.parse()

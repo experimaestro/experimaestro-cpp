@@ -17,7 +17,8 @@ import java.util.HashMap;
 /**
  *
  */
-public class BaseJsonRPCMethods extends HttpServlet {
+public class BaseJsonRPCMethods extends HttpServlet implements AutoCloseable {
+    private static final Logger LOGGER = Logger.getLogger();
     protected final JSONRPCRequest mos;
 
     HashMap<String, BufferedWriter> writers = new HashMap<>();
@@ -82,5 +83,16 @@ public class BaseJsonRPCMethods extends HttpServlet {
         WriterAppender appender = new WriterAppender(layout, stringWriter);
         root.addAppender(appender);
         return loggerRepository;
+    }
+
+    @Override
+    public void close() {
+        writers.values().forEach(bufferedWriter -> {
+            try {
+                bufferedWriter.close();
+            } catch (IOException e) {
+                LOGGER.error(e, "Cannot close RPC output stream");
+            }
+        });
     }
 }

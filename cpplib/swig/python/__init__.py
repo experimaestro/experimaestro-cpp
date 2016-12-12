@@ -27,13 +27,13 @@ JSON_ENCODER = JsonEncoder()
 _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
     pass
-    
+
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects"""
 
     def __init__(self):
         Object.__init__(self)
-        
+
     def __setattr__(self, name, value):
         super().set(name, value)
 
@@ -42,7 +42,7 @@ class PyObject(Object, metaclass=PyObjectType):
         if key.startswith("$"):
             key = key[1:]
         dict.__setattr__(self, key, sv.value())
-        
+
 __StructuredValue = StructuredValue
 class StructuredValue(__StructuredValue):
     def __init__(self, *args, **argv):
@@ -104,11 +104,11 @@ class PythonRegister(Register):
             return self.types.get(key, None)
 
         return super().getType(key)
-        
+
     def parse(self, arguments=None):
         if arguments is None:
             arguments = sys.argv[1:]
-        super().parse(StringList(arguments))
+        return super().parse(StringList(arguments))
 
 
     def build(self, params):
@@ -117,25 +117,25 @@ class PythonRegister(Register):
 
 register = PythonRegister()
 
-def create(t, args, options, execute=False):
+def create(t, args, options, submit=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
-    
+
     # Create the type and set the arguments
     o = xpmType.create()
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
         logger.debug("Setting attribute [%s]", k)
         setattr(o, k, v)
-        
+
     if hasattr(t, "__task__"):
         o.task(t.__task__)
 
-    if execute:
-        logger.debug("Running task")
-        o.run()
+    if submit:
+        logger.debug("Submitting task to experimaestro")
+        o.submit()
     return o
-        
+
 def wrap(self, function, **options):
     def _wrapped(*args, **opts):
         return function(self, args, opts, **options)
@@ -158,7 +158,7 @@ class RegisterType:
         if self.qname is not None and register.getType(self.qname).hasValue():
             print(register.getType(self.qname))
             raise Exception("XPM type %s is already declared" % self.qname)
-        
+
         # Add XPM object if needed
         bases = t.__bases__ if issubclass(t, PyObject) else (PyObject,) + t.__bases__
 
@@ -190,29 +190,37 @@ class RegisterTask():
         self.scriptpath = scriptpath
 
     def __call__(self, t):
-        if not issubclass(t, Object): 
+        if not issubclass(t, Object):
             raise Exception("Only XPM objects can be tasks")
-        
+
         if self.scriptpath is None:
-            self.scriptpath = op.abspath(inspect.getfile(t))
-            
+            self.scriptpath = inspect.getfile(t)
+        else:
+            self.scriptpath = op.join(op.dirname(inspect.getfile(t)), self.scriptpath)
+
+        self.scriptpath = op.abspath(self.scriptpath)
+
         logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
-        task = Task(register.getType(t))
+        pyType = register.getType(t)
+        task = Task(pyType)
         t.__task__ = task
+        task.objectFactory(pyType.objectFactory())
         register.addTask(task)
 
         command = Command()
         command.add(CommandPath(op.realpath(self.pythonpath)))
         command.add(CommandPath(op.realpath(self.scriptpath)))
+        command.add(CommandString("run"))
+        command.add(CommandString(task.typeName().toString()))
         command.add(CommandParameters())
         commandLine = CommandLine()
         commandLine.add(command)
         task.commandline(commandLine)
 
-        t.execute = wrap(t, create, execute=True)
+        t.autoSubmit = wrap(t, create, submit=True)
         return t
 
-        
+
 
 class AbstractArgument:
     def __init__(self, name, type, help=""):
@@ -247,3 +255,30 @@ def tojson(t=None):
             types.append(json.loads(t.toJson()))
         return types
     return register.types[t].toJson()
+
+
+class MergeClass:
+    """Merge class annotation
+
+    class A:
+        def x(self): print("x")
+
+    a = A()
+
+    @MergeClass(A)
+    class A:
+        def y(self): print("y")
+
+    a.x() # prints x
+    a.y() # prints y
+
+    """
+    def __init__(self, original):
+        self.original = original
+
+
+    def __call__(self, _class):
+        for _, method in inspect.getmembers(_class, predicate=inspect.isfunction):
+            setattr(self.original, method.__name__, method)
+
+        return None

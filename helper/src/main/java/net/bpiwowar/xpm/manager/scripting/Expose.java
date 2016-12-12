@@ -71,4 +71,7 @@ public @interface Expose {
      * @return List of languages or empty array if all
      */
     Languages[] languages() default {};
+
+    /** True if used only for scripting */
+    boolean useInRPC() default true;
 }

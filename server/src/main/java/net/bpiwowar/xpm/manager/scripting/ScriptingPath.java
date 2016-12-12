@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.utils.PathUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import net.bpiwowar.xpm.manager.json.Json;
@@ -26,6 +27,8 @@ import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.util.Iterator;
 import java.util.List;
@@ -52,6 +55,11 @@ public class ScriptingPath extends WrapperObject<Path> {
     @Expose
     public ScriptingPath(String path) throws FileSystemException {
         super(Paths.get(path));
+    }
+
+    @Expose
+    static public Path toPath(@Argument(name = "path") String path) throws URISyntaxException, IOException {
+        return PathUtils.toPath(path);
     }
 
     @Override

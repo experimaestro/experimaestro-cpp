@@ -29,7 +29,7 @@
 // Implicit conversions
 %implicitconv;
 %implicitconv xpm::Path;
-  
+
 // Documentation
 %include "documentation.i"
 
@@ -98,7 +98,7 @@
             $result = d->swig_get_self();
         } else {
             std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >(result SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
-            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);            
+            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);
         }
     } else {
         $result = SWIG_Py_Void();

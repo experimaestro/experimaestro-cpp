@@ -11,13 +11,17 @@ enable_testing()
 
 set(EXTERNAL_HEADERS
         include/xpm/xpm.hpp
-        include/xpm/rpc/objects.hpp
         include/xpm/context.hpp
         include/xpm/filesystem.hpp
         include/xpm/commandline.hpp)
 
+set(RPC_HEADERS
+        include/xpm/rpc/objects.hpp
+)
+
 set(SOURCES
         ${EXTERNAL_HEADERS}
+        ${RPC_HEADERS}
         src/rpc/jsonrpcclient.cpp
         src/xpm.cpp
         src/filesystem.cpp
@@ -101,12 +105,12 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
 
-    # Build module experimaestro    
+    # Build module experimaestro
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
 
-    # Build module experimaestro.rpc 
-    set(SWIG_MODULE_experimaestro_rpc_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    # Build module experimaestro.rpc
+    set(SWIG_MODULE_experimaestro_rpc_python_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_rpc_python python swig/xpm_rpc.i)
 
     # Set output name and path
@@ -135,11 +139,11 @@ if (true)
 
     add_test(python_test ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test/python/test.py")
     set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_SWIG_OUTDIR}")
-	
+
 	# Add install target
 	add_custom_target(install-python
 	  DEPENDS _experimaestro_python
 	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   	)
-	
+
 endif ()

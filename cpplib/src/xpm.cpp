@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
+#include <fstream>
 
 #include <openssl/sha.h>
 
@@ -12,6 +13,9 @@
 #include <xpm/context.hpp>
 #include <xpm/rpc/objects.hpp>
 #include <xpm/rpc/client.hpp>
+#include "private.hpp"
+
+DEFINE_LOGGER("xpm")
 
 using nlohmann::json;
 namespace {
@@ -147,7 +151,7 @@ struct _StructuredValue {
   std::map<std::string, StructuredValue> _content;
 
   // Construct from JSON object
-  _StructuredValue(json const &jsonValue) {
+  _StructuredValue(json const &jsonValue) : _StructuredValue() {
     switch (jsonValue.type()) {
       case nlohmann::json::value_t::null:break;
 
@@ -172,6 +176,17 @@ struct _StructuredValue {
         _value = Helper::toValue(jsonValue);
     }
   }
+  _StructuredValue() : _sealed(false), _value() {
+  }
+
+  _StructuredValue(Value &&scalar) : _sealed(false), _value(scalar) {
+  }
+
+  _StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
+  }
+
+  _StructuredValue(std::map<std::string, StructuredValue> &map) : _sealed(false), _value(), _content(map) {
+  }
 
 
   // Convert to JSON
@@ -195,15 +210,6 @@ struct _StructuredValue {
     return o;
   }
 
-  _StructuredValue() : _sealed(false), _value() {
-  }
-  _StructuredValue(Value &&scalar) : _sealed(false), _value(scalar) {
-  }
-  _StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
-  }
-
-  _StructuredValue(std::map<std::string, StructuredValue> &map) : _sealed(false), _value(), _content(map) {
-  }
 
   /// Internal digest function
   std::array<unsigned char, DIGEST_LENGTH> digest() const {
@@ -254,6 +260,9 @@ struct _StructuredValue {
     return md;
   };
 
+  static StructuredValue fromJson(json const &j) {
+    return StructuredValue(std::make_shared<_StructuredValue>(j));
+  }
 };
 
 
@@ -645,8 +654,12 @@ Type::Type(TypeName const &type, Type *parent, bool predefined) :
 Type::Type() {}
 Type::~Type() {}
 
-void Type::objectFactory(std::shared_ptr<ObjectFactory> &factory) {
+void Type::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
   _this->_factory = factory;
+}
+
+std::shared_ptr<ObjectFactory> const &Type::objectFactory() {
+  return _this->_factory;
 }
 
 void Type::addArgument(Argument &argument) {
@@ -700,7 +713,7 @@ int Type::hash() const {
 const PathGenerator PathGenerator::SINGLETON = PathGenerator();
 const PathGenerator &pathGenerator = PathGenerator::SINGLETON;
 
-StructuredValue PathGenerator::generate(StructuredValue &object) const {
+StructuredValue PathGenerator::generate(StructuredValue object) const {
   auto p = Path(Context::current().workdir(), {"yo", object.uniqueIdentifier()});
   return StructuredValue(p.toString());
 }
@@ -743,11 +756,11 @@ void Object::task(Task &task) {
 }
 
 
-std::shared_ptr<Object> Object::run() {
+void  Object::submit() {
   if (!_task) {
     throw exception("No underlying task for this object: cannot run");
   }
-  return _task->run(shared_from_this());
+  return _task->submit(shared_from_this());
 }
 
 
@@ -763,54 +776,110 @@ void Object::seal() {
   _value.seal();
 }
 
-void Object::generate() {
+void Object::configure(StructuredValue value) {
+  setValue(value);
+  validate();
+  seal();
+}
+
+void Object::validate() {
   for(auto entry: _type.arguments()) {
     const Argument &argument = entry.second;
     Generator const * generator = argument.generator();
-    if (generator) {
-      if (!_value.hasKey(argument.name())) {
+
+    if (!_value.hasKey(argument.name())) {
+      // No value provided
+      if (generator) {
+        LOGGER->info("Generating value...");
         set(argument.name(), generator->generate(_value));
-      }
-    } else if (argument.required()) {
-      if (!_value.hasKey(argument.name())) {
-        throw argument_error("Argument " + argument.name() + " was required but not given for " + this->type().toString());
-      }
-    } else {
-      // Not required and no generator: check if it has a value
-      if (!_value.hasKey(argument.name())) {
+      } else if (argument.required()) {
+        if (!_value.hasKey(argument.name())) {
+          throw argument_error(
+              "Argument " + argument.name() + " was required but not given for " + this->type().toString());
+        }
+      } else {
+        LOGGER->info("Setting default value...");
         set(argument.name(), argument.defaultValue());
       }
+    } else {
+      // Sets the value
+      LOGGER->info("Setting value...");
+      setValue(argument.name(), _value[argument.name()]);
     }
-
   }
+}
+
+void Object::execute() {
+  LOGGER->info("No execute method provided");
 }
 
 
 // ---- Task
 
-Task::Task(Type &type) : _type(type) {
+template<> struct Reference<Task> {
+  /// Task identifier
+  TypeName identifier;
+
+  /// The type for this task
+  Type type;
+
+  /// Command line
+  CommandLine commandLine;
+
+  /// The object factory
+  std::shared_ptr<ObjectFactory> factory;
+
+  Reference(const TypeName &identifier, const Type &type) : identifier(identifier), type(type) {}
+};
+
+Task::Task(Type &type) : Pimpl(type.typeName(), type) {
 }
 
-Task::Task() : _type(ANY_TYPE) {
+Task::Task() : Pimpl(TypeName(""), ANY_TYPE) {
 }
 
-TypeName Task::typeName() const { return _type.typeName(); }
+TypeName Task::typeName() const { return self(this).type.typeName(); }
 
-std::shared_ptr<Object> Task::run(std::shared_ptr<Object> const &object) {
+void Task::submit(std::shared_ptr<Object> const &object) {
   // Validate and seal the task object
-  object->generate();
+  object->validate();
   object->seal();
+
+  // Get generated directory as locator
+
+  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(object->getValue()).value().getString());
 
   // Prepare the command line
   CommandContext context;
   context.parameters = object->getValue().toString();
-  rpc::Scheduler::submitJob(_commandLine.rpc(context));
-
-  return object;
+  rpc::CommandLineTask::submitJob(locator, self(this).commandLine.rpc(context));
 }
 
 void Task::commandline(CommandLine command) {
-  _commandLine = command;
+  self(this).commandLine = command;
+}
+
+TypeName const& Task::identifier() {
+  return self(this).identifier;
+}
+
+void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
+  self(this).factory = factory;
+}
+
+std::shared_ptr<Object> Task::create() const {
+  if (!self(this).factory) {
+    throw argument_error("Task has no factory");
+  }
+  auto ptr = self(this).factory->create();
+  ptr->type(self(this).type);
+  return ptr;
+}
+
+void Task::execute(StructuredValue value) const {
+  auto object = create();
+  object->configure(value);
+  object->execute();
 }
 
 // ---- REGISTER
@@ -828,7 +897,7 @@ void Register::addType(Type &type) {
 }
 
 void Register::addTask(Task &task) {
-  _tasks[task.typeName()] = task;
+  _tasks[task.identifier()] = task;
 }
 
 optional<Task const> Register::getTask(TypeName const &typeName) const {
@@ -905,7 +974,6 @@ std::shared_ptr<Object> Register::build(StructuredValue &value) const {
 }
 
 void Register::parse(std::vector<std::string> const &args) {
-// TODO implement command line parsing
   if (args.size() < 1) {
     throw argument_error("Expected at least one argument (use help to get some help)");
   }
@@ -940,6 +1008,34 @@ void Register::parse(std::vector<std::string> const &args) {
     return;
   }
 
+  if (args[0] == "run") {
+    // Retrieve the task
+    std::string taskName = args[1];
+    auto task = this->getTask(TypeName(taskName));
+    if (!task) {
+      throw argument_error(taskName + " is not a task");
+
+    }
+    
+    // Retrieve the structured value
+    // TODO:
+    // - process other arguments (SV)
+    // - process command lines
+    auto stream = std::ifstream(args[2]);
+    if (!stream) {
+      throw argument_error(args[2] + " is not a file");
+    }
+    json j = json::parse(stream);
+    StructuredValue value = _StructuredValue::fromJson(j);
+
+    // Run the task
+    task->execute(value);
+
+    return;
+
+  }
+
+  throw argument_error("Unexpected command: " + args[0]);
 }
 
 void Helper::updateDigest(SHA_CTX &context, Value value) {

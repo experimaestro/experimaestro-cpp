@@ -22,7 +22,8 @@
         <class>net.bpiwowar.xpm.scheduler.Resource</class>
         <class>net.bpiwowar.xpm.scheduler.TokenResource</class>
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
-        <class>net.bpiwowar.xpm.scheduler.Scheduler</class>
+        <!--<class>net.bpiwowar.xpm.scheduler.Scheduler</class>-->
+        <class>net.bpiwowar.xpm.scheduler.CommandLineTask</class>
 
         <!-- Commands -->
         <class>net.bpiwowar.xpm.commands.Pipe</class>
@@ -76,6 +77,7 @@
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingMap</class>
         <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
         <class>net.bpiwowar.xpm.manager.scripting.ObjectPropertyReference</class>
+        <class>net.bpiwowar.xpm.manager.scripting.Functions</class>
 
         <!-- Commands -->
         <class>net.bpiwowar.xpm.commands.ParameterFile</class>
