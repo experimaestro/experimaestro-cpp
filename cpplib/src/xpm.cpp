@@ -1,12 +1,13 @@
 
 #include <sstream>
 #include <iostream>
-
-#include <xpm/xpm.hpp>
-#include <xpm/json.hpp>
+#include <unordered_set>
 
 #include <openssl/sha.h>
-#include <unordered_set>
+
+#include <xpm/common.hpp>
+#include <xpm/xpm.hpp>
+#include <xpm/json.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/objects.hpp>

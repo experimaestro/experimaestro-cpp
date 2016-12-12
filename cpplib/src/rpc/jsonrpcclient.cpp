@@ -11,6 +11,10 @@
 
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
+#include <xpm/common.hpp>
+#include "../private.hpp"
+
+DEFINE_LOGGER("rpc");
 
 using nlohmann::json;
 typedef websocketpp::frame::opcode::value OpValue;
@@ -30,6 +34,13 @@ typedef unsigned long RequestId;
 
 std::string JSONRPC_VERSION = "2.0";
 
+enum ConnectionStatus {
+  WAITING,
+  OPENED,
+  FAILURE,
+  CLOSED
+};
+
 class _JSONRPCClient {
  public:
   /// Counter for JSON request
@@ -46,7 +57,7 @@ class _JSONRPCClient {
   // Opened connection
   std::mutex m_open;
   std::condition_variable cv_open;
-  bool connected;
+  ConnectionStatus connected;
 
   // Incoming messages
   std::mutex m_incoming_message;
@@ -68,13 +79,14 @@ class _JSONRPCClient {
     c.close(hdl, 0, "Finished");
 
     // Wait for close signal
+    LOGGER->info("Waiting for close signal");
     std::unique_lock<std::mutex> lk(m_open);
     cv_open.wait(lk, [&] { return hdl.expired(); });
 
     // Wait for websocket to be closed
     _thread.join();
 
-    std::cerr << "Connection closed";
+    LOGGER->info("Connection closed");
   }
 
   _JSONRPCClient(std::string const &uri, std::string const &username, std::string const &password, bool debug)
@@ -90,7 +102,7 @@ class _JSONRPCClient {
 
   void start(std::string const &username, std::string const &password) {
     try {
-      connected = false;
+      connected = WAITING;
       if (debug) {
         // Set logging to be pretty verbose (everything except message payloads)
         c.set_access_channels(websocketpp::log::alevel::none);
@@ -109,38 +121,47 @@ class _JSONRPCClient {
         this->on_message(hdl, msg);
       });
       c.set_open_handler([&](websocketpp::connection_hdl hdl) {
-        std::cerr << "Connection opening..." << std::endl;
+        LOGGER->debug("Connection opening...");
         {
           std::lock_guard<std::mutex> lk(m_open);
           this->hdl = hdl;
         }
-        std::cerr << "Connection opened, notifying" << std::endl;
-        connected = true;
+        LOGGER->info("Connection opened...");
+        connected = OPENED;
         cv_open.notify_all();
       });
 
       c.set_fail_handler([&](websocketpp::connection_hdl hdl) {
         auto connection = c.get_con_from_hdl(hdl);
-        std::cerr << "[ERROR/RPC] " << connection->get_state() << " "
-                  << connection->get_local_close_code() << " "
-                  << connection->get_local_close_reason() << " "
-                  << connection->get_remote_close_code() << " "
-                  << connection->get_remote_close_reason() << ": "
-                  << connection->get_ec() << " - " << connection->get_ec().message() << std::endl;
+        LOGGER->error(
+            "RPC failure: local {} (code {}) / remote {} (code {}) / message: {} (code {})",
+            connection->get_local_close_reason(),
+            connection->get_local_close_code(),
+            connection->get_remote_close_reason(),
+            connection->get_remote_close_code(),
+            connection->get_ec().message(),
+            connection->get_ec().value()
+        );
+
+        // Failure
+        connected = FAILURE;
+        cv_open.notify_all();
 
         // Close connection
+        LOGGER->info("Closing connection...");
         connection->close(connection->get_local_close_code(), connection->get_local_close_reason());
+        LOGGER->info("Connection closed...");
       });
 
       c.set_close_handler([&](websocketpp::connection_hdl hdl) {
-        std::cerr << "Connection closing..." << std::endl;
+        LOGGER->debug("Connection closing...");
         {
           std::lock_guard<std::mutex> lk(m_open);
           this->hdl.reset();
         }
-        std::cerr << "Connection closed, notifying" << std::endl;
+        connected = CLOSED;
         cv_open.notify_all();
-        connected = false;
+        LOGGER->info("Connection closed...");
       });
 
       websocketpp::lib::error_code ec;
@@ -163,14 +184,20 @@ class _JSONRPCClient {
       // will exit when this connection is closed.
       c.run();
     } catch (websocketpp::exception const &e) {
-      throw std::runtime_error(std::string("Caught exception: ") + e.what());
+      LOGGER->debug("Error while trying to connect");
+      connected = FAILURE;
+      cv_open.notify_all();
     }
   }
 
   void send(json const &message) {
     while (true) {
       std::unique_lock<std::mutex> lk(m_open);
-      cv_open.wait(lk, [&] { return connected; });
+      LOGGER->debug("Sending message...");
+      cv_open.wait(lk, [&] { return connected != WAITING; });
+      if (connected != ConnectionStatus::OPENED) {
+        throw exception("Cannot send a message: connection is closed");
+      }
       if (auto ptr = hdl.lock()) {
         c.send(hdl, message.dump(), OpValue::text);
         return;

@@ -25,7 +25,7 @@ set(SOURCES
         src/rpc/client.cpp
         src/rpc/objects.cpp
         src/rpc/utils.cpp
-        src/commandline.cpp)
+        src/commandline.cpp src/private.cpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
