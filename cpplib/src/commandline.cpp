@@ -4,7 +4,7 @@
 
 #include <string>
 #include <xpm/json.hpp>
-#include "include/xpm/commandline.hpp"
+#include <xpm/commandline.hpp>
 
 namespace xpm {
 

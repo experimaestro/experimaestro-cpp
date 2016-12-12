@@ -30,8 +30,9 @@ set(SOURCES
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
+add_subdirectory(ext/spdlog EXCLUDE_FROM_ALL)
 
-include_directories("${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/websocketpp" "${CMAKE_SOURCE_DIR}/asio/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/ext/websocketpp" "${CMAKE_SOURCE_DIR}/ext/asio/include" "${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 
 # --- experimaestro library
 

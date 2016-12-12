@@ -1,11 +1,11 @@
 include(ExternalProject)
 ExternalProject_Add(googletest
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/googletest/googletest
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/ext/googletest/googletest
         EXCLUDE_FROM_ALL 1
 )
 
 
-link_directories(${CMAKE_BINARY_DIR}/googletest/googletest)
+link_directories(${CMAKE_BINARY_DIR}/ext/googletest/googletest)
 add_executable(experimaestro-tests tests.cpp digest.cpp)
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES}) 
 target_include_directories(experimaestro-tests PUBLIC ${CMAKE_SOURCE_DIR}/googletest/googletest/include)

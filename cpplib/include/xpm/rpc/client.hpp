@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <xpm/json.hpp>
-#include <include/xpm/rpc/jsonrpcclient.hpp>
+#include <xpm/rpc/jsonrpcclient.hpp>
 
 namespace xpm {
 namespace rpc {

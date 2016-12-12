@@ -7,10 +7,10 @@
 
 #include <openssl/sha.h>
 #include <unordered_set>
-#include <include/xpm/filesystem.hpp>
-#include <include/xpm/context.hpp>
-#include <include/xpm/rpc/objects.hpp>
-#include <include/xpm/rpc/client.hpp>
+#include <xpm/filesystem.hpp>
+#include <xpm/context.hpp>
+#include <xpm/rpc/objects.hpp>
+#include <xpm/rpc/client.hpp>
 
 using nlohmann::json;
 namespace {

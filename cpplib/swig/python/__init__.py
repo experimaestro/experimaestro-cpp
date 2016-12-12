@@ -41,7 +41,6 @@ class PyObject(Object, metaclass=PyObjectType):
         """Called by XPM when value has been validated"""
         if key.startswith("$"):
             key = key[1:]
-        logger.debug("Really setting %s to %s" % (key, sv.value()))
         dict.__setattr__(self, key, sv.value())
         
 __StructuredValue = StructuredValue

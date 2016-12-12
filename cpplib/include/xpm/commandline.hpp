@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <xpm/utils.hpp>
-#include <include/xpm/rpc/objects.hpp>
+#include <xpm/rpc/objects.hpp>
 #include "json.hpp"
 #include "filesystem.hpp"
 

@@ -3,7 +3,7 @@
 //
 #include <functional>
 
-#include <include/xpm/rpc/client.hpp>
+#include <xpm/rpc/client.hpp>
 #include <fstream>
 
 namespace xpm {
