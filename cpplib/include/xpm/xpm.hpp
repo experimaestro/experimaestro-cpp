@@ -139,6 +139,7 @@ class Value {
   Value();
   Value(double value);
   Value(bool value);
+  Value(int value);
   Value(long value);
   Value(std::string const &value);
   Value(ValueArray &&value);
@@ -230,6 +231,11 @@ class StructuredValue {
    */
   std::string uniqueIdentifier() const;
 
+  /**
+   * Check whether the value is set and is default
+   */
+  bool isDefault() const;
+
  private:
   /**
    *  Whether this element can be ignored for digest computation
@@ -299,6 +305,8 @@ class Argument {
  private:
   std::shared_ptr<_Argument> _this;
 };
+
+bool operator==(Value const &a, Value const &b);
 
 class Register;
 
@@ -474,7 +482,7 @@ class Object
   virtual std::string toString() const;
 
   /**
-   * Generate values
+   * Validate values
    */
   void validate();
 

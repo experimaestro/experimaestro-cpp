@@ -51,6 +51,7 @@ static const std::string ARGUMENT_TYPE = "$type";
 static const std::string ARGUMENT_PATH = "$path";
 static const std::string ARGUMENT_VALUE = "$value";
 static const std::string ARGUMENT_IGNORE = "$ignore";
+static const char *const DEFAULT_KEY = "$default";
 
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
@@ -85,7 +86,6 @@ struct Helper {
     }
   }
 
-
   static void updateDigest(SHA_CTX &context, Value value);
 
   static Value toValue(json const &j) {
@@ -115,7 +115,36 @@ struct Helper {
     }
   }
 
+  static bool equals(Value const &a, Value const &b) {
+    if (a._type != b._type) return false;
+    switch(a._type) {
+      case ValueType::STRING:return a._value.string == b._value.string;
+
+      case ValueType::INTEGER:return a._value.integer == b._value.integer;
+
+      case ValueType::REAL:return a._value.real == b._value.real;
+
+      case ValueType::BOOLEAN:return a._value.boolean == b._value.boolean;
+
+      case ValueType::ARRAY: {
+        if (a._value.array.size() != b._value.array.size()) return false;
+        for(size_t i = 0; i < a._value.array.size(); ++i) {
+          // TODO: implement
+          throw exception("Cannot compare an array: not implemented");
+        }
+        return true;
+      }
+
+      case ValueType::OBJECT: throw exception("Cannot compare an object");
+
+      case ValueType::NONE:throw std::runtime_error("none has no type");
+    }
+  }
 };
+
+bool operator==(Value const &a, Value const &b) {
+  return Helper::equals(a, b);
+}
 
 // ---
 // --- Type names
@@ -172,8 +201,7 @@ struct _StructuredValue {
       case nlohmann::json::value_t::boolean:
       case nlohmann::json::value_t::number_integer:
       case nlohmann::json::value_t::number_unsigned:
-      case nlohmann::json::value_t::number_float:
-        _value = Helper::toValue(jsonValue);
+      case nlohmann::json::value_t::number_float:_value = Helper::toValue(jsonValue);
     }
   }
   _StructuredValue() : _sealed(false), _value() {
@@ -187,7 +215,6 @@ struct _StructuredValue {
 
   _StructuredValue(std::map<std::string, StructuredValue> &map) : _sealed(false), _value(), _content(map) {
   }
-
 
   // Convert to JSON
   json convert() {
@@ -209,7 +236,6 @@ struct _StructuredValue {
     }
     return o;
   }
-
 
   /// Internal digest function
   std::array<unsigned char, DIGEST_LENGTH> digest() const {
@@ -265,7 +291,6 @@ struct _StructuredValue {
   }
 };
 
-
 const TypeName ANY_TYPE("any");
 
 StructuredValue::StructuredValue() : _this(std::make_shared<_StructuredValue>()) {
@@ -274,9 +299,9 @@ StructuredValue::StructuredValue(Value &&scalar) : _this(std::make_shared<_Struc
 }
 StructuredValue::StructuredValue(Value const &scalar) : _this(std::make_shared<_StructuredValue>(scalar)) {
 }
-StructuredValue::StructuredValue(std::map<std::string, StructuredValue> &map) : _this(std::make_shared<_StructuredValue>(map)) {
+StructuredValue::StructuredValue(std::map<std::string, StructuredValue> &map)
+    : _this(std::make_shared<_StructuredValue>(map)) {
 }
-
 
 StructuredValue::StructuredValue(std::shared_ptr<_StructuredValue> const &ptr) : _this(ptr) {
 }
@@ -349,17 +374,32 @@ bool StructuredValue::isSealed() const {
   return _this->_sealed;
 }
 
-bool StructuredValue::canIgnore() const {
-  if (IGNORED_TYPES.count(type()) > 0) {
-    return true;
-  }
-
-  auto const it = _this->_content.find(ARGUMENT_IGNORE);
+bool StructuredValue::isDefault() const {
+  auto it = _this->_content.find(DEFAULT_KEY);
   if (it != _this->_content.end()) {
     if (it->second.value().scalarType() == ValueType::BOOLEAN) {
       return it->second.value().getBoolean();
     }
   }
+  return false;
+}
+
+bool StructuredValue::canIgnore() const {
+  if (IGNORED_TYPES.count(type()) > 0) {
+    return true;
+  }
+
+  // Is the ignore flag set?
+  auto it = _this->_content.find(ARGUMENT_IGNORE);
+  if (it != _this->_content.end()) {
+    if (it->second.value().scalarType() == ValueType::BOOLEAN) {
+      return it->second.value().getBoolean();
+    }
+  }
+
+  // Is the value a default value?
+  if (isDefault())
+    return true;
 
   return false;
 }
@@ -423,6 +463,10 @@ Value::Value(double value) : _type(ValueType::REAL) {
 }
 
 Value::Value(long value) : _type(ValueType::INTEGER) {
+  _value.integer = value;
+}
+
+Value::Value(int value) : _type(ValueType::INTEGER) {
   _value.integer = value;
 }
 
@@ -581,11 +625,11 @@ Argument::Argument(std::string const &name) : _this(std::make_shared<_Argument>(
 Argument::Argument() : _this(std::make_shared<_Argument>("")) {
 }
 
-std::string const& Argument::name() const {
+std::string const &Argument::name() const {
   return _this->_name;
 }
 
-bool Argument::required() const  { return _this->_required; }
+bool Argument::required() const { return _this->_required; }
 
 void Argument::required(bool required) {
   _this->_required = required;
@@ -599,6 +643,7 @@ void Argument::help(const std::string &help) {
 
 void Argument::defaultValue(Value const &defaultValue) {
   _this->_defaultValue = defaultValue;
+  if (defaultValue.simple()) _this->_required = false;
 }
 Value Argument::defaultValue() const { return _this->_defaultValue; }
 
@@ -640,7 +685,6 @@ struct _Type {
   }
 };
 
-
 /** Creates an object with a given type */
 std::shared_ptr<Object> Type::create() const {
   const std::shared_ptr<Object> object = _this->create();
@@ -666,7 +710,7 @@ void Type::addArgument(Argument &argument) {
   _this->arguments[argument.name()] = argument;
 }
 
-std::map<std::string, Argument>& Type::arguments() {
+std::map<std::string, Argument> &Type::arguments() {
   return _this->arguments;
 }
 
@@ -687,7 +731,7 @@ std::string Type::toJson() const {
     json definition = {
         {"help", arg.help()},
         {"required", arg.required()},
-        {"type", arg.type().typeName().toString() },
+        {"type", arg.type().typeName().toString()},
     };
 
     if (arg.defaultValue().defined())
@@ -721,7 +765,7 @@ StructuredValue PathGenerator::generate(StructuredValue object) const {
 // ---- Object
 
 
-Object::Object()  {
+Object::Object() {
 }
 
 Object::~Object() {
@@ -734,7 +778,7 @@ Type Object::type() const { return _type; }
 void Object::type(Type const &type) { _type = type; }
 
 /** Sets the structured value */
-void Object::setValue(StructuredValue & value) {
+void Object::setValue(StructuredValue &value) {
   _value = value;
 }
 
@@ -746,7 +790,6 @@ void Object::set(std::string const &key, StructuredValue value) {
   setValue(key, value);
 }
 
-
 StructuredValue const Object::getValue() const {
   return _value;
 }
@@ -755,14 +798,12 @@ void Object::task(Task &task) {
   _task = task;
 }
 
-
-void  Object::submit() {
+void Object::submit() {
   if (!_task) {
     throw exception("No underlying task for this object: cannot run");
   }
   return _task->submit(shared_from_this());
 }
-
 
 std::string Object::toString() const {
   return "Object of type " + _type.toString();
@@ -783,28 +824,42 @@ void Object::configure(StructuredValue value) {
 }
 
 void Object::validate() {
-  for(auto entry: _type.arguments()) {
+  // First validate
+  for (auto entry: _type.arguments()) {
     const Argument &argument = entry.second;
-    Generator const * generator = argument.generator();
 
     if (!_value.hasKey(argument.name())) {
       // No value provided
-      if (generator) {
-        LOGGER->info("Generating value...");
-        set(argument.name(), generator->generate(_value));
-      } else if (argument.required()) {
+      if (argument.required() && !argument.generator()) {
         if (!_value.hasKey(argument.name())) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type().toString());
         }
       } else {
         LOGGER->info("Setting default value...");
-        set(argument.name(), argument.defaultValue());
+        StructuredValue value(argument.defaultValue());
+        value[DEFAULT_KEY] = Value(true);
+        set(argument.name(), value);
       }
     } else {
       // Sets the value
       LOGGER->info("Setting value...");
-      setValue(argument.name(), _value[argument.name()]);
+      auto &value = _value[argument.name()];
+      if (value.value().simple() && value.value() == argument.defaultValue()) {
+        value[DEFAULT_KEY] = Value(true);
+      }
+      setValue(argument.name(), value);
+    }
+  }
+
+  // Generate
+  for (auto entry: _type.arguments()) {
+    const Argument &argument = entry.second;
+    Generator const *generator = argument.generator();
+
+    if (!_value.hasKey(argument.name()) && generator) {
+      LOGGER->info("Generating value...");
+      set(argument.name(), generator->generate(_value));
     }
   }
 }
@@ -816,7 +871,8 @@ void Object::execute() {
 
 // ---- Task
 
-template<> struct Reference<Task> {
+template<>
+struct Reference<Task> {
   /// Task identifier
   TypeName identifier;
 
@@ -859,7 +915,7 @@ void Task::commandline(CommandLine command) {
   self(this).commandLine = command;
 }
 
-TypeName const& Task::identifier() {
+TypeName const &Task::identifier() {
   return self(this).identifier;
 }
 
@@ -1016,7 +1072,7 @@ void Register::parse(std::vector<std::string> const &args) {
       throw argument_error(taskName + " is not a task");
 
     }
-    
+
     // Retrieve the structured value
     // TODO:
     // - process other arguments (SV)

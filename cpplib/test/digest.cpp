@@ -31,3 +31,15 @@ TEST(Digest, subkeys) {
   StructuredValue v1 = StructuredValue::parse(R"({ "a": { "$value": 1, "z": "ignore" } })");
   EXPECT_EQ(v0.uniqueIdentifier(), v1.uniqueIdentifier());
 }
+
+TEST(Digest, ignore) {
+  StructuredValue v0 = StructuredValue::parse(R"({ "a": 1})");
+  StructuredValue v1 = StructuredValue::parse(R"({ "a": { "$value": 1 }, "b": { "$value": 2, "$ignore": true }})");
+  EXPECT_EQ(v0.uniqueIdentifier(), v1.uniqueIdentifier());
+}
+
+TEST(Digest, default) {
+  StructuredValue v0 = StructuredValue::parse(R"({ "a": 1})");
+  StructuredValue v1 = StructuredValue::parse(R"({ "a": { "$value": 1 }, "b": { "$value": 2, "$default": true }})");
+  EXPECT_EQ(v0.uniqueIdentifier(), v1.uniqueIdentifier());
+}
