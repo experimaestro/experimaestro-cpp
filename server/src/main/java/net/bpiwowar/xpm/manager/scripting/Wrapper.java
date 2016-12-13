@@ -19,8 +19,8 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 /**
- * Created by bpiwowar on 21/05/15.
+ * Wrapper interface
  */
-public interface Wrapper<T> extends org.mozilla.javascript.Wrapper {
+public interface Wrapper<T>  {
     T unwrap();
 }

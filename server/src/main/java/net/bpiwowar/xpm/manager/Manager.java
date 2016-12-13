@@ -18,24 +18,9 @@ package net.bpiwowar.xpm.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableList;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.json.Json;
-import net.bpiwowar.xpm.manager.json.JsonObject;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.utils.MessageDigestWriter;
 import net.bpiwowar.xpm.utils.XMLUtils;
 import org.w3c.dom.Element;
 
-import javax.xml.bind.DatatypeConverter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;

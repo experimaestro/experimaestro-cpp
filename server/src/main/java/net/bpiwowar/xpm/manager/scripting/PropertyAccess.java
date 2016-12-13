@@ -42,10 +42,6 @@ public class PropertyAccess {
 
     }
 
-    public ScriptingReference get(final Object object) {
-        return new ObjectPropertyReference(getter, setter, object);
-    }
-
     public void set(Object object, Object value) {
         setter.accept(object, value);
     }

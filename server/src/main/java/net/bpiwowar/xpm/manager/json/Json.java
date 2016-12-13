@@ -24,16 +24,10 @@ import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.WrappedException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.scripting.Expose;
-import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.Help;
-import net.bpiwowar.xpm.manager.scripting.LanguageContext;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
+import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.scheduler.Resource;
 
 import java.io.ByteArrayOutputStream;
@@ -201,7 +195,7 @@ abstract public class Json {
                     try {
                         return finalConnector.resolve(f);
                     } catch (Exception e) {
-                        throw new XPMRhinoException(e);
+                        throw new XPMScriptRuntimeException(e);
                     }
                 });
         writeDescriptorString(writer, options);

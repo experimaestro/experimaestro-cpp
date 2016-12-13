@@ -36,8 +36,6 @@ import net.sf.saxon.value.BooleanValue;
 import net.sf.saxon.value.SequenceType;
 import net.sf.saxon.value.SingletonItem;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.Arrays;
@@ -109,31 +107,6 @@ public class Main {
             //
             // xqjs.writeSequence(System.out, new Properties());
             // xqjc.close();
-        }
-        // Test
-        else if ("test".equals(task)) {
-            // Creates and enters a Context. The Context stores information
-            // about the execution environment of a script.
-            Context cx = Context.enter();
-            try {
-                // Initialize the standard objects (Object, Function, etc.)
-                // This must be done before scripts can be executed. Returns
-                // a scope object that we use in later calls.
-                Scriptable scope = cx.initStandardObjects();
-
-                // Collect the arguments into a single string.
-                for (int i = 0; i < args.length; i++) {
-                    logger.info("Executing %s", args[i]);
-                    Object result = cx.evaluateString(scope, args[i], "<cmd>",
-                            1, null);
-                    logger.info("Result: %s [%s]", result.getClass(), Context.toString(result));
-                }
-
-            } finally {
-                // Exit from the context.
-                Context.exit();
-            }
-
         }
 
         // Unknown command

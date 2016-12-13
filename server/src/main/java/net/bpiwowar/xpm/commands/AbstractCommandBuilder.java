@@ -21,7 +21,7 @@ package net.bpiwowar.xpm.commands;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.WrappedIOException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -158,7 +158,7 @@ public abstract class AbstractCommandBuilder {
         int error = p.waitFor();
         if (error != 0) {
             errLogger.warn("Output was: %s", sb.toString());
-            throw new XPMRhinoException("Command returned an error code %d", error);
+            throw new XPMScriptRuntimeException("Command returned an error code %d", error);
         }
         return sb.toString();
     }

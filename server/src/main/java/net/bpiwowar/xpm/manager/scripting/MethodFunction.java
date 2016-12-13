@@ -19,9 +19,8 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
-import net.bpiwowar.xpm.exceptions.ExitException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.PrintWriter;
@@ -126,13 +125,10 @@ public class MethodFunction extends GenericFunction {
                 }
                 return method.invoke(isStatic ? null : thisObj, transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
-                if (!(e.getCause() instanceof ExitException)) {
-                    LOGGER.debug(e, "Error [%s] while invoking method %s", e, method);
-                }
                 if (cx == null)
                     throw new XPMRuntimeException(e, "Error [%s] while invoking method %s", e, method);
                 throw cx.runtimeException(e, "Error [%s] while invoking method %s", e, method);
-            } catch (XPMRhinoException e) {
+            } catch (XPMRuntimeException e) {
                 throw e.addContext("While invoking method %s", method);
             }
         }

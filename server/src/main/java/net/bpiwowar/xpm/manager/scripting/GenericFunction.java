@@ -19,9 +19,7 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
-import org.mozilla.javascript.ScriptRuntime;
 import net.bpiwowar.xpm.exceptions.WrappedException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -125,14 +123,11 @@ public abstract class GenericFunction {
 
             return result;
         } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof XPMRhinoException) {
-                throw (XPMRhinoException) e.getCause();
-            }
-            throw new WrappedException(new XPMRhinoException(e.getCause()));
+            throw new WrappedException(new XPMScriptRuntimeException(e.getCause()));
         } catch (RuntimeException e) {
             throw e;
         } catch (Throwable e) {
-            throw new WrappedException(new XPMRhinoException(e));
+            throw new WrappedException(new XPMScriptRuntimeException(e));
         }
 
     }

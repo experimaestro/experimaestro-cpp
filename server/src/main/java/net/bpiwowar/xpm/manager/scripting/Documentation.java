@@ -21,8 +21,6 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.documentation.*;
 import net.bpiwowar.xpm.documentation.Documentation.Printer;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.Scriptable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -130,12 +128,6 @@ public class Documentation {
                 || aClass == Integer.class || aClass == Long.class || aClass == Object.class
                 || aClass == String.class)
             return aClass.getSimpleName();
-
-        if (aClass == NativeArray.class)
-            return "Array";
-
-        if (aClass == Scriptable.class)
-            return "Object";
 
         return "NA/" + aClass.getCanonicalName();
     }

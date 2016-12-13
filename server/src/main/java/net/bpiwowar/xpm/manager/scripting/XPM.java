@@ -34,9 +34,6 @@ import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
-import net.bpiwowar.xpm.exceptions.ValueMismatchException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
@@ -44,8 +41,6 @@ import net.bpiwowar.xpm.manager.Module;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.js.JavaScriptContext;
-import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonResource;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
@@ -57,17 +52,10 @@ import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TokenResource;
 import net.bpiwowar.xpm.server.TasksServlet;
-import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.ConsString;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -81,7 +69,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
 /**
  * XPM Object in scripting languages
@@ -157,10 +144,7 @@ public class XPM {
 
     public static java.nio.file.Path getPath(Connector connector, Object stdout) throws IOException {
 
-        if (stdout instanceof String || stdout instanceof ConsString)
-            return connector.getMainConnector().resolveFile(stdout.toString());
-
-        if (stdout instanceof ScriptingPath)
+        if (stdout instanceof String)
             return connector.getMainConnector().resolveFile(stdout.toString());
 
         if (stdout instanceof java.nio.file.Path)
@@ -168,24 +152,6 @@ public class XPM {
 
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
-
-    public static Object get(Scriptable scope, final String name) {
-
-        Object object = scope.get(name, scope);
-        if (object != null && object == Undefined.instance)
-            object = null;
-        else if (object instanceof Wrapper)
-            object = ((Wrapper) object).unwrap();
-        return object;
-    }
-
-    static String toString(Object object) {
-
-        if (object instanceof NativeJavaObject)
-            return ((NativeJavaObject) object).unwrap().toString();
-        return object.toString();
-    }
-
 
     @Expose("set_property")
     public void setProperty(@NotNull String name, Object object) {
@@ -204,16 +170,6 @@ public class XPM {
         context().addDefaultLock(resource, parameters);
     }
 
-    @Expose(value = "logger", languages = Languages.JAVASCRIPT)
-    public ScriptingLogger getLoggerJS(String name) {
-        return new ScriptingLogger(name);
-    }
-
-    @Expose(value = "get_logger", languages = Languages.PYTHON)
-    public ScriptingLogger getLoggerPython(String name) {
-        return new ScriptingLogger(name);
-    }
-
     @Expose("log_level")
     @Help(value = "Sets the logger debug level")
     public void setLogLevel(
@@ -227,11 +183,6 @@ public class XPM {
     @Expose("get_script_path")
     public String getScriptPath() {
         return context().getCurrentScriptPath().toString();
-    }
-
-    @Expose("get_script_file")
-    public ScriptingPath getScriptFile() throws FileSystemException {
-        return new ScriptingPath(context().getCurrentScriptPath());
     }
 
     /**
@@ -265,22 +216,6 @@ public class XPM {
         // Add the module
         scriptContext.getRepository().addModule(module);
         return module;
-    }
-
-    /**
-     * Add an experimentId
-     *
-     * @param object
-     * @return
-     */
-    @Expose(value = "add_task_factory", context = true)
-    public JavaScriptTaskFactory add_task_factory(JavaScriptContext jcx, @NoJavaization NativeObject object) throws ValueMismatchException {
-        ScriptContext scx = context();
-
-        final TypeName id = jcx.qname(JSUtils.get(jcx.scope(), "id", object));
-        final JavaScriptTaskFactory factory = new JavaScriptTaskFactory(id, jcx.scope(), object, scx.getRepository());
-        scx.getRepository().addFactory(factory);
-        return factory;
     }
 
     @Expose("get_task")
@@ -326,7 +261,7 @@ public class XPM {
         } else if (commands instanceof List) {
             _commands = new Commands(Command.getCommand((List) commands));
         } else {
-            throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
+            throw new XPMScriptRuntimeException("2nd argument of command_line_job must be a command");
         }
 
         Resource resource = commandlineJob(jobId, _commands, jsOptions);
@@ -339,7 +274,6 @@ public class XPM {
     @Expose("publish")
     @Help("Publish the repository on the web server")
     public void publish() throws InterruptedException {
-
         final ScriptContext scriptContext = context();
         TasksServlet.updateRepository(context().getCurrentScriptPath().toString(), scriptContext.getRepository());
     }
@@ -399,7 +333,7 @@ public class XPM {
             })));
 
             if (options.containsKey("stdout")) {
-                java.nio.file.Path stdout = getPath(commandConnector, unwrap(options.get("stdout")));
+                java.nio.file.Path stdout = getPath(commandConnector, options.get("stdout"));
                 builder.redirectOutput(Redirect.to(stdout));
             } else {
                 builder.redirectOutput(Redirect.PIPE);
@@ -518,7 +452,7 @@ public class XPM {
                     } else if (lock_i instanceof List) {
                         List array = (List) lock_i;
                         if (array.size() != 2) {
-                            throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+                            throw new XPMScriptRuntimeException(new IllegalArgumentException("Wrong number of arguments for lock"));
                         }
 
                         final Object depObject = array.get(0);
@@ -526,7 +460,7 @@ public class XPM {
                         if (depObject instanceof Resource) {
                             resource = (Resource) depObject;
                         } else {
-                            final String rsrcPath = Context.toString(depObject);
+                            final String rsrcPath = depObject.toString();
                             resource = Resource.getByLocator(rsrcPath);
                             if (resource == null)
                                 if (simulate()) {

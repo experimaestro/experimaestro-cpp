@@ -32,7 +32,6 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.utils.Graph;
-import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
@@ -342,7 +341,7 @@ public abstract class Task {
 
     @Expose(value = "set")
     public void set(String id, Object value) throws NoSuchParameter {
-        setParameter(id, ValueType.wrap(JSUtils.unwrap(value)));
+        setParameter(id, ValueType.wrap(value));
     }
 
     @Expose("run")

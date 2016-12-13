@@ -21,8 +21,8 @@
 
 package net.bpiwowar.xpm.manager;
 
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
@@ -121,7 +121,7 @@ public class JsonSignature {
 
         if (Files.exists(signaturePath)) {
             if (!Files.isRegularFile(signaturePath)) {
-                throw new XPMRhinoException("Path %s exists and is not a file", signaturePath);
+                throw new XPMScriptRuntimeException("Path %s exists and is not a file", signaturePath);
             }
             // Check that the signature is the same
             char buffer[] = new char[1024];

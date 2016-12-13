@@ -24,41 +24,27 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShareAccess;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ContextualException;
-import net.bpiwowar.xpm.exceptions.ExitException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.fs.XPMFileSystemProvider;
 import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.manager.Repositories;
-import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
-import net.bpiwowar.xpm.manager.python.PythonRunner;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.manager.scripting.StaticContext;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
-import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.XPMInformation;
 import net.bpiwowar.xpm.utils.log.Logger;
 import net.bpiwowar.xpm.utils.log.Router;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptStackElement;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
-import org.python.core.PyException;
 
 import java.io.*;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -220,27 +206,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 while (t.getCause() != null) {
                     t = t.getCause();
                 }
-
-                // Handles an exit exception
-                if (t instanceof ExitException) {
-                    ExitException exitException = (ExitException) t;
-                    if (exitException.getCode() != 0) {
-                        try {
-                            mos.error(requestID, exitException.getCode(), exitException.getMessage());
-                            return;
-                        } catch (IOException e2) {
-                            LOGGER.error(e2, "Could not send the return code");
-                        }
-                    } else {
-                        try {
-                            mos.endMessage(requestID, null);
-                            return;
-                        } catch (IOException e1) {
-                            LOGGER.error(e1, "Could not send the return code");
-                        }
-                    }
-                }
-
                 LOGGER.info(e, "Error while handling JSON request [%s]", e.toString());
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
@@ -322,215 +287,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         logger.setLevel(Level.toLevel(level));
         return 0;
     }
-
-    /**
-     * Run javascript
-     */
-    @RPCMethod(name = "run-python", help = "Run a python file")
-    public String runPython(@RPCArgument(name = "files") List<JsonArray> files,
-                            @RPCArgument(name = "environment") Map<String, String> environment,
-                            @RPCArgument(name = "debug", required = false) Integer debugPort,
-                            @RPCArgument(name = "pythonpath", required = false) String pythonPath) {
-
-        final StringWriter errString = new StringWriter();
-//        final PrintWriter err = new PrintWriter(errString);
-
-        final Hierarchy loggerRepository = getScriptLogger();
-
-        // Enter JS context (so we have just one)
-        Context.enter();
-        try {
-            // TODO: should be a one shot repository - ugly
-            Repositories repositories = new Repositories(new File("/").toPath());
-            repositories.add(settings.repository, 0);
-
-            // Creates and enters a Context. The Context stores information
-            // about the execution environment of a script.
-            try (PythonRunner pythonContext =
-                         new PythonRunner(environment, repositories, settings.scheduler, loggerRepository, pythonPath,
-                                 getRequestOutputStream(), getRequestErrorStream())
-            ) {
-                Object result = null;
-                for (JsonArray filePointer : files) {
-                    boolean isFile = filePointer.size() < 2 || filePointer.get(1).isJsonNull();
-                    final String content = isFile ? null : filePointer.get(1).getAsString();
-                    final String filename = filePointer.get(0).getAsString();
-
-                    final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
-                    Path locator = connector.resolve(filename);
-                    if (isFile) {
-                        result = pythonContext.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
-                    } else {
-                        result = pythonContext.evaluateString(connector, locator, content, filename, 1, null);
-                    }
-                }
-
-                if (result != null)
-                    LOGGER.debug("Returns %s", result.toString());
-                else
-                    LOGGER.debug("Null result");
-
-                return result != null && result != Scriptable.NOT_FOUND &&
-                        result != Undefined.instance ? result.toString() : "";
-
-            } catch (ExitException e) {
-                if (e.getCode() == 0) {
-                    return null;
-                }
-                throw e;
-            } catch (Throwable e) {
-                // HACK: should not be necessary
-                if (e instanceof PyException) {
-                    try {
-                        final Field printingStackTrace = PyException.class.getDeclaredField("printingStackTrace");
-                        printingStackTrace.setAccessible(true);
-                        printingStackTrace.set(e, true);
-                        e.printStackTrace(System.err);
-                        printingStackTrace.set(e, false);
-                    } catch (Throwable e2) {
-                    }
-                }
-                e.printStackTrace(System.err);
-
-                Throwable wrapped = e;
-                PyException pye = e instanceof PyException ? (PyException) e : null;
-                LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
-
-                while (wrapped.getCause() != null) {
-                    wrapped = wrapped.getCause();
-                    if (wrapped instanceof PyException) {
-                        pye = (PyException) wrapped;
-                    }
-                }
-
-                LOGGER.printException(Level.INFO, wrapped);
-
-                org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
-
-                logger.error(wrapped.toString());
-
-                for (Throwable ee = e; ee != null; ee = ee.getCause()) {
-                    if (ee instanceof ContextualException) {
-                        ContextualException ce = (ContextualException) ee;
-                        List<String> context = ce.getContext();
-                        if (!context.isEmpty()) {
-                            logger.error("[Context]");
-                            for (String s : context) {
-                                logger.error(s);
-                            }
-                        }
-                    }
-                }
-
-                if (pye != null) {
-                    logger.error("[Stack trace]");
-                    logger.error(pye.traceback.dumpStack());
-                }
-
-                throw new RuntimeException(errString.toString());
-
-            }
-        } finally {
-            Context.exit();
-        }
-    }
-
-
-    /**
-     * Run javascript
-     */
-    @RPCMethod(name = "run-javascript", help = "Run a javascript")
-    public String runJSScript(@RPCArgument(name = "files") List<JsonArray> files,
-                              @RPCArgument(name = "environment") Map<String, String> environment,
-                              @RPCArgument(name = "debug", required = false) Integer debugPort) {
-
-        final StringWriter errString = new StringWriter();
-//        final PrintWriter err = new PrintWriter(errString);
-
-        final Hierarchy loggerRepository = getScriptLogger();
-
-        // TODO: should be a one shot repository - ugly
-        Repositories repositories = new Repositories(new File("/").toPath());
-        repositories.add(settings.repository, 0);
-
-        Router.writer(getRequestErrorStream());
-
-        // Creates and enters a Context. The Context stores information
-        // about the execution environment of a script.
-        try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, settings.scheduler, loggerRepository, debugPort)) {
-            Object result = null;
-            for (JsonArray filePointer : files) {
-                boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
-                final String content = isFile ? null : filePointer.get(1).toString();
-                final String filename = filePointer.get(0).toString();
-
-                final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
-                Path locator = connector.resolve(filename);
-                if (isFile) {
-                    result = jsXPM.evaluateReader(new FileReader(filename), locator, 1, null);
-                } else
-                    result = jsXPM.evaluateString(content, locator, 1, null);
-
-            }
-
-            if (result != null)
-                LOGGER.debug("Returns %s", result.toString());
-            else
-                LOGGER.debug("Null result");
-
-            return result != null && result != Scriptable.NOT_FOUND &&
-                    result != Undefined.instance ? result.toString() : "";
-
-        } catch (Throwable e) {
-            Throwable wrapped = e;
-            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
-            while (wrapped.getCause() != null) {
-                wrapped = wrapped.getCause();
-            }
-
-            if (wrapped instanceof ExitException) {
-                throw (ExitException) wrapped;
-            }
-
-            LOGGER.printException(Level.INFO, wrapped);
-
-            org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
-
-            logger.error(wrapped.toString());
-
-            for (Throwable ee = e; ee != null; ee = ee.getCause()) {
-                if (ee instanceof ContextualException) {
-                    ContextualException ce = (ContextualException) ee;
-                    List<String> context = ce.getContext();
-                    if (!context.isEmpty()) {
-                        logger.error("[Context]");
-                        for (String s : context) {
-                            logger.error(s);
-                        }
-                    }
-                }
-            }
-
-            if (wrapped instanceof NotImplementedException)
-                logger.error(format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]));
-
-            logger.error("[Stack trace]");
-            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
-            for (ScriptStackElement x : scriptStackTrace) {
-                logger.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
-            }
-
-            // TODO: We should have something better
-//            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
-//                err.format("Internal error:%n");
-//                e.printStackTrace(err);
-//            }
-
-            throw new RuntimeException(errString.toString());
-
-        }
-    }
-
 
     /**
      * Shutdown the server

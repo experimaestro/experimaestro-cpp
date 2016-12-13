@@ -24,7 +24,6 @@ package net.bpiwowar.xpm.tasks;
 import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
-import net.bpiwowar.xpm.manager.python.PythonRunner;
 import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import net.bpiwowar.xpm.server.rpc.JsonRPCServlet;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
@@ -42,7 +41,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import net.bpiwowar.xpm.manager.Repositories;
-import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.server.*;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -128,10 +126,6 @@ public class ServerTask extends AbstractTask {
         final String baseURL = format("http://%s:%d", InetAddress.getLocalHost().getHostName(), port);
         LOGGER.info("Server URL is %s", baseURL);
         scheduler.setURL(baseURL);
-
-        // Early initialization to detect errors
-        JavaScriptRunner.init();
-        PythonRunner.init();
 
         // Main repository
         final Repositories repositories = new Repositories(new File("/").toPath());

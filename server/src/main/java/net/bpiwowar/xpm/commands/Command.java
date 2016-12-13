@@ -23,12 +23,9 @@ import com.google.common.collect.Lists;
 import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Functional;
-import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.mozilla.javascript.NativeArray;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -107,20 +104,14 @@ public class Command extends AbstractCommand implements AbstractCommandComponent
         if (object == null)
             throw new IllegalArgumentException(java.lang.String.format("Null argument in command line"));
 
-        if (object instanceof ScriptingPath)
-            object = ((ScriptingPath) object).getObject();
-
         if (object instanceof java.nio.file.Path) {
             if (sb.length() > 0) {
                 command.add(sb.toString());
                 sb.delete(0, sb.length());
             }
             command.add(new CommandPath((java.nio.file.Path) object));
-        } else if (object instanceof NativeArray) {
-            for (Object child : (NativeArray) object)
-                argumentWalkThrough(sb, command, JSUtils.unwrap(child));
-        } else {
-            sb.append(JSUtils.toString(object));
+        }  else {
+            sb.append(object.toString());
         }
     }
 

@@ -41,10 +41,6 @@ dependencies {
     // Command line
     compile group: 'net.bpiwowar', name: 'argj', version: '1.1.4'
 
-    // Script languages
-    compile group: 'org.python', name: 'jython-standalone', version: '2.7.0'
-    compile group: 'org.mozilla', name: 'rhino', version: '1.7.7'
-
     // Database
     compile group: 'org.hsqldb', name: 'hsqldb', version: '2.3.4'
     compile group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.1.1'
