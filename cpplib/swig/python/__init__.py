@@ -123,6 +123,8 @@ def create(t, args, options, submit=False):
 
     # Create the type and set the arguments
     o = xpmType.create()
+    if hasattr(t, "__task__"):
+        o.task(t.__task__)
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
         logger.debug("Setting attribute [%s]", k)

@@ -43,23 +43,32 @@ class optional {
   ~optional() {
   }
 
+  operator optional<T const>() const {
+    return t != nullptr ? optional<T const>(*t) : optional<T const>();
+  }
+
   T &operator*() {
-    if (!t) throw std::runtime_error("Optional value is not set");
+    if (t == nullptr) throw std::runtime_error("Optional value is not set");
     return *t;
   }
 
   T const &operator*() const {
-    if (!t) throw std::runtime_error("Optional value is not set");
+    if (t == nullptr) throw std::runtime_error("Optional value is not set");
     return *t;
   }
 
   T *operator->() {
-    if (!t) throw std::runtime_error("Optional value is not set");
+    if (t == nullptr) throw std::runtime_error("Optional value is not set");
+    return t;
+  }
+
+  T const *operator->() const {
+    if (t == nullptr) throw std::runtime_error("Optional value is not set");
     return t;
   }
 
   operator bool() const {
-    return t;
+    return t != nullptr;
   }
 };
 
@@ -394,6 +403,7 @@ class Type {
  */
 class XPM_PIMPL(Task) {
  public:
+  /** For map */
   Task();
 
   /**
@@ -404,11 +414,16 @@ class XPM_PIMPL(Task) {
    */
   Task(Type &type);
 
+  Task(Task &&);
+  Task(Task const &);
+  Task &operator=(Task const &);
+  Task &operator=(Task &&);
+
   /**
    * Configure the object
    * @param object The object corresponding to the task type
    */
-  void submit(std::shared_ptr<Object> const &object);
+  void submit(std::shared_ptr<Object> const &object) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;
@@ -480,7 +495,7 @@ class Object
   virtual void setValue(std::string const &name, StructuredValue &value) {};
 
   /** Sets the task */
-  void task(Task task);
+  void task(Task const & task);
 
   /** Sets the task */
   optional<Task const> task() const;
@@ -547,7 +562,7 @@ class Object
   Type _type;
 
   /// Associated task, if any
-  optional<Task> _task;
+  optional<Task const> _task;
 };
 
 // --- Building objects

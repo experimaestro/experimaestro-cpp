@@ -31,6 +31,10 @@ class PimplChild : public Parent {
 
 };
 
+
+struct NullPimpl {
+};
+
 template<typename T>
 class Pimpl {
  protected:
@@ -39,20 +43,24 @@ class Pimpl {
 
   template<typename U, typename V>
   friend Reference<U> &self(PimplChild<U, V> *p) {
+    if (!p->_this) throw std::runtime_error("Unitialized object");
     return *std::dynamic_pointer_cast<Reference<U>>(p->_this);
   };
 
   template<typename U>
   friend Reference<U> &self(Pimpl<U> *p) {
+    if (!p->_this) throw std::runtime_error("Unitialized object");
     return *p->_this;
   }
   template<typename U, typename V>
   friend Reference<U> const &self(PimplChild<U, V> const *p) {
+    if (!p->_this) throw std::runtime_error("Unitialized object");
     return *std::dynamic_pointer_cast<Reference<U>>(p->_this);
   };
 
   template<typename U>
   friend Reference<U> const &self(Pimpl<U> const *p) {
+    if (!p->_this) throw std::runtime_error("Unitialized object");
     return *p->_this;
   }
 
@@ -68,7 +76,27 @@ class Pimpl {
       _this(std::make_shared<Reference<T>>(std::forward<_Args>(__args)...)) {
   }
 
+
   Pimpl(ThisPtr const &ptr) : _this(ptr) {
+  }
+
+  inline Pimpl(NullPimpl) : _this(nullptr) {}
+
+  Pimpl(T &&other) : _this(std::move(other._this)) {
+  }
+
+  Pimpl(T const &other) : _this(other._this) {
+  }
+
+  Pimpl &operator=(T &&other) {
+    _this = std::move(other._this);
+    return *this;
+  }
+
+  // Assign from another
+  Pimpl &operator=(T const &other) {
+    _this = other._this;
+    return *this;
   }
 
 };

@@ -241,17 +241,8 @@ public class ServerTask extends AbstractTask {
         cm.setConstraint(constraint);
         cm.setPathSpec("/*");
 
-        String passwordProperty = configuration.getString("passwords");
-//        final HashLoginService loginService;
-//        if (passwordProperty != null) {
-//            File passwordFile = new File(passwordProperty);
-//            loginService = new HashLoginService(XPM_REALM, passwordFile
-//                    .getAbsolutePath());
-//        } else {
-//            loginService = new HashLoginService(XPM_REALM);
-//        }
-
         LoginService loginService = new LoginService();
+        loginService.setName(XPM_REALM);
 
         // Read passwords
         final SubnodeConfiguration passwords = configuration.getSection("passwords");

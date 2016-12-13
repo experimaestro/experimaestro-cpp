@@ -51,7 +51,8 @@ static const std::string ARGUMENT_TYPE = "$type";
 static const std::string ARGUMENT_PATH = "$path";
 static const std::string ARGUMENT_VALUE = "$value";
 static const std::string ARGUMENT_IGNORE = "$ignore";
-static const char *const DEFAULT_KEY = "$default";
+static const std::string DEFAULT_KEY = "$default";
+static const std::string RESOURCE_KEY = "$resource";
 
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
@@ -765,13 +766,17 @@ const PathGenerator &pathGenerator = PathGenerator::SINGLETON;
 
 StructuredValue PathGenerator::generate(Object const & object) const {
   auto uuid = object.getValue().uniqueIdentifier();
+
+  // We have a task, so we use it
   optional<Task const> task = object.task();
   if (task) {
+    LOGGER->info("Object has task {}", task->identifier().toString());
     std::string localName = task->identifier().localName();
     auto p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
     return StructuredValue(p.toString());
   }
 
+  LOGGER->info("Object has no task");
   auto p = Path(Context::current().workdir(), {uuid});
   return StructuredValue(p.toString());
 }
@@ -806,14 +811,17 @@ void Object::set(std::string const &key, StructuredValue value) {
 
 StructuredValue const Object::getValue() const {
   return _value;
+
 }
 
-void Object::task(Task task) {
+void Object::task(Task const &task) {
   _task = task;
+  LOGGER->info("Set object task to {}", _task->identifier().toString());
 }
 
 optional<Task const> Object::task() const {
-  return *_task;
+  std::cerr << "Getting task " << (_task ? _task->identifier().toString() : "") << std::endl;
+  return _task;
 }
 
 void Object::submit() {
@@ -842,7 +850,8 @@ void Object::configure(StructuredValue value) {
 }
 
 void Object::validate() {
-  // First validate
+
+  // (1) Validate the object arguments
   for (auto entry: _type.arguments()) {
     const Argument &argument = entry.second;
 
@@ -870,7 +879,7 @@ void Object::validate() {
     }
   }
 
-  // Generate
+  // (2) Generate values
   for (auto entry: _type.arguments()) {
     const Argument &argument = entry.second;
     Generator const *generator = argument.generator();
@@ -879,6 +888,11 @@ void Object::validate() {
       LOGGER->info("Generating value...");
       set(argument.name(), generator->generate(*this));
     }
+  }
+
+  // (3) Add resource
+  if (_task) {
+    set(RESOURCE_KEY, PathGenerator::SINGLETON.generate(*this));
   }
 }
 
@@ -903,18 +917,42 @@ struct Reference<Task> {
   /// The object factory
   std::shared_ptr<ObjectFactory> factory;
 
-  Reference(const TypeName &identifier, const Type &type) : identifier(identifier), type(type) {}
+  Reference(const TypeName &identifier, const Type &type) : identifier(identifier), type(type) {
+    LOGGER->info("Created task {} with type {}", identifier.toString(), type.toString());
+  }
 };
 
 Task::Task(Type &type) : Pimpl(type.typeName(), type) {
+  std::cerr << "New task with this=" << &self(this) << std::endl;
 }
 
-Task::Task() : Pimpl(TypeName(""), ANY_TYPE) {
+Task::Task() : Pimpl(NullPimpl()) {
 }
+
+Task::Task(Task const &other) : Pimpl(other) {
+  std::cerr << "Copy creator/" << this << " : " << _this.get() << " from " << other._this.get() << std::endl;
+}
+
+Task::Task(Task &&other) : Pimpl(std::move(other)) {
+  std::cerr << "Move creator/" << this << " :" << _this.get() << std::endl;
+}
+
+Task &Task::operator=(Task const & other) {
+  Pimpl::operator=(other);
+  std::cerr << "Operator=(&)/" << this << " : " << _this.get() << " from " << other._this.get() << std::endl;
+  return *this;
+}
+
+Task &Task::operator=(Task &&other) {
+  Pimpl::operator=(std::move(other));
+  std::cerr << "operator=(&&)/" << this << " :" << _this.get() << std::endl;
+  return *this;
+}
+
 
 TypeName Task::typeName() const { return self(this).type.typeName(); }
 
-void Task::submit(std::shared_ptr<Object> const &object) {
+void Task::submit(std::shared_ptr<Object> const &object) const {
   // Validate and seal the task object
   object->validate();
   object->seal();
@@ -934,6 +972,7 @@ void Task::commandline(CommandLine command) {
 }
 
 TypeName const &Task::identifier() const {
+  std::cerr << "Getting identifier of " << _this.get() << std::endl;
   return self(this).identifier;
 }
 
@@ -948,6 +987,7 @@ std::shared_ptr<Object> Task::create() const {
   auto ptr = self(this).factory->create();
   ptr->type(self(this).type);
   ptr->task(*this);
+  LOGGER->info("Setting task to {}", _this->identifier.toString());
   return ptr;
 }
 

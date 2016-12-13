@@ -24,7 +24,7 @@ class XPM_PIMPL(AbstractCommandComponent) {
   AbstractCommandComponent();
  public:
   virtual ~AbstractCommandComponent();
-  std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context);
+  std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const;
 };
 
 /** A command argument */
@@ -63,7 +63,7 @@ class Command {
   std::vector<AbstractCommandComponent> components;
  public:
   void add(AbstractCommandComponent component);
-  std::shared_ptr<rpc::Command> rpc(CommandContext &context) ;
+  std::shared_ptr<rpc::Command> rpc(CommandContext &context) const;
 };
 
 class CommandLine {
@@ -71,7 +71,7 @@ class CommandLine {
  public:
   CommandLine();
 
-  std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context);
+  std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context) const;
   void add(Command command);
 };
 }
