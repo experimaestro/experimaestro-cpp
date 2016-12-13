@@ -854,7 +854,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
         // Close other RPC handlers
         for (Object o : objects.values()) {
-            if (o instanceof AutoCloseable) {
+            if (o != this && o instanceof AutoCloseable) {
                 try {
                     ((AutoCloseable) o).close();
                 } catch (Exception e) {

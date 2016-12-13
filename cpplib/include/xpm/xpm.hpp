@@ -579,4 +579,11 @@ class Register {
   std::shared_ptr<Object> build(StructuredValue &value) const;
 };
 
+// --- Useful functions
+
+/**
+ * Report progress when running a task
+ */
+void progress(float percentage);
+
 }

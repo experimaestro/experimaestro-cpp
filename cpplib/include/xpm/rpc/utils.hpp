@@ -16,7 +16,8 @@ typedef int64_t ObjectIdentifierType;
 
 struct ObjectIdentifier {
   ObjectIdentifierType id;
-  inline explicit ObjectIdentifier(ObjectIdentifierType id) : id(id) {}
+  inline explicit ObjectIdentifier(ObjectIdentifierType id) : id(id) {
+  }
 };
 
 class ServerObject {
@@ -35,7 +36,7 @@ class ServerObject {
   void __set__(json const &params);
   json __call__(std::string const &name, json &params);
   static json __static_call__(std::string const &name, json const &params);
-  explicit ServerObject(ObjectIdentifier o) : _identifier(o.id) {}
+  explicit ServerObject(ObjectIdentifier o);
 
  public:
   template<typename T> friend
@@ -55,7 +56,11 @@ struct RPCConverter<std::shared_ptr<T>> {
     return x ? x->_identifier : -1;
   }
   static inline std::shared_ptr<T> toCPP(nlohmann::json const &x) {
-    return std::shared_ptr<T>(new T(ObjectIdentifier((ObjectIdentifierType)x)));
+    ObjectIdentifierType id = (ObjectIdentifierType)x;
+    if (id >= 0) {
+      return std::shared_ptr<T>(new T(ObjectIdentifier(id)));
+    }
+    return nullptr;
   }
 };
 

@@ -87,12 +87,6 @@ public class BaseJsonRPCMethods extends HttpServlet implements AutoCloseable {
 
     @Override
     public void close() {
-        writers.values().forEach(bufferedWriter -> {
-            try {
-                bufferedWriter.close();
-            } catch (IOException e) {
-                LOGGER.error(e, "Cannot close RPC output stream");
-            }
-        });
+
     }
 }

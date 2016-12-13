@@ -58,6 +58,7 @@ public class LocalhostConnector extends SingleHostConnector {
         super(id);
     }
 
+    @Expose
     public LocalhostConnector() {
         super(IDENTIFIER);
     }

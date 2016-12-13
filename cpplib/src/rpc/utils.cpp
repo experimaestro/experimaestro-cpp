@@ -4,6 +4,7 @@
 
 #include <xpm/rpc/utils.hpp>
 #include <xpm/rpc/client.hpp>
+#include <xpm/common.hpp>
 #include "../private.hpp"
 
 namespace xpm {
@@ -14,8 +15,15 @@ namespace {
   auto LOGGER = logger("rpc");
 }
 
+ServerObject::ServerObject(ObjectIdentifier o) : _identifier(o.id) {
+  std::cerr << "New object ID " << _identifier << " / " << typeid(*this).name() << std::endl;
+}
+
 json ServerObject::__call__(std::string const &name, json &params) {
   params["__this__"] = _identifier;
+  if (_identifier < 0) {
+    throw exception("Identifier for the object is null");
+  }
   auto response = Client::defaultClient().call(name, params);
   if (response.error()) {
     throw std::runtime_error("Error with RPC call: " + response.errorMessage());

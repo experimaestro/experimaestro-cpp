@@ -22,6 +22,7 @@ import jnr.unixsocket.UnixSocketChannel;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.util.BufferUtil;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.thread.Scheduler;
@@ -173,6 +174,11 @@ public class UnixChannelEndPoint extends UnixAbstractEndPoint //implements Socke
     @Override
     public Object getTransport() {
         return _channel;
+    }
+
+    @Override
+    public boolean tryFillInterested(Callback callback) {
+        return false;
     }
 
     @Override

@@ -184,7 +184,7 @@ class _JSONRPCClient {
       // will exit when this connection is closed.
       c.run();
     } catch (websocketpp::exception const &e) {
-      LOGGER->debug("Error while trying to connect");
+      LOGGER->debug("Error while trying to connect: {}", e.what());
       connected = FAILURE;
       cv_open.notify_all();
     }
@@ -193,12 +193,13 @@ class _JSONRPCClient {
   void send(json const &message) {
     while (true) {
       std::unique_lock<std::mutex> lk(m_open);
-      LOGGER->debug("Sending message...");
+      LOGGER->debug("Waiting to send message...");
       cv_open.wait(lk, [&] { return connected != WAITING; });
       if (connected != ConnectionStatus::OPENED) {
         throw exception("Cannot send a message: connection is closed");
       }
       if (auto ptr = hdl.lock()) {
+        LOGGER->debug("Sending message...");
         c.send(hdl, message.dump(), OpValue::text);
         return;
       }

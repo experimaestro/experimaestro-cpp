@@ -437,9 +437,9 @@ public class RPCObjects implements AutoCloseable {
                 }
 
                 final ClassNode parentNode = classNode.parents.isEmpty() ? null : classNode.parents.get(0);
-                out.format("%s::%s(ObjectIdentifier o) : %s(o) {} %n",
+                out.format("%s::%s(ObjectIdentifier o) : ServerObject(o)%s {} %n",
                         description.getClassName(), description.getClassName(),
-                        parentNode == null ? "ServerObject" : parentNode.classDescription.getClassName());
+                        parentNode == null ? "" : ", " + parentNode.classDescription.getClassName() + "(o)");
 
                 for (MethodDeclaration method : description.methods) {
                     if (!isRegistered(method) || method.isPureVirtual()) continue;

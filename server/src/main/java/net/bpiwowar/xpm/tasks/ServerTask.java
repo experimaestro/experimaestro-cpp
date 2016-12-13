@@ -29,6 +29,7 @@ import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import net.bpiwowar.xpm.server.rpc.JsonRPCServlet;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
+import org.eclipse.jetty.security.AbstractLoginService;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.HashLoginService;
@@ -49,6 +50,7 @@ import net.bpiwowar.xpm.utils.log.Logger;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -246,14 +248,16 @@ public class ServerTask extends AbstractTask {
         cm.setPathSpec("/*");
 
         String passwordProperty = configuration.getString("passwords");
-        final HashLoginService loginService;
-        if (passwordProperty != null) {
-            File passwordFile = new File(passwordProperty);
-            loginService = new HashLoginService(XPM_REALM, passwordFile
-                    .getAbsolutePath());
-        } else {
-            loginService = new HashLoginService(XPM_REALM);
-        }
+//        final HashLoginService loginService;
+//        if (passwordProperty != null) {
+//            File passwordFile = new File(passwordProperty);
+//            loginService = new HashLoginService(XPM_REALM, passwordFile
+//                    .getAbsolutePath());
+//        } else {
+//            loginService = new HashLoginService(XPM_REALM);
+//        }
+
+        LoginService loginService = new LoginService();
 
         // Read passwords
         final SubnodeConfiguration passwords = configuration.getSection("passwords");
@@ -316,5 +320,25 @@ public class ServerTask extends AbstractTask {
             }
         }, 2000);
 
+    }
+
+    private static class LoginService extends AbstractLoginService {
+        HashMap<String, UserPrincipal> users = new HashMap<>();
+        HashMap<String, String[]> roles = new HashMap<>();
+
+        @Override
+        protected String[] loadRoleInfo(UserPrincipal user) {
+            return roles.get(user.getName());
+        }
+
+        @Override
+        protected UserPrincipal loadUserInfo(String username) {
+            return users.get(username);
+        }
+
+        public void putUser(String user, Password password, String[] roles) {
+            this.roles.put(user, roles);
+            this.users.put(user, new UserPrincipal(user, password));
+        }
     }
 }

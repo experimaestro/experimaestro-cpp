@@ -22,7 +22,6 @@ import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.unixsocket.UnixSocketChannel;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
-import org.eclipse.jetty.util.ConcurrentArrayQueue;
 import org.eclipse.jetty.util.TypeUtil;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.eclipse.jetty.util.component.ContainerLifeCycle;
@@ -42,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -298,7 +298,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * with the channel.</p>
      */
     public class ManagedSelector extends AbstractLifeCycle implements Runnable, Dumpable {
-        private final Queue<Runnable> _changes = new ConcurrentArrayQueue<>();
+        private final Queue<Runnable> _changes = new ConcurrentLinkedDeque<>();
 
         private final int _id;
         private Selector _selector;
