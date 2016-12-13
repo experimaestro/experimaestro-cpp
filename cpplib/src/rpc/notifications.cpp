@@ -4,6 +4,7 @@
 
 #include <regex>
 #include <ostream>
+#include <sstream>
 
 #include <asio.hpp>
 #include "../private.hpp"
@@ -12,12 +13,16 @@ DEFINE_LOGGER("rpc")
 
 namespace xpm {
 
+using namespace asio::ip;
+
 namespace {
 struct Progress {
   float last_progress = -1.;
   std::string hostname;
   std::string path;
   std::string port;
+  asio::io_service io_service;
+  tcp::resolver::iterator endpoint_iterator;
 
   Progress() {
     const char *notification_url = getenv("XPM_NOTIFICATION_URL");
@@ -37,6 +42,10 @@ struct Progress {
       LOGGER->info("Notifications: host {}, port {}, path {}", hostname, port, path);
     }
 
+    // Resolves hostname
+    tcp::resolver resolver(io_service);
+    tcp::resolver::query query(hostname, port, asio::ip::resolver_query_base::flags::all_matching);
+    endpoint_iterator = resolver.resolve(query);
   }
 
   void update(float percentage) {
@@ -44,21 +53,20 @@ struct Progress {
       return;
     last_progress = percentage;
 
-    asio::io_service io_service;
-    asio::ip::tcp::resolver resolver(io_service);
-    asio::ip::tcp::resolver::query query(hostname, port, asio::ip::resolver_query_base::flags::all_matching);
-    asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+    try {
+      asio::ip::tcp::socket socket(io_service);
+      asio::connect(socket, endpoint_iterator);
 
-    asio::ip::tcp::socket socket(io_service);
-    asio::connect(socket, endpoint_iterator);
-
-    asio::streambuf request;
-    std::ostream request_stream(&request);
-    request_stream << "GET " << path << "/progress/" << percentage << " HTTP/1.0\r\n";
-    request_stream << "Host: " << hostname << "\r\n";
-    request_stream << "Accept: */*\r\n";
-    request_stream << "Connection: close\r\n\r\n";
-    asio::write(socket, request);
+      asio::streambuf request;
+      std::ostream request_stream(&request);
+      request_stream << "GET " << path << "/progress/" << percentage << " HTTP/1.0\r\n";
+      request_stream << "Host: " << hostname << "\r\n";
+      request_stream << "Accept: */*\r\n";
+      request_stream << "Connection: close\r\n\r\n";
+      asio::write(socket, request);
+    } catch(std::exception &e) {
+      LOGGER->info("Caught exception while reporting progress: {}", e.what());
+    }
   }
 };
 }
