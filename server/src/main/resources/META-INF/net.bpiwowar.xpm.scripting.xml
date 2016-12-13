@@ -35,10 +35,11 @@
         <class>net.bpiwowar.xpm.commands.Commands</class>
         <class>net.bpiwowar.xpm.commands.AbstractCommand</class>
         <class>net.bpiwowar.xpm.commands.AbstractCommandComponent</class>
-        <class>net.bpiwowar.xpm.commands.ParameterFile</class>
         <class>net.bpiwowar.xpm.commands.CommandComponent</class>
         <class>net.bpiwowar.xpm.commands.CommandPath</class>
         <class>net.bpiwowar.xpm.commands.CommandString</class>
+        <class>net.bpiwowar.xpm.commands.ParameterFile</class>
+        <class>net.bpiwowar.xpm.commands.JsonParameterFile</class>
 
         <!-- Dependencies -->
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
@@ -70,30 +71,9 @@
 
         <!-- Scripting -->
         <class>net.bpiwowar.xpm.manager.scripting.XPM</class>
-        <class>net.bpiwowar.xpm.manager.scripting.Tasks</class>
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingPath</class>
-        <class>net.bpiwowar.xpm.manager.scripting.ScriptingLogger</class>
-        <class>net.bpiwowar.xpm.manager.scripting.ScriptingList</class>
-        <class>net.bpiwowar.xpm.manager.scripting.ScriptingMap</class>
-        <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
-        <class>net.bpiwowar.xpm.manager.scripting.ObjectPropertyReference</class>
         <class>net.bpiwowar.xpm.manager.scripting.Functions</class>
 
-        <!-- Commands -->
-        <class>net.bpiwowar.xpm.commands.ParameterFile</class>
-        <class>net.bpiwowar.xpm.commands.JsonParameterFile</class>
-
-        <!-- Json -->
-        <class>net.bpiwowar.xpm.manager.json.Json</class>
-
-        <class>net.bpiwowar.xpm.manager.json.JsonArray</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonBoolean</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonString</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonNull</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonObject</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonPath</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonReal</class>
-        <class>net.bpiwowar.xpm.manager.json.JsonResource</class>
 
     </classes>
 </scripting>

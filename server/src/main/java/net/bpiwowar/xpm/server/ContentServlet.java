@@ -45,8 +45,8 @@ public class ContentServlet extends XPMServlet {
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response) throws ServletException, IOException {
 
-        URL url = ContentServlet.class.getResource(format("/web%s",
-                request.getRequestURI()));
+        String path = format("/web%s", request.getRequestURI());
+        URL url = ContentServlet.class.getResource(path);
 
         if (url != null) {
             Path file;

@@ -135,10 +135,6 @@ final public class ScriptContext implements AutoCloseable {
 
 
     public ScriptContext(StaticContext staticContext) {
-        if (threadContext.get() != null) {
-            throw new IllegalStateException("Cannot create a new script context if another one is active");
-        }
-
         LOGGER.debug("Creating script context [%s] from static context", this);
 
         this.staticContext = staticContext;
@@ -156,8 +152,6 @@ final public class ScriptContext implements AutoCloseable {
 
         simulate = new Updatable<>(false);
         submittedJobs = new HashMap<>();
-
-
     }
 
     @Override
@@ -308,14 +302,6 @@ final public class ScriptContext implements AutoCloseable {
 
     @Override
     public void close() {
-
-        if (threadContext.get() != this) {
-            LOGGER.error("Current thread context [%s] is not ourselves [%s]", threadContext.get(), this);
-        }
-
-        LOGGER.debug("Closing script context [%s] - restoring [%s]", this, oldCurrent);
-
-        threadContext.set(oldCurrent);
     }
 
     public void addDefaultLock(Resource resource, DependencyParameters parameters) {
@@ -360,7 +346,7 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     // Only used for tests
-    public static void force(ScriptContext sc) {
+    public static void setThreadScriptContext(ScriptContext sc) {
         threadContext.set(sc);
     }
 

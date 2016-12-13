@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     connector = rpc.Functions.get_localhost_connector()
     launcher = connector.default_launcher()
-    launcher.set_notification_url("http://localhost:12346/notification/") #rpc.Functions.notification_url())
+    launcher.set_notification_url("http://localhost:12346/notification") #rpc.Functions.notification_url())
     rpc.Functions.set_default_launcher(launcher)
 
     model = A.create()

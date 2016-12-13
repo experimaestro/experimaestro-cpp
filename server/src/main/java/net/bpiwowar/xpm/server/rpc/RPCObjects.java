@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
-import com.google.gson.internal.Primitives;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
@@ -17,7 +16,6 @@ import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Hierarchy;
-import sun.font.Script;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -53,6 +51,7 @@ public class RPCObjects implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        ScriptContext.setThreadScriptContext(null);
         scriptContext.close();
         staticContext.close();
     }
@@ -208,7 +207,7 @@ public class RPCObjects implements AutoCloseable {
                 }
             }
 
-            ScriptContext.force(rpcObjects.scriptContext);
+            ScriptContext.setThreadScriptContext(rpcObjects.scriptContext);
             final Object result = method.invoke(null, thisObject, args);
 
             if (result != null && rpcObjects.isManaged(result.getClass())) {

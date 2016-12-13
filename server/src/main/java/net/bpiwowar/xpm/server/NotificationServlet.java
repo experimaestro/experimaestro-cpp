@@ -55,7 +55,7 @@ public class NotificationServlet extends XPMServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException {
         try {
-            String[] parts = request.getPathInfo().split("/");
+            String[] parts = request.getPathInfo().split("/+");
             if (parts.length < 3) {
                 error404(request, resp);
                 return;
