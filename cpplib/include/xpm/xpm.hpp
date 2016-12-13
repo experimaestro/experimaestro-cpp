@@ -48,6 +48,11 @@ class optional {
     return *t;
   }
 
+  T const &operator*() const {
+    if (!t) throw std::runtime_error("Optional value is not set");
+    return *t;
+  }
+
   T *operator->() {
     if (!t) throw std::runtime_error("Optional value is not set");
     return t;
@@ -80,6 +85,8 @@ class TypeName {
   std::string toString() const;
 
   int hash() const;
+
+  std::string localName() const;
 
   bool operator==(TypeName const &other) const {
     return other.name == name;
@@ -262,7 +269,7 @@ class StructuredValue {
  */
 class Generator {
  public:
-  virtual StructuredValue generate(StructuredValue object) const = 0;
+  virtual StructuredValue generate(Object const & object) const = 0;
   virtual ~Generator() {}
 };
 
@@ -273,7 +280,7 @@ class PathGenerator : public Generator {
  public:
   static const PathGenerator SINGLETON;
 
-  virtual StructuredValue generate(StructuredValue object) const;
+  virtual StructuredValue generate(Object const & object) const;
 };
 
 extern const PathGenerator &pathGenerator;
@@ -410,7 +417,7 @@ class XPM_PIMPL(Task) {
   void commandline(CommandLine command);
 
   /** Gets the task identifier */
-  TypeName const &identifier();
+  TypeName const &identifier() const;
 
   /** Executes */
   void execute(StructuredValue value) const;
@@ -473,7 +480,10 @@ class Object
   virtual void setValue(std::string const &name, StructuredValue &value) {};
 
   /** Sets the task */
-  void task(Task &task);
+  void task(Task task);
+
+  /** Sets the task */
+  optional<Task const> task() const;
 
   /** Get the associated structured value */
   StructuredValue const getValue() const;

@@ -164,6 +164,12 @@ TypeName TypeName::call(std::string const &localname) const {
   return TypeName(name + "." + localname);
 }
 
+std::string TypeName::localName() const {
+  const auto i = name.rfind(".");
+  if (i == std::string::npos) return name;
+  return name.substr(i+1);
+}
+
 // ---
 // --- Structured value
 // ---
@@ -757,8 +763,16 @@ int Type::hash() const {
 const PathGenerator PathGenerator::SINGLETON = PathGenerator();
 const PathGenerator &pathGenerator = PathGenerator::SINGLETON;
 
-StructuredValue PathGenerator::generate(StructuredValue object) const {
-  auto p = Path(Context::current().workdir(), {"yo", object.uniqueIdentifier()});
+StructuredValue PathGenerator::generate(Object const & object) const {
+  auto uuid = object.getValue().uniqueIdentifier();
+  optional<Task const> task = object.task();
+  if (task) {
+    std::string localName = task->identifier().localName();
+    auto p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
+    return StructuredValue(p.toString());
+  }
+
+  auto p = Path(Context::current().workdir(), {uuid});
   return StructuredValue(p.toString());
 }
 
@@ -794,8 +808,12 @@ StructuredValue const Object::getValue() const {
   return _value;
 }
 
-void Object::task(Task &task) {
+void Object::task(Task task) {
   _task = task;
+}
+
+optional<Task const> Object::task() const {
+  return *_task;
 }
 
 void Object::submit() {
@@ -859,7 +877,7 @@ void Object::validate() {
 
     if (!_value.hasKey(argument.name()) && generator) {
       LOGGER->info("Generating value...");
-      set(argument.name(), generator->generate(_value));
+      set(argument.name(), generator->generate(*this));
     }
   }
 }
@@ -903,7 +921,7 @@ void Task::submit(std::shared_ptr<Object> const &object) {
 
   // Get generated directory as locator
 
-  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(object->getValue()).value().getString());
+  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object).value().getString());
 
   // Prepare the command line
   CommandContext context;
@@ -915,7 +933,7 @@ void Task::commandline(CommandLine command) {
   self(this).commandLine = command;
 }
 
-TypeName const &Task::identifier() {
+TypeName const &Task::identifier() const {
   return self(this).identifier;
 }
 
@@ -929,6 +947,7 @@ std::shared_ptr<Object> Task::create() const {
   }
   auto ptr = self(this).factory->create();
   ptr->type(self(this).type);
+  ptr->task(*this);
   return ptr;
 }
 
