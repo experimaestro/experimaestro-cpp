@@ -118,7 +118,7 @@ struct Helper {
 
   static bool equals(Value const &a, Value const &b) {
     if (a._type != b._type) return false;
-    switch(a._type) {
+    switch (a._type) {
       case ValueType::STRING:return a._value.string == b._value.string;
 
       case ValueType::INTEGER:return a._value.integer == b._value.integer;
@@ -129,7 +129,7 @@ struct Helper {
 
       case ValueType::ARRAY: {
         if (a._value.array.size() != b._value.array.size()) return false;
-        for(size_t i = 0; i < a._value.array.size(); ++i) {
+        for (size_t i = 0; i < a._value.array.size(); ++i) {
           // TODO: implement
           throw exception("Cannot compare an array: not implemented");
         }
@@ -168,7 +168,7 @@ TypeName TypeName::call(std::string const &localname) const {
 std::string TypeName::localName() const {
   const auto i = name.rfind(".");
   if (i == std::string::npos) return name;
-  return name.substr(i+1);
+  return name.substr(i + 1);
 }
 
 // ---
@@ -200,7 +200,7 @@ StructuredValue::StructuredValue(json const &jsonValue) {
   }
 }
 
-  // Convert to JSON
+// Convert to JSON
 json StructuredValue::toJson() const {
   // No content
   if (_content.empty()) {
@@ -405,6 +405,9 @@ std::shared_ptr<StructuredValue> StructuredValue::parse(std::string const &jsonS
   return std::make_shared<StructuredValue>(json::parse(jsonString));
 }
 
+std::map<std::string, std::shared_ptr<StructuredValue>> const &StructuredValue::content() const {
+  return _content;
+}
 
 // ---
 // --- Scalar values
@@ -559,6 +562,26 @@ bool Value::getBoolean() const {
   return _value.boolean;
 }
 
+double Value::getReal() const {
+  if (_type != ValueType::REAL) throw std::runtime_error("Value is not a boolean");
+  return _value.real;
+}
+
+long Value::getInteger() const {
+  if (_type != ValueType::INTEGER) throw std::runtime_error("Value is not a boolean");
+  return _value.integer;
+}
+
+ValueArray &Value::getArray() {
+  if (_type != ValueType::ARRAY) throw std::runtime_error("Value is not a boolean");
+  return _value.array;
+}
+
+std::shared_ptr<Object> Value::getObject() {
+  if (_type != ValueType::OBJECT) throw std::runtime_error("Value is not a boolean");
+  return _value.object;
+}
+
 std::string const &Value::getString() const {
   if (_type != ValueType::STRING) throw std::runtime_error("Value is not a string");
   return _value.string;
@@ -621,11 +644,7 @@ std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true
 
 /** Creates an object with a given type */
 std::shared_ptr<Object> Type::create() const {
-    if (_factory) {
-      return _factory->create();
-    }
-    return std::make_shared<Object>();
-  const std::shared_ptr<Object> object = create();
+  const std::shared_ptr<Object> object = _factory ? _factory->create() : std::make_shared<Object>();
   object->type(shared_from_this());
   return object;
 }
@@ -728,7 +747,10 @@ Object::~Object() {
 std::shared_ptr<Type const> Object::type() const { return _type; }
 
 /** Get type */
-void Object::type(std::shared_ptr<Type const> const &type) { _type = type; }
+void Object::type(std::shared_ptr<Type const> const &type) {
+  _type = type;
+  (*_value).type(type->typeName());
+}
 
 /** Sets the structured value */
 void Object::setValue(std::shared_ptr<StructuredValue> const &value) {
@@ -754,7 +776,6 @@ void Object::task(std::shared_ptr<Task const> const&task) {
 }
 
 std::shared_ptr<Task const> Object::task() const {
-  std::cerr << "Getting task " << (_task ? _task->identifier().toString() : "") << std::endl;
   return _task;
 }
 
@@ -831,7 +852,7 @@ void Object::validate() {
 }
 
 void Object::execute() {
-  LOGGER->info("No execute method provided");
+  throw exception("No execute method provided");
 }
 
 
@@ -842,19 +863,46 @@ Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
+namespace {
+  void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, StructuredValue const &value) {
+    // Stop here
+    if (value.canIgnore() || value.value().simple())
+      return;
+
+    if (value.hasKey(RESOURCE_KEY)) {
+      std::string rid = value[RESOURCE_KEY]->value().toString();
+      LOGGER->info("Found dependency {}", rid);
+      dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(rid));
+    } else {
+      for(auto &entry: value.content()) {
+        findDependencies(dependencies, *entry.second);
+      }
+    }
+
+  }
+}
+
 void Task::submit(std::shared_ptr<Object> const &object) const {
+  // Find dependencies
+  std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
+  findDependencies(dependencies, *object->getValue());
+
   // Validate and seal the task object
   object->validate();
   object->seal();
 
   // Get generated directory as locator
-
   auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object)->value().getString());
 
   // Prepare the command line
   CommandContext context;
   context.parameters = object->getValue()->toString();
-  rpc::CommandLineTask::submitJob(locator, _commandLine.rpc(context));
+  auto command = _commandLine.rpc(context);
+  for(auto dependency: dependencies) {
+    command->add_dependency(dependency);
+  }
+
+  rpc::CommandLineTask::submitJob(locator, command);
 }
 
 void Task::commandline(CommandLine command) {

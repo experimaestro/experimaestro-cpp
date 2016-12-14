@@ -258,8 +258,6 @@ already exists.
   /**   */
   static std::shared_ptr<Path> toPath(std::string const &path);
   /**   */
-  virtual std::string toSource();
-  /**   */
   virtual std::string read_all();
   /**   */
   virtual int64_t get_size();
@@ -268,6 +266,8 @@ already exists.
   virtual std::string get_path();
   /**   */
   virtual std::string uri();
+  /**   */
+  virtual std::string toSource();
 };
 
 class OARParameters : public LauncherParameters {
@@ -304,28 +304,28 @@ public:
   /** Returns a file relative to the current connector
   */
   virtual std::shared_ptr<Path> file(std::string const &filepath);
+  /**   */
+  virtual std::string ns();
+  /**   */
+  virtual bool simulate();
+  /** Set the simulate flag: When true, the jobs are not submitted but just output
+  */
+  virtual bool simulate(bool const &boolean);
+  /**   */
+  virtual std::shared_ptr<Task> get_task(std::string const &string, std::string const &string_1);
+  /** Publish the repository on the web server
+  */
+  virtual void publish();
   /** Retrieve (or creates) a token resource with a given xpath
-com.sun.javafx.binding.StringConstant@1ebd319f  */
+com.sun.javafx.binding.StringConstant@3c0be339  */
   static std::shared_ptr<TokenResource> token_resource(std::string const &path);
-  /** com.sun.javafx.binding.StringConstant@3c0be339com.sun.javafx.binding.StringConstant@15ca7889  */
+  /** com.sun.javafx.binding.StringConstant@15ca7889com.sun.javafx.binding.StringConstant@7a675056  */
   static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
   /** Sets the logger debug level
   */
   virtual void log_level(std::string const &name, std::string const &level);
   /**   */
   virtual std::string get_script_path();
-  /** Publish the repository on the web server
-  */
-  virtual void publish();
-  /**   */
-  virtual std::shared_ptr<Task> get_task(std::string const &string, std::string const &string_1);
-  /** Set the simulate flag: When true, the jobs are not submitted but just output
-  */
-  virtual bool simulate(bool const &boolean);
-  /**   */
-  virtual bool simulate();
-  /**   */
-  virtual std::string ns();
   /** com.sun.javafx.binding.StringConstant@2898ac89  */
   static std::shared_ptr<TokenResource> token(std::string const &path);
 };
@@ -441,9 +441,11 @@ protected:
   explicit ReadWriteDependency(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
-  ReadWriteDependency() {}
-
 public:
+  /**   */
+  ReadWriteDependency(std::string const &locator);
+  /**   */
+  ReadWriteDependency(std::shared_ptr<Resource> const &resource);
 };
 
 class OARLauncher : public Launcher {
@@ -611,8 +613,6 @@ public:
   /**   */
   virtual std::string hostname();
   /**   */
-  virtual void port(int32_t const &int_1);
-  /**   */
   virtual std::shared_ptr<SSHOptions> check_host(bool const &boolean);
   /**   */
   virtual void set_use_ssh_agent(bool const &boolean);
@@ -622,6 +622,8 @@ public:
   virtual void set_stream_proxy(std::shared_ptr<SSHConnector> const &proxy);
   /**   */
   virtual void hostname(std::string const &string);
+  /**   */
+  virtual void port(int32_t const &int_1);
   /**   */
   virtual void username(std::string const &string);
   /**   */
@@ -640,9 +642,9 @@ public:
   /**   */
   Command();
   /**   */
-  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
-  /**   */
   virtual void add(std::vector<std::string> const &string);
+  /**   */
+  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
   /**   */
   virtual void add_subcommand(std::shared_ptr<Commands> const &commands);
 };

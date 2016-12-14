@@ -28,6 +28,16 @@ _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
     pass
 
+VALUECONVERTERS = {
+    ValueType_NONE: lambda v: v,
+    ValueType_BOOLEAN: lambda v: v.value().getBoolean(),
+    ValueType_INTEGER: lambda v: v.value().getInteger(),
+    ValueType_STRING: lambda v: v.value().getString(),
+    ValueType_REAL: lambda v: v.value().getReal(),
+    ValueType_OBJECT: lambda v: v.value().getObject(),
+    ValueType_ARRAY: lambda v: [VALUECONVERTERS[x.value().scalarType()](x) for x in v.value().getArray()],
+}
+
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects"""
 
@@ -35,13 +45,15 @@ class PyObject(Object, metaclass=PyObjectType):
         Object.__init__(self)
 
     def __setattr__(self, name, value):
+        logger.debug("Setting %s to %s", name, value)
         super().set(name, value)
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
         if key.startswith("$"):
-            key = key[1:]
-        dict.__setattr__(self, key, sv.value())
+            key = key[1:]        
+        value = VALUECONVERTERS[sv.value().scalarType()](sv)
+        dict.__setattr__(self, key, value)
 
 __StructuredValue = StructuredValue
 class StructuredValue(__StructuredValue):
@@ -60,7 +72,7 @@ class PythonObjectFactory(ObjectFactory):
 
     def create(self):
       newObject = self.pythonType()
-      OBJECTS.append(newObject)
+      OBJECTS.append(newObject)      
       return newObject
 
 class PythonRegister(Register):
@@ -127,7 +139,7 @@ def create(t, args, options, submit=False):
         o.task(t.__task__)
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
-        logger.debug("Setting attribute [%s]", k)
+        logger.debug("Setting attribute [%s] to %s", k, v)
         setattr(o, k, v)
 
     if hasattr(t, "__task__"):

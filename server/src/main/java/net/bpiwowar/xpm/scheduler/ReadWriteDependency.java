@@ -20,8 +20,12 @@ package net.bpiwowar.xpm.scheduler;
 
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Argument;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.log.Logger;
+
+import java.sql.SQLException;
 
 
 /**
@@ -38,8 +42,14 @@ public class ReadWriteDependency extends Dependency {
         super(fromId, toId, lock, status);
     }
 
+    @Expose
     public ReadWriteDependency(Resource from) {
         super(from);
+    }
+
+    @Expose
+    public ReadWriteDependency(@Argument(name="locator") String fromLocator) throws SQLException {
+        super(Resource.getByLocator(fromLocator));
     }
 
     @Override

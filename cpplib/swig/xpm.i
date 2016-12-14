@@ -10,8 +10,7 @@
 #include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
-// #include <xpm/rpc/objects.hpp>
-/*using xpm::Path;*/
+#include <xpm/logging.hpp>
 %}
 
 // Support for standard C++ structures
@@ -116,8 +115,7 @@
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
 %include <xpm/xpm.hpp>
-/*%include <xpm/rpc/utils.hpp>*/
-/*%include <xpm/rpc/objects.hpp>*/
+%include <xpm/logging.hpp>
 
 // Optional
 %extend xpm::optional {

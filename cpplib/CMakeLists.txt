@@ -13,7 +13,8 @@ set(EXTERNAL_HEADERS
         include/xpm/xpm.hpp
         include/xpm/context.hpp
         include/xpm/filesystem.hpp
-        include/xpm/commandline.hpp)
+        include/xpm/commandline.hpp
+        include/xpm/logging.hpp)
 
 set(RPC_HEADERS
         include/xpm/rpc/objects.hpp

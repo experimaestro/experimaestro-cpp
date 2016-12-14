@@ -16,7 +16,7 @@ namespace {
 }
 
 ServerObject::ServerObject(ObjectIdentifier o) : _identifier(o.id) {
-  std::cerr << "New object ID " << _identifier << " / " << typeid(*this).name() << std::endl;
+  LOGGER->debug("New object ID {} [{}]", _identifier, typeid(*this).name());
 }
 
 json ServerObject::__call__(std::string const &name, json &params) {

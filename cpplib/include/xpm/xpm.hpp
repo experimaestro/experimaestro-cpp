@@ -173,7 +173,11 @@ class Value {
 
   /// Get the value
   bool getBoolean() const;
+  double getReal() const;
+  long getInteger() const;
   std::string const &getString() const;
+  ValueArray &getArray();
+  std::shared_ptr<Object> getObject();
 
   friend struct Helper;
 };
@@ -257,12 +261,17 @@ class StructuredValue {
    */
   nlohmann::json toJson() const;
 
- private:
   /**
    *  Whether this element can be ignored for digest computation
    */
   bool canIgnore() const;
 
+  /**
+   * Retrieve content
+   */
+  std::map<std::string, std::shared_ptr<StructuredValue>> const & content() const;
+
+ private:
   /// Whether this value is sealed or not
   bool _sealed;
 

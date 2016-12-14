@@ -24,6 +24,11 @@ class A1():
 @RegisterType(xpmcpp("A2"))
 class A2(A1): pass
 
+@TypeArgument("a", type=A1)
+@RegisterTask("task-a2.py")
+@RegisterType(xpmcpp("B"))
+class B(object):
+    pass
 
 if __name__ == '__main__':
     import os.path as osp
@@ -47,8 +52,16 @@ if __name__ == '__main__':
     # Create and then run
     for size in  [5, 10]:
         a2 = A2.create(size=size, any=1)
+        print(a2)
+        # a2.yoas()
         a2.model = model
         a2.submit()
+        print("a2 is", a2.getValue().toJsonString())
+        
+        b = B.create(a=a2)
+        print("b is", b.getValue().toJsonString())
+        print(b.a.size)
+        b.submits()
 
 
 
