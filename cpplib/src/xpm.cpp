@@ -175,163 +175,132 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-struct _StructuredValue {
- public:
-  /// Whether this value is sealed or not
-  bool _sealed;
+StructuredValue::StructuredValue(json const &jsonValue) {
+  switch (jsonValue.type()) {
+    case nlohmann::json::value_t::null:break;
 
-  /// Scalar value
-  Value _value;
+    case nlohmann::json::value_t::discarded:break;
 
-  /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
-  std::map<std::string, StructuredValue> _content;
-
-  // Construct from JSON object
-  _StructuredValue(json const &jsonValue) : _StructuredValue() {
-    switch (jsonValue.type()) {
-      case nlohmann::json::value_t::null:break;
-
-      case nlohmann::json::value_t::discarded:break;
-
-      case nlohmann::json::value_t::object:
-        for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-          if (it.key() == ARGUMENT_VALUE) {
-            _value = Helper::toValue(it.value());
-          } else {
-            _content[it.key()] = StructuredValue(std::make_shared<_StructuredValue>(it.value()));
-          }
+    case nlohmann::json::value_t::object:
+      for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
+        if (it.key() == ARGUMENT_VALUE) {
+          _value = Helper::toValue(it.value());
+        } else {
+          _content[it.key()] = std::make_shared<StructuredValue>(it.value());
         }
-        break;
+      }
+      break;
 
-      case nlohmann::json::value_t::array:
-      case nlohmann::json::value_t::string:
-      case nlohmann::json::value_t::boolean:
-      case nlohmann::json::value_t::number_integer:
-      case nlohmann::json::value_t::number_unsigned:
-      case nlohmann::json::value_t::number_float:_value = Helper::toValue(jsonValue);
-    }
+    case nlohmann::json::value_t::array:
+    case nlohmann::json::value_t::string:
+    case nlohmann::json::value_t::boolean:
+    case nlohmann::json::value_t::number_integer:
+    case nlohmann::json::value_t::number_unsigned:
+    case nlohmann::json::value_t::number_float:_value = Helper::toValue(jsonValue);
   }
-  _StructuredValue() : _sealed(false), _value() {
-  }
-
-  _StructuredValue(Value &&scalar) : _sealed(false), _value(scalar) {
-  }
-
-  _StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
-  }
-
-  _StructuredValue(std::map<std::string, StructuredValue> &map) : _sealed(false), _value(), _content(map) {
-  }
+}
 
   // Convert to JSON
-  json convert() {
-    // No content
-    if (_content.empty()) {
-      if (_value.simple()) {
-        return Helper::convert(_value);
-      }
-      return nullptr;
-    }
-
-    // We have some values
-    json o = json::object();
-    for (auto const &entry: _content) {
-      o[entry.first] = entry.second._this->convert();
-    }
+json StructuredValue::toJson() const {
+  // No content
+  if (_content.empty()) {
     if (_value.simple()) {
-      o[ARGUMENT_VALUE] = Helper::convert(_value);
+      return Helper::convert(_value);
     }
-    return o;
+    return nullptr;
   }
 
-  /// Internal digest function
-  std::array<unsigned char, DIGEST_LENGTH> digest() const {
-    SHA_CTX context;
-
-    if (!SHA1_Init(&context)) {
-      throw std::runtime_error("Error while initializing SHA-1");
-    }
-
-    // If this is a scalar, just ignores everything below
-    if (_value.simple()) {
-      // Signal a scalar
-      ::updateDigest(context, _value.scalarType());
-
-      // Hash value
-      Helper::updateDigest(context, _value);
-
-    } else {
-      // Signal a full object
-      ::updateDigest(context, ValueType::NONE);
-
-      for (auto &item: _content) {
-        auto const &key = item.first;
-
-        if (key[0] == '$' && key != ARGUMENT_TYPE) {
-          // Skip all keys begining by "$s" but $type and $task
-          continue;
-        }
-
-        if (item.second.canIgnore()) {
-          // Remove keys that can be ignored (e.g. paths)
-          continue;
-        }
-
-        // Update digest with key
-        ::updateDigest(context, key);
-
-        // Update digest with *value digest* (this allows digest caching)
-        ::updateDigest(context, item.second._this->digest());
-      }
-    }
-
-    std::array<unsigned char, SHA_DIGEST_LENGTH> md;
-    if (!SHA1_Final(md.__elems_, &context)) {
-      throw std::runtime_error("Error while retrieving SHA-1");
-    }
-
-    return md;
-  };
-
-  static StructuredValue fromJson(json const &j) {
-    return StructuredValue(std::make_shared<_StructuredValue>(j));
+  // We have some values
+  json o = json::object();
+  for (auto const &entry: _content) {
+    o[entry.first] = entry.second->toJson();
   }
+  if (_value.simple()) {
+    o[ARGUMENT_VALUE] = Helper::convert(_value);
+  }
+  return o;
+}
+
+/// Internal digest function
+std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
+  SHA_CTX context;
+
+  if (!SHA1_Init(&context)) {
+    throw std::runtime_error("Error while initializing SHA-1");
+  }
+
+  // If this is a scalar, just ignores everything below
+  if (_value.simple()) {
+    // Signal a scalar
+    ::updateDigest(context, _value.scalarType());
+
+    // Hash value
+    Helper::updateDigest(context, _value);
+
+  } else {
+    // Signal a full object
+    ::updateDigest(context, ValueType::NONE);
+
+    for (auto &item: _content) {
+      auto const &key = item.first;
+
+      if (key[0] == '$' && key != ARGUMENT_TYPE) {
+        // Skip all keys begining by "$s" but $type and $task
+        continue;
+      }
+
+      if (item.second->canIgnore()) {
+        // Remove keys that can be ignored (e.g. paths)
+        continue;
+      }
+
+      // Update digest with key
+      ::updateDigest(context, key);
+
+      // Update digest with *value digest* (this allows digest caching)
+      ::updateDigest(context, item.second->digest());
+    }
+  }
+
+  std::array<unsigned char, SHA_DIGEST_LENGTH> md;
+  if (!SHA1_Final(md.__elems_, &context)) {
+    throw std::runtime_error("Error while retrieving SHA-1");
+  }
+
+  return md;
 };
 
 const TypeName ANY_TYPE("any");
 
-StructuredValue::StructuredValue() : _this(std::make_shared<_StructuredValue>()) {
+StructuredValue::StructuredValue() {
 }
-StructuredValue::StructuredValue(Value &&scalar) : _this(std::make_shared<_StructuredValue>(scalar)) {
+StructuredValue::StructuredValue(Value &&scalar) : _value(std::move(scalar)) {
 }
-StructuredValue::StructuredValue(Value const &scalar) : _this(std::make_shared<_StructuredValue>(scalar)) {
+StructuredValue::StructuredValue(Value const &scalar) : _value(scalar) {
 }
-StructuredValue::StructuredValue(std::map<std::string, StructuredValue> &map)
-    : _this(std::make_shared<_StructuredValue>(map)) {
-}
-
-StructuredValue::StructuredValue(std::shared_ptr<_StructuredValue> const &ptr) : _this(ptr) {
+StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
+    : _content(map) {
 }
 
 bool StructuredValue::hasValue() const {
-  return _this->_value.defined();
+  return _value.defined();
 }
 
 void StructuredValue::type(TypeName const &typeName) {
-  _this->_content[ARGUMENT_TYPE] = Value(typeName.toString());
+  _content[ARGUMENT_TYPE] = std::make_shared<StructuredValue>(Value(typeName.toString()));
 }
 
 TypeName StructuredValue::type() const {
-  auto value_ptr = _this->_content.find(ARGUMENT_TYPE);
-  if (value_ptr != _this->_content.end()) {
+  auto value_ptr = _content.find(ARGUMENT_TYPE);
+  if (value_ptr != _content.end()) {
     auto &_object = value_ptr->second;
-    if (_object.hasValue()) {
-      return TypeName(_object.value().toString());
+    if (_object->hasValue()) {
+      return TypeName(_object->value().toString());
     }
   }
 
-  if (_this->_value.defined()) {
-    return _this->_value.type();
+  if (_value.defined()) {
+    return _value.type();
   }
 
   // Type not defined
@@ -339,53 +308,53 @@ TypeName StructuredValue::type() const {
 }
 
 bool StructuredValue::hasKey(std::string const &key) const {
-  return _this->_content.find(key) != _this->_content.end();
+  return _content.find(key) != _content.end();
 }
 
-StructuredValue &StructuredValue::operator[](const std::string &key) {
-  if (_this->_sealed) {
+std::shared_ptr<StructuredValue> &StructuredValue::operator[](const std::string &key) {
+  if (_sealed) {
     throw sealed_error();
   }
 
   if (key == ARGUMENT_VALUE) throw argument_error("Cannot access directly to " + ARGUMENT_VALUE);
-  return _this->_content[key];
+  return _content[key];
 }
 
-StructuredValue const StructuredValue::operator[](const std::string &key) const {
-  auto value = _this->_content.find(key);
-  if (value == _this->_content.end()) throw std::out_of_range(key + " is not defined for object");
+std::shared_ptr<StructuredValue const> StructuredValue::operator[](const std::string &key) const {
+  auto value = _content.find(key);
+  if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
 }
 
 Value StructuredValue::value() const {
-  return _this->_value;
+  return _value;
 }
 
 void StructuredValue::value(Value const &scalar) {
-  if (_this->_sealed) {
+  if (_sealed) {
     throw sealed_error();
   }
-  _this->_value = scalar;
+  _value = scalar;
 }
 
 void StructuredValue::seal() {
-  if (_this->_sealed) return;
+  if (_sealed) return;
 
-  _this->_sealed = true;
-  for (auto &item: _this->_content) {
-    item.second.seal();
+  _sealed = true;
+  for (auto &item: _content) {
+    item.second->seal();
   }
 }
 
 bool StructuredValue::isSealed() const {
-  return _this->_sealed;
+  return _sealed;
 }
 
 bool StructuredValue::isDefault() const {
-  auto it = _this->_content.find(DEFAULT_KEY);
-  if (it != _this->_content.end()) {
-    if (it->second.value().scalarType() == ValueType::BOOLEAN) {
-      return it->second.value().getBoolean();
+  auto it = _content.find(DEFAULT_KEY);
+  if (it != _content.end()) {
+    if (it->second->value().scalarType() == ValueType::BOOLEAN) {
+      return it->second->value().getBoolean();
     }
   }
   return false;
@@ -397,10 +366,10 @@ bool StructuredValue::canIgnore() const {
   }
 
   // Is the ignore flag set?
-  auto it = _this->_content.find(ARGUMENT_IGNORE);
-  if (it != _this->_content.end()) {
-    if (it->second.value().scalarType() == ValueType::BOOLEAN) {
-      return it->second.value().getBoolean();
+  auto it = _content.find(ARGUMENT_IGNORE);
+  if (it != _content.end()) {
+    if (it->second->value().scalarType() == ValueType::BOOLEAN) {
+      return it->second->value().getBoolean();
     }
   }
 
@@ -413,7 +382,7 @@ bool StructuredValue::canIgnore() const {
 
 std::string StructuredValue::uniqueIdentifier() const {
   // Compute the digest
-  auto array = _this->digest();
+  auto array = digest();
 
   // Transform into hexadecimal string
   std::string s;
@@ -428,12 +397,12 @@ std::string StructuredValue::uniqueIdentifier() const {
   return s;
 }
 
-std::string StructuredValue::toJson() const {
-  return _this->convert().dump();
+std::string StructuredValue::toJsonString() const {
+  return toJson().dump();
 }
 
-StructuredValue StructuredValue::parse(std::string const &jsonString) {
-  return StructuredValue(std::make_shared<_StructuredValue>(json::parse(jsonString)));
+std::shared_ptr<StructuredValue> StructuredValue::parse(std::string const &jsonString) {
+  return std::make_shared<StructuredValue>(json::parse(jsonString));
 }
 
 
@@ -567,7 +536,7 @@ TypeName const &Value::type() const {
 
     case ValueType::ARRAY: return ARRAY_TYPE;
 
-    case ValueType::OBJECT: return _value.object->type().typeName();
+    case ValueType::OBJECT: return _value.object->type()->typeName();
 
     case ValueType::NONE:throw std::runtime_error("none has no type");
   }
@@ -602,63 +571,40 @@ std::string const &Value::getString() const {
 // --- Task
 // ---
 
-struct _Argument {
-  /// The argument name
-  std::string _name;
 
-  /// The argument type
-  Type _type;
-
-  /// Help string (in Markdown syntax)
-  std::string _help;
-
-  /// Required
-  bool _required;
-
-  /// Default value
-  Value _defaultValue;
-
-  /// A generator
-  Generator const *_generator;
-
-  _Argument(std::string const &name) : _name(name), _type(AnyType), _required(true), _generator(nullptr) {
-
-  }
-};
-
-Argument::Argument(std::string const &name) : _this(std::make_shared<_Argument>(name)) {
+Argument::Argument(std::string const &name) : _name(name) {
 }
 
-Argument::Argument() : _this(std::make_shared<_Argument>("")) {
+Argument::Argument() : _name() {
 }
 
 std::string const &Argument::name() const {
-  return _this->_name;
+  return _name;
 }
 
-bool Argument::required() const { return _this->_required; }
+bool Argument::required() const { return _required; }
 
 void Argument::required(bool required) {
-  _this->_required = required;
+  _required = required;
 }
 const std::string &Argument::help() const {
-  return _this->_help;
+  return _help;
 }
 void Argument::help(const std::string &help) {
-  _this->_help = help;
+  _help = help;
 }
 
 void Argument::defaultValue(Value const &defaultValue) {
-  _this->_defaultValue = defaultValue;
-  if (defaultValue.simple()) _this->_required = false;
+  _defaultValue = defaultValue;
+  if (defaultValue.simple()) _required = false;
 }
-Value Argument::defaultValue() const { return _this->_defaultValue; }
+Value Argument::defaultValue() const { return _defaultValue; }
 
-Generator const *Argument::generator() const { return _this->_generator; }
-void Argument::generator(Generator const *generator) { _this->_generator = generator; }
+Generator const *Argument::generator() const { return _generator; }
+void Argument::generator(Generator const *generator) { _generator = generator; }
 
-Type const &Argument::type() const { return _this->_type; }
-void Argument::type(Type const &type) { _this->_type = type; }
+std::shared_ptr<Type const> const &Argument::type() const { return _type; }
+void Argument::type(std::shared_ptr<Type const> const &type) { _type = type; }
 
 
 
@@ -672,73 +618,61 @@ Type StringType(STRING_TYPE, nullptr, true);
 Type AnyType(ANY_TYPE, nullptr, true);
 Type PathType(PATH_TYPE, nullptr, true);
 
-struct _Type {
-  const TypeName _type;
-  std::shared_ptr<_Type> _parent;
-  std::map<std::string, Argument> arguments;
-  bool _predefined;
-  std::shared_ptr<ObjectFactory> _factory;
 
-  friend class Register;
-
-  _Type(TypeName const &type, Type *parent, bool predefined)
-      : _type(type), _parent(parent ? parent->_this : nullptr), _predefined(predefined) {}
-
-  std::shared_ptr<Object> create() const {
+/** Creates an object with a given type */
+std::shared_ptr<Object> Type::create() const {
     if (_factory) {
       return _factory->create();
     }
     return std::make_shared<Object>();
-  }
-};
-
-/** Creates an object with a given type */
-std::shared_ptr<Object> Type::create() const {
-  const std::shared_ptr<Object> object = _this->create();
-  object->type(*this);
+  const std::shared_ptr<Object> object = create();
+  object->type(shared_from_this());
   return object;
 }
 
-Type::Type(TypeName const &type, Type *parent, bool predefined) :
-    _this(std::make_shared<_Type>(type, parent, predefined)) {}
+Type::Type(TypeName const &type, std::shared_ptr<Type const> parent, bool predefined) :
+ _type(type), _parent(parent), _predefined(predefined) {}
 
-Type::Type() {}
 Type::~Type() {}
 
 void Type::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _this->_factory = factory;
+  _factory = factory;
 }
 
 std::shared_ptr<ObjectFactory> const &Type::objectFactory() {
-  return _this->_factory;
+  return _factory;
 }
 
-void Type::addArgument(Argument &argument) {
-  _this->arguments[argument.name()] = argument;
+void Type::addArgument(std::shared_ptr<Argument> const &argument) {
+  _arguments[argument->name()] = argument;
 }
 
-std::map<std::string, Argument> &Type::arguments() {
-  return _this->arguments;
+std::map<std::string, std::shared_ptr<Argument>> &Type::arguments() {
+  return _arguments;
 }
 
-TypeName const &Type::typeName() const { return _this->_type; }
+std::map<std::string, std::shared_ptr<Argument>> const &Type::arguments() const {
+  return _arguments;
+}
+
+TypeName const &Type::typeName() const { return _type; }
 
 /// Return the type
-std::string Type::toString() const { return "type(" + _this->_type.toString() + ")"; }
+std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
 
 /// Predefined types
-bool Type::predefined() const { return _this->_predefined; }
+bool Type::predefined() const { return _predefined; }
 
 std::string Type::toJson() const {
   json response;
 
   json jsonArguments = json::object();
-  for (auto const &entry: _this->arguments) {
-    Argument const &arg = entry.second;
+  for (auto const &entry: _arguments) {
+    auto const &arg = *entry.second;
     json definition = {
         {"help", arg.help()},
         {"required", arg.required()},
-        {"type", arg.type().typeName().toString()},
+        {"type", arg.type()->typeName().toString()},
     };
 
     if (arg.defaultValue().defined())
@@ -749,8 +683,8 @@ std::string Type::toJson() const {
 
   response["arguments"] = jsonArguments;
   response["type"] = typeName().toString();
-  if (_this->_parent) {
-    response["parent"] = _this->_parent->_type.toString();
+  if (_parent) {
+    response["parent"] = _parent->_type.toString();
   }
   return response.dump();
 }
@@ -764,21 +698,21 @@ int Type::hash() const {
 const PathGenerator PathGenerator::SINGLETON = PathGenerator();
 const PathGenerator &pathGenerator = PathGenerator::SINGLETON;
 
-StructuredValue PathGenerator::generate(Object const & object) const {
-  auto uuid = object.getValue().uniqueIdentifier();
+std::shared_ptr<StructuredValue> PathGenerator::generate(Object const & object) const {
+  auto uuid = object.getValue()->uniqueIdentifier();
 
   // We have a task, so we use it
-  optional<Task const> task = object.task();
+  std::shared_ptr<Task const> task = object.task();
   if (task) {
     LOGGER->info("Object has task {}", task->identifier().toString());
     std::string localName = task->identifier().localName();
     auto p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
-    return StructuredValue(p.toString());
+    return std::make_shared<StructuredValue>(Value(p.toString()));
   }
 
   LOGGER->info("Object has no task");
   auto p = Path(Context::current().workdir(), {uuid});
-  return StructuredValue(p.toString());
+  return std::make_shared<StructuredValue>(p.toString());
 }
 
 // ---- Object
@@ -791,35 +725,35 @@ Object::~Object() {
 }
 
 /** Get type */
-Type Object::type() const { return _type; }
+std::shared_ptr<Type const> Object::type() const { return _type; }
 
 /** Get type */
-void Object::type(Type const &type) { _type = type; }
+void Object::type(std::shared_ptr<Type const> const &type) { _type = type; }
 
 /** Sets the structured value */
-void Object::setValue(StructuredValue &value) {
+void Object::setValue(std::shared_ptr<StructuredValue> const &value) {
   _value = value;
 }
 
-void Object::set(std::string const &key, StructuredValue value) {
+void Object::set(std::string const &key, std::shared_ptr<StructuredValue> const & value) {
   // Set the value in the map
-  _value[key] = value;
+  (*_value)[key] = value;
 
   // And for the object
   setValue(key, value);
 }
 
-StructuredValue const Object::getValue() const {
+std::shared_ptr<StructuredValue const> Object::getValue() const {
   return _value;
 
 }
 
-void Object::task(Task const &task) {
+void Object::task(std::shared_ptr<Task const> const&task) {
   _task = task;
   LOGGER->info("Set object task to {}", _task->identifier().toString());
 }
 
-optional<Task const> Object::task() const {
+std::shared_ptr<Task const> Object::task() const {
   std::cerr << "Getting task " << (_task ? _task->identifier().toString() : "") << std::endl;
   return _task;
 }
@@ -832,18 +766,18 @@ void Object::submit() {
 }
 
 std::string Object::toString() const {
-  return "Object of type " + _type.toString();
+  return "Object of type " + _type->toString();
 }
 
 std::string Object::json() const {
-  return _value.toJson();
+  return _value->toJson();
 }
 
 void Object::seal() {
-  _value.seal();
+  _value->seal();
 }
 
-void Object::configure(StructuredValue value) {
+void Object::configure(std::shared_ptr<StructuredValue> const& value) {
   setValue(value);
   validate();
   seal();
@@ -852,39 +786,39 @@ void Object::configure(StructuredValue value) {
 void Object::validate() {
 
   // (1) Validate the object arguments
-  for (auto entry: _type.arguments()) {
-    const Argument &argument = entry.second;
+  for (auto entry: _type->arguments()) {
+    auto &argument = *entry.second;
 
-    if (!_value.hasKey(argument.name())) {
+    if (!_value->hasKey(argument.name())) {
       // No value provided
       if (argument.required() && !argument.generator()) {
-        if (!_value.hasKey(argument.name())) {
+        if (!_value->hasKey(argument.name())) {
           throw argument_error(
-              "Argument " + argument.name() + " was required but not given for " + this->type().toString());
+              "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         }
       } else {
         LOGGER->info("Setting default value...");
-        StructuredValue value(argument.defaultValue());
-        value[DEFAULT_KEY] = Value(true);
+        auto value = std::make_shared<StructuredValue>(argument.defaultValue());
+        (*value)[DEFAULT_KEY] = std::make_shared<StructuredValue>(Value(true));
         set(argument.name(), value);
       }
     } else {
       // Sets the value
       LOGGER->info("Setting value...");
-      auto &value = _value[argument.name()];
-      if (value.value().simple() && value.value() == argument.defaultValue()) {
-        value[DEFAULT_KEY] = Value(true);
+      auto &value = (*_value)[argument.name()];
+      if (value->value().simple() && value->value() == argument.defaultValue()) {
+        (*value)[DEFAULT_KEY] = std::make_shared<StructuredValue>(Value(true));
       }
       setValue(argument.name(), value);
     }
   }
 
   // (2) Generate values
-  for (auto entry: _type.arguments()) {
-    const Argument &argument = entry.second;
+  for (auto entry: _type->arguments()) {
+    const Argument &argument = *entry.second;
     Generator const *generator = argument.generator();
 
-    if (!_value.hasKey(argument.name()) && generator) {
+    if (!_value->hasKey(argument.name()) && generator) {
       LOGGER->info("Generating value...");
       set(argument.name(), generator->generate(*this));
     }
@@ -903,54 +837,10 @@ void Object::execute() {
 
 // ---- Task
 
-template<>
-struct Reference<Task> {
-  /// Task identifier
-  TypeName identifier;
-
-  /// The type for this task
-  Type type;
-
-  /// Command line
-  CommandLine commandLine;
-
-  /// The object factory
-  std::shared_ptr<ObjectFactory> factory;
-
-  Reference(const TypeName &identifier, const Type &type) : identifier(identifier), type(type) {
-    LOGGER->info("Created task {} with type {}", identifier.toString(), type.toString());
-  }
-};
-
-Task::Task(Type &type) : Pimpl(type.typeName(), type) {
-  std::cerr << "New task with this=" << &self(this) << std::endl;
+Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 }
 
-Task::Task() : Pimpl(NullPimpl()) {
-}
-
-Task::Task(Task const &other) : Pimpl(other) {
-  std::cerr << "Copy creator/" << this << " : " << _this.get() << " from " << other._this.get() << std::endl;
-}
-
-Task::Task(Task &&other) : Pimpl(std::move(other)) {
-  std::cerr << "Move creator/" << this << " :" << _this.get() << std::endl;
-}
-
-Task &Task::operator=(Task const & other) {
-  Pimpl::operator=(other);
-  std::cerr << "Operator=(&)/" << this << " : " << _this.get() << " from " << other._this.get() << std::endl;
-  return *this;
-}
-
-Task &Task::operator=(Task &&other) {
-  Pimpl::operator=(std::move(other));
-  std::cerr << "operator=(&&)/" << this << " :" << _this.get() << std::endl;
-  return *this;
-}
-
-
-TypeName Task::typeName() const { return self(this).type.typeName(); }
+TypeName Task::typeName() const { return _type->typeName(); }
 
 void Task::submit(std::shared_ptr<Object> const &object) const {
   // Validate and seal the task object
@@ -959,39 +849,38 @@ void Task::submit(std::shared_ptr<Object> const &object) const {
 
   // Get generated directory as locator
 
-  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object).value().getString());
+  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object)->value().getString());
 
   // Prepare the command line
   CommandContext context;
-  context.parameters = object->getValue().toString();
-  rpc::CommandLineTask::submitJob(locator, self(this).commandLine.rpc(context));
+  context.parameters = object->getValue()->toString();
+  rpc::CommandLineTask::submitJob(locator, _commandLine.rpc(context));
 }
 
 void Task::commandline(CommandLine command) {
-  self(this).commandLine = command;
+  _commandLine = command;
 }
 
 TypeName const &Task::identifier() const {
-  std::cerr << "Getting identifier of " << _this.get() << std::endl;
-  return self(this).identifier;
+  return _identifier;
 }
 
 void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  self(this).factory = factory;
+  _factory = factory;
 }
 
 std::shared_ptr<Object> Task::create() const {
-  if (!self(this).factory) {
+  if (!_factory) {
     throw argument_error("Task has no factory");
   }
-  auto ptr = self(this).factory->create();
-  ptr->type(self(this).type);
-  ptr->task(*this);
-  LOGGER->info("Setting task to {}", _this->identifier.toString());
+  auto ptr = _factory->create();
+  ptr->type(_type);
+  ptr->task(this->shared_from_this());
+  LOGGER->info("Setting task to {}", _identifier.toString());
   return ptr;
 }
 
-void Task::execute(StructuredValue value) const {
+void Task::execute(std::shared_ptr<StructuredValue> const& value) const {
   auto object = create();
   object->configure(value);
   object->execute();
@@ -1170,7 +1059,7 @@ void Helper::updateDigest(SHA_CTX &context, Value value) {
 
       case ValueType::ARRAY:
         for (const auto &x: value._value.array) {
-          auto xDigest = x._this->digest();
+          auto xDigest = x.digest();
           ::updateDigest(context, xDigest);
         }
         break;

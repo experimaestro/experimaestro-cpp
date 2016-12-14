@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include <xpm/json.hpp>
 #include <xpm/utils.hpp>
 #include <xpm/commandline.hpp>
 
@@ -19,11 +20,6 @@ namespace xpm {
 
 // SHA-1 digest lenght
 static const int DIGEST_LENGTH = 20;
-
-// Implementation classes
-struct _StructuredValue;
-struct _Type;
-struct _Argument;
 
 // Forward declarations
 class StructuredValue;
@@ -129,7 +125,7 @@ enum class ValueType : int8_t {
 };
 
 class StructuredValue;
-typedef std::vector<xpm::StructuredValue> ValueArray;
+typedef std::vector<std::shared_ptr<StructuredValue>> ValueArray;
 struct Helper;
 
 /**
@@ -200,7 +196,10 @@ class StructuredValue {
   StructuredValue(Value const &value);
 
   /// Constructor from a map
-  StructuredValue(std::map<std::string, StructuredValue> &map);
+  StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map);
+
+  /// Construct from a JSON object
+  StructuredValue(nlohmann::json const &jsonValue);
 
   /// Returns true if the object has a value
   bool hasValue() const;
@@ -215,10 +214,10 @@ class StructuredValue {
   bool hasKey(std::string const &key) const;
 
   /// Get access to one value
-  StructuredValue &operator[](const std::string &key);
+  std::shared_ptr<StructuredValue> &operator[](const std::string &key);
 
   /// Get access to one value
-  StructuredValue const operator[](const std::string &key) const;
+  std::shared_ptr<StructuredValue const> operator[](const std::string &key) const;
 
   /// Get access to the associated value
   Value value() const;
@@ -233,13 +232,13 @@ class StructuredValue {
   bool isSealed() const;
 
   /// Parse
-  static StructuredValue parse(std::string const &jsonString);
+  static std::shared_ptr<StructuredValue> parse(std::string const &jsonString);
 
   /// Returns JSON string
-  std::string toJson() const;
+  std::string toJsonString() const;
 
   /// Returns JSON string
-  inline std::string toString() const { return toJson(); }
+  inline std::string toString() const { return toJsonString(); }
 
   /**
    * Returns a almost-unique identifier using a
@@ -252,16 +251,28 @@ class StructuredValue {
    */
   bool isDefault() const;
 
+  /**
+   * Converts to JSON
+   * @return
+   */
+  nlohmann::json toJson() const;
+
  private:
   /**
    *  Whether this element can be ignored for digest computation
    */
   bool canIgnore() const;
 
-  /// Underlying implementation
-  std::shared_ptr<_StructuredValue> _this;
+  /// Whether this value is sealed or not
+  bool _sealed;
 
-  StructuredValue(std::shared_ptr<_StructuredValue> const &);
+  /// Scalar value
+  Value _value;
+
+  /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
+  std::map<std::string, std::shared_ptr<StructuredValue>> _content;
+
+  std::array<unsigned char, DIGEST_LENGTH> digest() const;
 
   friend struct _StructuredValue;
   friend struct Helper;
@@ -278,7 +289,7 @@ class StructuredValue {
  */
 class Generator {
  public:
-  virtual StructuredValue generate(Object const & object) const = 0;
+  virtual std::shared_ptr<StructuredValue> generate(Object const &object) const = 0;
   virtual ~Generator() {}
 };
 
@@ -289,7 +300,7 @@ class PathGenerator : public Generator {
  public:
   static const PathGenerator SINGLETON;
 
-  virtual StructuredValue generate(Object const & object) const;
+  virtual std::shared_ptr<StructuredValue> generate(Object const &object) const;
 };
 
 extern const PathGenerator &pathGenerator;
@@ -313,13 +324,29 @@ class Argument {
   Generator const *generator() const;
   void generator(Generator const *generator);
 
-  Type const &type() const;
-  void type(Type const &type);
+  std::shared_ptr<Type const> const &type() const;
+  void type(std::shared_ptr<Type const> const &type);
 
   const std::string &help() const;
   void help(const std::string &help);
  private:
-  std::shared_ptr<_Argument> _this;
+  /// The argument name
+  std::string _name;
+
+  /// The argument type
+  std::shared_ptr<Type const> _type;
+
+  /// Help string (in Markdown syntax)
+  std::string _help;
+
+  /// Required
+  bool _required;
+
+  /// Default value
+  Value _defaultValue;
+
+  /// A generator
+  Generator const *_generator;
 };
 
 bool operator==(Value const &a, Value const &b);
@@ -345,19 +372,19 @@ class ObjectFactory {
  * <li>A parent type</li>
  * </ul>
  */
-class Type {
-  std::shared_ptr<_Type> _this;
+class Type
+#ifndef SWIG
+    : public std::enable_shared_from_this<Type>
+#endif
+{
   friend class Register;
-  friend struct _Type;
  public:
-  Type();
-
   /**
    * Creates a new type
    * @param type The typename
    * @param _parent The parent type (or null pointer)
    */
-  Type(TypeName const &type, Type *_parent = nullptr, bool predefined = false);
+  Type(TypeName const &type, std::shared_ptr<Type const> _parent = nullptr, bool predefined = false);
 
   /** Type destruction */
   virtual ~Type();
@@ -366,12 +393,17 @@ class Type {
    * Add new arguments for this type
    * @param argument
    */
-  void addArgument(Argument &argument);
+  void addArgument(std::shared_ptr<Argument> const &argument);
 
   /**
    * Get the arguments
    */
-  std::map<std::string, Argument> &arguments();
+  std::map<std::string, std::shared_ptr<Argument>> &arguments();
+
+  /**
+   * Get the arguments
+   */
+  std::map<std::string, std::shared_ptr<Argument>> const &arguments() const;
 
   /// Returns the JSON string corresponding to this type
   std::string toJson() const;
@@ -396,12 +428,24 @@ class Type {
 
   /** Creates an object with a given type */
   std::shared_ptr<Object> create() const;
+
+ private:
+  const TypeName _type;
+  std::shared_ptr<Type const> _parent;
+  std::map<std::string, std::shared_ptr<Argument>> _arguments;
+  bool _predefined;
+  std::shared_ptr<ObjectFactory> _factory;
+
 };
 
 /**
  * A task can be executed
  */
-class XPM_PIMPL(Task) {
+class Task
+#ifndef SWIG
+    : public std::enable_shared_from_this<Task>
+#endif
+{
  public:
   /** For map */
   Task();
@@ -412,12 +456,7 @@ class XPM_PIMPL(Task) {
    * @param outputType The output type
    * @return
    */
-  Task(Type &type);
-
-  Task(Task &&);
-  Task(Task const &);
-  Task &operator=(Task const &);
-  Task &operator=(Task &&);
+  Task(std::shared_ptr<Type> const &type);
 
   /**
    * Configure the object
@@ -435,13 +474,25 @@ class XPM_PIMPL(Task) {
   TypeName const &identifier() const;
 
   /** Executes */
-  void execute(StructuredValue value) const;
+  void execute(std::shared_ptr<StructuredValue> const &value) const;
 
   /// Sets the object factory
   void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
 
   /** Creates an object with a given type */
   std::shared_ptr<Object> create() const;
+ private:
+  /// Task identifier
+  TypeName _identifier;
+
+  /// The type for this task
+  std::shared_ptr<Type> _type;
+
+  /// Command line
+  CommandLine _commandLine;
+
+  /// The object factory
+  std::shared_ptr<ObjectFactory> _factory;
 };
 
 } // namespace xpm
@@ -489,19 +540,19 @@ class Object
   virtual ~Object();
 
   /** Sets the structured value (globally) */
-  void setValue(StructuredValue &value);
+  void setValue(std::shared_ptr<StructuredValue> const &value);
 
   /** Sets a value  */
-  virtual void setValue(std::string const &name, StructuredValue &value) {};
+  virtual void setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value) {};
 
   /** Sets the task */
-  void task(Task const & task);
+  void task(std::shared_ptr<Task const> const &task);
 
   /** Sets the task */
-  optional<Task const> task() const;
+  std::shared_ptr<Task const> task() const;
 
   /** Get the associated structured value */
-  StructuredValue const getValue() const;
+  std::shared_ptr<StructuredValue const> getValue() const;
 
   /** String representation of the object */
   virtual std::string toString() const;
@@ -523,13 +574,13 @@ class Object
   }
 
   /** Set a value */
-  void set(std::string const &key, StructuredValue value);
+  void set(std::string const &key, std::shared_ptr<StructuredValue> const &value);
 
   /** Get type */
-  Type type() const;
+  std::shared_ptr<Type const> type() const;
 
   /** Get type */
-  void type(Type const &type);
+  void type(std::shared_ptr<Type const> const &type);
 
   /** Transform to JSON */
   std::string json() const;
@@ -541,7 +592,7 @@ class Object
    * <li>Seal the object</li>
    * </ol>
    */
-  void configure(StructuredValue value);
+  void configure(std::shared_ptr<StructuredValue> const &value);
 
   /**
    * Submit the underlying task to experimaestro server
@@ -553,16 +604,15 @@ class Object
   */
   virtual void execute();
 
-
  private:
   /// The associated structured value
-  StructuredValue _value;
+  std::shared_ptr<StructuredValue> _value;
 
   /// Type of the object
-  Type _type;
+  std::shared_ptr<Type const> _type;
 
   /// Associated task, if any
-  optional<Task const> _task;
+  std::shared_ptr<Task const> _task;
 };
 
 // --- Building objects
@@ -603,13 +653,13 @@ class Register {
   void addType(Type &type);
 
   /// Find a type given a t ype name
-  optional<Type const> getType(TypeName const &typeName) const;
+  std::shared_ptr<Type const> getType(TypeName const &typeName) const;
 
   /// Find a type given a t ype name
   Type getType(Object const &object) const;
 
   /// Build a new object from parameters
-  std::shared_ptr<Object> build(StructuredValue &value) const;
+  std::shared_ptr<Object> build(std::shared_ptr<StructuredValue> const &value) const;
 };
 
 // --- Useful functions

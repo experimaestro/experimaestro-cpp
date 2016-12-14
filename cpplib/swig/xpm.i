@@ -81,6 +81,9 @@
 %ignore xpm::StructuredValue::operator[];
 
 %shared_ptr(xpm::Object)
+%shared_ptr(xpm::Type)
+%shared_ptr(xpm::StructuredValue)
+%shared_ptr(xpm::Argument)
 %shared_ptr(xpm::ObjectFactory)
 
 // Object and object factory have virtual methods
