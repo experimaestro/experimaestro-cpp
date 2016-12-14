@@ -272,14 +272,14 @@ std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
 
 const TypeName ANY_TYPE("any");
 
-StructuredValue::StructuredValue() {
+StructuredValue::StructuredValue() : _sealed(false) {
 }
-StructuredValue::StructuredValue(Value &&scalar) : _value(std::move(scalar)) {
+StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _value(std::move(scalar)) {
 }
-StructuredValue::StructuredValue(Value const &scalar) : _value(scalar) {
+StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
 }
 StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
-    : _content(map) {
+    : _sealed(false), _content(map) {
 }
 
 bool StructuredValue::hasValue() const {
