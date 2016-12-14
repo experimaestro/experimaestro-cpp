@@ -447,9 +447,6 @@ class Task
 #endif
 {
  public:
-  /** For map */
-  Task();
-
   /**
    * Defines a new task
    * @param identifier The task identifier
@@ -510,12 +507,12 @@ struct hash<xpm::Type> {
 namespace xpm {
 
 SWIG_IMMUTABLE;
-extern Type IntegerType;
-extern Type RealType;
-extern Type StringType;
-extern Type BooleanType;
-extern Type AnyType;
-extern Type PathType;
+extern std::shared_ptr<Type> IntegerType;
+extern std::shared_ptr<Type> RealType;
+extern std::shared_ptr<Type> StringType;
+extern std::shared_ptr<Type> BooleanType;
+extern std::shared_ptr<Type> AnyType;
+extern std::shared_ptr<Type> PathType;
 SWIG_MUTABLE;
 
 // ---
@@ -568,13 +565,17 @@ class Object
   void seal();
 
   /** Set a value */
-  template<typename _Value>
-  inline void set(std::string const &key, _Value const &value) {
-    set(key, StructuredValue(Value(value)));
-  }
+  void set(std::string const &key, std::shared_ptr<StructuredValue> const &value);
 
   /** Set a value */
-  void set(std::string const &key, std::shared_ptr<StructuredValue> const &value);
+  template<typename _Value>
+  inline void set(std::string const &key, _Value const &value) {
+    set(key, std::make_shared<StructuredValue>(Value(value)));
+  }
+
+  inline void set(std::string const &key, Value const &value) {
+    set(key, std::make_shared<StructuredValue>(value));
+  }
 
   /** Get type */
   std::shared_ptr<Type const> type() const;
@@ -620,10 +621,10 @@ class Object
 /** Register for types */
 class Register {
   /// Maps typenames to types
-  std::unordered_map<TypeName, Type> _types;
+  std::unordered_map<TypeName, std::shared_ptr<Type>> _types;
 
   /// Maps typenames to tasks
-  std::unordered_map<TypeName, Task> _tasks;
+  std::unordered_map<TypeName, std::shared_ptr<Task>> _tasks;
  public:
   // Constructs a new register
   Register();
@@ -644,19 +645,19 @@ class Register {
   void parse(std::vector<std::string> const &args);
 
   /// Register a new task
-  void addTask(Task &task);
+  void addTask(std::shared_ptr<Task> const &task);
 
   /// Find a type given a t ype name
-  optional<Task const> getTask(TypeName const &typeName) const;
+  std::shared_ptr<Task const> getTask(TypeName const &typeName) const;
 
   /// Register a new type
-  void addType(Type &type);
+  void addType(std::shared_ptr<Type> const &type);
 
   /// Find a type given a t ype name
   std::shared_ptr<Type const> getType(TypeName const &typeName) const;
 
   /// Find a type given a t ype name
-  Type getType(Object const &object) const;
+  std::shared_ptr<Type const> getType(Object const &object) const;
 
   /// Build a new object from parameters
   std::shared_ptr<Object> build(std::shared_ptr<StructuredValue> const &value) const;

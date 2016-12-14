@@ -157,8 +157,7 @@ class RegisterType:
             raise Exception("Error: type %s is an old style Python 2 class" % t)
 
         # Register type
-        if self.qname is not None and register.getType(self.qname).hasValue():
-            print(register.getType(self.qname))
+        if self.qname is not None and register.getType(self.qname) is not None:
             raise Exception("XPM type %s is already declared" % self.qname)
 
         # Add XPM object if needed

@@ -82,6 +82,7 @@
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
+%shared_ptr(xpm::Task)
 %shared_ptr(xpm::StructuredValue)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::ObjectFactory)
@@ -123,11 +124,6 @@
     bool hasValue() const { return *$self; }
 }
 
-%template(ConstTaskOptional) xpm::optional<xpm::Task const>;
-%template(ConstTypeOptional) xpm::optional<xpm::Type const>;
-%template(TaskOptional) xpm::optional<xpm::Task>;
-%template(TypeOptional) xpm::optional<xpm::Type>;
-
 %template(set) xpm::Object::set<std::string>;
 %template(set) xpm::Object::set<long>;
 %template(set) xpm::Object::set<double>;
@@ -136,16 +132,16 @@
 %template(StringList) std::vector<std::string>;
 
 %extend xpm::StructuredValue {
-    void __setitem__(std::string const & key, xpm::StructuredValue const &value) {
+    void __setitem__(std::string const & key, std::shared_ptr<xpm::StructuredValue> const &value) {
         (*($self))[key] = value;
     }
-    void __setitem__(std::string const & key, std::map<std::string, xpm::StructuredValue> &value) {
-        (*($self))[key] = value;
+    void __setitem__(std::string const & key, std::map<std::string, std::shared_ptr<xpm::StructuredValue>> &value) {
+        (*($self))[key] = std::make_shared<xpm::StructuredValue>(value);
     }
     void __setitem__(std::string const & key, Value const &value) {
-        (*($self))[key] = value;
+        (*($self))[key] = std::make_shared<xpm::StructuredValue>(value);
     }
-    StructuredValue __getitem__(std::string const & key) {
+    std::shared_ptr<xpm::StructuredValue> __getitem__(std::string const & key) {
       return (*($self))[key];
     }
 }

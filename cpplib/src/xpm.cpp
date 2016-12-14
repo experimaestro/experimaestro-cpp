@@ -611,12 +611,12 @@ void Argument::type(std::shared_ptr<Type const> const &type) { _type = type; }
 // ---- Type
 
 
-Type BooleanType(BOOLEAN_TYPE, nullptr, true);
-Type IntegerType(INTEGER_TYPE, nullptr, true);
-Type RealType(REAL_TYPE, nullptr, true);
-Type StringType(STRING_TYPE, nullptr, true);
-Type AnyType(ANY_TYPE, nullptr, true);
-Type PathType(PATH_TYPE, nullptr, true);
+std::shared_ptr<Type> BooleanType = std::make_shared<Type>(BOOLEAN_TYPE, nullptr, true);
+std::shared_ptr<Type> IntegerType = std::make_shared<Type>(INTEGER_TYPE, nullptr, true);
+std::shared_ptr<Type> RealType = std::make_shared<Type>(REAL_TYPE, nullptr, true);
+std::shared_ptr<Type> StringType = std::make_shared<Type>(STRING_TYPE, nullptr, true);
+std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
+std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true);
 
 
 /** Creates an object with a given type */
@@ -712,13 +712,13 @@ std::shared_ptr<StructuredValue> PathGenerator::generate(Object const & object) 
 
   LOGGER->info("Object has no task");
   auto p = Path(Context::current().workdir(), {uuid});
-  return std::make_shared<StructuredValue>(p.toString());
+  return std::make_shared<StructuredValue>(Value(p.toString()));
 }
 
 // ---- Object
 
 
-Object::Object() {
+Object::Object() : _value(std::make_shared<StructuredValue>()), _type(AnyType) {
 }
 
 Object::~Object() {
@@ -766,7 +766,7 @@ void Object::submit() {
 }
 
 std::string Object::toString() const {
-  return "Object of type " + _type->toString();
+  return "Object of type " + (_type ? _type->toString() : "?");
 }
 
 std::string Object::json() const {
@@ -896,40 +896,40 @@ Register::Register() {
 }
 Register::~Register() {}
 
-void Register::addType(Type &type) {
-  _types[type.typeName()] = type;
+void Register::addType(std::shared_ptr<Type> const &type) {
+  _types[type->typeName()] = type;
 }
 
-void Register::addTask(Task &task) {
-  _tasks[task.identifier()] = task;
+void Register::addTask(std::shared_ptr<Task> const &task) {
+  _tasks[task->identifier()] = task;
 }
 
-optional<Task const> Register::getTask(TypeName const &typeName) const {
+std::shared_ptr<Task const> Register::getTask(TypeName const &typeName) const {
   auto it = _tasks.find(typeName);
   if (it != _tasks.end()) {
     return it->second;
   }
-  return optional<Task const>();
+  return nullptr;
 }
 
-optional<Type const> Register::getType(TypeName const &typeName) const {
+std::shared_ptr<Type const> Register::getType(TypeName const &typeName) const {
   auto it = _types.find(typeName);
   if (it != _types.end()) {
     return it->second;
   }
-  return optional<Type const>();
+  return nullptr;
 }
 
 // Find a type given a type name
-Type Register::getType(Object const &object) const {
+std::shared_ptr<Type const> Register::getType(Object const &object) const {
   return object.type();
 }
 
-std::shared_ptr<Object> Register::build(StructuredValue &value) const {
-  auto const &objectTypeName = value.type();
+std::shared_ptr<Object> Register::build(std::shared_ptr<StructuredValue> const &value) const {
+  auto const &objectTypeName = value->type();
   auto _type = getType(objectTypeName);
 
-  std::shared_ptr<_Type> objectType = _type ? _type->_this : nullptr;
+  std::shared_ptr<Type const> objectType = _type ? _type : nullptr;
   std::cerr << "Building object with type " << objectTypeName.toString()
             << " / " << (objectType ? "OK" : "not registered!") << std::endl;
 
@@ -948,27 +948,27 @@ std::shared_ptr<Object> Register::build(StructuredValue &value) const {
   for (auto type = objectType; type; type = type->_parent) {
 
     // Loop over the arguments
-    for (auto entry: type->arguments) {
+    for (auto entry: type->arguments()) {
       auto key = entry.first;
 
       // Check required argument
-      auto const hasKey = value.hasKey(key);
-      if (!hasKey && entry.second.required()) {
+      auto const hasKey = value->hasKey(key);
+      if (!hasKey && entry.second->required()) {
         throw argument_error("Argument " + key + " was required but not provided");
       }
 
       // Build subtype
       if (hasKey) {
         std::cerr << "Building " << key << std::endl;
-        auto subvalue = build(value[key]);
+        auto subvalue = build((*value)[key]);
 
         // Set argument
         std::cerr << "Setting " << key << std::endl;
         object->set(key, subvalue);
       } else {
-        auto scalar = entry.second.defaultValue();
+        auto scalar = entry.second->defaultValue();
         if (scalar.defined()) {
-          object->set(key, StructuredValue(scalar));
+          object->set(key, std::make_shared<StructuredValue>(scalar));
         }
       }
     }
@@ -991,9 +991,9 @@ void Register::parse(std::vector<std::string> const &args) {
     std::cout << R"("types": [)" << std::endl;
     bool first = true;
     for (auto const &type: _types) {
-      if (!type.second.predefined()) {
+      if (!type.second->predefined()) {
         if (!first) std::cout << ","; else first = false;
-        std::cout << type.second.toJson() << std::endl;
+        std::cout << type.second->toJson() << std::endl;
       }
     }
     std::cout << "]" << std::endl;
@@ -1001,9 +1001,9 @@ void Register::parse(std::vector<std::string> const &args) {
     std::cout << R"("tasks": [)" << std::endl;
     first = true;
     for (auto const &type: _types) {
-      if (!type.second.predefined()) {
+      if (!type.second->predefined()) {
         if (!first) std::cout << ","; else first = false;
-        std::cout << type.second.toJson() << std::endl;
+        std::cout << type.second->toJson() << std::endl;
       }
     }
     std::cout << "]" << std::endl;
@@ -1030,7 +1030,7 @@ void Register::parse(std::vector<std::string> const &args) {
       throw argument_error(args[2] + " is not a file");
     }
     json j = json::parse(stream);
-    StructuredValue value = _StructuredValue::fromJson(j);
+    auto value = std::make_shared<StructuredValue>(j);
 
     // Run the task
     task->execute(value);
@@ -1059,7 +1059,7 @@ void Helper::updateDigest(SHA_CTX &context, Value value) {
 
       case ValueType::ARRAY:
         for (const auto &x: value._value.array) {
-          auto xDigest = x.digest();
+          auto xDigest = x->digest();
           ::updateDigest(context, xDigest);
         }
         break;
