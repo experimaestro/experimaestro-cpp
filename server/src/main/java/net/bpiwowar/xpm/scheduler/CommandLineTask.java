@@ -311,9 +311,6 @@ public class CommandLineTask extends Job {
 //        }
 
 
-        // --- Environment
-        ArrayList<Dependency> dependencies = new ArrayList<>();
-
         // --- Set defaults
         scriptContext.prepare(job);
 
@@ -321,7 +318,7 @@ public class CommandLineTask extends Job {
         job.setState(ResourceState.WAITING);
 
         // Add dependencies
-        dependencies.forEach(job::addDependency);
+        command.dependencies().forEach(job::addDependency);
 
         final Resource old = Resource.getByLocator(job.getLocator());
 

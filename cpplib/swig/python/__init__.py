@@ -45,7 +45,7 @@ class PyObject(Object, metaclass=PyObjectType):
         Object.__init__(self)
 
     def __setattr__(self, name, value):
-        logger.debug("Setting %s to %s", name, value)
+        logger.debug("Setting %s to %s [%s]", name, value, type(value))
         super().set(name, value)
 
     def setValue(self, key, sv):
@@ -53,6 +53,7 @@ class PyObject(Object, metaclass=PyObjectType):
         if key.startswith("$"):
             key = key[1:]        
         value = VALUECONVERTERS[sv.value().scalarType()](sv)
+        logger.debug("Really setting %s to %s", key, value)
         dict.__setattr__(self, key, value)
 
 __StructuredValue = StructuredValue

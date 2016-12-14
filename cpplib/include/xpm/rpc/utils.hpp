@@ -39,6 +39,8 @@ class ServerObject {
   explicit ServerObject(ObjectIdentifier o);
 
  public:
+  inline ObjectIdentifierType identifier() const { return _identifier; };
+
   template<typename T> friend
   struct RPCConverter;
 };

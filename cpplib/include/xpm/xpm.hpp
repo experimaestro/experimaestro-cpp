@@ -155,7 +155,6 @@ class Value {
   Value(long value);
   Value(std::string const &value);
   Value(ValueArray &&value);
-  Value(std::shared_ptr<Object> const &value);
   Value(Value const &other);
   Value &operator=(Value const &other);
 
@@ -177,9 +176,12 @@ class Value {
   long getInteger() const;
   std::string const &getString() const;
   ValueArray &getArray();
-  std::shared_ptr<Object> getObject();
 
+  std::shared_ptr<Object> getObject();
+ protected:
+  Value(std::shared_ptr<Object> const &object);
   friend struct Helper;
+  friend class Object;
 };
 
 /**
@@ -558,7 +560,7 @@ class Object
   std::shared_ptr<Task const> task() const;
 
   /** Get the associated structured value */
-  std::shared_ptr<StructuredValue const> getValue() const;
+  std::shared_ptr<StructuredValue> getValue() const;
 
   /** String representation of the object */
   virtual std::string toString() const;
@@ -584,6 +586,10 @@ class Object
 
   inline void set(std::string const &key, Value const &value) {
     set(key, std::make_shared<StructuredValue>(value));
+  }
+
+  inline void set(std::string const &key, std::shared_ptr<Object> const &object) {
+    set(key, object->getValue());
   }
 
   /** Get type */

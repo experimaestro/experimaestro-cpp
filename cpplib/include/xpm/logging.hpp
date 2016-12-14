@@ -6,7 +6,7 @@
 #define PROJECT_LOGGING_HPP
 
 namespace xpm {
-enum LogLevel {
+enum class LogLevel {
   TRACE,
   DEBUG,
   INFO,

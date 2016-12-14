@@ -274,10 +274,13 @@ const TypeName ANY_TYPE("any");
 
 StructuredValue::StructuredValue() : _sealed(false) {
 }
+
 StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _value(std::move(scalar)) {
 }
+
 StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
 }
+
 StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
     : _sealed(false), _content(map) {
 }
@@ -759,13 +762,14 @@ void Object::setValue(std::shared_ptr<StructuredValue> const &value) {
 
 void Object::set(std::string const &key, std::shared_ptr<StructuredValue> const & value) {
   // Set the value in the map
+  LOGGER->info("Setting [{}] to [{}]", key, value->toString());
   (*_value)[key] = value;
 
   // And for the object
   setValue(key, value);
 }
 
-std::shared_ptr<StructuredValue const> Object::getValue() const {
+std::shared_ptr<StructuredValue> Object::getValue() const {
   return _value;
 
 }
@@ -898,7 +902,11 @@ void Task::submit(std::shared_ptr<Object> const &object) const {
   CommandContext context;
   context.parameters = object->getValue()->toString();
   auto command = _commandLine.rpc(context);
+
+  // Add dependencies
+  LOGGER->info("Adding {} dependencies", dependencies.size());
   for(auto dependency: dependencies) {
+    LOGGER->info("Adding dependency {}", dependency->identifier());
     command->add_dependency(dependency);
   }
 
@@ -1012,7 +1020,7 @@ std::shared_ptr<Object> Register::build(std::shared_ptr<StructuredValue> const &
 
         // Set argument
         std::cerr << "Setting " << key << std::endl;
-        object->set(key, subvalue);
+        object->set(key, subvalue->getValue());
       } else {
         auto scalar = entry.second->defaultValue();
         if (scalar.defined()) {

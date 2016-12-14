@@ -21,6 +21,9 @@ void initLogging() {
     auto errsink = spdlog::sinks::stderr_sink_mt::instance();
     sink = std::make_shared<spdlog::sinks::ansicolor_sink>(errsink);
     sink->set_level(spdlog::level::debug);
+
+    // Sets some log levels
+    setLogLevel("rpc", LogLevel::WARN);
   }
 }
 
@@ -29,11 +32,15 @@ void initLogging() {
 std::shared_ptr<spdlog::logger> logger(std::string const &name) {
   initLogging();
 
-  auto iterator = loggers.find(name);
-  if (iterator != loggers.end())
-    return iterator->second;
-  auto v = loggers[name] = std::make_shared<spdlog::logger>(name, sink);
-  return v;
+  auto logger = spdlog::get(name);
+  if (logger) {
+    return logger;
+  }
+
+  logger = std::make_shared<spdlog::logger>(name, sink);
+  spdlog::register_logger(logger);
+
+  return logger;
 
 }
 
@@ -52,6 +59,8 @@ spdlog::level::level_enum convert(LogLevel l) {
 }
 
 void setLogLevel(std::string const &loggername, LogLevel level) {
+  initLogging();
+
   auto l = logger(loggername);
   l->set_level(convert(level));
 }

@@ -60,7 +60,7 @@
 %feature("python:slot", "tp_call", functype = "ternarycallfunc") *::call;
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 %feature("python:slot", "mp_subscript", functype = "binaryfunc") *::__getitem__;
-%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__setitem__;
+%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__getitem__;
 
 // Attributes
 %attribute(xpm::Argument, bool, required, required, required);
@@ -125,7 +125,7 @@
 %template(set) xpm::Object::set<std::string>;
 %template(set) xpm::Object::set<long>;
 %template(set) xpm::Object::set<double>;
-%template(set) xpm::Object::set<std::shared_ptr<xpm::Object>>;
+%template(set) xpm::Object::set<bool>;
 
 %template(StringList) std::vector<std::string>;
 

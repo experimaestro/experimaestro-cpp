@@ -24,6 +24,8 @@ json ServerObject::__call__(std::string const &name, json &params) {
   if (_identifier < 0) {
     throw exception("Identifier for the object is null");
   }
+  LOGGER->debug("rpc call {} [{}]", name, _identifier);
+
   auto response = Client::defaultClient().call(name, params);
   if (response.error()) {
     throw std::runtime_error("Error with RPC call: " + response.errorMessage());
@@ -32,7 +34,7 @@ json ServerObject::__call__(std::string const &name, json &params) {
 }
 
 json ServerObject::__static_call__(std::string const &name, json const &params) {
-  LOGGER->info("rpc call {}", name);
+  LOGGER->debug("rpc static call {}", name);
   auto response = Client::defaultClient().call(name, params);
   if (response.error()) {
     throw std::runtime_error("Error with RPC call: " + response.errorMessage());

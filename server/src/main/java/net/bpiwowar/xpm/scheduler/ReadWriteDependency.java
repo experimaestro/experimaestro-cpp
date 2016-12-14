@@ -19,12 +19,16 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.SQLException;
 
 
@@ -48,8 +52,15 @@ public class ReadWriteDependency extends Dependency {
     }
 
     @Expose
-    public ReadWriteDependency(@Argument(name="locator") String fromLocator) throws SQLException {
-        super(Resource.getByLocator(fromLocator));
+    public ReadWriteDependency(@Argument(name="locator") String fromLocator) throws SQLException, IOException {
+        super(getByLocator(fromLocator));
+    }
+
+    private static Resource getByLocator(String fromLocator) throws SQLException, IOException {
+        final Path path = PathUtils.toPath(fromLocator);
+        final Resource resource = Resource.getByLocator(path);
+        if (resource == null) throw new XPMRuntimeException("Cannot find resource [%s]", path);
+        return resource;
     }
 
     @Override
