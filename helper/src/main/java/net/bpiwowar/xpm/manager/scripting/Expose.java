@@ -65,13 +65,4 @@ public @interface Expose {
      * @return The mode (default: a method)
      */
     ExposeMode mode() default ExposeMode.METHOD;
-
-    /**
-     * List of languages that may use this method
-     * @return List of languages or empty array if all
-     */
-    Languages[] languages() default {};
-
-    /** True if used only for scripting */
-    boolean useInRPC() default true;
 }

@@ -25,19 +25,23 @@
 
 %import "xpm_rpc.i"
 
+#ifdef SWIGPYTHON
 // Implicit conversions
 %implicitconv;
 %implicitconv xpm::Path;
+#endif SWIGPYTHON
 
 // Documentation
 %include "documentation.i"
 
 // Exception handling
+#ifdef SWIGPYTHON
 %exception {
    try {
       $action
    } catch (Swig::DirectorException &e) {
       SWIG_fail;
+      SWIG_exception(SWIG_RuntimeError, e.what());      
    } catch(std::exception &e) {
       SWIG_exception(SWIG_RuntimeError, e.what());
    }
@@ -48,6 +52,7 @@
         throw Swig::DirectorMethodException();
     }
 }
+#endif
 
 
 // Ignores

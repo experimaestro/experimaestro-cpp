@@ -28,8 +28,6 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.JsonSignature;
-import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.UserCache;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.json.Json;
@@ -56,7 +54,6 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -67,84 +64,9 @@ import java.util.Map;
 public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
 
-    @Expose(context = true, value = "merge")
-    static public Map merge(LanguageContext cx,
-                            @Argument(name = "objects", types = {Map.class, Json.class})
-                                    Object... objects) {
-        Map<String, Object> returned = new HashMap<>();
-
-        for (Object object : objects) {
-            if (object instanceof Map) {
-                Map<?, ?> map = (Map) object;
-                for (Map.Entry<?, ?> entry : map.entrySet()) {
-                    Object key = entry.getKey();
-                    if (returned.containsKey(key.toString()))
-                        throw new XPMRuntimeException("Conflicting id in merge: %s", key);
-                    returned.put(key.toString(), entry.getValue());
-                }
-            } else if (object instanceof Json) {
-                Json json = (Json) object;
-                if (!(json instanceof JsonObject))
-                    throw new XPMRuntimeException("Cannot merge object of type " + object.getClass());
-                JsonObject jsonObject = (JsonObject) json;
-                for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
-                    returned.put(entry.getKey(), entry.getValue());
-                }
-
-            } else throw new XPMRuntimeException("Cannot merge object of type " + object.getClass());
-
-        }
-        return returned;
-    }
-
-    @Expose(context = true)
-    public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = cx.toJSON(jsons);
-        return JsonSignature.getDigest(json);
-    }
-
-    @Expose(context = true)
-    public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = cx.toJSON(jsons);
-        return JsonSignature.getDescriptor(json);
-    }
-
-    // Used in scripting languages which cannot use $ as first character
-    @Expose(value = "v_", languages = Languages.PYTHON)
-    public static Object _get_value(Object object) {
-        return get_value(object);
-    }
-
-    @Expose(value = "$", languages = Languages.JAVASCRIPT)
-    public static Object get_value(Object object) {
-        if (object instanceof Json)
-            return ((Json) object).get();
-
-        return object;
-    }
-
-    @Expose("assert")
-    public static void _assert(boolean condition, String format, Object... objects) {
-        if (!condition) {
-            throw new XPMRuntimeException("assertion failed: " + String.format(format, objects));
-        }
-    }
 
     private static ScriptContext context() {
         return ScriptContext.get();
-    }
-
-    /**
-     * Returns a QName object
-     *
-     * @param ns        The namespace: can be the URI string, or a javascript
-     *                  Namespace object
-     * @param localName the localname
-     * @return a QName object
-     */
-    @Expose
-    static public Object qname(String ns, String localName) {
-        return new TypeName(ns, localName);
     }
 
     @Expose
@@ -273,27 +195,6 @@ public class Functions {
             }
 
         }
-    }
-
-    @Expose(value = "r_", languages = Languages.PYTHON)
-    public static Object get_resource_py(Json json) throws SQLException {
-        return get_resource(json);
-    }
-
-    @Expose(value = "$$", useInRPC = false)
-    @Help("Get the resource associated with the json object")
-    static public Resource get_resource(Json json) throws SQLException {
-        Resource resource;
-        if (json instanceof JsonObject) {
-            resource = getResource((JsonObject) json);
-        } else {
-            throw new XPMScriptRuntimeException("Cannot get the resource of a Json of type " + json.getClass());
-        }
-
-        if (resource != null) {
-            return resource;
-        }
-        throw new XPMScriptRuntimeException("Object does not contain a resource (key %s)", Constants.XP_RESOURCE);
     }
 
     private static Resource getResource(JsonObject json) throws SQLException {

@@ -89,7 +89,7 @@ public class RPCObjects implements AutoCloseable {
                 // Avoid co-variants
                 if (method.isBridge()) continue;
                 final Expose annotation = method.getAnnotation(Expose.class);
-                if (annotation != null && annotation.useInRPC()) {
+                if (annotation != null) {
                     methods.add(new MethodDeclaration(method));
                 }
             }

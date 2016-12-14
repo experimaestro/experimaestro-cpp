@@ -87,7 +87,12 @@ add_custom_command(
 
 add_custom_target(documentation DEPENDS documentation.i)
 
+# --- General SWIG configuration
+
+set_source_files_properties(swig/xpm.i swig/xpm_rpc.i PROPERTIES CPLUSPLUS ON)
+
 # --- Python support
+
 
 if (true)
     FIND_PACKAGE(PythonLibs 3 REQUIRED)
@@ -102,10 +107,8 @@ if (true)
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
-    set_source_files_properties(swig/xpm.i swig/xpm_rpc.i PROPERTIES CPLUSPLUS ON)
 
     set(CMAKE_SWIG_FLAGS "-builtin")
-
 
     # Build module experimaestro
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
@@ -129,11 +132,11 @@ if (true)
 				CXX_STANDARD 11)
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
-		INSTALL(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-		INSTALL(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+		install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     endforeach()
-	INSTALL(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-	INSTALL(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+	install(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+	install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation _experimaestro_rpc_python)
 
     # Test examples (compilation only)
@@ -149,3 +152,37 @@ if (true)
   	)
 
 endif ()
+
+
+# --- Java support
+
+FIND_PACKAGE(JNI REQUIRED)
+
+set(JAVA_XPM_PACKAGE net.bpiwowar.xpm)
+string(REGEX REPLACE "\\." / JAVA_XPM_PACKAGE_PATH "${JAVA_XPM_PACKAGE}")
+
+set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/main/java/${JAVA_XPM_PACKAGE_PATH}")
+set(JAVA_XPM_TESTDIR "${CMAKE_CURRENT_SOURCE_DIR}BINARY_DIR}/java/src/test/java/${JAVA_XPM_PACKAGE_PATH}")
+
+set(CMAKE_SWIG_FLAGS -c++ -package ${JAVA_XPM_PACKAGE})  
+set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
+
+set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+swig_add_module(experimaestro_java java swig/xpm.i)
+swig_link_libraries(experimaestro_java experimaestro_shared)
+target_include_directories(experimaestro_java PUBLIC ${JNI_INCLUDE_DIRS})
+
+set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+swig_add_module(experimaestro_rpc_java java swig/xpm_rpc.i)
+swig_link_libraries(experimaestro_rpc_java experimaestro_shared)
+
+foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
+    # set(swigtargetlist ${swigtarget})
+    list(GET swigtargetlist 0 swigtargetname)
+    list(GET swigtargetlist 1 swigpythonname)
+    set_target_properties("${swigtargetname}_java" PROPERTIES
+			MACOSX_RPATH TRUE
+			INSTALL_RPATH "@loader_path"
+			CXX_STANDARD 11)
+    swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
+endforeach()
