@@ -31,7 +31,6 @@ abstract public class Declaration<T extends Executable> {
      */
     private int optionsIndex = -1;
 
-    boolean[] javaize;
     boolean[] nullable;
 
     String[] parameterNames;
@@ -68,7 +67,7 @@ abstract public class Declaration<T extends Executable> {
         return executable;
     }
 
-    public abstract Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
+    public abstract Object invoke(Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
 
 
     @Expose
@@ -101,15 +100,13 @@ abstract public class Declaration<T extends Executable> {
 
             final Class<?>[] types = executable.getParameterTypes();
 
-            javaize = new boolean[types.length];
             nullable = new boolean[types.length];
 
-            nbArguments = types.length - (expose.context() ? 1 : 0) - (executable.isVarArgs() ? 1 : 0) - expose.optional();
+            nbArguments = types.length - (executable.isVarArgs() ? 1 : 0) - expose.optional();
             final Annotation[][] annotations = executable.getParameterAnnotations();
 
             // Look at parameters
             for (int i = 0; i < types.length; ++i) {
-                javaize[i] = true;
                 nullable[i] = true;
 
                 for (Annotation a : annotations[i]) {
@@ -121,8 +118,6 @@ abstract public class Declaration<T extends Executable> {
                             }
                             optionsIndex = i;
                         }
-                    } else if (a instanceof NoJavaization) {
-                        javaize[i] = false;
                     } else if (a instanceof NotNull) {
                         nullable[i] = false;
                     }
@@ -131,10 +126,6 @@ abstract public class Declaration<T extends Executable> {
 
         }
         return this;
-    }
-
-    boolean javaize(int i) {
-        return javaize[i];
     }
 
     boolean nullable(int i) {
@@ -169,6 +160,7 @@ abstract public class Declaration<T extends Executable> {
     }
 
     static private final HashSet<String> RESERVED_CPP_NAMES = new HashSet<>();
+
     static {
         RESERVED_CPP_NAMES.add("int");
         RESERVED_CPP_NAMES.add("long");
@@ -215,17 +207,7 @@ abstract public class Declaration<T extends Executable> {
 
     public boolean isPureVirtual() {
         return executable.getDeclaringClass().isInterface()
-                && !((Method)executable).isDefault();
-    }
-
-
-    private static class ConverterContext implements Function<Arguments, Object> {
-        public static final Function<Arguments, Object> INSTANCE = new ConverterContext();
-
-        @Override
-        public LanguageContext apply(Arguments arguments) {
-            return arguments.context;
-        }
+                && !((Method) executable).isDefault();
     }
 
     /**
@@ -235,7 +217,7 @@ abstract public class Declaration<T extends Executable> {
      * @param fullCheck If all arguments should be checked (even if the method does not match)
      * @return An arguments converter, containing a score and a list of converter functions
      */
-    public Converter score(LanguageContext lcx, Arguments arguments, boolean fullCheck) {
+    public Converter score(Arguments arguments, boolean fullCheck) {
         init();
 
         final Class<?>[] types = executable.getParameterTypes();
@@ -276,19 +258,13 @@ abstract public class Declaration<T extends Executable> {
             };
 
             // Process options
-            Object o = lcx.toJava(arguments.options);
-            final Function<Object, Object> f = converter.converter(lcx, o, types[ix], false);
+            Object o = arguments.options;
+            final Function<Object, Object> f = converter.converter(o, types[ix], false);
             if (!converter.isOK() && !fullCheck) {
                 return converter;
             }
 
-            converter.functions[ix] = f.compose(lcx::toJava).compose(a -> a.options);
-        }
-
-        // If context is needed
-        if (expose.context()) {
-            converter.functions[position] = ConverterContext.INSTANCE;
-            position = nextPosition.apply(position);
+            converter.functions[ix] = f.compose(a -> a.options);
         }
 
         // The number of arguments should be in:
@@ -313,20 +289,10 @@ abstract public class Declaration<T extends Executable> {
         // Normal arguments
         for (int i = 0; i < args.length && i < nbArgs && (converter.isOK() || fullCheck); i++) {
             Object o = args[i];
-            boolean javaize = javaize(position);
 
-            // Unwrap if necessary
-            if (javaize) {
-                o = lcx.toJava(o);
-            }
-
-            final Function<Object, Object> f = converter.converter(lcx, o, types[position], nullable(position));
+            final Function<Object, Object> f = converter.converter(o, types[position], nullable(position));
             if (f != null) {
-                if (javaize) {
-                    converter.functions[position] = f.compose(lcx::toJava).compose(new GenericFunction.ArgumentConverter(i));
-                } else {
-                    converter.functions[position] = f.compose(new GenericFunction.ArgumentConverter(i));
-                }
+                converter.functions[position] = f.compose(new GenericFunction.ArgumentConverter(i));
             }
 
             position = nextPosition.apply(position);
@@ -362,7 +328,7 @@ abstract public class Declaration<T extends Executable> {
 
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final int j = nbArgs + i;
-                final Object o = lcx.toJava(args[j]);
+                final Object o = args[j];
 
                 int bestScore = 0;
                 int oldScore = converter.score;
@@ -371,7 +337,7 @@ abstract public class Declaration<T extends Executable> {
                 Function<Object, Object> best = null;
                 for (int k = 0; k < argTypes.length; ++k) {
                     converter.score = oldScore;
-                    Function<Object, Object> f = converter.converter(lcx, o, argTypes[k], nullable);
+                    Function<Object, Object> f = converter.converter(o, argTypes[k], nullable);
                     if (k == 0 || converter.score > bestScore) {
                         best = f;
                         bestScore = converter.score;
@@ -382,7 +348,7 @@ abstract public class Declaration<T extends Executable> {
 
                 // Add the converter
                 if (best != null) {
-                    varArgsConverter.add(best.compose(lcx::toJava).compose(new GenericFunction.ArgumentConverter(j)));
+                    varArgsConverter.add(best.compose(new GenericFunction.ArgumentConverter(j)));
                 } else {
                     varArgsConverter.add(null);
                 }

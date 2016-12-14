@@ -53,13 +53,6 @@ public @interface Expose {
     boolean optionalsAtStart() default false;
 
     /**
-     * Whether the context should be passed (language and script context)
-     *
-     * @return True if the first argument should be a ScriptContext object
-     */
-    boolean context() default false;
-
-    /**
      * How is this method used (ignored for constructors)
      *
      * @return The mode (default: a method)

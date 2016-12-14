@@ -35,8 +35,6 @@ import net.bpiwowar.xpm.manager.json.JsonArray;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.json.JsonString;
-import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
-import net.bpiwowar.xpm.manager.tasks.TasksLoader;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -78,12 +76,6 @@ public class Functions {
         return String.format(format, args);
     }
 
-    @Expose()
-    @Help("Returns the Path object corresponding to the current script")
-    static public java.nio.file.Path script_file()
-            throws FileSystemException {
-        return ScriptContext.get().getCurrentScriptPath();
-    }
 
     @Expose()
     static public java.nio.file.Path path(@Argument(name = "uri") Path path) {
@@ -114,51 +106,10 @@ public class Functions {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 
-    @Expose(value = "to_json", context = true)
-    static public Json toJson(LanguageContext lcx, Object o) {
-        return lcx.toJSON(o);
-    }
-
     @Expose
     @Help("Defines the default launcher")
     static public void set_default_launcher(Launcher launcher) {
         ScriptContext.get().setDefaultLauncher(launcher);
-    }
-
-    @Expose(value = "inspect_java_repository", optional = 1)
-    @Help("Include a repository from introspection of a java project")
-    static public void includeJavaRepository(final Connector connector, String[] paths, Path cachePath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        Path[] classpath = Arrays.stream(paths).map(path -> {
-            try {
-                return connector.getMainConnector().resolveFile(path);
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e, "Could not resolve path %s", path);
-            }
-        }).toArray(n -> new Path[n]);
-
-        JavaTasksIntrospection.addToRepository(context().getRepository(), classpath, cachePath);
-    }
-
-    @Expose(value = "load_java_repository")
-    @Deprecated("Use load_repository")
-    @Help("Include a repository from introspection of a JAR file")
-    static public void includeJavaRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        loadRepository(jarPath);
-    }
-
-    @Expose(value = "load_repository")
-    @Help("Include a repository from introspection of a JAR file")
-    static public void loadRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        TasksLoader.loadRepository(context().getRepository(), jarPath);
-    }
-
-    @Deprecated("Use get_locks(json, parameters...)")
-    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
-        switch (lockMode) {
-            case "READ":
-                return get_locks(json);
-        }
-        throw new XPMScriptRuntimeException("Cannot handle %s lock mode");
     }
 
     @Expose()
@@ -261,31 +212,6 @@ public class Functions {
         return ScriptContext.get().getParameter(key);
     }
 
-    @Expose(context = true)
-    @Help("Annotate a value with a tag, marked by " + Constants.JSON_TAG_NAME + " in the JSON")
-    static public Json tag(LanguageContext cx, String tagvalue, Object element) {
-        final JsonObject jsonObject = toJson(cx, element).asObject();
-        jsonObject.put(Constants.JSON_TAG_NAME, tagvalue);
-        return jsonObject;
-    }
-
-    @Expose(context = true)
-    @Help("Adds a tag " + Constants.JSON_TAG_NAME + " to the JSON with a given value")
-    static public Json tag(LanguageContext cx, JsonObject json, String key, String value) {
-        Json tags = json.get(Constants.JSON_TAG_NAME);
-        if (tags == null) {
-            json.put(Constants.JSON_TAG_NAME, tags = new JsonObject());
-        } else {
-            if (!tags.is_object()) {
-                final String tagName = tags.get().toString();
-                json.put(Constants.JSON_TAG_NAME, tags = new JsonObject());
-                tags.asObject().put(tagName, json.get().toString());
-            }
-        }
-
-        tags.asObject().put(key, value);
-        return json;
-    }
 
     @Expose
     @Help("Find all tags and return a hash map")
@@ -293,22 +219,6 @@ public class Functions {
         return json.findTags();
     }
 
-    @Expose(context = true, optional = 1, optionalsAtStart = true)
-    @Help("Find all tags and add it to the base object")
-    static public Json retrieve_tags(
-            LanguageContext cx,
-            @Argument(name = "key", help = "The key in the returned JSON")
-                    String key,
-            @Argument(name = "json", help = "The JSON to inspect")
-                    JsonObject json
-    ) {
-        final Map<String, JsonSimple> tags = find_tags(json);
-        if (json.sealed()) {
-            json = (JsonObject) json.copy(false);
-        }
-        json.put(key != null ? key : Constants.JSON_TAGS_NAME, Json.toJSON(cx, tags));
-        return json;
-    }
 
     @Expose
     @Help("Returns the notification URL")

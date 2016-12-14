@@ -25,7 +25,6 @@ import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.PathUtils;
 
@@ -357,18 +356,18 @@ public class JsonObject extends Json {
         return map.entrySet();
     }
 
-    public static JsonObject toJSON(LanguageContext lcx, Map<?, ?> map) {
+    public static JsonObject toJSON(Map<?, ?> map) {
         JsonObject json = new JsonObject();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
-            TypeName qname = lcx.qname(entry.getKey());
+            TypeName qname = TypeName.parse(entry.getKey().toString());
             Object pValue = entry.getValue();
 
             if (qname.equals(Constants.XP_TYPE)) {
-                pValue = lcx.qname(entry.getValue());
+                pValue = TypeName.parse(entry.getValue().toString());
             }
 
             String key = qname.toString();
-            final Json key_value = Json.toJSON(lcx, pValue);
+            final Json key_value = Json.toJSON(pValue);
             json.put(key, key_value);
         }
         return json;

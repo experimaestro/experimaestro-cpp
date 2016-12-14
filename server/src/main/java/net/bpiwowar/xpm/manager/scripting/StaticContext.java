@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import org.apache.log4j.spi.LoggerRepository;
-import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.Cleaner;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -41,11 +40,6 @@ public class StaticContext implements AutoCloseable {
      * The logger
      */
     LoggerRepository loggerRepository;
-
-    /**
-     * Task repository
-     */
-    Repository repository;
 
     /**
      * Main logger
@@ -80,8 +74,7 @@ public class StaticContext implements AutoCloseable {
         return new ScriptContext(this);
     }
 
-    public StaticContext repository(Repository repository) {
-        this.repository = repository;
+    public StaticContext repository() {
         return this;
     }
 

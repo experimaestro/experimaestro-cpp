@@ -51,7 +51,6 @@ public class RPCObjects implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        ScriptContext.setThreadScriptContext(null);
         scriptContext.close();
         staticContext.close();
     }
@@ -207,8 +206,8 @@ public class RPCObjects implements AutoCloseable {
                 }
             }
 
-            ScriptContext.setThreadScriptContext(rpcObjects.scriptContext);
-            final Object result = method.invoke(null, thisObject, args);
+            rpcObjects.scriptContext.setThreadScriptContext();
+            final Object result = method.invoke(thisObject, args);
 
             if (result != null && rpcObjects.isManaged(result.getClass())) {
                 return rpcObjects.store(result);

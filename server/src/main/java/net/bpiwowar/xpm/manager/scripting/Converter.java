@@ -1,7 +1,7 @@
 package net.bpiwowar.xpm.manager.scripting;
 
-import org.apache.commons.lang.ClassUtils;
 import net.bpiwowar.xpm.manager.json.Json;
+import org.apache.commons.lang.ClassUtils;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 
@@ -32,13 +32,12 @@ public class Converter {
     /**
      * Returns a function that convert the object into a given type
      *
-     * @param lcx      The scripting language context
      * @param object   The object to convert
      * @param targetType     The type of the target argument
      * @param nullable Whether the value can be null
      * @return
      */
-    Function<Object, Object> converter(LanguageContext lcx, Object object, Class<?> targetType, boolean nullable) {
+    Function<Object, Object> converter(Object object, Class<?> targetType, boolean nullable) {
         if (object == null) {
             if (!nullable) {
                 return nonMatching();
@@ -71,7 +70,7 @@ public class Converter {
                 final GenericFunction.ListConverter listConverter = new GenericFunction.ListConverter(innerType);
 
                 while (iterator.hasNext()) {
-                    listConverter.add(converter(lcx, iterator.next(), innerType, true));
+                    listConverter.add(converter(iterator.next(), innerType, true));
                     if (score == Integer.MIN_VALUE) {
                         return null;
                     }
@@ -117,7 +116,7 @@ public class Converter {
                     || object instanceof Resource || object instanceof ScriptingPath
                     || object instanceof BigInteger || object instanceof String) {
                 score -= 10;
-                return x -> Json.toJSON(lcx, x);
+                return x -> Json.toJSON(x);
             }
 
         }

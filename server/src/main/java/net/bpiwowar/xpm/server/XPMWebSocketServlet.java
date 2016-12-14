@@ -23,7 +23,6 @@ import net.bpiwowar.xpm.server.rpc.JsonRPCSettings;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
-import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 
 import java.io.IOException;
@@ -34,8 +33,8 @@ import java.io.IOException;
 public class XPMWebSocketServlet extends WebSocketServlet {
     private final JsonRPCSettings settings;
 
-    public XPMWebSocketServlet(Server server, Scheduler scheduler, Repositories repositories, ServerSettings serverSettings) {
-        this.settings = new JsonRPCSettings(scheduler, repositories, server, serverSettings);
+    public XPMWebSocketServlet(Server server, Scheduler scheduler, ServerSettings serverSettings) {
+        this.settings = new JsonRPCSettings(scheduler, server, serverSettings);
     }
 
     @Override

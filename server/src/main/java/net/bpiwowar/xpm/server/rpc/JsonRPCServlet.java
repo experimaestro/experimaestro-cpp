@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.server.rpc;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.server.ServerSettings;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -46,8 +45,8 @@ public class JsonRPCServlet extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
     private final JsonRPCSettings settings;
 
-    public JsonRPCServlet(Server server, ServerSettings serverSettings, Scheduler scheduler, Repositories repository) {
-        this.settings = new JsonRPCSettings(scheduler, repository, server, serverSettings);
+    public JsonRPCServlet(Server server, ServerSettings serverSettings, Scheduler scheduler) {
+        this.settings = new JsonRPCSettings(scheduler, server, serverSettings);
     }
 
     @Override

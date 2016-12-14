@@ -62,12 +62,10 @@ public class ConstructorFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        public Object invoke(Object thisObj, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
             try {
                 return constructor.newInstance(transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
-                if (cx != null)
-                    throw cx.runtimeException(e, "Could not construct object with %s", constructor);
                 throw new XPMRuntimeException(e, "Could not construct object with %s", constructor);
             }
 

@@ -129,11 +129,6 @@ abstract public class Json {
      */
     abstract public void write(JsonWriter out) throws IOException;
 
-    @Expose(context = true)
-    static public Json of(LanguageContext lcx, ScriptContext cx, Object object) {
-        return lcx.toJSON(object);
-    }
-
     @Expose
     public String toSource() {
         try (StringWriter writer = new StringWriter();
@@ -235,11 +230,10 @@ abstract public class Json {
     /**
      * Convert an object to a  JSON
      *
-     * @param lcx
      * @param value
      * @return
      */
-    public static Json toJSON(LanguageContext lcx, Object value) {
+    public static Json toJSON(Object value) {
         if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
             value = ((net.bpiwowar.xpm.manager.scripting.Wrapper) value).unwrap();
         }
@@ -286,7 +280,7 @@ abstract public class Json {
             final int length = Array.getLength(value);
             JsonArray json = new JsonArray();
             for (int i = 0; i < length; i++)
-                json.add(toJSON(lcx, Array.get(value, i)));
+                json.add(toJSON(Array.get(value, i)));
             return json;
         }
 
@@ -294,13 +288,13 @@ abstract public class Json {
             final List list = (List) value;
             JsonArray json = new JsonArray();
             for (Object element : list)
-                json.add(toJSON(lcx, element));
+                json.add(toJSON(element));
             return json;
         }
 
         // Maps
         if (value instanceof Map) {
-            return JsonObject.toJSON(lcx, (Map) value);
+            return JsonObject.toJSON((Map) value);
         }
 
         if (value instanceof java.nio.file.Path)
@@ -346,7 +340,7 @@ abstract public class Json {
 
         if (element.isJsonArray()) {
             final JsonArray array = new JsonArray();
-            element.getAsJsonArray().forEach(m -> array.add(toJSON(null, m)));
+            element.getAsJsonArray().forEach(m -> array.add(toJSON(m)));
             return array;
         }
 

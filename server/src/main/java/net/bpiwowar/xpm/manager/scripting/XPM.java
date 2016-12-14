@@ -37,9 +37,6 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.Module;
-import net.bpiwowar.xpm.manager.Repository;
-import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonResource;
@@ -51,7 +48,6 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TokenResource;
-import net.bpiwowar.xpm.server.TasksServlet;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -180,63 +176,6 @@ public class XPM {
         context().getLogger(name).setLevel(Level.toLevel(level));
     }
 
-    @Expose("get_script_path")
-    public String getScriptPath() {
-        return context().getCurrentScriptPath().toString();
-    }
-
-    /**
-     * Add a module
-     */
-    @Expose("add_module")
-    public Module addModule(TypeName qname) {
-        final ScriptContext scriptContext = context();
-        Module module = new Module(qname);
-        LOGGER.debug("Adding module [%s]", module.getId());
-        scriptContext.getRepository().addModule(module);
-        return module;
-    }
-
-    @Expose(value = "add_module", context = true)
-    public Module addModule(LanguageContext cx, Map description) {
-        final ScriptContext scriptContext = context();
-        Module module = new Module(cx.qname(description.get("id")));
-        module.setName(description.get("name").toString());
-
-        // Set the parent
-        final Object parentString = description.get("parent");
-        if (parentString != null) {
-            TypeName parent = cx.qname(parentString);
-            final Module parentModule = scriptContext.getRepository().getModules().get(parent);
-            if (parentModule != null) {
-                module.setParent(parentModule);
-            }
-        }
-
-        // Add the module
-        scriptContext.getRepository().addModule(module);
-        return module;
-    }
-
-    @Expose("get_task")
-    public Task getTask(@NotNull TypeName name) {
-        return ScriptContext.get().getTask(name);
-    }
-
-    @Expose("get_task")
-    public Task getTask(
-            @NotNull String namespaceURI,
-            @NotNull String localName) {
-        return ScriptContext.get().getTask(new TypeName(namespaceURI, localName));
-    }
-
-    @Expose("file")
-    @Help(value = "Returns a file relative to the current connector")
-    public Path file(@Argument(name = "filepath") @NotNull String filepath) throws FileSystemException {
-        return context().getCurrentScriptPath().resolve(filepath);
-    }
-
-
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
     public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
@@ -271,13 +210,6 @@ public class XPM {
         return resource;
     }
 
-    @Expose("publish")
-    @Help("Publish the repository on the web server")
-    public void publish() throws InterruptedException {
-        final ScriptContext scriptContext = context();
-        TasksServlet.updateRepository(context().getCurrentScriptPath().toString(), scriptContext.getRepository());
-    }
-
 
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
@@ -292,9 +224,9 @@ public class XPM {
         return ScriptContext.get().simulate();
     }
 
-    @Expose(context = true)
-    public String evaluate(LanguageContext lc, List<Object> command) throws Exception {
-        return evaluate(lc, command, ImmutableMap.of());
+    @Expose
+    public String evaluate(List<Object> command) throws Exception {
+        return evaluate(command, ImmutableMap.of());
     }
 
     /**
@@ -304,8 +236,8 @@ public class XPM {
      * @throws IOException
      * @throws InterruptedException
      */
-    @Expose(context = true)
-    public String evaluate(LanguageContext lc, List<Object> jsargs, Map options) throws Exception {
+    @Expose
+    public String evaluate(List<Object> jsargs, Map options) throws Exception {
         ScriptContext sc = context();
         Command command = Command.getCommand(jsargs);
 
@@ -541,10 +473,6 @@ public class XPM {
         return Constants.EXPERIMAESTRO_NS;
     }
 
-
-    Repository getRepository() {
-        return context().getRepository();
-    }
 
     public Scheduler getScheduler() {
         return context().getScheduler();

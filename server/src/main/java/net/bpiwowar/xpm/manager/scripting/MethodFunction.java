@@ -78,6 +78,7 @@ public class MethodFunction extends GenericFunction {
 
     /**
      * Add all methods from another function
+     *
      * @param other The other function
      */
     public void add(MethodFunction other) {
@@ -109,15 +110,7 @@ public class MethodFunction extends GenericFunction {
         }
 
         @Override
-        public String toString() {
-            final StringWriter stringWriter = new StringWriter();
-            Documentation.methodDeclaration(method).text(new PrintWriter(stringWriter));
-            return stringWriter.toString();
-        }
-
-
-        @Override
-        public Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+        public Object invoke(Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
             boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
             try {
                 if (!isStatic && thisObj == null) {
@@ -125,9 +118,7 @@ public class MethodFunction extends GenericFunction {
                 }
                 return method.invoke(isStatic ? null : thisObj, transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
-                if (cx == null)
-                    throw new XPMRuntimeException(e, "Error [%s] while invoking method %s", e, method);
-                throw cx.runtimeException(e, "Error [%s] while invoking method %s", e, method);
+                throw new XPMRuntimeException(e, "Error [%s] while invoking method %s", e, method);
             } catch (XPMRuntimeException e) {
                 throw e.addContext("While invoking method %s", method);
             }

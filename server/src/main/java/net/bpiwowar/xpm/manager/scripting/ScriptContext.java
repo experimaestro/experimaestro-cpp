@@ -21,14 +21,8 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.DirectLauncher;
 import net.bpiwowar.xpm.connectors.Launcher;
-import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
-import net.bpiwowar.xpm.manager.DummyTask;
 import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.Repository;
-import net.bpiwowar.xpm.manager.Task;
-import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
@@ -126,12 +120,12 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Whether we are simulating
      */
-    Updatable<Boolean> simulate;
+    boolean simulate;
 
     /**
      * Current task
      */
-    private Updatable<Task> task;
+    private Task task;
 
 
     public ScriptContext(StaticContext staticContext) {
@@ -140,7 +134,7 @@ final public class ScriptContext implements AutoCloseable {
         this.staticContext = staticContext;
 
         defaultLocks = new Updatable<>(new HashMap<>(), HashMap::new);
-        task = Updatable.create(null);
+        task = task;
         experiment = Updatable.create(null);
         priority = Updatable.create(0);
         workingDirectory = new Mutable<>();
@@ -150,48 +144,13 @@ final public class ScriptContext implements AutoCloseable {
         properties = new HashMap<>();
         parameters = new MapStack<>();
 
-        simulate = new Updatable<>(false);
+        simulate = false;
         submittedJobs = new HashMap<>();
     }
 
     @Override
     public String toString() {
         return format("ScriptContext@%X", System.identityHashCode(this));
-    }
-
-    private ScriptContext(ScriptContext parent, boolean newRepository, boolean setThreadContext) {
-        LOGGER.debug("Creating script context [%s] from context [%s]", this, parent);
-
-        staticContext = parent.staticContext;
-        experiment = parent.experiment.reference();
-        priority = parent.priority.reference();
-        currentScriptPath = parent.currentScriptPath.reference();
-
-        // Initialise shared values
-        if (newRepository) {
-            properties = new HashMap<>();
-            workingDirectory = new Mutable<>(parent.workingDirectory.getValue());
-            defaultLauncher = parent.defaultLauncher.reference();
-            defaultLocks = parent.defaultLocks.reference();
-            parameters = new MapStack<>(parent.parameters);
-        } else {
-            properties = parent.properties;
-            workingDirectory = parent.workingDirectory;
-            defaultLauncher = parent.defaultLauncher;
-            defaultLocks = parent.defaultLocks;
-            parameters = parent.parameters;
-        }
-
-
-        simulate = parent.simulate.reference();
-        submittedJobs = parent.submittedJobs;
-        task = parent.task.reference();
-
-        if (setThreadContext) {
-            // Sets the current thread context
-            oldCurrent = threadContext.get();
-            threadContext.set(this);
-        }
     }
 
 
@@ -251,24 +210,6 @@ final public class ScriptContext implements AutoCloseable {
         return this;
     }
 
-    public ScriptContext copy() {
-        return new ScriptContext(this, false, true);
-    }
-
-    public ScriptContext copy(boolean newRepository, boolean setThreadContext) {
-        return new ScriptContext(this, newRepository, setThreadContext);
-    }
-
-    public TaskFactory getFactory(TypeName typeName) {
-
-        return staticContext.repository.getFactory(typeName);
-    }
-
-    public Repository getRepository() {
-
-        return staticContext.repository;
-    }
-
     public Map<Resource, DependencyParameters> getDefaultLocks() {
         return defaultLocks.get();
     }
@@ -302,6 +243,7 @@ final public class ScriptContext implements AutoCloseable {
 
     @Override
     public void close() {
+        threadContext.remove();
     }
 
     public void addDefaultLock(Resource resource, DependencyParameters parameters) {
@@ -328,27 +270,6 @@ final public class ScriptContext implements AutoCloseable {
         properties.put(key, value);
     }
 
-    public Path getCurrentScriptPath() {
-        return currentScriptPath.get();
-    }
-
-    public Task getTask(TypeName qname) {
-        TaskFactory factory = getFactory(qname);
-        if (factory == null) {
-            throw new XPMRuntimeException("Could not find a task with name [%s]", qname);
-        }
-        LOGGER.info("Creating a new JS task [%s]", factory.getId());
-        return factory.create();
-    }
-
-    public void setCurrentScriptPath(Path currentScriptPath) {
-        this.currentScriptPath.set(currentScriptPath);
-    }
-
-    // Only used for tests
-    public static void setThreadScriptContext(ScriptContext sc) {
-        threadContext.set(sc);
-    }
 
     public void setParameter(Object key, Object value) {
         parameters.put(key, value);
@@ -392,7 +313,7 @@ final public class ScriptContext implements AutoCloseable {
 
         // Get the current task if needed
         if (task == null) {
-            task = this.task.get();
+            task = this.task;
         }
 
         TaskReference taskReference = null;
@@ -401,15 +322,9 @@ final public class ScriptContext implements AutoCloseable {
         }
 
         try {
-            // If no task, use a dummy one
-            if (task == null) {
-                // Create dummy task
-                task = DummyTask.INSTANCE;
-            }
-
             // Find the task reference with the same ID that has the same parents,
             // otherwise create a new task reference
-            final TypeName taskId = task.getFactory().getId();
+            final TypeName taskId = null; // FIXME: Should be the task ID
             IdentityHashSet<TaskReference> set = null;
             ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
             for (Dependency dependency : resource.getDependencies()) {
@@ -456,10 +371,6 @@ final public class ScriptContext implements AutoCloseable {
 
     }
 
-    public void setTask(Task task) {
-        this.task.set(task);
-    }
-
     /**
      * Submitted jobs
      */
@@ -468,11 +379,11 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public boolean simulate() {
-        return simulate.get();
+        return simulate;
     }
 
     public ScriptContext simulate(boolean simulate) {
-        this.simulate.set(simulate);
+        this.simulate = simulate;
         return this;
     }
 
@@ -480,5 +391,10 @@ final public class ScriptContext implements AutoCloseable {
         final ScriptContext sc = ScriptContext.get();
         if (sc == null) return LOGGER;
         return sc.getMainLogger();
+    }
+
+
+    public void setThreadScriptContext() {
+        threadContext.set(this);
     }
 }

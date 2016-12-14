@@ -31,7 +31,6 @@ import org.apache.commons.configuration.SubnodeConfiguration;
 import org.eclipse.jetty.security.AbstractLoginService;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -40,7 +39,6 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
-import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.server.*;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -127,9 +125,6 @@ public class ServerTask extends AbstractTask {
         LOGGER.info("Server URL is %s", baseURL);
         scheduler.setURL(baseURL);
 
-        // Main repository
-        final Repositories repositories = new Repositories(new File("/").toPath());
-
         webServer = new Server();
 
         // TCP-IP socket
@@ -178,28 +173,17 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the JSON RPC servlet
 
-        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, serverSettings, scheduler, repositories);
+        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, serverSettings, scheduler);
         JsonRPCMethods.initMethods();
         final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
         context.addServlet(jsonServletHolder, JSON_RPC_PATH);
 
         // --- Add the web socket servlet
 
-        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories, serverSettings);
+        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, serverSettings);
         final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
         context.addServlet(webSocketServletHolder, "/web-socket");
 
-
-        // --- Add the status servlet
-
-        final ServletHolder taskServlet = new ServletHolder(new TasksServlet(serverSettings, repositories,
-                scheduler));
-        context.addServlet(taskServlet, "/tasks/*");
-
-
-        // --- Add the JS Help servlet
-
-        context.addServlet(new ServletHolder(new HelpServlet(serverSettings)), "/help/*");
 
         // --- Add the default servlet
 

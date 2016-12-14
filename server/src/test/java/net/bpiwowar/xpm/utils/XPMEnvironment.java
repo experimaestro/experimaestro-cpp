@@ -25,9 +25,9 @@ import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ServerSocket;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.manager.js.SSHServer.findFreeLocalPort;
 
 /**
  * Ensures that only one scheduler is opened throughout the tests
@@ -46,6 +46,22 @@ public class XPMEnvironment {
     public static String testPassword;
 
     private static TemporaryDirectory directory;
+
+    /**
+     * Finds a free local socket port.
+     *
+     * @return a free local socket port.
+     * @throws IOException
+     */
+    public static int findFreeLocalPort() throws IOException {
+
+        ServerSocket server = new ServerSocket(0);
+        try {
+            return server.getLocalPort();
+        } finally {
+            server.close();
+        }
+    }
 
     /**
      * Make a directory corresponding to the caller

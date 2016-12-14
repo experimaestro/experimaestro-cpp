@@ -49,16 +49,15 @@ public abstract class GenericFunction {
     /**
      * Call this method
      *
-     * @param lcx     The language context
      * @param thisObj The object for which this method is called, or null if it is a static method
      * @param options The arguments passed as options
      * @param args    The arguments passed
      * @return
      */
-    public Object call(LanguageContext lcx, Object thisObj, Map<String, Object> options, Object... args) {
+    public Object call(Object thisObj, Map<String, Object> options, Object... args) {
         Converter argmax = null;
 
-        Arguments arguments = new Arguments(lcx, args, options);
+        Arguments arguments = new Arguments(args, options);
 
         for (int i = 0; i < args.length; ++i) {
             if (args[i] instanceof Wrapper) {
@@ -69,7 +68,7 @@ public abstract class GenericFunction {
         int n = 0;
         for (Declaration method : declarations()) {
             ++n;
-            Converter converter = method.score(lcx, arguments, false);
+            Converter converter = method.score(arguments, false);
             if (converter.score > 0  && (argmax == null  || converter.score > argmax.score)) {
                 argmax = converter;
             }
@@ -83,7 +82,7 @@ public abstract class GenericFunction {
             Converter scoredDeclarations[] = new Converter[n];
             int i = 0;
             for (Declaration declaration : declarations()) {
-                scoredDeclarations[i++] = declaration.score(lcx, arguments, true);
+                scoredDeclarations[i++] = declaration.score(arguments, true);
             }
 
             Arrays.sort(scoredDeclarations, (a, b) -> Integer.compare(a.score, b.score));
@@ -113,13 +112,12 @@ public abstract class GenericFunction {
             final Deprecated deprecated = argmax.declaration.executable().getAnnotation(Deprecated.class);
             if (deprecated != null) {
                 final Logger logger = ScriptContext.get().getMainLogger();
-                logger.warn("In %s", lcx.getScriptLocation());
                 logger.warn("Method %s is deprecated", argmax.declaration);
                 if (!deprecated.value().isEmpty()) {
                     logger.warn(deprecated.value());
                 }
             }
-            final Object result = argmax.declaration.invoke(lcx, thisObj, transformedArgs);
+            final Object result = argmax.declaration.invoke(thisObj, transformedArgs);
 
             return result;
         } catch (InvocationTargetException e) {
