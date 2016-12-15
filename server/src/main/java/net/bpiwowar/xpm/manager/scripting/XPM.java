@@ -107,7 +107,7 @@ public class XPM {
 
         // Post-process (experiment handling)
         if (postProcess) {
-            Context.get().postProcess(null, tokenResource);
+            Context.get().postProcess(tokenResource);
         }
 
         return tokenResource;
@@ -443,7 +443,7 @@ public class XPM {
                 if (!old.canBeReplaced()) {
                     rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
                             "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                    context.postProcess(null, old);
+                    context.postProcess(old);
                     return old;
                 } else {
                     rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
@@ -456,7 +456,7 @@ public class XPM {
 
         }
 
-        context.postProcess(null, job);
+        context.postProcess(job);
 
         return job;
     }

@@ -25,6 +25,7 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.CloseableIterable;
@@ -156,6 +157,11 @@ public class Resource implements Identifiable {
      * Flag that says whether the data has been loaded
      */
     transient private boolean dataLoaded;
+
+    /**
+     * Tags
+     */
+    transient private Map<String, JsonSimple> tags;
 
     public Resource(Path locator) {
         this.locator = locator;
@@ -352,6 +358,28 @@ public class Resource implements Identifiable {
      */
     final public ResourceState getState() {
         return state;
+    }
+
+    @Expose
+    void setTags(Map<String, JsonSimple> tags) {
+        this.tags = tags;
+        if (inDatabase()) {
+            try (XPMStatement st1 = Scheduler.statement("DELETE FROM ResourceTags WHERE resource=?");
+                 XPMStatement st = Scheduler.statement("INSERT INTO ResourceTags(resource,tag,value) VALUES(?,?,?)")) {
+                st1.setLong(1, getId());
+                st1.execute();
+
+                st.setLong(1, getId());
+                for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
+                    st.setString(2, entry.getKey());
+                    st.setString(3, entry.getValue().get().toString());
+                    st.execute();
+                }
+
+            } catch (SQLException e) {
+                LOGGER.error(e, "Could not save resource tags");
+            }
+        }
     }
 
     /**
@@ -734,6 +762,7 @@ public class Resource implements Identifiable {
             Scheduler.get().addChangedResource(this);
             ResourceMessage.changed(this).send();
         } else if (!update) {
+            setTags(this.tags); // Save tags in DB
             ResourceMessage.added(this).send();
         }
 

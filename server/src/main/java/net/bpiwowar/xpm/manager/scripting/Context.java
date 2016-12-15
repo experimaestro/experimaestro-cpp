@@ -26,7 +26,6 @@ import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.*;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -144,11 +143,6 @@ final public class Context implements AutoCloseable {
      * Whether we are simulating
      */
     boolean simulate;
-
-    /**
-     * Current task
-     */
-    private Task task;
 
 
     public Context(Scheduler scheduler, LoggerRepository loggerRepository) {
@@ -292,39 +286,10 @@ final public class Context implements AutoCloseable {
     /**
      * Post processing of a saved resource
      *
-     * @param task     The corresponding task
      * @param resource The saved resource
      */
-    public void postProcess(Task task, Resource resource) {
-        // --- Add tags
-        if (task != null) {
-            final Map<String, JsonSimple> tags = task.tags();
-            if (!tags.isEmpty()) {
-                try (XPMStatement st1 = Scheduler.statement("DELETE FROM ResourceTags WHERE resource=?");
-                     XPMStatement st = Scheduler.statement("INSERT INTO ResourceTags(resource,tag,value) VALUES(?,?,?)")) {
-                    st1.setLong(1, resource.getId());
-                    st1.execute();
-
-                    st.setLong(1, resource.getId());
-                    for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
-                        st.setString(2, entry.getKey());
-                        st.setString(3, entry.getValue().get().toString());
-                        st.execute();
-                    }
-
-                } catch (SQLException e) {
-                    LOGGER.error(e, "Could not save resource tags");
-                }
-            }
-        }
-
+    public void postProcess(Resource resource) {
         // --- Build the experiment task hierarchy and set the resource position within it
-
-        // Get the current task if needed
-        if (task == null) {
-            task = this.task;
-        }
-
         TaskReference taskReference = null;
         if (getExperiment() == null) {
             throw new XPMScriptRuntimeException("Experiment is not set");

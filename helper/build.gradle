@@ -4,7 +4,6 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 dependencies {
-    compile group: 'net.bpiwowar', name: 'fson', version:'2.3.2-SNAPSHOT'
 }
 
 task javadocJar(type: Jar) {
