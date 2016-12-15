@@ -31,12 +31,11 @@ import static com.sun.javafx.binding.StringFormatter.format;
  */
 public class RPCObjects implements AutoCloseable {
 
-    public static final String OBJECTS = "objects";
+    private static final String OBJECTS = "objects";
     private static final Logger LOGGER = Logger.getLogger();
     static private boolean initialized = false;
     static private final HashMap<Class<?>, ClassDescription> types = new HashMap<>();
-    private final ScriptContext scriptContext;
-    private final StaticContext staticContext;
+    private final Context context;
 
     IdentityHashMap<Object, Integer> object2id = new IdentityHashMap<>();
 
@@ -45,14 +44,12 @@ public class RPCObjects implements AutoCloseable {
 
     public RPCObjects(JsonRPCMethods mos, JsonRPCSettings settings) {
         final Hierarchy loggerRepository = mos.getScriptLogger();
-        staticContext = new StaticContext(settings.scheduler, loggerRepository);
-        scriptContext = new ScriptContext(staticContext);
+        context = new Context(settings.scheduler, loggerRepository);
     }
 
     @Override
     public void close() throws Exception {
-        scriptContext.close();
-        staticContext.close();
+        context.close();
     }
 
 
@@ -157,7 +154,7 @@ public class RPCObjects implements AutoCloseable {
         Declaration<?> method;
 
 
-        public ExposedCaller(Declaration<?> callable) {
+        ExposedCaller(Declaration<?> callable) {
             this.method = callable;
 
             Annotation[][] annotations = callable.getParameterAnnotations();
@@ -206,7 +203,7 @@ public class RPCObjects implements AutoCloseable {
                 }
             }
 
-            rpcObjects.scriptContext.setThreadScriptContext();
+            rpcObjects.context.setThreadScriptContext();
             final Object result = method.invoke(thisObject, args);
 
             if (result != null && rpcObjects.isManaged(result.getClass())) {
@@ -223,7 +220,7 @@ public class RPCObjects implements AutoCloseable {
 
     }
 
-    static HashSet<Class<?>> UNMANAGED_TYPES = new HashSet<>();
+    private static HashSet<Class<?>> UNMANAGED_TYPES = new HashSet<>();
 
     static {
         UNMANAGED_TYPES.add(boolean.class);
@@ -251,7 +248,7 @@ public class RPCObjects implements AutoCloseable {
      * Checks whether the type is managed by RPC objects
      *
      * @param aClass Class
-     * @return
+     * @return True if the class is managed
      */
     private boolean isManaged(Class<?> aClass) {
         return !UNMANAGED_TYPES.contains(aClass)
@@ -482,7 +479,7 @@ public class RPCObjects implements AutoCloseable {
         }
     }
 
-    public static void outputHelp(PrintStream out, Declaration<?> d) {
+    private static void outputHelp(PrintStream out, Declaration<?> d) {
         final Help help = d.executable().getAnnotation(Help.class);
         StringBuilder sb = new StringBuilder();
 
@@ -594,7 +591,7 @@ public class RPCObjects implements AutoCloseable {
         }
     }
 
-    static final HashMap<Type, String> type2cppType = new HashMap<>();
+    private static final HashMap<Type, String> type2cppType = new HashMap<>();
 
     static {
         type2cppType.put(String.class, "std::string");

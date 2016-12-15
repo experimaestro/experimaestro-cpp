@@ -28,12 +28,11 @@ import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.scheduler.*;
-import net.bpiwowar.xpm.utils.IdentityHashSet;
-import net.bpiwowar.xpm.utils.MapStack;
-import net.bpiwowar.xpm.utils.Mutable;
-import net.bpiwowar.xpm.utils.Updatable;
+import net.bpiwowar.xpm.utils.*;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.spi.LoggerRepository;
 
+import java.io.Closeable;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -49,33 +48,28 @@ import static java.lang.String.format;
  * This class hides away what is part of the static context and
  * what if part of the dynamic one
  */
-final public class ScriptContext implements AutoCloseable {
+final public class Context implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
      * The thread local context
      */
-    private final static ThreadLocal<ScriptContext> threadContext = new ThreadLocal<>();
-
-    /**
-     * The script static context
-     */
-    final StaticContext staticContext;
+    private final static ThreadLocal<Context> threadContext = new ThreadLocal<>();
 
     /**
      * Default locks
      */
-    Updatable<Map<Resource, DependencyParameters>> defaultLocks;
+    Map<Resource, DependencyParameters> defaultLocks;
 
     /**
      * Priority
      */
-    Updatable<Integer> priority;
+    Integer priority;
 
     /**
      * The working directory
      */
-    Mutable<Path> workingDirectory;
+    Path workingDirectory;
 
     /**
      * List of listeners for new jobs
@@ -83,24 +77,14 @@ final public class ScriptContext implements AutoCloseable {
     ArrayList<Consumer<Job>> newTaskListeners = new ArrayList<>();
 
     /**
-     * Previous context
-     */
-    private ScriptContext oldCurrent = null;
-
-    /**
      * The default launcher
      */
-    private Updatable<Launcher> defaultLauncher;
+    private Launcher defaultLauncher;
 
     /**
      * Associated experiment
      */
-    private Updatable<Experiment> experiment;
-
-    /**
-     * The current script path
-     */
-    private Updatable<Path> currentScriptPath;
+    private Experiment experiment;
 
     /**
      * Parameters
@@ -116,7 +100,46 @@ final public class ScriptContext implements AutoCloseable {
      * Submitted jobs
      */
     private Map<String, SubmittedJob> submittedJobs;
+    /**
+     * The scheduler
+     */
+    Scheduler scheduler;
 
+    /**
+     * The logger
+     */
+    LoggerRepository loggerRepository;
+
+    /**
+     * Main logger
+     */
+    final Logger mainLogger;
+
+    /**
+     * The resource cleaner
+     * <p>
+     * Used to close objects at the end of the execution of a script
+     */
+    Cleaner cleaner;
+
+
+    public void register(Closeable closeable) {
+        cleaner.register(closeable);
+    }
+
+    public void unregister(AutoCloseable autoCloseable) {
+        cleaner.unregister(autoCloseable);
+    }
+
+    public Logger getMainLogger() {
+        return mainLogger;
+    }
+
+    @Override
+    public void close() {
+        threadContext.remove();
+        cleaner.close();
+    }
     /**
      * Whether we are simulating
      */
@@ -128,19 +151,20 @@ final public class ScriptContext implements AutoCloseable {
     private Task task;
 
 
-    public ScriptContext(StaticContext staticContext) {
+    public Context(Scheduler scheduler, LoggerRepository loggerRepository) {
         LOGGER.debug("Creating script context [%s] from static context", this);
 
-        this.staticContext = staticContext;
+        this.scheduler = scheduler;
+        this.loggerRepository = loggerRepository;
+        this.mainLogger = (Logger)loggerRepository.getLogger("xpm", Logger.factory());
+        this.cleaner = new Cleaner();
 
-        defaultLocks = new Updatable<>(new HashMap<>(), HashMap::new);
-        task = task;
-        experiment = Updatable.create(null);
-        priority = Updatable.create(0);
-        workingDirectory = new Mutable<>();
-        defaultLauncher = Updatable.create(new DirectLauncher(Scheduler.get().getLocalhostConnector()));
+        defaultLocks = new HashMap<>();
+        experiment = null;
+        priority = 0;
+        workingDirectory = null;
+        defaultLauncher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         threadContext.set(this);
-        currentScriptPath = Updatable.create(null);
         properties = new HashMap<>();
         parameters = new MapStack<>();
 
@@ -150,36 +174,30 @@ final public class ScriptContext implements AutoCloseable {
 
     @Override
     public String toString() {
-        return format("ScriptContext@%X", System.identityHashCode(this));
+        return format("Context@%X", System.identityHashCode(this));
     }
 
 
-    static public ScriptContext get() {
+    static public Context get() {
         return threadContext.get();
     }
 
-
-    public ScriptContext defaultLocks(Map<Resource, DependencyParameters> defaultLocks) {
-        this.defaultLocks.set(defaultLocks);
+    public Context defaultLocks(Map<Resource, DependencyParameters> defaultLocks) {
+        this.defaultLocks = defaultLocks;
         return this;
     }
 
     public Map<Resource, DependencyParameters> defaultLocks() {
-        return defaultLocks.get();
+        return defaultLocks;
     }
 
 
     public Scheduler getScheduler() {
-
-        return staticContext.scheduler;
-    }
-
-    public Logger getMainLogger() {
-        return staticContext.getMainLogger();
+        return scheduler;
     }
 
     public Logger getLogger(String loggerName) {
-        return (Logger) staticContext.loggerRepository.getLogger(loggerName, Logger.factory());
+        return (Logger) loggerRepository.getLogger(loggerName, Logger.factory());
     }
 
     /**
@@ -189,81 +207,72 @@ final public class ScriptContext implements AutoCloseable {
      */
     public void prepare(Resource resource) {
         // -- Adds default locks
-        for (Map.Entry<? extends Resource, DependencyParameters> lock : defaultLocks.get().entrySet()) {
+        for (Map.Entry<? extends Resource, DependencyParameters> lock : defaultLocks.entrySet()) {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
             ((Job) resource).addDependency(dependency);
         }
 
-        if (defaultLauncher.get() != null) {
-            Launcher launcher = defaultLauncher.get();
+        if (defaultLauncher != null) {
+            Launcher launcher = defaultLauncher;
             resource.setLauncher(launcher, (LauncherParameters) parameters.get(launcher));
         }
     }
 
-    public ScriptContext addNewTaskListener(Consumer<Job> listener) {
+    public Context addNewTaskListener(Consumer<Job> listener) {
         newTaskListeners.add(listener);
         return this;
     }
 
-    public ScriptContext addDefaultLocks(Map<Resource, DependencyParameters> map) {
-        defaultLocks.modify().putAll(map);
+    public Context addDefaultLocks(Map<Resource, DependencyParameters> map) {
+        defaultLocks.putAll(map);
         return this;
     }
 
     public Map<Resource, DependencyParameters> getDefaultLocks() {
-        return defaultLocks.get();
+        return defaultLocks;
     }
 
     public int getPriority() {
-
-        return priority.get();
+        return priority;
     }
 
     public void setPriority(int priority) {
-
-        this.priority.set(priority);
+        this.priority = priority;
     }
 
     public Path getWorkingDirectory() {
-        return workingDirectory.getValue();
-    }
+        return workingDirectory; }
 
     public void setWorkingDirectory(Path workingDirectory) {
         LOGGER.debug("[%s] Setting working directory to %s", this, workingDirectory);
-        this.workingDirectory.setValue(workingDirectory);
+        this.workingDirectory = workingDirectory;
     }
 
     public Experiment getExperiment() {
-        return experiment.get();
+        return experiment;
     }
 
     public void setExperiment(Experiment experiment) {
-        this.experiment.set(experiment);
-    }
-
-    @Override
-    public void close() {
-        threadContext.remove();
+        this.experiment = experiment;
     }
 
     public void addDefaultLock(Resource resource, DependencyParameters parameters) {
-        defaultLocks.modify().put(resource, parameters);
+        defaultLocks.put(resource, parameters);
     }
 
     public Launcher getDefaultLauncher() {
-        return defaultLauncher.get();
+        return defaultLauncher;
     }
 
     public void setDefaultLauncher(Launcher defaultLauncher) {
-        this.defaultLauncher.set(defaultLauncher);
+        this.defaultLauncher = defaultLauncher;
     }
 
     public Connector getConnector() {
-        Launcher launcher = defaultLauncher.get();
-        if (launcher == null) {
-            return Scheduler.get().getLocalhostConnector();
+        if (defaultLauncher == null) {
+            return scheduler.getLocalhostConnector();
         }
-        return launcher.getConnector();
+        return defaultLauncher.getConnector();
     }
 
     public void setProperty(String key, Object value) {
@@ -353,7 +362,7 @@ final public class ScriptContext implements AutoCloseable {
 
             // Create a new task reference if necessary
             if (set == null || set.isEmpty()) {
-                taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
+                taskReference = new TaskReference(taskId, experiment, parentTaskReferences);
                 taskReference.save();
             } else {
                 taskReference = set.iterator().next();
@@ -382,13 +391,13 @@ final public class ScriptContext implements AutoCloseable {
         return simulate;
     }
 
-    public ScriptContext simulate(boolean simulate) {
+    public Context simulate(boolean simulate) {
         this.simulate = simulate;
         return this;
     }
 
     public static Logger mainLogger() {
-        final ScriptContext sc = ScriptContext.get();
+        final Context sc = Context.get();
         if (sc == null) return LOGGER;
         return sc.getMainLogger();
     }

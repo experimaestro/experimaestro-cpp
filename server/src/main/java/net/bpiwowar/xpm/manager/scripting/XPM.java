@@ -37,7 +37,6 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonResource;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
@@ -56,8 +55,6 @@ import org.apache.log4j.Level;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
-import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -110,7 +107,7 @@ public class XPM {
 
         // Post-process (experiment handling)
         if (postProcess) {
-            ScriptContext.get().postProcess(null, tokenResource);
+            Context.get().postProcess(null, tokenResource);
         }
 
         return tokenResource;
@@ -133,9 +130,9 @@ public class XPM {
         return (TokenResource) resource;
     }
 
-    protected static ScriptContext context() {
+    protected static Context context() {
 
-        return ScriptContext.get();
+        return Context.get();
     }
 
     public static java.nio.file.Path getPath(Connector connector, Object stdout) throws IOException {
@@ -214,14 +211,14 @@ public class XPM {
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
     public boolean simulate(boolean simulate) {
-        final boolean old = ScriptContext.get().simulate();
-        ScriptContext.get().simulate(simulate);
+        final boolean old = Context.get().simulate();
+        Context.get().simulate(simulate);
         return old;
     }
 
     @Expose
     public boolean simulate() {
-        return ScriptContext.get().simulate();
+        return Context.get().simulate();
     }
 
     @Expose
@@ -238,7 +235,7 @@ public class XPM {
      */
     @Expose
     public String evaluate(List<Object> jsargs, Map options) throws Exception {
-        ScriptContext sc = context();
+        Context sc = context();
         Command command = Command.getCommand(jsargs);
 
         // Get the launcher
@@ -281,8 +278,8 @@ public class XPM {
     public Resource commandlineJob(@Argument(name = "jobId") Object path,
                                    AbstractCommand command,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-        final ScriptContext scriptContext = context();
-        final Logger rootLogger = scriptContext.getLogger("xpm");
+        final Context context = context();
+        final Logger rootLogger = context.getLogger("xpm");
 
         if (path == null) {
             throw new XPMScriptRuntimeException("Locator was null for command line job");
@@ -314,7 +311,7 @@ public class XPM {
         }
 
         job.setCommand(command);
-        if (scriptContext.getSubmittedJobs().containsKey(path)) {
+        if (context.getSubmittedJobs().containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
             if (simulate()) {
                 return job;
@@ -328,7 +325,7 @@ public class XPM {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         // --- Set defaults
-        scriptContext.prepare(job);
+        context.prepare(job);
 
         // --- Options
         if (options != null) {
@@ -344,7 +341,7 @@ public class XPM {
             if (options.containsKey("launcher")) {
                 final Object launcher = options.get("launcher");
                 if (launcher != null)
-                    job.setLauncher((Launcher) launcher, (LauncherParameters) scriptContext.getParameter(launcher));
+                    job.setLauncher((Launcher) launcher, (LauncherParameters) context.getParameter(launcher));
 
             }
 
@@ -396,7 +393,7 @@ public class XPM {
                             resource = Resource.getByLocator(rsrcPath);
                             if (resource == null)
                                 if (simulate()) {
-                                    if (!scriptContext.getSubmittedJobs().containsKey(rsrcPath))
+                                    if (!context.getSubmittedJobs().containsKey(rsrcPath))
                                         LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
                                 } else {
                                     throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
@@ -446,7 +443,7 @@ public class XPM {
                 if (!old.canBeReplaced()) {
                     rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
                             "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                    scriptContext.postProcess(null, old);
+                    context.postProcess(null, old);
                     return old;
                 } else {
                     rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
@@ -459,7 +456,7 @@ public class XPM {
 
         }
 
-        scriptContext.postProcess(null, job);
+        context.postProcess(null, job);
 
         return job;
     }

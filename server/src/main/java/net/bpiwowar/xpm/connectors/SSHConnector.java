@@ -31,7 +31,7 @@ import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
@@ -389,7 +389,7 @@ public class SSHConnector extends SingleHostConnector {
         if (launcher == null) {
             launcher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         }
-        final Logger logger = ScriptContext.get().getMainLogger();
+        final Logger logger = Context.get().getMainLogger();
         AbstractProcessBuilder builder = launcher.processBuilder(null);
         builder.command(command);
         String returned = builder.execute(logger);

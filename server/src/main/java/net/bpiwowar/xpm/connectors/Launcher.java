@@ -26,7 +26,7 @@ import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -166,7 +166,7 @@ public abstract class Launcher implements Serializable {
         if (launcherEnvironment == null) {
             AbstractProcessBuilder builder = processBuilder(null);
             builder.command("env");
-            final Logger logger = ScriptContext.get().getMainLogger();
+            final Logger logger = Context.get().getMainLogger();
             launcherEnvironment = new HashMap<>();
             int code = builder.execute(logger, is -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {

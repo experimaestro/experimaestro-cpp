@@ -25,7 +25,6 @@ import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.*;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.util.Iterator;
@@ -206,13 +205,13 @@ public class ScriptingPath extends WrapperObject<Path> {
     @Expose
     public PrintWriter output_stream() throws IOException {
         final OutputStream output = Files.newOutputStream(object);
-        final PrintWriter writer = new MyPrintWriter(ScriptContext.get(), output);
+        final PrintWriter writer = new MyPrintWriter(Context.get(), output);
         return writer;
     }
 
     @Expose
     public BufferedReader input_stream() throws IOException {
-        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(ScriptContext.get(), Files.newInputStream(object)));
+        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(Context.get(), Files.newInputStream(object)));
         return reader;
     }
 
@@ -227,34 +226,34 @@ public class ScriptingPath extends WrapperObject<Path> {
     }
 
     static class MyPrintWriter extends PrintWriter {
-        private final ScriptContext scriptContext;
+        private final Context context;
 
-        public MyPrintWriter(ScriptContext scriptContext, OutputStream out) {
+        public MyPrintWriter(Context context, OutputStream out) {
             super(out);
-            this.scriptContext = scriptContext;
-            scriptContext.staticContext.register(this);
+            this.context = context;
+            context.register(this);
         }
 
         @Override
         public void close() {
             super.close();
-            scriptContext.staticContext.unregister(this);
+            context.unregister(this);
         }
     }
 
     static class MyInputStreamReader extends InputStreamReader {
-        final ScriptContext scriptContext;
+        final Context context;
 
-        public MyInputStreamReader(ScriptContext scriptContext, InputStream in) {
+        public MyInputStreamReader(Context context, InputStream in) {
             super(in);
-            this.scriptContext = scriptContext;
-            scriptContext.staticContext.register(this);
+            this.context = context;
+            context.register(this);
         }
 
         @Override
         public void close() throws IOException {
             super.close();
-            scriptContext.staticContext.unregister(this);
+            context.unregister(this);
         }
     }
 

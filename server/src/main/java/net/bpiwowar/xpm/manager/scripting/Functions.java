@@ -18,15 +18,11 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
-import net.bpiwowar.xpm.exceptions.ExperimaestroException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.UserCache;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
@@ -51,7 +47,6 @@ import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -63,8 +58,8 @@ public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
 
 
-    private static ScriptContext context() {
-        return ScriptContext.get();
+    private static Context context() {
+        return Context.get();
     }
 
     @Expose
@@ -109,7 +104,7 @@ public class Functions {
     @Expose
     @Help("Defines the default launcher")
     static public void set_default_launcher(Launcher launcher) {
-        ScriptContext.get().setDefaultLauncher(launcher);
+        Context.get().setDefaultLauncher(launcher);
     }
 
     @Expose()
@@ -156,8 +151,8 @@ public class Functions {
             } else {
                 final String uri = o instanceof JsonString ? o.toString() : (String) o;
                 Path path = NetworkShare.uriToPath(uri);
-                if (ScriptContext.get().simulate()) {
-                    final Resource resource = ScriptContext.get().getSubmittedJobs().get(uri).resource;
+                if (Context.get().simulate()) {
+                    final Resource resource = Context.get().getSubmittedJobs().get(uri).resource;
                     if (resource == null) {
                         return Resource.getByLocator(path);
                     }
@@ -177,8 +172,8 @@ public class Functions {
             @Argument(name = "identifier", help = "Name of the experiment") String identifier,
             @Argument(name = "holdPrevious") Boolean holdPrevious
     ) throws ExperimaestroCannotOverwrite, SQLException {
-        final ScriptContext scriptContext = ScriptContext.get();
-        if (!scriptContext.simulate()) {
+        final Context context = Context.get();
+        if (!context.simulate()) {
             // We first put on hold all the resources belonging to this experiment
             if (holdPrevious == null || holdPrevious) {
                 for (Resource resource : Experiment.resourcesByIdentifier(identifier, ResourceState.WAITING_STATES)) {
@@ -193,7 +188,7 @@ public class Functions {
 
             Experiment experiment = new Experiment(identifier, System.currentTimeMillis());
             experiment.save();
-            scriptContext.setExperiment(experiment);
+            context.setExperiment(experiment);
         }
     }
 
@@ -209,7 +204,7 @@ public class Functions {
 
     @Expose
     static public Object parameters(String key) {
-        return ScriptContext.get().getParameter(key);
+        return Context.get().getParameter(key);
     }
 
 

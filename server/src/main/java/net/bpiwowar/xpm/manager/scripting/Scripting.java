@@ -36,8 +36,6 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -93,7 +91,7 @@ public class Scripting {
                 NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
                 for (int i = 0; i < classes.getLength(); ++i) {
                     classname = classes.item(i).getTextContent();
-                    final Class<?> aClass = ScriptContext.class.getClassLoader().loadClass(classname);
+                    final Class<?> aClass = Context.class.getClassLoader().loadClass(classname);
                     TYPES.add(aClass);
                     final ClassDescription classDescription = ClassDescription.analyzeClass(aClass);
                     final String className = classDescription.getClassName();

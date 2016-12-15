@@ -88,7 +88,7 @@ public abstract class GenericFunction {
             Arrays.sort(scoredDeclarations, (a, b) -> Integer.compare(a.score, b.score));
 
 
-            final Logger logger = ScriptContext.mainLogger();
+            final Logger logger = Context.mainLogger();
             final String message = String.format("Could not find a matching method for %s(%s)%s",
                     getKey(),
                     Output.toString(", ", args, o -> o.getClass().toString()),
@@ -111,7 +111,7 @@ public abstract class GenericFunction {
             // Show deprecated methods
             final Deprecated deprecated = argmax.declaration.executable().getAnnotation(Deprecated.class);
             if (deprecated != null) {
-                final Logger logger = ScriptContext.get().getMainLogger();
+                final Logger logger = Context.get().getMainLogger();
                 logger.warn("Method %s is deprecated", argmax.declaration);
                 if (!deprecated.value().isEmpty()) {
                     logger.warn(deprecated.value());

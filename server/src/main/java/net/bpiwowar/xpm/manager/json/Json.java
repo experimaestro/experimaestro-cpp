@@ -181,7 +181,7 @@ abstract public class Json {
     public ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         if (connector == null) {
-            connector = ScriptContext.get().getConnector().getMainConnector();
+            connector = Context.get().getConnector().getMainConnector();
         }
         Writer writer = new OutputStreamWriter(bytes);
         final SingleHostConnector finalConnector = connector;

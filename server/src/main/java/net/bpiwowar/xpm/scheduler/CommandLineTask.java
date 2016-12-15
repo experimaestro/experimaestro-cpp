@@ -32,8 +32,7 @@ import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.manager.scripting.StaticContext;
+import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Level;
 
@@ -278,7 +277,7 @@ public class CommandLineTask extends Job {
      */
     @Expose("submitJob")
     static public Resource submit(Path path, AbstractCommand command) throws IOException, SQLException, ExperimaestroCannotOverwrite {
-        ScriptContext scriptContext = ScriptContext.get();
+        Context context = Context.get();
 
         if (path == null) {
             throw new XPMScriptRuntimeException("Locator was null for command line job");
@@ -301,7 +300,7 @@ public class CommandLineTask extends Job {
         }
 
         job.setCommand(command);
-//        if (scriptContext.getSubmittedJobs().containsKey(path)) {
+//        if (context.getSubmittedJobs().containsKey(path)) {
 //            rootLogger.info("Not submitting %s [duplicate]", path);
 //            if (simulate()) {
 //                return job;
@@ -312,7 +311,7 @@ public class CommandLineTask extends Job {
 
 
         // --- Set defaults
-        scriptContext.prepare(job);
+        context.prepare(job);
 
 
         job.setState(ResourceState.WAITING);
@@ -329,7 +328,7 @@ public class CommandLineTask extends Job {
             if (!old.canBeReplaced()) {
                 LOGGER.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
                         "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                scriptContext.postProcess(null, old);
+                context.postProcess(null, old);
                 return old;
             } else {
                 LOGGER.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
@@ -341,7 +340,7 @@ public class CommandLineTask extends Job {
         }
 
 
-        scriptContext.postProcess(null, job);
+        context.postProcess(null, job);
 
         return job;
     }

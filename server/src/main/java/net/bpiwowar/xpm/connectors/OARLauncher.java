@@ -29,7 +29,6 @@ import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.Output;
