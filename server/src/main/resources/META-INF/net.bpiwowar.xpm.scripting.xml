@@ -46,11 +46,7 @@
         <class>net.bpiwowar.xpm.scheduler.ReadWriteDependency</class>
 
         <!-- Manager -->
-        <class>net.bpiwowar.xpm.manager.Module</class>
-        <class>net.bpiwowar.xpm.manager.Task</class>
-        <class>net.bpiwowar.xpm.manager.JsonTask</class>
         <class>net.bpiwowar.xpm.manager.Namespace</class>
-        <class>net.bpiwowar.xpm.manager.tasks.JavaTaskFactory</class>
 
         <!-- Connectors -->
         <class>net.bpiwowar.xpm.connectors.ConnectorOptions</class>

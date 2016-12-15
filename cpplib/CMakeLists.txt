@@ -158,23 +158,15 @@ endif ()
 
 FIND_PACKAGE(JNI REQUIRED)
 
-set(JAVA_XPM_PACKAGE net.bpiwowar.xpm)
-string(REGEX REPLACE "\\." / JAVA_XPM_PACKAGE_PATH "${JAVA_XPM_PACKAGE}")
-
-set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/main/java/${JAVA_XPM_PACKAGE_PATH}")
-set(JAVA_XPM_TESTDIR "${CMAKE_CURRENT_SOURCE_DIR}BINARY_DIR}/java/src/test/java/${JAVA_XPM_PACKAGE_PATH}")
-
-set(CMAKE_SWIG_FLAGS -c++ -package ${JAVA_XPM_PACKAGE})  
+set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/main/java/net/bpiwowar")
+set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
 set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
 
 set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
 swig_add_module(experimaestro_java java swig/xpm.i)
-swig_link_libraries(experimaestro_java experimaestro_shared)
-target_include_directories(experimaestro_java PUBLIC ${JNI_INCLUDE_DIRS})
 
 set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
 swig_add_module(experimaestro_rpc_java java swig/xpm_rpc.i)
-swig_link_libraries(experimaestro_rpc_java experimaestro_shared)
 
 foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
     # set(swigtargetlist ${swigtarget})
@@ -184,5 +176,8 @@ foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
 			MACOSX_RPATH TRUE
 			INSTALL_RPATH "@loader_path"
 			CXX_STANDARD 11)
+    target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
     swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
 endforeach()
+
+add_dependencies(experimaestro_java documentation experimaestro_rpc_java)

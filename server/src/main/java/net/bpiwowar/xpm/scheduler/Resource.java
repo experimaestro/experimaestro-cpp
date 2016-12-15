@@ -361,7 +361,7 @@ public class Resource implements Identifiable {
     }
 
     @Expose
-    void setTags(Map<String, JsonSimple> tags) {
+    public void setTags(Map<String, JsonSimple> tags) {
         this.tags = tags;
         if (inDatabase()) {
             try (XPMStatement st1 = Scheduler.statement("DELETE FROM ResourceTags WHERE resource=?");

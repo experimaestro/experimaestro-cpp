@@ -1,9 +1,12 @@
 %module(directors="1") experimaestro
 
+
 #define SWIG_IGNORE %ignore
 #define SWIG_REMOVE(x)
 #define XPM_PIMPL(x) x
 #define XPM_PIMPL_CHILD(name, parent) name: public parent
+
+%pragma(java) jniclasspackage="xpm";
 
 %{
 #include <xpm/xpm.hpp>
@@ -13,6 +16,8 @@
 #include <xpm/logging.hpp>
 %}
 
+// Support for intxx_t
+%include "stdint.i"
 // Support for standard C++ structures
 %include "std_string.i"
 %include "std_vector.i"
@@ -29,7 +34,7 @@
 // Implicit conversions
 %implicitconv;
 %implicitconv xpm::Path;
-#endif SWIGPYTHON
+#endif
 
 // Documentation
 %include "documentation.i"
@@ -53,7 +58,6 @@
     }
 }
 #endif
-
 
 // Ignores
 %import "ignores.i";
@@ -83,6 +87,35 @@
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 %ignore xpm::Argument::type;
 %ignore xpm::StructuredValue::operator[];
+
+%nspace xpm::Object;
+%nspace xpm::Type;
+%nspace xpm::Task;
+%nspace xpm::StructuredValue;
+%nspace xpm::Argument;
+%nspace xpm::ObjectFactory;
+%nspace xpm::Command;
+%nspace xpm::Argument;
+%nspace xpm::ObjectFactory;
+%nspace xpm::Context;
+%nspace xpm::Generator;
+%nspace xpm::Path;
+%nspace xpm::Register;
+%nspace xpm::Share;
+%nspace xpm::PathGenerator;
+%nspace xpm::Generator;
+%nspace xpm::LogLevel;
+%nspace xpm::TypeName;
+%nspace xpm::Value;
+%nspace xpm::ValueType;
+
+%nspace xpm::AbstractCommandComponent;
+%nspace xpm::CommandContext;
+%nspace xpm::CommandContent;
+%nspace xpm::CommandParameters;
+%nspace xpm::CommandString;
+%nspace xpm::CommandPath;
+%nspace xpm::CommandLine;
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
@@ -148,5 +181,7 @@
       return (*($self))[key];
     }
 }
+
+/*%typemap(javapackage) xpm::rpc::AbstractCommandComponent & "net.bpiwowar.xpm.rpc";*/
 
 

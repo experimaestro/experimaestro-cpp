@@ -1,7 +1,10 @@
+import java.nio.file.Files
+
 description = 'Experimaestro helper package'
 
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply plugin: 'idea'
 
 dependencies {
 }
@@ -14,6 +17,44 @@ task javadocJar(type: Jar) {
 task sourcesJar(type: Jar) {
     classifier = 'sources'
     from sourceSets.main.allSource
+}
+
+def jnidir = project.buildDir.toPath().resolve("jni")
+def javaSource = jnidir.resolve("java/src/main/java")
+
+task buildJNI() {
+    description = "Builds the JNI"
+
+    // Creates directory
+    Files.createDirectories(jnidir)
+
+    def sourceDir = project.projectDir.toPath().resolve("../cpplib").normalize()
+
+    exec {
+        executable "/usr/local/bin/cmake"
+        workingDir jnidir.toFile()
+
+        args sourceDir.toString()
+    }
+    exec {
+        executable "make"
+        workingDir jnidir.toFile()
+
+        args "experimaestro_java"
+    }
+}
+
+compileJava {
+    dependsOn buildJNI
+    def jniSources = files { javaSource.toFile().listFiles() }
+    source += jniSources
+}
+
+
+idea {
+    module {
+        sourceDirs += javaSource.toFile()
+    }
 }
 
 artifacts {
@@ -36,50 +77,53 @@ def ossrhPassword = hasProperty("ossrhPassword") ? ossrhPassword : null
 
 
 uploadArchives {
-  if (System.env.TRAVIS && !version.endsWith("-SNAPSHOT")) return
+    if (System.env.TRAVIS && !version.endsWith("-SNAPSHOT")) return
 
-  repositories {
-    mavenDeployer {
-      beforeDeployment {
-        MavenDeployment deployment -> if (!version.endsWith("-SNAPSHOT")) { signing.signPom(deployment) }
-      }
+    repositories {
+        mavenDeployer {
+            beforeDeployment {
+                MavenDeployment deployment ->
+                    if (!version.endsWith("-SNAPSHOT")) {
+                        signing.signPom(deployment)
+                    }
+            }
 
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: ossrhUsername, password: ossrhPassword)
-      }
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
 
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: ossrhUsername, password: ossrhPassword)
-      }
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
 
-      pom.project {
-        name 'Experimaestro helper'
-        packaging 'jar'
-        // optionally artifactId can be defined here
-        description 'Experimaestro helper package that is used to auto-configure tasks with annotations.'
-        url 'http://experimaestro.readthedocs.org/en/latest/'
+            pom.project {
+                name 'Experimaestro helper'
+                packaging 'jar'
+                // optionally artifactId can be defined here
+                description 'Experimaestro helper package that is used to auto-configure tasks with annotations.'
+                url 'http://experimaestro.readthedocs.org/en/latest/'
 
-        scm {
-          connection 'scm:svn:https://github.com/bpiwowar/experimaestro.git'
-          developerConnection 'scm:git:https://github.com/bpiwowar/experimaestro.git'
-          url 'https://github.com/bpiwowar/experimaestro'
+                scm {
+                    connection 'scm:svn:https://github.com/bpiwowar/experimaestro.git'
+                    developerConnection 'scm:git:https://github.com/bpiwowar/experimaestro.git'
+                    url 'https://github.com/bpiwowar/experimaestro'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'bpiwowar'
+                        name 'Benjamin Piwowarski'
+                        email 'benjamin@bpiwowar.net'
+                    }
+                }
+            }
         }
-
-        licenses {
-          license {
-            name 'The Apache License, Version 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-          }
-        }
-
-        developers {
-          developer {
-            id 'bpiwowar'
-            name 'Benjamin Piwowarski'
-            email 'benjamin@bpiwowar.net'
-          }
-        }
-      }
     }
-  }
 }
