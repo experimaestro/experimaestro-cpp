@@ -5,17 +5,18 @@ import time
 @MergeClass(A2)
 class _A2:
     def execute(self):
+        print("Hello world %s" % (self.seed))
         for i in range(20):
             time.sleep(1)
             progress((i+1)/20)
-        print("Hello world %s" % (self.seed))
 
 @MergeClass(B)
 class _B:
     def execute(self):
+        print(self.a)
+        print("Hello world %s" % (self.a.seed))
         for i in range(20):
             time.sleep(1)
             progress((i+1)/20)
-        print("Hello world %s" % (self.seed))
 
 register.parse()

@@ -810,7 +810,6 @@ void Object::configure(std::shared_ptr<StructuredValue> const& value) {
 }
 
 void Object::validate() {
-
   // (1) Validate the object arguments
   for (auto entry: _type->arguments()) {
     auto &argument = *entry.second;
@@ -834,6 +833,18 @@ void Object::validate() {
       auto &value = (*_value)[argument.name()];
       if (value->value().simple() && value->value() == argument.defaultValue()) {
         (*value)[KEY_DEFAULT] = std::make_shared<StructuredValue>(Value(true));
+      } else {
+        if (value->hasKey(KEY_TYPE) && value->value().scalarType() != ValueType::OBJECT) {
+          assert(value->value().scalarType() == ValueType::NONE);
+          LOGGER->warn("Looking at {}", entry.first);
+          auto const v = (*value)[KEY_TYPE];
+          auto valueType = _register->getType(TypeName(v->value().getString()));
+          if (valueType) {
+            auto object = valueType->create();
+            object->setValue(value);
+            object->validate();
+          }
+        }
       }
       setValue(argument.name(), value);
     }
@@ -933,11 +944,11 @@ std::shared_ptr<Object> Task::create() const {
   if (!_factory) {
     throw argument_error("Task has no factory");
   }
-  auto ptr = _factory->create();
-  ptr->type(_type);
-  ptr->task(this->shared_from_this());
+  auto object = _factory->create();
+  object->type(_type);
+  object->task(this->shared_from_this());
   LOGGER->info("Setting task to {}", _identifier.toString());
-  return ptr;
+  return object;
 }
 
 void Task::execute(std::shared_ptr<StructuredValue> const& value) const {
@@ -947,6 +958,16 @@ void Task::execute(std::shared_ptr<StructuredValue> const& value) const {
 }
 
 // ---- REGISTER
+
+std::shared_ptr<Object> ObjectFactory::create() {
+  auto object = _create();
+  object->_register = _register;
+  return object;
+}
+
+ObjectFactory::ObjectFactory(std::shared_ptr<Register> const &theRegister) : _register(theRegister) {
+
+}
 
 Register::Register() {
   addType(IntegerType);

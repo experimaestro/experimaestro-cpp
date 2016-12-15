@@ -55,7 +55,7 @@ class PyObject(Object, metaclass=PyObjectType):
         value = VALUECONVERTERS[sv.value().scalarType()](sv)
         logger.debug("Really setting %s to %s", key, value)
         dict.__setattr__(self, key, value)
-
+        
 __StructuredValue = StructuredValue
 class StructuredValue(__StructuredValue):
     def __init__(self, *args, **argv):
@@ -67,11 +67,11 @@ OBJECTS = []
 
 class PythonObjectFactory(ObjectFactory):
     """An experimaestro type in Python"""
-    def __init__(self, pythonType):
-      ObjectFactory.__init__(self)
+    def __init__(self, register, pythonType):
+      ObjectFactory.__init__(self, register)
       self.pythonType = pythonType
 
-    def create(self):
+    def _create(self):
       newObject = self.pythonType()
       OBJECTS.append(newObject)      
       return newObject
@@ -93,7 +93,7 @@ class PythonRegister(Register):
 
     def addType(self, pythonType, typeName, parentType):
         pyType = self.types[pythonType] = Type(typeName, parentType)
-        factory = PythonObjectFactory(pythonType)
+        factory = PythonObjectFactory(self, pythonType)
         FACTORIES.append(factory)
         pyType.objectFactory(factory)
         super().addType(pyType)

@@ -26,6 +26,7 @@ class StructuredValue;
 class AbstractObjectHolder;
 class Type;
 class Object;
+class Register;
 
 /// Valeur optionnelle
 template<typename T>
@@ -362,15 +363,18 @@ class Argument {
 
 bool operator==(Value const &a, Value const &b);
 
-class Register;
-
 /**
  * Object factory
  */
 class ObjectFactory {
+  /// The register
+  std::shared_ptr<Register> _register;
+
  public:
+  ObjectFactory(std::shared_ptr<Register> const &theRegister);
   virtual ~ObjectFactory() {}
-  virtual std::shared_ptr<Object> create() const = 0;
+  std::shared_ptr<Object> create();
+  virtual std::shared_ptr<Object> _create() const = 0;
 };
 
 /**
@@ -496,11 +500,11 @@ class Task
   /// The type for this task
   std::shared_ptr<Type> _type;
 
-  /// Command line
-  CommandLine _commandLine;
-
   /// The object factory
   std::shared_ptr<ObjectFactory> _factory;
+
+  /// Command line
+  CommandLine _commandLine;
 };
 
 } // namespace xpm
@@ -629,6 +633,11 @@ class Object
 
   /// Associated task, if any
   std::shared_ptr<Task const> _task;
+
+  /// The register
+  std::shared_ptr<Register> _register;
+
+  friend class ObjectFactory;
 };
 
 // --- Building objects

@@ -125,6 +125,7 @@
 %shared_ptr(xpm::StructuredValue)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::ObjectFactory)
+%shared_ptr(xpm::Register)
 
 // Object and object factory have virtual methods
 %feature("director") xpm::ObjectFactory;
