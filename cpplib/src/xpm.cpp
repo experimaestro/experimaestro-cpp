@@ -8,10 +8,7 @@
 
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
-#include <xpm/json.hpp>
-#include <xpm/filesystem.hpp>
 #include <xpm/context.hpp>
-#include <xpm/rpc/objects.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
 
@@ -47,18 +44,22 @@ void updateDigest(SHA_CTX &context, std::string const &value) {
 
 namespace xpm {
 
-static const std::string ARGUMENT_TYPE = "$type";
-static const std::string ARGUMENT_PATH = "$path";
-static const std::string ARGUMENT_VALUE = "$value";
-static const std::string ARGUMENT_IGNORE = "$ignore";
-static const std::string DEFAULT_KEY = "$default";
-static const std::string RESOURCE_KEY = "$resource";
+// Type and task should be included
+static const std::string KEY_TYPE = "$type";
+static const std::string KEY_TASK = "$task";
+
+static const std::string KEY_PATH = "$path";
+static const std::string KEY_VALUE = "$value";
+static const std::string KEY_IGNORE = "$ignore";
+static const std::string KEY_DEFAULT = "$default";
+static const std::string KEY_RESOURCE = "$resource";
 
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
 static const TypeName INTEGER_TYPE("integer");
 static const TypeName REAL_TYPE("real");
 static const TypeName ARRAY_TYPE("array");
+static const TypeName ANY_TYPE("any");
 
 static const TypeName PATH_TYPE("path");
 static const TypeName RESOURCE_TYPE("resource");
@@ -93,7 +94,7 @@ struct Helper {
     switch (j.type()) {
       case nlohmann::json::value_t::null: return Value();
 
-      case nlohmann::json::value_t::object:throw std::runtime_error("Unexpected JSON: object as a " + ARGUMENT_VALUE);
+      case nlohmann::json::value_t::object:throw std::runtime_error("Unexpected JSON: object as a " + KEY_VALUE);
 
       case nlohmann::json::value_t::discarded: throw std::runtime_error("Unexpected JSON: discarded value");
 
@@ -175,7 +176,20 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-StructuredValue::StructuredValue(json const &jsonValue) {
+StructuredValue::StructuredValue() : _sealed(false) {
+}
+
+StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _value(std::move(scalar)) {
+}
+
+StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
+}
+
+StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
+    : _sealed(false), _content(map) {
+}
+
+StructuredValue::StructuredValue(json const &jsonValue) : _sealed(false) {
   switch (jsonValue.type()) {
     case nlohmann::json::value_t::null:break;
 
@@ -183,7 +197,7 @@ StructuredValue::StructuredValue(json const &jsonValue) {
 
     case nlohmann::json::value_t::object:
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        if (it.key() == ARGUMENT_VALUE) {
+        if (it.key() == KEY_VALUE) {
           _value = Helper::toValue(it.value());
         } else {
           _content[it.key()] = std::make_shared<StructuredValue>(it.value());
@@ -216,7 +230,7 @@ json StructuredValue::toJson() const {
     o[entry.first] = entry.second->toJson();
   }
   if (_value.simple()) {
-    o[ARGUMENT_VALUE] = Helper::convert(_value);
+    o[KEY_VALUE] = Helper::convert(_value);
   }
   return o;
 }
@@ -244,7 +258,7 @@ std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
     for (auto &item: _content) {
       auto const &key = item.first;
 
-      if (key[0] == '$' && key != ARGUMENT_TYPE) {
+      if (key[0] == '$' && key != KEY_TYPE && key != KEY_TASK) {
         // Skip all keys begining by "$s" but $type and $task
         continue;
       }
@@ -270,31 +284,17 @@ std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
   return md;
 };
 
-const TypeName ANY_TYPE("any");
-
-StructuredValue::StructuredValue() : _sealed(false) {
-}
-
-StructuredValue::StructuredValue(Value &&scalar) : _sealed(false), _value(std::move(scalar)) {
-}
-
-StructuredValue::StructuredValue(Value const &scalar) : _sealed(false), _value(scalar) {
-}
-
-StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
-    : _sealed(false), _content(map) {
-}
 
 bool StructuredValue::hasValue() const {
   return _value.defined();
 }
 
 void StructuredValue::type(TypeName const &typeName) {
-  _content[ARGUMENT_TYPE] = std::make_shared<StructuredValue>(Value(typeName.toString()));
+  _content[KEY_TYPE] = std::make_shared<StructuredValue>(Value(typeName.toString()));
 }
 
 TypeName StructuredValue::type() const {
-  auto value_ptr = _content.find(ARGUMENT_TYPE);
+  auto value_ptr = _content.find(KEY_TYPE);
   if (value_ptr != _content.end()) {
     auto &_object = value_ptr->second;
     if (_object->hasValue()) {
@@ -319,7 +319,7 @@ std::shared_ptr<StructuredValue> &StructuredValue::operator[](const std::string 
     throw sealed_error();
   }
 
-  if (key == ARGUMENT_VALUE) throw argument_error("Cannot access directly to " + ARGUMENT_VALUE);
+  if (key == KEY_VALUE) throw argument_error("Cannot access directly to " + KEY_VALUE);
   return _content[key];
 }
 
@@ -354,7 +354,7 @@ bool StructuredValue::isSealed() const {
 }
 
 bool StructuredValue::isDefault() const {
-  auto it = _content.find(DEFAULT_KEY);
+  auto it = _content.find(KEY_DEFAULT);
   if (it != _content.end()) {
     if (it->second->value().scalarType() == ValueType::BOOLEAN) {
       return it->second->value().getBoolean();
@@ -369,7 +369,7 @@ bool StructuredValue::canIgnore() const {
   }
 
   // Is the ignore flag set?
-  auto it = _content.find(ARGUMENT_IGNORE);
+  auto it = _content.find(KEY_IGNORE);
   if (it != _content.end()) {
     if (it->second->value().scalarType() == ValueType::BOOLEAN) {
       return it->second->value().getBoolean();
@@ -774,8 +774,9 @@ std::shared_ptr<StructuredValue> Object::getValue() const {
 
 }
 
-void Object::task(std::shared_ptr<Task const> const&task) {
+void Object::task(std::shared_ptr<Task const> const &task) {
   _task = task;
+  (*_value)[KEY_TASK] = std::make_shared<StructuredValue>(Value(task->identifier().toString()));
   LOGGER->info("Set object task to {}", _task->identifier().toString());
 }
 
@@ -824,7 +825,7 @@ void Object::validate() {
       } else {
         LOGGER->info("Setting default value...");
         auto value = std::make_shared<StructuredValue>(argument.defaultValue());
-        (*value)[DEFAULT_KEY] = std::make_shared<StructuredValue>(Value(true));
+        (*value)[KEY_DEFAULT] = std::make_shared<StructuredValue>(Value(true));
         set(argument.name(), value);
       }
     } else {
@@ -832,7 +833,7 @@ void Object::validate() {
       LOGGER->info("Setting value...");
       auto &value = (*_value)[argument.name()];
       if (value->value().simple() && value->value() == argument.defaultValue()) {
-        (*value)[DEFAULT_KEY] = std::make_shared<StructuredValue>(Value(true));
+        (*value)[KEY_DEFAULT] = std::make_shared<StructuredValue>(Value(true));
       }
       setValue(argument.name(), value);
     }
@@ -851,7 +852,7 @@ void Object::validate() {
 
   // (3) Add resource
   if (_task) {
-    set(RESOURCE_KEY, PathGenerator::SINGLETON.generate(*this));
+    set(KEY_RESOURCE, PathGenerator::SINGLETON.generate(*this));
   }
 }
 
@@ -873,8 +874,8 @@ namespace {
     if (value.canIgnore() || value.value().simple())
       return;
 
-    if (value.hasKey(RESOURCE_KEY)) {
-      std::string rid = value[RESOURCE_KEY]->value().toString();
+    if (value.hasKey(KEY_RESOURCE)) {
+      std::string rid = value[KEY_RESOURCE]->value().toString();
       LOGGER->info("Found dependency {}", rid);
       dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(rid));
     } else {
@@ -910,7 +911,10 @@ void Task::submit(std::shared_ptr<Object> const &object) const {
     command->add_dependency(dependency);
   }
 
-  rpc::CommandLineTask::submitJob(locator, command);
+  auto task = std::make_shared<rpc::CommandLineTask>(locator);
+  task->taskId(object->task()->identifier().toString());
+  task->command(command);
+  task->submit();
 }
 
 void Task::commandline(CommandLine command) {

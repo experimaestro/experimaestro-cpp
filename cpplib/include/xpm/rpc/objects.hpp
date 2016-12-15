@@ -5,72 +5,74 @@
 #include <xpm/rpc/utils.hpp>
 
 #ifdef SWIG
-%nspace xpm::rpc::CommandComponent;
 %shared_ptr(xpm::rpc::CommandComponent);
-%nspace xpm::rpc::Connector;
 %shared_ptr(xpm::rpc::Connector);
-%nspace xpm::rpc::Functions;
 %shared_ptr(xpm::rpc::Functions);
-%nspace xpm::rpc::LocalhostConnector;
 %shared_ptr(xpm::rpc::LocalhostConnector);
-%nspace xpm::rpc::ConnectorOptions;
 %shared_ptr(xpm::rpc::ConnectorOptions);
-%nspace xpm::rpc::JsonParameterFile;
 %shared_ptr(xpm::rpc::JsonParameterFile);
-%nspace xpm::rpc::ParameterFile;
 %shared_ptr(xpm::rpc::ParameterFile);
-%nspace xpm::rpc::Command;
 %shared_ptr(xpm::rpc::Command);
-%nspace xpm::rpc::AbstractCommandComponent;
 %shared_ptr(xpm::rpc::AbstractCommandComponent);
-%nspace xpm::rpc::ReadWriteDependency;
 %shared_ptr(xpm::rpc::ReadWriteDependency);
-%nspace xpm::rpc::Pipe;
 %shared_ptr(xpm::rpc::Pipe);
-%nspace xpm::rpc::DirectLauncher;
 %shared_ptr(xpm::rpc::DirectLauncher);
-%nspace xpm::rpc::CommandPath;
 %shared_ptr(xpm::rpc::CommandPath);
-%nspace xpm::rpc::SingleHostConnector;
 %shared_ptr(xpm::rpc::SingleHostConnector);
-%nspace xpm::rpc::XPM;
 %shared_ptr(xpm::rpc::XPM);
-%nspace xpm::rpc::LauncherParameters;
 %shared_ptr(xpm::rpc::LauncherParameters);
-%nspace xpm::rpc::Launcher;
 %shared_ptr(xpm::rpc::Launcher);
-%nspace xpm::rpc::Path;
 %shared_ptr(xpm::rpc::Path);
-%nspace xpm::rpc::Namespace;
 %shared_ptr(xpm::rpc::Namespace);
-%nspace xpm::rpc::CommandLineTask;
 %shared_ptr(xpm::rpc::CommandLineTask);
-%nspace xpm::rpc::TokenResource;
 %shared_ptr(xpm::rpc::TokenResource);
-%nspace xpm::rpc::SSHOptions;
 %shared_ptr(xpm::rpc::SSHOptions);
-%nspace xpm::rpc::OARParameters;
 %shared_ptr(xpm::rpc::OARParameters);
-%nspace xpm::rpc::Job;
 %shared_ptr(xpm::rpc::Job);
-%nspace xpm::rpc::CommandString;
 %shared_ptr(xpm::rpc::CommandString);
-%nspace xpm::rpc::AbstractCommand;
 %shared_ptr(xpm::rpc::AbstractCommand);
-%nspace xpm::rpc::Resource;
 %shared_ptr(xpm::rpc::Resource);
-%nspace xpm::rpc::OARLauncher;
 %shared_ptr(xpm::rpc::OARLauncher);
-%nspace xpm::rpc::Dependency;
 %shared_ptr(xpm::rpc::Dependency);
-%nspace xpm::rpc::Commands;
 %shared_ptr(xpm::rpc::Commands);
-%nspace xpm::rpc::CommandOutput;
 %shared_ptr(xpm::rpc::CommandOutput);
-%nspace xpm::rpc::SSHConnector;
 %shared_ptr(xpm::rpc::SSHConnector);
-%nspace xpm::rpc::SubCommand;
 %shared_ptr(xpm::rpc::SubCommand);
+#endif
+#ifdef SWIGJAVA
+%nspace xpm::rpc::CommandComponent;
+%nspace xpm::rpc::Connector;
+%nspace xpm::rpc::Functions;
+%nspace xpm::rpc::LocalhostConnector;
+%nspace xpm::rpc::ConnectorOptions;
+%nspace xpm::rpc::JsonParameterFile;
+%nspace xpm::rpc::ParameterFile;
+%nspace xpm::rpc::Command;
+%nspace xpm::rpc::AbstractCommandComponent;
+%nspace xpm::rpc::ReadWriteDependency;
+%nspace xpm::rpc::Pipe;
+%nspace xpm::rpc::DirectLauncher;
+%nspace xpm::rpc::CommandPath;
+%nspace xpm::rpc::SingleHostConnector;
+%nspace xpm::rpc::XPM;
+%nspace xpm::rpc::LauncherParameters;
+%nspace xpm::rpc::Launcher;
+%nspace xpm::rpc::Path;
+%nspace xpm::rpc::Namespace;
+%nspace xpm::rpc::CommandLineTask;
+%nspace xpm::rpc::TokenResource;
+%nspace xpm::rpc::SSHOptions;
+%nspace xpm::rpc::OARParameters;
+%nspace xpm::rpc::Job;
+%nspace xpm::rpc::CommandString;
+%nspace xpm::rpc::AbstractCommand;
+%nspace xpm::rpc::Resource;
+%nspace xpm::rpc::OARLauncher;
+%nspace xpm::rpc::Dependency;
+%nspace xpm::rpc::Commands;
+%nspace xpm::rpc::CommandOutput;
+%nspace xpm::rpc::SSHConnector;
+%nspace xpm::rpc::SubCommand;
 #endif
 namespace xpm { namespace rpc {
 
@@ -137,6 +139,8 @@ public:
   /**   */
   virtual std::shared_ptr<Path> file();
   /**   */
+  virtual void taskId(std::string const &string);
+  /**   */
   virtual std::shared_ptr<Path> output();
 };
 
@@ -196,14 +200,14 @@ public:
   virtual std::shared_ptr<LauncherParameters> parameters();
   /**   */
   virtual std::string environment(std::string const &key);
-  /**   */
-  virtual void set_notification_url(std::string const &string);
-  /** Gets the value of the environment variable
-  */
-  virtual std::string env(std::string const &string);
   /** Sets an environment variable and returns the old value (if any)
   */
   virtual std::string env(std::string const &key, std::string const &value);
+  /** Gets the value of the environment variable
+  */
+  virtual std::string env(std::string const &string);
+  /**   */
+  virtual void set_notification_url(std::string const &string);
   /** Sets the temporary directory for this launcher
   */
   virtual void set_tmpdir(std::shared_ptr<Path> const &path);
@@ -251,6 +255,8 @@ protected:
   Job() {}
 
 public:
+  /**   */
+  virtual std::shared_ptr<Resource> submit();
 };
 
 class CommandComponent : public AbstractCommandComponent {
@@ -291,6 +297,8 @@ public:
   /**   */
   virtual std::string hostname();
   /**   */
+  virtual void port(int32_t const &int_1);
+  /**   */
   virtual std::shared_ptr<SSHOptions> check_host(bool const &boolean);
   /**   */
   virtual void set_use_ssh_agent(bool const &boolean);
@@ -300,8 +308,6 @@ public:
   virtual void set_stream_proxy(std::shared_ptr<SSHConnector> const &proxy);
   /**   */
   virtual void hostname(std::string const &string);
-  /**   */
-  virtual void port(int32_t const &int_1);
   /**   */
   virtual void username(std::string const &string);
   /**   */
@@ -344,20 +350,20 @@ protected:
 
 public:
   /**   */
-  virtual std::string ns();
-  /** Retrieve (or creates) a token resource with a given xpath
-com.sun.javafx.binding.StringConstant@5c90e579  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path);
-  /** com.sun.javafx.binding.StringConstant@58ea606ccom.sun.javafx.binding.StringConstant@6f45df59  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
-  /** Sets the logger debug level
-  */
-  virtual void log_level(std::string const &name, std::string const &level);
+  virtual bool simulate();
   /** Set the simulate flag: When true, the jobs are not submitted but just output
   */
   virtual bool simulate(bool const &boolean);
+  /** com.sun.javafx.binding.StringConstant@5c90e579com.sun.javafx.binding.StringConstant@58ea606c  */
+  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
+  /** Retrieve (or creates) a token resource with a given xpath
+com.sun.javafx.binding.StringConstant@6f45df59  */
+  static std::shared_ptr<TokenResource> token_resource(std::string const &path);
+  /** Sets the logger debug level
+  */
+  virtual void log_level(std::string const &name, std::string const &level);
   /**   */
-  virtual bool simulate();
+  virtual std::string ns();
   /** com.sun.javafx.binding.StringConstant@31f9b85e  */
   static std::shared_ptr<TokenResource> token(std::string const &path);
 };
@@ -394,16 +400,16 @@ already exists.
   /**   */
   static std::shared_ptr<Path> toPath(std::string const &path);
   /**   */
-  virtual int64_t get_size();
-  /**   */
-  virtual std::string read_all();
-  /** Get the file path, ignoring the file scheme
-  */
-  virtual std::string get_path();
-  /**   */
   virtual std::string uri();
   /**   */
   virtual std::string toSource();
+  /**   */
+  virtual std::string read_all();
+  /**   */
+  virtual int64_t get_size();
+  /** Get the file path, ignoring the file scheme
+  */
+  virtual std::string get_path();
 };
 
 class OARLauncher : public Launcher {
@@ -599,11 +605,11 @@ protected:
   explicit CommandLineTask(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
-  CommandLineTask() {}
-
 public:
   /**   */
-  static std::shared_ptr<Resource> submitJob(std::shared_ptr<Path> const &path, std::shared_ptr<AbstractCommand> const &abstractCommand);
+  CommandLineTask(std::shared_ptr<Path> const &path);
+  /**   */
+  virtual void command(std::shared_ptr<AbstractCommand> const &abstractCommand);
 };
 
 class OARParameters : public LauncherParameters {

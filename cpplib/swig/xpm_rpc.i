@@ -1,9 +1,10 @@
 %module(package="experimaestro") rpc
 
+#ifdef SWIGJAVA
 %pragma(java) jniclasspackage="xpm.rpc";
-
 %nspace xpm::rpc::ObjectIdentifier;
 %nspace xpm::rpc::ServerObject;
+#endif
 
 %{
     #include <xpm/rpc/utils.hpp>

@@ -61,6 +61,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     private final JsonRPCSettings settings;
 
+    /** Our logger */
+    final Logger rootLogger;
+
     /**
      * Listeners associated to this
      */
@@ -75,6 +78,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException, NoSuchMethodException {
         super(mos);
+        rootLogger = (Logger) getScriptLogger().getLogger("rpc");
         initMethods();
         this.settings = settings;
         addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos), new RPCObjects(this, settings));
@@ -199,12 +203,14 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                     t = t.getCause();
                 }
                 LOGGER.info(e, "Error while handling JSON request [%s]", e.toString());
+                rootLogger.error(t, "Error while running request");
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
                 LOGGER.error(e2, "Could not send the return code");
             }
         } catch (XPMRuntimeException t) {
             try {
+                rootLogger.error(t, "Error while running request");
                 mos.error(requestID, 1, "Error while running request: " + t.toString());
             } catch (IOException e) {
                 LOGGER.error("Could not send the return code");

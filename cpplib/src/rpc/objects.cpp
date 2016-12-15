@@ -21,6 +21,12 @@ std::shared_ptr<Path> Resource::file() {
   return RPCConverter<std::shared_ptr<Path>>::toCPP(__call__("objects.Resource.file", params));
 }
 
+void Resource::taskId(std::string const &string) {
+  nlohmann::json params = nlohmann::json::object();
+  params["string"] = RPCConverter<std::string>::toJson(string);
+  __call__("objects.Resource.taskId", params);
+}
+
 std::shared_ptr<Path> Resource::output() {
   nlohmann::json params = nlohmann::json::object();
   return RPCConverter<std::shared_ptr<Path>>::toCPP(__call__("objects.Resource.output", params));
@@ -75,10 +81,11 @@ std::string Launcher::environment(std::string const &key) {
   return RPCConverter<std::string>::toCPP(__call__("objects.Launcher.environment", params));
 }
 
-void Launcher::set_notification_url(std::string const &string) {
+std::string Launcher::env(std::string const &key, std::string const &value) {
   nlohmann::json params = nlohmann::json::object();
-  params["string"] = RPCConverter<std::string>::toJson(string);
-  __call__("objects.Launcher.set_notification_url", params);
+  params["key"] = RPCConverter<std::string>::toJson(key);
+  params["value"] = RPCConverter<std::string>::toJson(value);
+  return RPCConverter<std::string>::toCPP(__call__("objects.Launcher.env", params));
 }
 
 std::string Launcher::env(std::string const &string) {
@@ -87,11 +94,10 @@ std::string Launcher::env(std::string const &string) {
   return RPCConverter<std::string>::toCPP(__call__("objects.Launcher.env", params));
 }
 
-std::string Launcher::env(std::string const &key, std::string const &value) {
+void Launcher::set_notification_url(std::string const &string) {
   nlohmann::json params = nlohmann::json::object();
-  params["key"] = RPCConverter<std::string>::toJson(key);
-  params["value"] = RPCConverter<std::string>::toJson(value);
-  return RPCConverter<std::string>::toCPP(__call__("objects.Launcher.env", params));
+  params["string"] = RPCConverter<std::string>::toJson(string);
+  __call__("objects.Launcher.set_notification_url", params);
 }
 
 void Launcher::set_tmpdir(std::shared_ptr<Path> const &path) {
@@ -108,6 +114,11 @@ std::string const &LauncherParameters::__name__() const { static std::string nam
 LauncherParameters::LauncherParameters(ObjectIdentifier o) : ServerObject(o) {} 
 std::string const &Job::__name__() const { static std::string name = "Job"; return name; }
 Job::Job(ObjectIdentifier o) : ServerObject(o), Resource(o) {} 
+std::shared_ptr<Resource> Job::submit() {
+  nlohmann::json params = nlohmann::json::object();
+  return RPCConverter<std::shared_ptr<Resource>>::toCPP(__call__("objects.Job.submit", params));
+}
+
 std::string const &CommandComponent::__name__() const { static std::string name = "CommandComponent"; return name; }
 CommandComponent::CommandComponent(ObjectIdentifier o) : ServerObject(o), AbstractCommandComponent(o) {} 
 Commands::Commands() {
@@ -141,6 +152,12 @@ std::string SSHOptions::hostname() {
   return RPCConverter<std::string>::toCPP(__call__("objects.SSHOptions.hostname", params));
 }
 
+void SSHOptions::port(int32_t const &int_1) {
+  nlohmann::json params = nlohmann::json::object();
+  params["int_1"] = RPCConverter<int32_t>::toJson(int_1);
+  __call__("objects.SSHOptions.port", params);
+}
+
 std::shared_ptr<SSHOptions> SSHOptions::check_host(bool const &boolean) {
   nlohmann::json params = nlohmann::json::object();
   params["boolean"] = RPCConverter<bool>::toJson(boolean);
@@ -170,12 +187,6 @@ void SSHOptions::hostname(std::string const &string) {
   nlohmann::json params = nlohmann::json::object();
   params["string"] = RPCConverter<std::string>::toJson(string);
   __call__("objects.SSHOptions.hostname", params);
-}
-
-void SSHOptions::port(int32_t const &int_1) {
-  nlohmann::json params = nlohmann::json::object();
-  params["int_1"] = RPCConverter<int32_t>::toJson(int_1);
-  __call__("objects.SSHOptions.port", params);
 }
 
 void SSHOptions::username(std::string const &string) {
@@ -213,21 +224,27 @@ std::string Namespace::uri() {
 
 std::string const &XPM::__name__() const { static std::string name = "XPM"; return name; }
 XPM::XPM(ObjectIdentifier o) : ServerObject(o) {} 
-std::string XPM::ns() {
+bool XPM::simulate() {
   nlohmann::json params = nlohmann::json::object();
-  return RPCConverter<std::string>::toCPP(__call__("objects.XPM.ns", params));
+  return RPCConverter<bool>::toCPP(__call__("objects.XPM.simulate", params));
 }
 
-std::shared_ptr<TokenResource> XPM::token_resource(std::string const &path) {
+bool XPM::simulate(bool const &boolean) {
   nlohmann::json params = nlohmann::json::object();
-  params["path"] = RPCConverter<std::string>::toJson(path);
-  return RPCConverter<std::shared_ptr<TokenResource>>::toCPP(__static_call__("objects.XPM.token_resource", params));
+  params["boolean"] = RPCConverter<bool>::toJson(boolean);
+  return RPCConverter<bool>::toCPP(__call__("objects.XPM.simulate", params));
 }
 
 std::shared_ptr<TokenResource> XPM::token_resource(std::string const &path, bool const &post_process) {
   nlohmann::json params = nlohmann::json::object();
   params["path"] = RPCConverter<std::string>::toJson(path);
   params["post_process"] = RPCConverter<bool>::toJson(post_process);
+  return RPCConverter<std::shared_ptr<TokenResource>>::toCPP(__static_call__("objects.XPM.token_resource", params));
+}
+
+std::shared_ptr<TokenResource> XPM::token_resource(std::string const &path) {
+  nlohmann::json params = nlohmann::json::object();
+  params["path"] = RPCConverter<std::string>::toJson(path);
   return RPCConverter<std::shared_ptr<TokenResource>>::toCPP(__static_call__("objects.XPM.token_resource", params));
 }
 
@@ -238,15 +255,9 @@ void XPM::log_level(std::string const &name, std::string const &level) {
   __call__("objects.XPM.log_level", params);
 }
 
-bool XPM::simulate(bool const &boolean) {
+std::string XPM::ns() {
   nlohmann::json params = nlohmann::json::object();
-  params["boolean"] = RPCConverter<bool>::toJson(boolean);
-  return RPCConverter<bool>::toCPP(__call__("objects.XPM.simulate", params));
-}
-
-bool XPM::simulate() {
-  nlohmann::json params = nlohmann::json::object();
-  return RPCConverter<bool>::toCPP(__call__("objects.XPM.simulate", params));
+  return RPCConverter<std::string>::toCPP(__call__("objects.XPM.ns", params));
 }
 
 std::shared_ptr<TokenResource> XPM::token(std::string const &path) {
@@ -291,21 +302,6 @@ std::shared_ptr<Path> Path::toPath(std::string const &path) {
   return RPCConverter<std::shared_ptr<Path>>::toCPP(__static_call__("objects.Path.toPath", params));
 }
 
-int64_t Path::get_size() {
-  nlohmann::json params = nlohmann::json::object();
-  return RPCConverter<int64_t>::toCPP(__call__("objects.Path.get_size", params));
-}
-
-std::string Path::read_all() {
-  nlohmann::json params = nlohmann::json::object();
-  return RPCConverter<std::string>::toCPP(__call__("objects.Path.read_all", params));
-}
-
-std::string Path::get_path() {
-  nlohmann::json params = nlohmann::json::object();
-  return RPCConverter<std::string>::toCPP(__call__("objects.Path.get_path", params));
-}
-
 std::string Path::uri() {
   nlohmann::json params = nlohmann::json::object();
   return RPCConverter<std::string>::toCPP(__call__("objects.Path.uri", params));
@@ -314,6 +310,21 @@ std::string Path::uri() {
 std::string Path::toSource() {
   nlohmann::json params = nlohmann::json::object();
   return RPCConverter<std::string>::toCPP(__call__("objects.Path.toSource", params));
+}
+
+std::string Path::read_all() {
+  nlohmann::json params = nlohmann::json::object();
+  return RPCConverter<std::string>::toCPP(__call__("objects.Path.read_all", params));
+}
+
+int64_t Path::get_size() {
+  nlohmann::json params = nlohmann::json::object();
+  return RPCConverter<int64_t>::toCPP(__call__("objects.Path.get_size", params));
+}
+
+std::string Path::get_path() {
+  nlohmann::json params = nlohmann::json::object();
+  return RPCConverter<std::string>::toCPP(__call__("objects.Path.get_path", params));
 }
 
 OARLauncher::OARLauncher(std::shared_ptr<Connector> const &connector) {
@@ -504,13 +515,18 @@ std::string CommandString::toString() {
   return RPCConverter<std::string>::toCPP(__call__("objects.CommandString.toString", params));
 }
 
-std::string const &CommandLineTask::__name__() const { static std::string name = "CommandLineTask"; return name; }
-CommandLineTask::CommandLineTask(ObjectIdentifier o) : ServerObject(o), Job(o) {} 
-std::shared_ptr<Resource> CommandLineTask::submitJob(std::shared_ptr<Path> const &path, std::shared_ptr<AbstractCommand> const &abstractCommand) {
+CommandLineTask::CommandLineTask(std::shared_ptr<Path> const &path) {
   nlohmann::json params = nlohmann::json::object();
   params["path"] = RPCConverter<std::shared_ptr<Path>>::toJson(path);
+  __set__(__static_call__("objects.CommandLineTask.__init__", params));
+}
+
+std::string const &CommandLineTask::__name__() const { static std::string name = "CommandLineTask"; return name; }
+CommandLineTask::CommandLineTask(ObjectIdentifier o) : ServerObject(o), Job(o) {} 
+void CommandLineTask::command(std::shared_ptr<AbstractCommand> const &abstractCommand) {
+  nlohmann::json params = nlohmann::json::object();
   params["abstractCommand"] = RPCConverter<std::shared_ptr<AbstractCommand>>::toJson(abstractCommand);
-  return RPCConverter<std::shared_ptr<Resource>>::toCPP(__static_call__("objects.CommandLineTask.submitJob", params));
+  __call__("objects.CommandLineTask.command", params);
 }
 
 std::string const &OARParameters::__name__() const { static std::string name = "OARParameters"; return name; }

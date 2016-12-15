@@ -23,16 +23,20 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.connectors.XPMProcess;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Context;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.FileNameTransformer;
 import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Level;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -846,5 +850,47 @@ abstract public class Job extends Resource {
 
     public int getNbUnsatisfied() {
         return jobData().getNbUnsatisfied();
+    }
+
+
+    /**
+     * Submit a new command line job
+     */
+    @Expose("submit")
+    public Resource submit() throws IOException, SQLException, ExperimaestroCannotOverwrite {
+        Context context = Context.get();
+        // --- XPMProcess arguments: convert the javascript array into a Java array
+        // of String
+        LOGGER.debug("Adding command line job");
+
+        // --- Set defaults
+        context.prepare(this);
+
+
+        setState(ResourceState.WAITING);
+
+        final Resource old = Resource.getByLocator(getLocator());
+
+        updateStatus();
+
+        // Replace old if necessary
+        if (old != null) {
+            if (!old.canBeReplaced()) {
+                LOGGER.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
+                        "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                context.postProcess(old);
+                return old;
+            } else {
+                LOGGER.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
+                old.replaceBy(this);
+            }
+        } else {
+            // Store in scheduler
+            save();
+        }
+
+
+        context.postProcess(this);
+        return this;
     }
 }

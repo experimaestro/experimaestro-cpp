@@ -56,7 +56,7 @@ public class TaskReference implements Identifiable {
     /**
      * The ID of the task
      */
-    TypeName taskId;
+    String taskId;
 
     /**
      * The experiment ID
@@ -71,7 +71,7 @@ public class TaskReference implements Identifiable {
     public TaskReference() {
     }
 
-    public TaskReference(TypeName taskId, Experiment experiment, ArrayList<TaskReference> parentTaskReferences) {
+    public TaskReference(String taskId, Experiment experiment, ArrayList<TaskReference> parentTaskReferences) {
         this.taskId = taskId;
         this.experiment = experiment;
         if (parentTaskReferences != null) {
@@ -85,7 +85,7 @@ public class TaskReference implements Identifiable {
     /**
      * Construct from DB
      */
-    public TaskReference(TypeName taskId, Experiment experiment) {
+    public TaskReference(String taskId, Experiment experiment) {
         this(taskId, experiment, null);
     }
 
@@ -149,7 +149,7 @@ public class TaskReference implements Identifiable {
         return children;
     }
 
-    public TypeName getTaskId() {
+    public String getTaskId() {
         return taskId;
     }
 
@@ -169,7 +169,7 @@ public class TaskReference implements Identifiable {
             String identifier = result.getString(2);
             long experimentId = result.getLong(3);
             Experiment experiment = Experiment.findById(experimentId);
-            final TaskReference reference = new TaskReference(TypeName.parse(identifier), experiment);
+            final TaskReference reference = new TaskReference(identifier, experiment);
             reference.setId(id);
             return reference;
         } catch (SQLException e) {

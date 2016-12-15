@@ -25,6 +25,7 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -142,6 +143,11 @@ public class Resource implements Identifiable {
      */
     @GsonSerialization(serialize = false)
     private Long resourceID;
+
+    /**
+     * Task ID
+     */
+    String taskId;
 
     /**
      * The ingoing dependencies (resources that we depend upon)
@@ -370,12 +376,13 @@ public class Resource implements Identifiable {
                 st1.execute();
 
                 st.setLong(1, getId());
-                for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
-                    st.setString(2, entry.getKey());
-                    st.setString(3, entry.getValue().get().toString());
-                    st.execute();
+                if (tags != null) {
+                    for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
+                        st.setString(2, entry.getKey());
+                        st.setString(3, entry.getValue().get().toString());
+                        st.execute();
+                    }
                 }
-
             } catch (SQLException e) {
                 LOGGER.error(e, "Could not save resource tags");
             }
@@ -450,7 +457,6 @@ public class Resource implements Identifiable {
     }
 
 
-
     /**
      * Get a JSON representation of the object
      *
@@ -465,10 +471,10 @@ public class Resource implements Identifiable {
         // Add tags
         JsonObject tags = new JsonObject();
         int count = 0;
-        try(XPMStatement st = Scheduler.statement("SELECT tag, value FROM ResourceTags WHERE resource=?")) {
+        try (XPMStatement st = Scheduler.statement("SELECT tag, value FROM ResourceTags WHERE resource=?")) {
             st.setLong(1, getId());
             st.execute();
-            try(XPMResultSet set = st.resultSet()) {
+            try (XPMResultSet set = st.resultSet()) {
                 while (set.next()) {
                     ++count;
                     tags.addProperty(set.getString(1), set.getString(2));
@@ -566,7 +572,7 @@ public class Resource implements Identifiable {
                                     if (!simulate) dependency.unlock();
                                     ++count;
                                     LOGGER.info("Unlocked %s", dependency);
-                                } catch(LockException e) {
+                                } catch (LockException e) {
                                     LOGGER.error("Could not unlock %s", dependency);
                                 }
                             }
@@ -957,6 +963,15 @@ public class Resource implements Identifiable {
         // Get class specific parameters
         dp = pmap.get(getClass());
         return createDependency(dp);
+    }
+
+    public String taskId() {
+        return taskId;
+    }
+
+    @Expose
+    public void taskId(String taskId) {
+        this.taskId = taskId;
     }
 
     /**

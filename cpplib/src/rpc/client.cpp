@@ -85,7 +85,12 @@ bool Client::ping() {
 }
 
 void Client::handler(nlohmann::json const &message) {
-  std::cerr << "[notification] " << message.dump() << std::endl;
+  if (message["result"].count("stream")) {
+    std::string value = message["result"]["value"];
+    LOGGER->info("{}", (std::string)value);
+  } else {
+    LOGGER->warn("Unhandled notification: {}", message.dump());
+  }
 }
 
 Client &Client::defaultClient() {

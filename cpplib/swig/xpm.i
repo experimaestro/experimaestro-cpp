@@ -88,6 +88,7 @@
 %ignore xpm::Argument::type;
 %ignore xpm::StructuredValue::operator[];
 
+#ifdef SWIGJAVA
 %nspace xpm::Object;
 %nspace xpm::Type;
 %nspace xpm::Task;
@@ -116,6 +117,7 @@
 %nspace xpm::CommandString;
 %nspace xpm::CommandPath;
 %nspace xpm::CommandLine;
+#endif
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)

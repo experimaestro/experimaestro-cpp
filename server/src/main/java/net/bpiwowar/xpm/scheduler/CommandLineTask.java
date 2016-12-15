@@ -115,6 +115,7 @@ public class CommandLineTask extends Job {
     /**
      * Construct a new command line object
      */
+    @Expose
     public CommandLineTask(Path path) throws IOException {
         super(path);
     }
@@ -268,80 +269,16 @@ public class CommandLineTask extends Job {
         return launcher.getNotificationURL() == null;
     }
 
+    @Expose("command")
     public void setCommand(AbstractCommand command) {
         this.command = command;
-    }
-
-    /**
-     * Submit a new command line job
-     */
-    @Expose("submitJob")
-    static public Resource submit(Path path, AbstractCommand command) throws IOException, SQLException, ExperimaestroCannotOverwrite {
-        Context context = Context.get();
-
-        if (path == null) {
-            throw new XPMScriptRuntimeException("Locator was null for command line job");
-        }
-
-        CommandLineTask job = null;
-        // --- XPMProcess arguments: convert the javascript array into a Java array
-        // of String
-        LOGGER.debug("Adding command line job");
-
-        // --- Create the task
-        job = new CommandLineTask(path);
-
-        // Inherit output for main commands
         command.setOutputRedirect(Redirect.INHERIT);
         if (command instanceof Commands) {
             for (AbstractCommand subcommand : command) {
                 subcommand.setOutputRedirect(Redirect.INHERIT);
             }
         }
-
-        job.setCommand(command);
-//        if (context.getSubmittedJobs().containsKey(path)) {
-//            rootLogger.info("Not submitting %s [duplicate]", path);
-//            if (simulate()) {
-//                return job;
-//            }
-//
-//            return Resource.getByLocator(connector.resolve((java.nio.file.Path) path));
-//        }
-
-
-        // --- Set defaults
-        context.prepare(job);
-
-
-        job.setState(ResourceState.WAITING);
-
         // Add dependencies
-        command.dependencies().forEach(job::addDependency);
-
-        final Resource old = Resource.getByLocator(job.getLocator());
-
-        job.updateStatus();
-
-        // Replace old if necessary
-        if (old != null) {
-            if (!old.canBeReplaced()) {
-                LOGGER.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
-                        "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                context.postProcess(old);
-                return old;
-            } else {
-                LOGGER.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
-                old.replaceBy(job);
-            }
-        } else {
-            // Store in scheduler
-            job.save();
-        }
-
-
-        context.postProcess(job);
-
-        return job;
+        command.dependencies().forEach(this::addDependency);
     }
 }
