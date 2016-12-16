@@ -14,15 +14,14 @@ import java.util.Random;
                 "<pre>TERM TID DID FIELD DOC_LENGHT POSITION_1 POSITION_2 ...</pre>",
         registry = Registry.class)
 public class Simple extends AbstractTask {
-    @JsonArgument(help = "Maximum (approximate through sampling) number of documents to output for each sampled term",
-            required = false)
+    @JsonArgument(help = "Maximum (approximate through sampling) number of documents to output for each sampled term")
     long maxdocuments = Long.MAX_VALUE;
 
-    @JsonArgument(required = false)
+    @JsonArgument(optional = true)
     long seed = new Random().nextLong();
 
     @Override
-    public JsonElement execute(JsonObject r) throws Throwable {
-        return null;
+    public void execute() throws Throwable {
+        progress(.2);
     }
 }

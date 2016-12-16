@@ -56,7 +56,7 @@ public @interface JsonArgument {
      * Whether the argument is required
      * @return true if required, false otherwise
      */
-    boolean required() default false;
+    boolean optional() default false;
 
     /**
      * Name of the argument in the output structure

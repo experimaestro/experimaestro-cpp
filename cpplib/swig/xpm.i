@@ -1,4 +1,4 @@
-%module(directors="1") experimaestro
+%module(directors="1", jniclasspackage="xpm") experimaestro
 
 
 #define SWIG_IGNORE %ignore
@@ -16,11 +16,21 @@
 #include <xpm/logging.hpp>
 %}
 
+
+%include "std_string.i"
+
+#ifdef SWIGJAVA
+%include "java/common.i"
+%nspace xpm::set_workdir;
+#endif
+
 // Support for intxx_t
 %include "stdint.i"
 // Support for standard C++ structures
-%include "std_string.i"
+#ifndef SWIGJAVA
 %include "std_vector.i"
+#endif
+
 %include "std_map.i"
 %include "std_shared_ptr.i"
 // Handles exceptions
@@ -36,6 +46,7 @@
 %implicitconv xpm::Path;
 #endif
 
+
 // Documentation
 %include "documentation.i"
 
@@ -46,7 +57,7 @@
       $action
    } catch (Swig::DirectorException &e) {
       SWIG_fail;
-      SWIG_exception(SWIG_RuntimeError, e.what());      
+      SWIG_exception(SWIG_RuntimeError, e.what());
    } catch(std::exception &e) {
       SWIG_exception(SWIG_RuntimeError, e.what());
    }
@@ -168,7 +179,10 @@
 %template(set) xpm::Object::set<double>;
 %template(set) xpm::Object::set<bool>;
 
+
+// Template instanciation
 %template(StringList) std::vector<std::string>;
+
 
 %extend xpm::StructuredValue {
     void __setitem__(std::string const & key, std::shared_ptr<xpm::StructuredValue> const &value) {

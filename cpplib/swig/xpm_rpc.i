@@ -11,6 +11,12 @@
     #include <xpm/rpc/objects.hpp>
 %}
 
+#ifdef SWIGJAVA
+%include "java/common.i"
+%nspace xpm::set_workdir;
+#endif
+
+
 // Support for intxx_t
 %include "stdint.i"
 %include "std_shared_ptr.i"
