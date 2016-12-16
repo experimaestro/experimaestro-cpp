@@ -34,6 +34,19 @@ class argument_error : public exception {
   argument_error(std::string const &message);
 };
 
+/** Thrown when an argument cannot be converted to a given type */
+class cast_error : public exception {
+ public:
+  cast_error(std::string const &message);
+};
+
+/** Thrown when something has not been implemented */
+class not_implemented_error : public exception {
+ public:
+  not_implemented_error(std::string const &method, std::string const &file, int line);
+};
+
+#define NOT_IMPLEMENTED() throw not_implemented_error(__func__, __FILE__, __LINE__)
 }
 
 #endif //PROJECT_COMMON_HPP

@@ -86,9 +86,9 @@
 %attribute(xpm::Argument, bool, required, required, required);
 %ignore xpm::Argument::required;
 
-%attributeval(xpm::Argument, xpm::Value, defaultValue, defaultValue, defaultValue)
+/*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, StructuredValue, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
-
+*/
 %attribute(xpm::Argument, Generator *, generator, generator, generator)
 %ignore xpm::Argument::generator;
 
@@ -103,12 +103,10 @@
 %nspace xpm::Object;
 %nspace xpm::Type;
 %nspace xpm::Task;
-%nspace xpm::StructuredValue;
 %nspace xpm::Argument;
 %nspace xpm::ObjectFactory;
 %nspace xpm::Command;
 %nspace xpm::Argument;
-%nspace xpm::ObjectFactory;
 %nspace xpm::Context;
 %nspace xpm::Generator;
 %nspace xpm::Path;
@@ -136,13 +134,16 @@
 %shared_ptr(xpm::StructuredValue)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::ObjectFactory)
+%shared_ptr(xpm::Value)
+%shared_ptr(xpm::Array)
 %shared_ptr(xpm::Register)
 
 // Object and object factory have virtual methods
 %feature("director") xpm::ObjectFactory;
 %feature("director") xpm::Object;
+%feature("nodirector") xpm::Object::toJson;
 
-%template(String2StructuredValue) std::map<std::string, xpm::StructuredValue>;
+%template(String2Object) std::map<std::string, std::shared_ptr<xpm::Object>>;
 
 // Returns the wrapped python object rather than the director object
 #ifdef SWIGPYTHON
@@ -184,7 +185,7 @@
 %template(StringList) std::vector<std::string>;
 
 
-%extend xpm::StructuredValue {
+/*%extend xpm::StructuredValue {
     void __setitem__(std::string const & key, std::shared_ptr<xpm::StructuredValue> const &value) {
         (*($self))[key] = value;
     }
@@ -198,7 +199,7 @@
       return (*($self))[key];
     }
 }
-
+*/
 /*%typemap(javapackage) xpm::rpc::AbstractCommandComponent & "net.bpiwowar.xpm.rpc";*/
 
 

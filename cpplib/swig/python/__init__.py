@@ -29,13 +29,10 @@ class PyObjectType(_SwigPyType):
     pass
 
 VALUECONVERTERS = {
-    ValueType_NONE: lambda v: v,
-    ValueType_BOOLEAN: lambda v: v.value().getBoolean(),
-    ValueType_INTEGER: lambda v: v.value().getInteger(),
-    ValueType_STRING: lambda v: v.value().getString(),
-    ValueType_REAL: lambda v: v.value().getReal(),
-    ValueType_OBJECT: lambda v: v.value().getObject(),
-    ValueType_ARRAY: lambda v: [VALUECONVERTERS[x.value().scalarType()](x) for x in v.value().getArray()],
+    BooleanType.toString(): lambda v: v.asBoolean(),
+    IntegerType.toString(): lambda v: v.asInteger(),
+    StringType.toString(): lambda v: v.asString(),
+    RealType.toString(): lambda v: v.asReal(),
 }
 
 class PyObject(Object, metaclass=PyObjectType):
@@ -52,15 +49,10 @@ class PyObject(Object, metaclass=PyObjectType):
         """Called by XPM when value has been validated"""
         if key.startswith("$"):
             key = key[1:]        
-        value = VALUECONVERTERS[sv.value().scalarType()](sv)
-        logger.debug("Really setting %s to %s", key, value)
+        value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+        logger.debug("Really setting %s to %s [%s => %s]", key, value, sv.type(), type(value))
         dict.__setattr__(self, key, value)
         
-__StructuredValue = StructuredValue
-class StructuredValue(__StructuredValue):
-    def __init__(self, *args, **argv):
-        __StructuredValue.__init__(self, *args, **argv)
-
 # FIXME: Hack to deal with smart pointers objects released by SWIG
 FACTORIES = []
 OBJECTS = []
@@ -255,7 +247,7 @@ class TypeArgument(AbstractArgument):
         AbstractArgument.__init__(self, name, register.getType(type), help=help)
         self.argument.required = (default is None) if required is None else required
         if default is not None:
-            self.argument.defaultValue = Value(default)
+            self.argument.defaultValue(Value(default))
 
 class PathArgument(AbstractArgument):
     def __init__(self, name, path, help=""):
@@ -265,7 +257,7 @@ class PathArgument(AbstractArgument):
 def tojson(t=None):
     if t is None:
         types = []
-        for k,t in register.types.items():
+        for k, t in register.types.items():
             types.append(json.loads(t.toJson()))
         return types
     return register.types[t].toJson()
