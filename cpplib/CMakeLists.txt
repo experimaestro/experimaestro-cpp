@@ -158,7 +158,7 @@ endif ()
 
 FIND_PACKAGE(JNI REQUIRED)
 
-set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/main/java/net/bpiwowar")
+set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/src/main/java/net/bpiwowar")
 set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
 set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
 

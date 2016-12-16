@@ -7,15 +7,36 @@ plugins {
     id 'org.ajoberstar.grgit' version '1.2.0'
 }
 
+apply plugin: 'java'
+apply plugin: 'idea'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 description = 'experimaestro server'
 
 apply plugin: 'application'
 
 def generatedResources = "$buildDir/classes/main"
 
+repositories {
+    mavenLocal()
+
+    maven { url "http://repo.maven.apache.org/maven2" }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+
 sourceSets {
     main {
         output.resourcesDir = generatedResources
+    }
+}
+
+test {
+    testLogging {
+        events "failed"
+        exceptionFormat "full"
+        showStackTraces true
     }
 }
 
@@ -25,10 +46,7 @@ compileTypeScript {
 }
 
 dependencies {
-//    compile project(':experimaestro-helper')
     compile project(':jsch-nio')
-
-    compile group: 'net.bpiwowar', name: 'fson', version:'2.3.2-SNAPSHOT'
 
     // Web & JsonRPC server
     compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.4.0.v20161208'
@@ -49,8 +67,6 @@ dependencies {
 
     // SSH / SFTP
     compile group: 'com.github.jnr', name: 'jnr-unixsocket', version: '0.3'
-//    compile group: 'com.jcraft', name: 'jsch', version: '0.1.52'
-//    compile group: 'net.bpiwowar', name: 'jsch-nio', version: '0.1.8-SNAPSHOT'
 
     // General purpose modules
     compile group: 'it.unimi.dsi', name: 'fastutil', version: '6.5.15'
@@ -58,6 +74,7 @@ dependencies {
     compile group: 'org.apache.commons', name: 'commons-compress', version: '1.4.1'
     compile group: 'commons-configuration', name: 'commons-configuration', version: '1.6'
     compile group: 'net.sf.saxon', name: 'Saxon-HE', version: '9.5.1-6'
+    compile group: 'net.bpiwowar', name: 'fson', version:'2.3.2-SNAPSHOT'
 
     // Test modules
     testCompile group: 'org.testng', name: 'testng', version: '6.9.4'

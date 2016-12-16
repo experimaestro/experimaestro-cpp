@@ -346,7 +346,7 @@ public class RPCObjects implements AutoCloseable {
                 out.format("%%shared_ptr(xpm::rpc::%s);%n", classDescription.className);
             }
             out.format("#endif%n");
-            out.format("#ifdef SWIGJAVA%n");
+            out.format("#if defined(SWIGJAVA) && defined(SWIG) %n");
             for (ClassDescription classDescription : RPCObjects.types.values()) {
                 out.format("%%nspace xpm::rpc::%s;%n", classDescription.className);
             }

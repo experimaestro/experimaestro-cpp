@@ -40,17 +40,15 @@ public class Output {
 
     public static void print(PrintWriter out, String separator,
                              final double[] array) {
-        print(out, separator, new AbstractIterator<Double>() {
+        print(out, separator, new com.google.common.collect.AbstractIterator() {
             int i = 0;
 
             @Override
-            protected boolean storeNext() {
+            protected Object computeNext() {
                 if (i < array.length) {
-                    value = array[i];
-                    i++;
-                    return true;
+                    return array[i++];
                 }
-                return false;
+                return endOfData();
             }
         }, new NullFormatter<Double>());
     }

@@ -39,7 +39,7 @@
 %shared_ptr(xpm::rpc::SSHConnector);
 %shared_ptr(xpm::rpc::SubCommand);
 #endif
-#ifdef SWIGJAVA
+#if defined(SWIGJAVA) && defined(SWIG) 
 %nspace xpm::rpc::CommandComponent;
 %nspace xpm::rpc::Connector;
 %nspace xpm::rpc::Functions;
@@ -200,14 +200,14 @@ public:
   virtual std::shared_ptr<LauncherParameters> parameters();
   /**   */
   virtual std::string environment(std::string const &key);
-  /** Sets an environment variable and returns the old value (if any)
-  */
-  virtual std::string env(std::string const &key, std::string const &value);
+  /**   */
+  virtual void set_notification_url(std::string const &string);
   /** Gets the value of the environment variable
   */
   virtual std::string env(std::string const &string);
-  /**   */
-  virtual void set_notification_url(std::string const &string);
+  /** Sets an environment variable and returns the old value (if any)
+  */
+  virtual std::string env(std::string const &key, std::string const &value);
   /** Sets the temporary directory for this launcher
   */
   virtual void set_tmpdir(std::shared_ptr<Path> const &path);
@@ -349,19 +349,19 @@ protected:
   XPM() {}
 
 public:
-  /**   */
-  virtual bool simulate();
-  /** Set the simulate flag: When true, the jobs are not submitted but just output
-  */
-  virtual bool simulate(bool const &boolean);
-  /** com.sun.javafx.binding.StringConstant@5c90e579com.sun.javafx.binding.StringConstant@58ea606c  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
   /** Retrieve (or creates) a token resource with a given xpath
-com.sun.javafx.binding.StringConstant@6f45df59  */
+com.sun.javafx.binding.StringConstant@77f80c04  */
   static std::shared_ptr<TokenResource> token_resource(std::string const &path);
+  /** com.sun.javafx.binding.StringConstant@1dac5efcom.sun.javafx.binding.StringConstant@5c90e579  */
+  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
   /** Sets the logger debug level
   */
   virtual void log_level(std::string const &name, std::string const &level);
+  /** Set the simulate flag: When true, the jobs are not submitted but just output
+  */
+  virtual bool simulate(bool const &boolean);
+  /**   */
+  virtual bool simulate();
   /**   */
   virtual std::string ns();
   /** com.sun.javafx.binding.StringConstant@31f9b85e  */
@@ -400,16 +400,16 @@ already exists.
   /**   */
   static std::shared_ptr<Path> toPath(std::string const &path);
   /**   */
-  virtual std::string uri();
-  /**   */
-  virtual std::string toSource();
-  /**   */
   virtual std::string read_all();
   /**   */
   virtual int64_t get_size();
   /** Get the file path, ignoring the file scheme
   */
   virtual std::string get_path();
+  /**   */
+  virtual std::string uri();
+  /**   */
+  virtual std::string toSource();
 };
 
 class OARLauncher : public Launcher {
@@ -464,11 +464,11 @@ protected:
 
 public:
   /**   */
-  virtual void set_limit(int32_t const &int_1);
-  /**   */
   virtual int32_t used();
   /**   */
   virtual int32_t getLimit();
+  /**   */
+  virtual void set_limit(int32_t const &int_1);
 };
 
 class JsonParameterFile : public CommandComponent {
@@ -557,9 +557,9 @@ public:
   /**   */
   Command();
   /**   */
-  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
-  /**   */
   virtual void add(std::vector<std::string> const &string);
+  /**   */
+  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
   /**   */
   virtual void add_subcommand(std::shared_ptr<Commands> const &commands);
 };
