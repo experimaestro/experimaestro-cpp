@@ -323,7 +323,7 @@ std::shared_ptr<StructuredValue> &StructuredValue::operator[](const std::string 
   return _content[key];
 }
 
-std::shared_ptr<StructuredValue const> StructuredValue::operator[](const std::string &key) const {
+std::shared_ptr<StructuredValue> StructuredValue::operator[](const std::string &key) const {
   auto value = _content.find(key);
   if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
@@ -726,13 +726,11 @@ std::shared_ptr<StructuredValue> PathGenerator::generate(Object const & object) 
   // We have a task, so we use it
   std::shared_ptr<Task const> task = object.task();
   if (task) {
-    LOGGER->info("Object has task {}", task->identifier().toString());
     std::string localName = task->identifier().localName();
     auto p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
     return std::make_shared<StructuredValue>(Value(p.toString()));
   }
 
-  LOGGER->info("Object has no task");
   auto p = Path(Context::current().workdir(), {uuid});
   return std::make_shared<StructuredValue>(Value(p.toString()));
 }
@@ -810,11 +808,14 @@ void Object::configure(std::shared_ptr<StructuredValue> const& value) {
 }
 
 void Object::validate() {
+  LOGGER->warn("Validating");
+
   // (1) Validate the object arguments
   for (auto entry: _type->arguments()) {
     auto &argument = *entry.second;
 
     if (!_value->hasKey(argument.name())) {
+      LOGGER->warn("No value provided...");
       // No value provided
       if (argument.required() && !argument.generator()) {
         if (!_value->hasKey(argument.name())) {
@@ -822,35 +823,38 @@ void Object::validate() {
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         }
       } else {
-        LOGGER->info("Setting default value...");
+        LOGGER->warn("Setting default value...");
         auto value = std::make_shared<StructuredValue>(argument.defaultValue());
         (*value)[KEY_DEFAULT] = std::make_shared<StructuredValue>(Value(true));
         set(argument.name(), value);
       }
     } else {
       // Sets the value
-      LOGGER->info("Setting value...");
-      auto &value = (*_value)[argument.name()];
+      LOGGER->info("Setting value of {}...", argument.name());
+      auto value = ((StructuredValue const &)(*_value))[argument.name()];
       if (value->value().simple() && value->value() == argument.defaultValue()) {
         (*value)[KEY_DEFAULT] = std::make_shared<StructuredValue>(Value(true));
       } else {
         if (value->hasKey(KEY_TYPE) && value->value().scalarType() != ValueType::OBJECT) {
+          LOGGER->info("Creating object for {} / {}...", argument.name(), (int)value->value().scalarType());
           assert(value->value().scalarType() == ValueType::NONE);
-          LOGGER->warn("Looking at {}", entry.first);
-          auto const v = (*value)[KEY_TYPE];
+          auto v = ((StructuredValue const &)(*value))[KEY_TYPE];
           auto valueType = _register->getType(TypeName(v->value().getString()));
           if (valueType) {
             auto object = valueType->create();
             object->setValue(value);
+            LOGGER->warn("Looking at {}", entry.first);
             object->validate();
           }
         }
       }
+      LOGGER->warn("Setting...");
       setValue(argument.name(), value);
     }
   }
 
   // (2) Generate values
+  LOGGER->warn("Generating values...");
   for (auto entry: _type->arguments()) {
     const Argument &argument = *entry.second;
     Generator const *generator = argument.generator();

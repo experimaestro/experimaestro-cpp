@@ -6,8 +6,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 xpmcpp = TypeName("xpmcpplib")
 
-setLogLevel("rpc", LogLevel_INFO)
-setLogLevel("xpm", LogLevel_WARN)
+setLogLevel("rpc", LogLevel_WARN)
+setLogLevel("xpm", LogLevel_INFO)
 
 @RegisterType(xpmcpp("A"))
 class A():

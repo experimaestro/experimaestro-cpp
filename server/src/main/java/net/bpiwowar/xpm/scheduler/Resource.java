@@ -965,6 +965,7 @@ public class Resource implements Identifiable {
         return createDependency(dp);
     }
 
+    @Expose
     public String taskId() {
         return taskId;
     }

@@ -224,7 +224,7 @@ class StructuredValue {
   std::shared_ptr<StructuredValue> &operator[](const std::string &key);
 
   /// Get access to one value
-  std::shared_ptr<StructuredValue const> operator[](const std::string &key) const;
+  std::shared_ptr<StructuredValue> operator[](const std::string &key) const;
 
   /// Get access to the associated value
   Value value() const;
