@@ -298,7 +298,11 @@ final public class Context implements AutoCloseable {
         try {
             // Find the task reference with the same ID that has the same parents,
             // otherwise create a new task reference
-            final String taskId = resource.taskId();
+            String _taskId = resource.taskId();
+            if (_taskId == null) {
+                _taskId = "?";
+            }
+            final String taskId = _taskId;
 
             IdentityHashSet<TaskReference> set = null;
             ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();

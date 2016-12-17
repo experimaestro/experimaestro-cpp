@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 xpmcpp = TypeName("xpmcpplib")
 
-setLogLevel("rpc", LogLevel_WARN)
+setLogLevel("rpc", LogLevel_INFO)
 setLogLevel("xpm", LogLevel_INFO)
 
 @RegisterType(xpmcpp("A"))
@@ -35,18 +35,24 @@ class B(object):
 
 if __name__ == '__main__':
     import os.path as osp
+    import os
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("workdir", type=str, help="Working directory")
     args = parser.parse_args()
 
+    pythonpath = ":".join([osp.realpath(x) for x in os.getenv("PYTHONPATH").split(":")])
+    print("PYTHON PATH=%s" % pythonpath)
+
     # Default values
     set_workdir(osp.realpath(args.workdir))
+    
     rpc.Functions.set_experiment("cpp.test", True)
 
     connector = rpc.Functions.get_localhost_connector()
     launcher = connector.default_launcher()
+    launcher.env("PYTHONPATH", pythonpath)
     launcher.set_notification_url("http://localhost:12346/notification") #rpc.Functions.notification_url())
     rpc.Functions.set_default_launcher(launcher)
 

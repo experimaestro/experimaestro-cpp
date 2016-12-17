@@ -50,7 +50,7 @@ class PyObject(Object, metaclass=PyObjectType):
         if key.startswith("$"):
             key = key[1:]        
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
-        logger.debug("Really setting %s to %s [%s => %s]", key, value, sv.type(), type(value))
+        logger.debug("Really setting %s to %s [%s => %s] on %s", key, value, sv.type(), type(value), type(self))
         dict.__setattr__(self, key, value)
         
 # FIXME: Hack to deal with smart pointers objects released by SWIG
@@ -64,6 +64,7 @@ class PythonObjectFactory(ObjectFactory):
       self.pythonType = pythonType
 
     def _create(self):
+      logger.debug("Created new object of type [%s]", self.pythonType)
       newObject = self.pythonType()
       OBJECTS.append(newObject)      
       return newObject

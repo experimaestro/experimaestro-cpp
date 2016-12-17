@@ -59,10 +59,6 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     protected Path path;
     /**
-     * The environment
-     */
-    private Map<String, String> environment;
-    /**
      * Commands
      */
     private AbstractCommand command;

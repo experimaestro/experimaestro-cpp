@@ -38,6 +38,8 @@ static const std::string KEY_IGNORE = "$ignore";
 static const std::string KEY_DEFAULT = "$default";
 static const std::string KEY_RESOURCE = "$resource";
 
+static const auto RESTRICTED_KEYS = std::unordered_set<std::string> { KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT };
+
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
 static const TypeName INTEGER_TYPE("integer");
@@ -55,7 +57,7 @@ argument_error::argument_error(const std::string &message) : exception(message) 
 cast_error::cast_error(const std::string &message) : exception(message) {}
 not_implemented_error::not_implemented_error(const std::string &message,
                                              const std::string &file, int line) : exception(
-    message + ", file " + file + ":" + std::to_string(line)) {}
+    "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
 
 namespace {
 
@@ -141,14 +143,14 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-Object::Object() : _sealed(false), _type(AnyType) {
+Object::Object() : _sealed(false), _default(false), _type(AnyType) {
 }
 
 Object::Object(std::map<std::string, std::shared_ptr<Object>> &map)
-    : _sealed(false), _content(map) {
+    : _sealed(false), _default(false), _content(map) {
 }
 
-Object::Object(Object const &other) : _content(other._content) {
+Object::Object(Object const &other) : _sealed(other._sealed), _default(other._default), _content(other._content) {
 }
 
 Object::~Object() {}
@@ -164,10 +166,15 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       } else {
         std::shared_ptr<Type> type;
         if (jsonValue.count(KEY_TYPE) > 0) {
-          type = xpmRegister.getType(TypeName((std::string const &) jsonValue[KEY_TYPE]));
+          auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
+          type = xpmRegister.getType(typeName);
+          if (!type) {
+            LOGGER->warn("Could not find type {} in registry", typeName.toString());
+          }
         }
 
         if (type) {
+          LOGGER->info("Creating object of type {} using type->create()", type->toString());
           object = type->create();
         } else {
           object = std::make_shared<Object>();
@@ -175,7 +182,13 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       }
 
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        if (*it != KEY_VALUE) {
+        if (it.key() == KEY_VALUE) {
+          // already handled
+        } else if (it.key() == KEY_TYPE) {
+          object->_type = xpmRegister.getType(TypeName((std::string const &)it.value()));
+        } else if (it.key() == KEY_DEFAULT) {
+          object->_default = it.value();
+        } else {
           object->set(it.key(), createFromJson(xpmRegister, it.value()));
         }
       }
@@ -221,7 +234,7 @@ double Object::asReal() {
 // Convert to JSON
 json Object::toJson() {
   // No content
-  if (_content.empty()) {
+  if (_content.empty() && !_task && (!_type || dynamic_cast<Value*>(this)) && !_default) {
     return nullptr;
   }
 
@@ -295,7 +308,7 @@ std::shared_ptr<Object> Object::set(const std::string &key, std::shared_ptr<Obje
     throw sealed_error();
   }
 
-  if (key == KEY_VALUE || key == KEY_TYPE)
+  if (RESTRICTED_KEYS.count(key) > 0)
     throw argument_error("Cannot access directly to " + key);
 
   auto it = _content.find(key);
@@ -439,10 +452,11 @@ void Object::validate() {
       }
     } else {
       // Sets the value
-      LOGGER->info("Setting value of {}...", argument.name());
+      LOGGER->info("Checking value of {}...", argument.name());
       auto value = get(argument.name());
 
-      if (value->equals(*argument.defaultValue())) {
+      if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+        LOGGER->info("Value is default");
         _default = true;
       } else {
         if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
@@ -475,6 +489,7 @@ void Object::validate() {
 
   // (3) Add resource
   if (_task) {
+    LOGGER->info("Setting resource to {}", PathGenerator::SINGLETON.generate(*this)->asString());
     set(KEY_RESOURCE, PathGenerator::SINGLETON.generate(*this));
   }
 }
@@ -802,6 +817,7 @@ std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, tr
 
 /** Creates an object with a given type */
 std::shared_ptr<Object> Type::create() {
+  LOGGER->info("Creating object from type {} with {}", _type.toString(), _factory ? "a factory" : "NO factory");
   const std::shared_ptr<Object> object = _factory ? _factory->create() : std::make_shared<Object>();
   object->type(shared_from_this());
   return object;

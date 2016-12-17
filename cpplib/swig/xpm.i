@@ -142,6 +142,8 @@
 %feature("director") xpm::ObjectFactory;
 %feature("director") xpm::Object;
 %feature("nodirector") xpm::Object::toJson;
+%feature("nodirector") xpm::Object::equals;
+%feature("nodirector") xpm::Object::digest;
 
 %template(String2Object) std::map<std::string, std::shared_ptr<xpm::Object>>;
 
@@ -153,11 +155,25 @@
             Py_INCREF(d->swig_get_self());
             $result = d->swig_get_self();
         } else {
-            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >(result SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
+            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >($1 SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
             $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);
         }
     } else {
         $result = SWIG_Py_Void();
+    }
+}
+
+%typemap(directorin) std::shared_ptr<xpm::Object> const & {
+    if ($1) {
+        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
+            Py_INCREF(d->swig_get_self());
+            $input = d->swig_get_self();
+        } else {
+            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >($1 SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
+            $input = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);
+        }
+    } else {
+        $input = SWIG_Py_Void();
     }
 }
 #endif
@@ -201,5 +217,3 @@
 }
 */
 /*%typemap(javapackage) xpm::rpc::AbstractCommandComponent & "net.bpiwowar.xpm.rpc";*/
-
-
