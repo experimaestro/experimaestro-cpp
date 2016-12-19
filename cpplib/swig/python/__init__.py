@@ -35,6 +35,7 @@ VALUECONVERTERS = {
     RealType.toString(): lambda v: v.asReal(),
 }
 
+print(Object.__mro__)
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects"""
 
@@ -47,12 +48,13 @@ class PyObject(Object, metaclass=PyObjectType):
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
+        print("Yo")
         if key.startswith("$"):
-            key = key[1:]        
+            key = key[1:]
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value, sv.type(), type(value), type(self))
         dict.__setattr__(self, key, value)
-        
+
 # FIXME: Hack to deal with smart pointers objects released by SWIG
 FACTORIES = []
 OBJECTS = []
@@ -66,7 +68,7 @@ class PythonObjectFactory(ObjectFactory):
     def _create(self):
       logger.debug("Created new object of type [%s]", self.pythonType)
       newObject = self.pythonType()
-      OBJECTS.append(newObject)      
+      OBJECTS.append(newObject)
       return newObject
 
 class PythonRegister(Register):
@@ -133,8 +135,10 @@ def create(t, args, options, submit=False):
         o.task(t.__task__)
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     for k, v in options.items():
-        logger.debug("Setting attribute [%s] to %s", k, v)
-        setattr(o, k, v)
+      if type(v) == dict:
+         v = Register.build(register, json.dumps(v))
+      logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
+      setattr(o, k, v)
 
     if hasattr(t, "__task__"):
         o.task(t.__task__)

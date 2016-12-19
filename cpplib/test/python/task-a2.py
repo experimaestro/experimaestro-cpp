@@ -13,8 +13,8 @@ class _A2:
 @MergeClass(B)
 class _B:
     def execute(self):
-        print(self.a)
-        print("Hello world %s" % (self.a.seed))
+        print(self.a.any, type(self.a.any))
+        print("Hello world %s" % (self.a.any.zou))
         for i in range(20):
             time.sleep(1)
             progress((i+1)/20)

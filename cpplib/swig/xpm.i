@@ -38,8 +38,6 @@
 // Handle attributes for languages supporting this (Python)
 %include "attribute.i"
 
-%import "xpm_rpc.i"
-
 #ifdef SWIGPYTHON
 // Implicit conversions
 %implicitconv;
@@ -70,8 +68,9 @@
 }
 #endif
 
-// Ignores
+// Imports
 %import "ignores.i";
+%import "xpm_rpc.i"
 
 // Python slots
 // See https://docs.python.org/3/c-api/typeobj.html
@@ -79,14 +78,15 @@
 %feature("python:slot", "tp_repr", functype = "reprfunc") *::toString;
 %feature("python:slot", "tp_call", functype = "ternarycallfunc") *::call;
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
-%feature("python:slot", "mp_subscript", functype = "binaryfunc") *::__getitem__;
-%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__getitem__;
+/*%feature("python:slot", "mp_subscript", functype = "binaryfunc") *::__getitem__;*/
+/*%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__getitem__;*/
+/*%feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattr__;*/
 
 // Attributes
 %attribute(xpm::Argument, bool, required, required, required);
 %ignore xpm::Argument::required;
 
-/*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, StructuredValue, defaultValue, defaultValue)
+/*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, Object, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
 */
 %attribute(xpm::Argument, Generator *, generator, generator, generator)
@@ -97,7 +97,6 @@
 
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 %ignore xpm::Argument::type;
-%ignore xpm::StructuredValue::operator[];
 
 #ifdef SWIGJAVA
 %nspace xpm::Object;
@@ -131,7 +130,7 @@
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::Task)
-%shared_ptr(xpm::StructuredValue)
+%shared_ptr(xpm::Object)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::ObjectFactory)
 %shared_ptr(xpm::Value)
@@ -200,20 +199,59 @@
 // Template instanciation
 %template(StringList) std::vector<std::string>;
 
-
-/*%extend xpm::StructuredValue {
-    void __setitem__(std::string const & key, std::shared_ptr<xpm::StructuredValue> const &value) {
+%extend xpm::Object {
+    /*void __setitem__(std::string const & key, std::shared_ptr<xpm::Object> const &value) {
         (*($self))[key] = value;
     }
-    void __setitem__(std::string const & key, std::map<std::string, std::shared_ptr<xpm::StructuredValue>> &value) {
-        (*($self))[key] = std::make_shared<xpm::StructuredValue>(value);
+    void __setitem__(std::string const & key, std::map<std::string, std::shared_ptr<xpm::Object>> &value) {
+        (*($self))[key] = std::make_shared<xpm::Object>(value);
     }
     void __setitem__(std::string const & key, Value const &value) {
-        (*($self))[key] = std::make_shared<xpm::StructuredValue>(value);
-    }
-    std::shared_ptr<xpm::StructuredValue> __getitem__(std::string const & key) {
-      return (*($self))[key];
+        (*($self))[key] = std::make_shared<xpm::Object>(value);
+    }*/
+
+    PyObject * __getattribute__(PyObject *name) {
+      char const *key = (char*)PyUnicode_DATA(name); // FIXME : check!
+      if (!key) {
+         std::cerr << "Object is not string\n";
+         return nullptr;
+      }
+
+         std::cerr << "In __getattr__ " << key << std::endl;
+         if ($self->hasKey(key)) {
+            std::shared_ptr<xpm::Object> value = $self->get(key);
+            auto pvalue = new std::shared_ptr<xpm::Object>(value);
+            PyObject *_value = SWIG_NewFunctionPtrObj(SWIG_as_voidptr(pvalue), $descriptor(std::shared_ptr< xpm::Object > *));
+            return _value;
+         }
+
+      /*std::cerr << "Searching base class " << key << std::endl;*/
+      /*std::cerr << "///" << PyObject_GenericGetAttr(SwigPyObject_TypeOnce(), "__getattribute__") << std::endl;*/
+      auto pself = new std::shared_ptr<xpm::Object>($self);
+      PyObject *_self = SWIG_NewFunctionPtrObj(SWIG_as_voidptr(pself), $descriptor(std::shared_ptr< xpm::Object > *));
+      PyObject *_result = nullptr;
+
+      auto mro = _self->ob_type->tp_mro;
+      for(size_t i = 0, N = PyTuple_Size(mro); i < N; ++i) {
+         PyTypeObject *base = (PyTypeObject*)PyTuple_GetItem(mro, i);
+         PyObject *dict = base->tp_dict;
+         auto item = PyDict_GetItem(dict, name);
+         /*std::cerr << "[search] " << base->tp_name << std::endl;*/
+         if (item) {
+            std::cerr << "Yo, find in " << base->tp_name << " / " << item->ob_type->tp_name << std::endl;
+            _result = item;
+            std::cerr << PyInstanceMethod_Check(item) << std::endl;
+            break;
+         }
+      }
+
+      Py_DECREF(_self);
+      if (_result) {
+         Py_INCREF(_result);
+         return _result;
+      }
+
+      PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
+      return nullptr;
     }
 }
-*/
-/*%typemap(javapackage) xpm::rpc::AbstractCommandComponent & "net.bpiwowar.xpm.rpc";*/

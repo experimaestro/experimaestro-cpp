@@ -1134,4 +1134,8 @@ void Register::parse(std::vector<std::string> const &args) {
   throw argument_error("Unexpected command: " + args[0]);
 }
 
+std::shared_ptr<Object> Register::build(std::string const &value) {
+  return Object::createFromJson(*this, json::parse(value));
+}
+
 } // xpm namespace

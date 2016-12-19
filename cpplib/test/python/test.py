@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # Default values
     set_workdir(osp.realpath(args.workdir))
-    
+
     rpc.Functions.set_experiment("cpp.test", True)
 
     connector = rpc.Functions.get_localhost_connector()
@@ -60,12 +60,9 @@ if __name__ == '__main__':
 
     # Create and then run
     for size in  [5, 10]:
-        a2 = A2.create(size=size, any=1)
+        a2 = A2.create(size=size, any={"zou": 1})
         a2.model = model
         a2.submit()
-        
+
         b = B.create(a=a2)
         b.submit()
-
-
-

@@ -672,6 +672,9 @@ class Register {
 
   /// Build
   std::shared_ptr<Object> build(std::shared_ptr<Object> const &value);
+
+  /// Build
+  std::shared_ptr<Object> build(std::string const &value);
 };
 
 // --- Useful functions
