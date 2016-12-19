@@ -2,7 +2,7 @@ from experimaestro import *
 import logging
 import json
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 xpmcpp = TypeName("xpmcpplib")
 

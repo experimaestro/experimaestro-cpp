@@ -11,6 +11,7 @@
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
+#include <spdlog/fmt/ostr.h>
 
 DEFINE_LOGGER("xpm")
 
@@ -58,6 +59,14 @@ cast_error::cast_error(const std::string &message) : exception(message) {}
 not_implemented_error::not_implemented_error(const std::string &message,
                                              const std::string &file, int line) : exception(
     "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
+
+  std::ostream& operator<<(std::ostream& os, const TypeName& c) {
+      return os << c.toString();
+  }
+  std::ostream& operator<<(std::ostream& os, const Type& c) {
+      return os << c.toString();
+  }
+
 
 namespace {
 
@@ -155,6 +164,8 @@ Object::Object(Object const &other) : _sealed(other._sealed), _default(other._de
 
 Object::~Object() {}
 
+
+
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
     case nlohmann::json::value_t::object: {
@@ -169,12 +180,12 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
           auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
           type = xpmRegister.getType(typeName);
           if (!type) {
-            LOGGER->warn("Could not find type {} in registry", typeName.toString());
+            LOGGER->debug("Could not find type {} in registry", typeName);
           }
         }
 
         if (type) {
-          LOGGER->info("Creating object of type {} using type->create()", type->toString());
+          LOGGER->debug("Creating object of type {} using type->create()", *type);
           object = type->create();
         } else {
           object = std::make_shared<Object>();
@@ -428,14 +439,14 @@ bool Object::equals(Object &other) {
 }
 
 void Object::validate() {
-  LOGGER->warn("Validating");
+  LOGGER->debug("Validating");
 
   // (1) Validate the object arguments
   for (auto entry: _type->arguments()) {
     auto &argument = *entry.second;
 
     if (_content.count(argument.name()) == 0) {
-      LOGGER->warn("No value provided...");
+      LOGGER->debug("No value provided...");
       // No value provided
       if (argument.required() && !argument.generator()) {
         throw argument_error(
@@ -452,11 +463,11 @@ void Object::validate() {
       }
     } else {
       // Sets the value
-      LOGGER->info("Checking value of {}...", argument.name());
+      LOGGER->debug("Checking value of {}...", argument.name());
       auto value = get(argument.name());
 
       if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-        LOGGER->info("Value is default");
+        LOGGER->debug("Value is default");
         _default = true;
       } else {
         if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
@@ -465,24 +476,24 @@ void Object::validate() {
           if (valueType) {
             auto object = valueType->create();
             object->setValue(value);
-            LOGGER->warn("Looking at {}", entry.first);
+            LOGGER->debug("Looking at {}", entry.first);
             object->validate();
           }
         }
       }
-      LOGGER->warn("Setting...");
+      LOGGER->debug("Setting...");
       setValue(argument.name(), value);
     }
   }
 
   // (2) Generate values
-  LOGGER->warn("Generating values...");
+  LOGGER->debug("Generating values...");
   for (auto entry: _type->arguments()) {
     Argument &argument = *entry.second;
     Generator *generator = argument.generator();
 
     if (!hasKey(argument.name()) && generator) {
-      LOGGER->info("Generating value...");
+      LOGGER->debug("Generating value...");
       set(argument.name(), generator->generate(*this));
     }
   }
@@ -817,7 +828,7 @@ std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, tr
 
 /** Creates an object with a given type */
 std::shared_ptr<Object> Type::create() {
-  LOGGER->info("Creating object from type {} with {}", _type.toString(), _factory ? "a factory" : "NO factory");
+  LOGGER->debug("Creating object from type {} with {}", _type, _factory ? "a factory" : "NO factory");
   const std::shared_ptr<Object> object = _factory ? _factory->create() : std::make_shared<Object>();
   object->type(shared_from_this());
   return object;
@@ -962,7 +973,7 @@ std::shared_ptr<Object> Task::create() {
   auto object = _factory->create();
   object->type(_type);
   object->task(this->shared_from_this());
-  LOGGER->info("Setting task to {}", _identifier.toString());
+  LOGGER->debug("Setting task to {}", _identifier);
   return object;
 }
 
@@ -1023,7 +1034,7 @@ std::shared_ptr<Type> Register::getType(std::shared_ptr<Object> const &object) {
 
 std::shared_ptr<Object> Register::build(std::shared_ptr<Object> const &value) {
   std::shared_ptr<Type> objectType = value->type();
-  LOGGER->info("Building object with type {}", objectType->toString());
+  LOGGER->debug("Building object with type {}", *objectType);
 
   // Create the object
   std::cerr << "Creating object..." << std::endl;
