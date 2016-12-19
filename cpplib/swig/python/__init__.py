@@ -35,7 +35,6 @@ VALUECONVERTERS = {
     RealType.toString(): lambda v: v.asReal(),
 }
 
-print(Object.__mro__)
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects"""
 
@@ -48,7 +47,6 @@ class PyObject(Object, metaclass=PyObjectType):
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
-        print("Yo")
         if key.startswith("$"):
             key = key[1:]
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)

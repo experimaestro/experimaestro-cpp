@@ -80,7 +80,7 @@
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 /*%feature("python:slot", "mp_subscript", functype = "binaryfunc") *::__getitem__;*/
 /*%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__getitem__;*/
-/*%feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattr__;*/
+%feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
 // Attributes
 %attribute(xpm::Argument, bool, required, required, required);
@@ -148,33 +148,26 @@
 
 // Returns the wrapped python object rather than the director object
 #ifdef SWIGPYTHON
-%typemap(out) std::shared_ptr<xpm::Object> {
-    if ($1) {
-        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
-            Py_INCREF(d->swig_get_self());
-            $result = d->swig_get_self();
-        } else {
-            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >($1 SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
-            $result = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);
+%{
+    namespace xpm { namespace python {
+        PyObject * getRealObject(std::shared_ptr<xpm::Object> const &object, swig_type_info *swigtype) {
+            if (object) {
+                if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
+                    Py_INCREF(d->swig_get_self());
+                    return d->swig_get_self();
+                } 
+             
+                std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>(object);
+                return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), swigtype, SWIG_POINTER_OWN);
+            }
+            return SWIG_Py_Void();    
         }
-    } else {
-        $result = SWIG_Py_Void();
-    }
-}
+    }}
+%}
 
-%typemap(directorin) std::shared_ptr<xpm::Object> const & {
-    if ($1) {
-        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
-            Py_INCREF(d->swig_get_self());
-            $input = d->swig_get_self();
-        } else {
-            std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<  xpm::Object >($1 SWIG_NO_NULL_DELETER_SWIG_BUILTIN_INIT);
-            $input = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr< xpm::Object > *), SWIG_POINTER_OWN);
-        }
-    } else {
-        $input = SWIG_Py_Void();
-    }
-}
+%typemap(out) std::shared_ptr<xpm::Object> { $result = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*)); }
+%typemap(directorin) std::shared_ptr<xpm::Object> const & { $input = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));  }
+
 #endif
 
 
@@ -210,47 +203,29 @@
         (*($self))[key] = std::make_shared<xpm::Object>(value);
     }*/
 
-    PyObject * __getattribute__(PyObject *name) {
-      char const *key = (char*)PyUnicode_DATA(name); // FIXME : check!
-      if (!key) {
-         std::cerr << "Object is not string\n";
-         return nullptr;
+    PyObject * __getattro__(PyObject *name) {
+        auto _self = xpm::python::getRealObject($self->shared_from_this(), $descriptor(std::shared_ptr<xpm::Object>*));
+
+        PyObject *object = PyObject_GenericGetAttr(_self, name);
+        if (object) {
+            return object;
+        }
+
+        if (!PyUnicode_Check(name)) {
+            PyErr_SetString(PyExc_AttributeError, "Attribute name is not a string");
+            return nullptr;            
+        }
+        
+        Py_ssize_t stringsize;
+        char *_key = (char*)PyUnicode_AsUTF8AndSize(name, &stringsize);
+        std::string key(_key, stringsize);
+  
+      if ($self->hasKey(key)) {
+          PyErr_Clear();
+         return xpm::python::getRealObject($self->get(key), $descriptor(std::shared_ptr<xpm::Object>*));
       }
 
-         std::cerr << "In __getattr__ " << key << std::endl;
-         if ($self->hasKey(key)) {
-            std::shared_ptr<xpm::Object> value = $self->get(key);
-            auto pvalue = new std::shared_ptr<xpm::Object>(value);
-            PyObject *_value = SWIG_NewFunctionPtrObj(SWIG_as_voidptr(pvalue), $descriptor(std::shared_ptr< xpm::Object > *));
-            return _value;
-         }
-
-      /*std::cerr << "Searching base class " << key << std::endl;*/
-      /*std::cerr << "///" << PyObject_GenericGetAttr(SwigPyObject_TypeOnce(), "__getattribute__") << std::endl;*/
-      auto pself = new std::shared_ptr<xpm::Object>($self);
-      PyObject *_self = SWIG_NewFunctionPtrObj(SWIG_as_voidptr(pself), $descriptor(std::shared_ptr< xpm::Object > *));
-      PyObject *_result = nullptr;
-
-      auto mro = _self->ob_type->tp_mro;
-      for(size_t i = 0, N = PyTuple_Size(mro); i < N; ++i) {
-         PyTypeObject *base = (PyTypeObject*)PyTuple_GetItem(mro, i);
-         PyObject *dict = base->tp_dict;
-         auto item = PyDict_GetItem(dict, name);
-         /*std::cerr << "[search] " << base->tp_name << std::endl;*/
-         if (item) {
-            std::cerr << "Yo, find in " << base->tp_name << " / " << item->ob_type->tp_name << std::endl;
-            _result = item;
-            std::cerr << PyInstanceMethod_Check(item) << std::endl;
-            break;
-         }
-      }
-
-      Py_DECREF(_self);
-      if (_result) {
-         Py_INCREF(_result);
-         return _result;
-      }
-
+      std::cerr << "Could not find attribute\n";
       PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
       return nullptr;
     }

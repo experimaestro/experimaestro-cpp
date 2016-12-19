@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # Create and then run
     for size in  [5, 10]:
-        a2 = A2.create(size=size, any={"zou": 1})
+        a2 = A2.create(size=size, any={"zoé": 1})
         a2.model = model
         a2.submit()
 
