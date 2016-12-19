@@ -14,7 +14,7 @@ class _A2:
 class _B:
     def execute(self):
         print("Hello world %s [%s]" % (self.a.any.zoé, type(self.a.any.zoé)))
-        print()
+        print("Hello world %s [%s]" % (self.a.zoé, type(self.a.any.zoé)))
         for i in range(20):
             time.sleep(1)
             progress((i+1)/20)
