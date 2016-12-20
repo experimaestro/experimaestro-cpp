@@ -782,7 +782,7 @@ std::shared_ptr<Object> Array::copy() {
 Argument::Argument(std::string const &name) : _name(name), _required(true) {
 }
 
-Argument::Argument() : _name() {
+Argument::Argument() : _name(), _required(true) {
 }
 
 std::string const &Argument::name() const {
