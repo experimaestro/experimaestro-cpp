@@ -434,7 +434,7 @@ void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dep
   }
 }
 
-bool Object::equals(Object &other) {
+bool Object::equals(Object const &other) {
   NOT_IMPLEMENTED();
 }
 
@@ -580,8 +580,8 @@ Value::Value(Value const &other) : Object(other), _scalarType(other._scalarType)
   }
 }
 
-bool Value::equals(Object &other) {
-  if (Value *otherValue = dynamic_cast<Value*>(&other)) {
+bool Value::equals(Object const &other) {
+  if (Value const *otherValue = dynamic_cast<Value const*>(&other)) {
     return Helper::equals(*this, *otherValue);
   }
   return false;
@@ -788,30 +788,37 @@ Argument::Argument() : _name(), _required(true) {
 std::string const &Argument::name() const {
   return _name;
 }
+Argument &Argument::name(std::string const &name) {
+  _name = name;
+  return *this;
+}
 
 bool Argument::required() const { return _required; }
 
-void Argument::required(bool required) {
+Argument & Argument::required(bool required) {
   _required = required;
+  return *this;
 }
 const std::string &Argument::help() const {
   return _help;
 }
-void Argument::help(const std::string &help) {
+Argument & Argument::help(const std::string &help) {
   _help = help;
+  return *this;
 }
 
-void Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
+Argument & Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
+  return *this;
 }
 std::shared_ptr<Object> Argument::defaultValue() const { return _defaultValue; }
 
 Generator *Argument::generator() { return _generator; }
-void Argument::generator(Generator *generator) { _generator = generator; }
+Argument & Argument::generator(Generator *generator) { _generator = generator; return *this; }
 
 std::shared_ptr<Type> const &Argument::type() const { return _type; }
-void Argument::type(std::shared_ptr<Type> const &type) { _type = type; }
+Argument & Argument::type(std::shared_ptr<Type> const &type) { _type = type; return *this; }
 
 
 
@@ -1147,6 +1154,14 @@ void Register::parse(std::vector<std::string> const &args) {
 
 std::shared_ptr<Object> Register::build(std::string const &value) {
   return Object::createFromJson(*this, json::parse(value));
+}
+
+void Register::parse(int argc, const char **argv) {
+  std::vector<std::string> args;
+  for(int i = 1; i < argc; ++i) {
+    args.emplace_back(std::string(argv[argc]));
+  }
+  parse(args);
 }
 
 } // xpm namespace

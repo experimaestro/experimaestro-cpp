@@ -11,8 +11,8 @@ using namespace xpm;
 struct TestType {
   Type type;
   TestType() : type(TypeName("test")) {
-    Argument a("a");
-    a.defaultValue(Value(1l));
+    auto a = std::make_shared<Argument>("a");
+    a->defaultValue(Value::create(1l));
     type.addArgument(a);
   }
 };
@@ -22,9 +22,8 @@ TEST(StructuredValue, defaultSet) {
   object->set("a", Value(1l));
   object->validate();
 
-  auto const value = object->getValue();
-  EXPECT_EQ(value["a"].value(), Value(1));
-  EXPECT_TRUE(value["a"].isDefault());
+  EXPECT_TRUE(object->get("a")->equals(Value(1)));
+  EXPECT_TRUE(object->get("a")->isDefault());
 }
 
 TEST(StructuredValue, notDefault) {
@@ -32,9 +31,8 @@ TEST(StructuredValue, notDefault) {
   object->set("a", Value(2));
   object->validate();
 
-  auto const value = object->getValue();
-  EXPECT_EQ(value["a"].value(), Value(2));
-  EXPECT_TRUE(!value["a"].isDefault());
+  EXPECT_TRUE(object->get("a")->equals(Value(2)));
+  EXPECT_TRUE(!object->get("a")->isDefault());
 }
 
 
@@ -42,7 +40,6 @@ TEST(StructuredValue, defaultNotSet) {
   auto object = TestType().type.create();
   object->validate();
 
-  auto const value = object->getValue();
-  EXPECT_EQ(value["a"].value(), Value(1));
-  EXPECT_TRUE(value["a"].isDefault());
+  EXPECT_TRUE(object->get("a")->equals(Value(1)));
+  EXPECT_TRUE(object->get("a")->isDefault());
 }

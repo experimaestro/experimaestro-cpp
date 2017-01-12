@@ -9,7 +9,9 @@ FIND_PACKAGE(PythonInterp 3 REQUIRED)
 add_definitions("-Wall")
 enable_testing()
 
-set(EXTERNAL_HEADERS
+set(PUBLIC_HEADERS
+        include/xpm/utils.hpp
+        include/xpm/json.hpp
         include/xpm/xpm.hpp
         include/xpm/context.hpp
         include/xpm/filesystem.hpp
@@ -21,7 +23,7 @@ set(RPC_HEADERS
 )
 
 set(SOURCES
-        ${EXTERNAL_HEADERS}
+        ${PUBLIC_HEADERS}
         ${RPC_HEADERS}
         src/rpc/jsonrpcclient.cpp
         src/xpm.cpp
@@ -48,6 +50,9 @@ set_target_properties(experimaestro_shared PROPERTIES
     CXX_STANDARD 11
     OUTPUT_NAME experimaestro)
 
+install(TARGETS experimaestro_shared LIBRARY DESTINATION lib)
+install(DIRECTORY include/xpm DESTINATION include)
+
 # ---- experimaestro executable
 
 add_executable(experimaestro src/experimaestro.cpp)
@@ -72,7 +77,7 @@ add_custom_command(
         COMMAND touch xml/index.xml # Necessary when doxygen does not update the documentation
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating XML documentation with Doxygen" VERBATIM
-        DEPENDS ${EXTERNAL_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+        DEPENDS ${PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
 )
 add_custom_target(documentation_index DEPENDS xml/index.xml)
 
@@ -111,7 +116,7 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
     # Build module experimaestro
-    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
 
     # Build module experimaestro.rpc
@@ -132,11 +137,11 @@ if (true)
 				CXX_STANDARD 11)
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
-		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-		install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" EXCLUDE_FROM_ALL COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+		install(TARGETS "_${swigtargetname}_python" EXCLUDE_FROM_ALL COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     endforeach()
-	install(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-	install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+	install(FILES swig/python/__init__.py EXCLUDE_FROM_ALL COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+	install(TARGETS experimaestro_shared EXCLUDE_FROM_ALL COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation _experimaestro_rpc_python)
 
     # Test examples (compilation only)
@@ -162,7 +167,7 @@ set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/src/main/java/net/bpiwowar")
 set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
 set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
 
-set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${EXTERNAL_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
 swig_add_module(experimaestro_java java swig/xpm.i)
 
 set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)

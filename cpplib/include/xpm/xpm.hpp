@@ -152,7 +152,7 @@ class Object
   static std::shared_ptr<Object> createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue);
 
   /// Returns true if objects are equal
-  virtual bool equals(Object &other);
+  virtual bool equals(Object const &other);
 
   /// Returns the string
   virtual std::string asString();
@@ -331,6 +331,8 @@ class Value : public Object {
   } _value;
   ValueType _scalarType;
  public:
+  typedef std::shared_ptr<Value> Ptr;
+
   Value();
   Value(double value);
   Value(bool value);
@@ -339,6 +341,11 @@ class Value : public Object {
   Value(std::string const &value);
   Value(Value const &other);
   Value &operator=(Value const &other);
+
+  template<typename T>
+  static Ptr create(T const &t) {
+    return std::make_shared<Value>(t);
+  }
 
   virtual ~Value();
   virtual std::shared_ptr<Object> copy() override;
@@ -358,7 +365,7 @@ class Value : public Object {
   std::string const &getString();
   virtual nlohmann::json toJson() override;
 
-  virtual bool equals(Object &) override ;
+  virtual bool equals(Object const &) override ;
 
   /// Returns the string
   virtual std::string asString() override;
@@ -417,21 +424,22 @@ class Argument {
   Argument(std::string const &name);
 
   std::string const &name() const;
+  Argument &name(std::string const &name);
 
-  void required(bool required);
+  Argument &required(bool required);
   bool required() const;
 
-  void defaultValue(std::shared_ptr<Object> const &defaultValue);
+  Argument &defaultValue(std::shared_ptr<Object> const &defaultValue);
   std::shared_ptr<Object> defaultValue() const;
 
   Generator *generator();
-  void generator(Generator *generator);
+  Argument &generator(Generator *generator);
 
   std::shared_ptr<Type> const &type() const;
-  void type(std::shared_ptr<Type> const &type);
+  Argument &type(std::shared_ptr<Type> const &type);
 
   const std::string &help() const;
-  void help(const std::string &help);
+  Argument &help(const std::string &help);
  private:
   /// The argument name
   std::string _name;
@@ -655,6 +663,15 @@ class Register {
    */
   void parse(std::vector<std::string> const &args);
 
+  /**
+   * Parse command line
+   *
+   * @see parse(std::vector<strd::string> const &0
+   * @param argc
+   * @param argv
+   */
+  void parse(int argc, const char **argv);
+
   /// Register a new task
   void addTask(std::shared_ptr<Task> const &task);
 
@@ -673,7 +690,7 @@ class Register {
   /// Build
   std::shared_ptr<Object> build(std::shared_ptr<Object> const &value);
 
-  /// Build
+  /// Build from a string
   std::shared_ptr<Object> build(std::string const &value);
 };
 
