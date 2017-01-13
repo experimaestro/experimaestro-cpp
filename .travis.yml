@@ -10,10 +10,11 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise-3.6
-
+      - george-edison55-precise-backports
     packages:
       - swig
-      - ubuntu-toolchain-r-test
+      - cmake
+      - cmake-data
 
 
 # Use faster container-based builds
