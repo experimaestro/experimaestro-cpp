@@ -1,16 +1,20 @@
+# Main language
 language: java
 jdk:
   - oraclejdk8
 
-# Use faster container-based builds
-
+# Environment
+dist: trusty # Use more recent Ubuntu
 addons:
   apt:
     packages:
     - swig
 
 
+# Use faster container-based builds
 sudo: false
+
+# Configuration
 cache:
   directories:
       - $HOME/.gradle
