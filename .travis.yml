@@ -13,6 +13,7 @@ addons:
       - george-edison55-precise-backports
     packages:
       - swig
+      - doxygen
       - cmake
       - cmake-data
 
