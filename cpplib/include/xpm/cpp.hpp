@@ -2,9 +2,10 @@
  * This file contains helpers for c++ code
  */
 
-#ifndef PROJECT_CPP_HPP
-#define PROJECT_CPP_HPP
+#ifndef EXPERIMAESTRO_CPP_HPP
+#define EXPERIMAESTRO_CPP_HPP
 
+#include "xpm.hpp"
 
 namespace xpm {
 

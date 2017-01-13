@@ -1,3 +1,7 @@
+
+#ifndef EXPERIMAESTRO_XPM_HPP
+#define EXPERIMAESTRO_XPM_HPP
+
 #include <memory>
 #include <string>
 #include <map>
@@ -702,3 +706,5 @@ class Register {
 void progress(float percentage);
 
 }
+
+#endif
