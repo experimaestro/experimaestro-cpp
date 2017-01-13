@@ -1,12 +1,19 @@
 language: java
 jdk:
   - oraclejdk8
+
+# Use faster container-based builds
+
+addons:
+  apt:
+    packages:
+    - swig
+
+
 sudo: false
 cache:
   directories:
       - $HOME/.gradle
-install:
-  - apt-get install -qq swig
 branches:
   only:
    - master
