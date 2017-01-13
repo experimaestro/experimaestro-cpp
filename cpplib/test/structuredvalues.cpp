@@ -9,16 +9,16 @@
 using namespace xpm;
 
 struct TestType {
-  Type type;
-  TestType() : type(TypeName("test")) {
+  std::shared_ptr<Type> type;
+  TestType() : type(std::make_shared<Type>(TypeName("test"))) {
     auto a = std::make_shared<Argument>("a");
     a->defaultValue(Value::create(1l));
-    type.addArgument(a);
+    type->addArgument(a);
   }
 };
 
 TEST(StructuredValue, defaultSet) {
-  auto object = TestType().type.create();
+  auto object = TestType().type->create();
   object->set("a", Value(1l));
   object->validate();
 
@@ -27,7 +27,7 @@ TEST(StructuredValue, defaultSet) {
 }
 
 TEST(StructuredValue, notDefault) {
-  auto object = TestType().type.create();
+  auto object = TestType().type->create();
   object->set("a", Value(2));
   object->validate();
 
@@ -37,7 +37,7 @@ TEST(StructuredValue, notDefault) {
 
 
 TEST(StructuredValue, defaultNotSet) {
-  auto object = TestType().type.create();
+  auto object = TestType().type->create();
   object->validate();
 
   EXPECT_TRUE(object->get("a")->equals(Value(1)));
