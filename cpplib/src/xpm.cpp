@@ -162,9 +162,6 @@ Object::Object(std::map<std::string, std::shared_ptr<Object>> &map)
 Object::Object(Object const &other) : _sealed(other._sealed), _default(other._default), _content(other._content) {
 }
 
-Object::~Object() {}
-
-
 
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
@@ -442,59 +439,63 @@ void Object::validate() {
   LOGGER->debug("Validating");
 
   // (1) Validate the object arguments
-  for (auto entry: _type->arguments()) {
-    auto &argument = *entry.second;
+  for(auto type = _type; type; type = type->parentType()) {
+    for (auto entry: type->arguments()) {
+      auto &argument = *entry.second;
 
-    if (_content.count(argument.name()) == 0) {
-      LOGGER->debug("No value provided...");
-      // No value provided
-      if (argument.required() && !argument.generator()) {
-        throw argument_error(
-            "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-      } else {
-        LOGGER->warn("Setting default value for {}...", argument.name());
-        if (argument.defaultValue()) {
-          auto value = argument.defaultValue()->copy();
-          value->_default = true;
-          set(argument.name(), value);
+      if (_content.count(argument.name()) == 0) {
+        LOGGER->debug("No value provided...");
+        // No value provided
+        if (argument.required() && !argument.generator()) {
+          throw argument_error(
+              "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         } else {
-          set(argument.name(), std::make_shared<Object>());
-        }
-      }
-    } else {
-      // Sets the value
-      LOGGER->debug("Checking value of {}...", argument.name());
-      auto value = get(argument.name());
-
-      if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-        LOGGER->debug("Value is default");
-        _default = true;
-      } else {
-        if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
-          auto v = value->get(KEY_TYPE);
-          auto valueType = value->type();
-          if (valueType) {
-            auto object = valueType->create();
-            object->setValue(value);
-            LOGGER->debug("Looking at {}", entry.first);
-            object->validate();
+          LOGGER->warn("Setting default value for {}...", argument.name());
+          if (argument.defaultValue()) {
+            auto value = argument.defaultValue()->copy();
+            value->_default = true;
+            set(argument.name(), value);
+          } else {
+            set(argument.name(), std::make_shared<Object>());
           }
         }
+      } else {
+        // Sets the value
+        LOGGER->debug("Checking value of {}...", argument.name());
+        auto value = get(argument.name());
+
+        if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+          LOGGER->debug("Value is default");
+          value->_default = true;
+        } else {
+          if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
+            auto v = value->get(KEY_TYPE);
+            auto valueType = value->type();
+            if (valueType) {
+              auto object = valueType->create();
+              object->setValue(value);
+              LOGGER->debug("Looking at {}", entry.first);
+              object->validate();
+            }
+          }
+        }
+        LOGGER->debug("Setting...");
+        setValue(argument.name(), value);
       }
-      LOGGER->debug("Setting...");
-      setValue(argument.name(), value);
     }
   }
 
   // (2) Generate values
   LOGGER->debug("Generating values...");
-  for (auto entry: _type->arguments()) {
-    Argument &argument = *entry.second;
-    Generator *generator = argument.generator();
+  for(auto type = _type; type; type = type->parentType()) {
+    for (auto entry: type->arguments()) {
+      Argument &argument = *entry.second;
+      Generator *generator = argument.generator();
 
-    if (!hasKey(argument.name()) && generator) {
-      LOGGER->debug("Generating value...");
-      set(argument.name(), generator->generate(*this));
+      if (!hasKey(argument.name()) && generator) {
+        LOGGER->debug("Generating value...");
+        set(argument.name(), generator->generate(*this));
+      }
     }
   }
 
@@ -865,6 +866,15 @@ std::map<std::string, std::shared_ptr<Argument>> &Type::arguments() {
 std::map<std::string, std::shared_ptr<Argument>> const &Type::arguments() const {
   return _arguments;
 }
+
+void Type::parentType(Ptr const &type) {
+  _parent = type;
+}
+
+Type::Ptr Type::parentType() {
+  return _parent;
+}
+
 
 TypeName const &Type::typeName() const { return _type; }
 

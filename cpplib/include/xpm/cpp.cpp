@@ -3,3 +3,9 @@
 //
 
 #include "cpp.hpp"
+
+namespace xpm {
+
+std::shared_ptr<Register> CURRENT_REGISTER = std::make_shared<Register>();
+
+}

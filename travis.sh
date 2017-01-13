@@ -12,6 +12,7 @@ log() {
 
 log "Build and test the CPP library"
 (
+    log "cmake version $(cmake --version)"
     cd cpplib
     mkdir build
     (cd build && cmake -C ..)

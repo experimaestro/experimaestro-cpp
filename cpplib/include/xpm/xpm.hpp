@@ -150,8 +150,6 @@ class Object
   /// Constructor from a map
   Object(std::map<std::string, std::shared_ptr<Object>> &map);
 
-  virtual ~Object();
-
   /// Construct from a JSON object
   static std::shared_ptr<Object> createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue);
 
@@ -476,7 +474,7 @@ class ObjectFactory {
  public:
   ObjectFactory(std::shared_ptr<Register> const &theRegister);
   virtual ~ObjectFactory() {}
-  std::shared_ptr<Object> create();
+  virtual std::shared_ptr<Object> create();
   virtual std::shared_ptr<Object> _create() const = 0;
 };
 
@@ -497,6 +495,7 @@ class Type
 {
   friend class Register;
  public:
+  typedef std::shared_ptr<Type> Ptr;
   /**
    * Creates a new type
    * @param type The typename
@@ -550,6 +549,12 @@ class Type
 
   /** Can ignore */
   inline bool canIgnore() { return _canIgnore; }
+
+  /** Get parent type */
+  Ptr parentType();
+
+  /** Set parent type */
+  void parentType(Ptr const &type);
  private:
   const TypeName _type;
   std::shared_ptr<Type> _parent;
@@ -707,4 +712,4 @@ void progress(float percentage);
 
 }
 
-#endif
+#endif // EXPERIMAESTRO_XPM_HPP
