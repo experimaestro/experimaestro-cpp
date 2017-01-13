@@ -7,8 +7,13 @@ jdk:
 dist: trusty # Use more recent Ubuntu
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.6
+
     packages:
-    - swig
+      - swig
+      - ubuntu-toolchain-r-test
 
 
 # Use faster container-based builds
