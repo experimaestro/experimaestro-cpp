@@ -10,17 +10,17 @@ log() {
     echo "$@" 1>&2
 }
 
-log "Build and testing the server"
-(
-    cd server
-    gradle build
-    gradle test
-)
-
 log "Build and test the CPP library"
 (
     cd cpplib
     mkdir build
     (cd build && cmake -C ..)
     make -C experimaestro-tests
+)
+
+log "Build and testing the server"
+(
+    cd server
+    gradle build
+    gradle test
 )
