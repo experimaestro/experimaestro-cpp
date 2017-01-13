@@ -8,10 +8,14 @@
 
 namespace xpm {
 
-struct None {};
+struct _ArgumentHolder {
+
+};
+
 template<typename T>
-struct ArgumentHolder {
+struct ArgumentHolder : public _ArgumentHolder {
   std::shared_ptr<Argument> argument;
+  T value;
 
   ArgumentHolder() {}
   ArgumentHolder(const char *name) : argument(std::make_shared<Argument>(name)) {
@@ -21,13 +25,7 @@ struct ArgumentHolder {
     argument->required(_required);
     return *this;
   }
-
-  ArgumentHolder(ArgumentHolder<None> const &other) : argument(std::move(other.argument)) {}
 };
-
-ArgumentHolder<None> operator "" _arg(const char *name, size_t len) {
-  return ArgumentHolder<None>(name);
-}
 
 struct TypeBuilder {
   std::shared_ptr<Type> type;
@@ -39,13 +37,12 @@ struct TypeBuilder {
   void add(std::string const &name, ArgumentHolder<T> a, Ts... args) {
     a.argument->name(name);
     type->addArgument(a.argument);
-    add(args...); //std::forward<Ts>(args)...);
+    add(args...);
   }
 };
 
 #define XPMTYPE(name, ...) \
-  TypeBuilder __register() { TypeBuilder tb(name); tb.add(__VA_ARGS__); return tb; }; \
-  static const std::shared_ptr<Type> TYPE = nullptr;
+  TypeBuilder __register() { TypeBuilder tb(name); tb.add(__VA_ARGS__); return tb; };
 
 /**
  * Add a type
@@ -57,11 +54,18 @@ void addType(Register &r) {
   T t;
   r.addType(t.__register().type);
 }
+
+struct CppObject : public Object {
+  std::unordered_map<std::string, _ArgumentHolder *> _arguments;
+
+  void setValue(std::string const &name, std::shared_ptr<Object> const &value) override {
+  }
+};
 }
 
 using namespace xpm;
 
-struct TypeA : public Object {
+struct TypeA : public CppObject {
   ArgumentHolder<std::string> name;
   ArgumentHolder<int> x;
 
@@ -69,14 +73,23 @@ struct TypeA : public Object {
 
   TypeA() {
   }
+
 };
 
-struct TypeB : public Object {
-  ArgumentHolder<TypeA> b;
-  XPMTYPE("TypeB", "b", b.required(true));
+struct TypeB : public CppObject {
+  ArgumentHolder<TypeA> a;
+  XPMTYPE("TypeB", "a", a.required(true));
+};
+
+struct TypeB1 : public TypeB {
+  ArgumentHolder<int> x;
+  XPMTYPE("TypeB", "x", x.required(true));
 };
 
 TEST(CppInterface, basic) {
   Register r;
-  auto o = r.build(R"({ "type": "TypeB" })");
+  auto o = r.build(R"({ "type": "TypeB1" })");
+
+  o->validate();
+
 }
