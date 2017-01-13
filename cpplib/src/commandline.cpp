@@ -31,6 +31,14 @@ void CommandLine::add(Command command) {
   commands.push_back(command);
 }
 
+nlohmann::json CommandLine::toJson() const {
+  auto j = nlohmann::json::array();
+  for(auto &command: commands) {
+    j.push_back(command.toJson());
+  }
+  return j;
+}
+
 template<>
 struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   std::string value;
@@ -51,6 +59,9 @@ std::string CommandString::toString() const {
 CommandString::~CommandString() {
 
 }
+nlohmann::json CommandString::toJson() const {
+  return nlohmann::json();
+}
 
 void Command::add(AbstractCommandComponent component) {
   components.push_back(component);
@@ -63,6 +74,13 @@ std::shared_ptr<rpc::Command> Command::rpc(CommandContext &context) const {
   }
   return rpc;
 }
+nlohmann::json Command::toJson() const {
+  auto j = nlohmann::json::array();
+  for(auto &component: this->components) {
+    j.push_back(component.toJson());
+  }
+  return j;
+}
 AbstractCommandComponent::AbstractCommandComponent() {
 
 }
@@ -71,6 +89,9 @@ std::shared_ptr<rpc::AbstractCommandComponent> AbstractCommandComponent::rpc(Com
 }
 AbstractCommandComponent::~AbstractCommandComponent() {
 
+}
+nlohmann::json AbstractCommandComponent::toJson() const {
+  return nullptr;
 }
 
 template<>
@@ -91,6 +112,13 @@ std::string CommandContent::toString() const {
 CommandContent::~CommandContent() {
 
 }
+nlohmann::json CommandContent::toJson() const {
+  auto j = nlohmann::json::object();
+  j["type"] = "content";
+  j["key"] = self(this).key;
+  j["content"] = self(this).content;
+  return j;
+}
 
 template<>
 struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
@@ -104,6 +132,9 @@ CommandParameters::~CommandParameters() {
 
 }
 CommandParameters::CommandParameters() {
+}
+nlohmann::json CommandParameters::toJson() const {
+  return { {"type", "parameters"} };
 }
 
 template<>
@@ -121,7 +152,15 @@ CommandPath::CommandPath(Path path) : PimplChild(path) {
 CommandPath::~CommandPath() {
 
 }
+
 std::string CommandPath::toString() const {
-  return std::string();
+  return self(this).path.toString();
+}
+
+nlohmann::json CommandPath::toJson() const {
+  auto j = nlohmann::json::object();
+  j["type"] = "path";
+  j["path"] = self(this).path.toString();
+  return j;
 }
 }

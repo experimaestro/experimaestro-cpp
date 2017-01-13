@@ -39,7 +39,7 @@ static const std::string KEY_IGNORE = "$ignore";
 static const std::string KEY_DEFAULT = "$default";
 static const std::string KEY_RESOURCE = "$resource";
 
-static const auto RESTRICTED_KEYS = std::unordered_set<std::string> { KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT };
+static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
 
 static const TypeName STRING_TYPE("string");
 static const TypeName BOOLEAN_TYPE("boolean");
@@ -59,13 +59,6 @@ cast_error::cast_error(const std::string &message) : exception(message) {}
 not_implemented_error::not_implemented_error(const std::string &message,
                                              const std::string &file, int line) : exception(
     "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
-
-  std::ostream& operator<<(std::ostream& os, const TypeName& c) {
-      return os << c.toString();
-  }
-  std::ostream& operator<<(std::ostream& os, const Type& c) {
-      return os << c.toString();
-  }
 
 
 namespace {
@@ -162,6 +155,19 @@ Object::Object(std::map<std::string, std::shared_ptr<Object>> &map)
 Object::Object(Object const &other) : _sealed(other._sealed), _default(other._default), _content(other._content) {
 }
 
+void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
+  for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
+    if (it.key() == KEY_VALUE) {
+      // already handled
+    } else if (it.key() == KEY_TYPE) {
+      _type = xpmRegister.getType(TypeName((std::string const &) it.value()));
+    } else if (it.key() == KEY_DEFAULT) {
+      _default = it.value();
+    } else {
+      set(it.key(), createFromJson(xpmRegister, it.value()));
+    }
+  }
+}
 
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
@@ -189,17 +195,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
         }
       }
 
-      for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        if (it.key() == KEY_VALUE) {
-          // already handled
-        } else if (it.key() == KEY_TYPE) {
-          object->_type = xpmRegister.getType(TypeName((std::string const &)it.value()));
-        } else if (it.key() == KEY_DEFAULT) {
-          object->_default = it.value();
-        } else {
-          object->set(it.key(), createFromJson(xpmRegister, it.value()));
-        }
-      }
+      object->fill(xpmRegister, jsonValue);
 
       return object;
     }
@@ -242,7 +238,7 @@ double Object::asReal() {
 // Convert to JSON
 json Object::toJson() {
   // No content
-  if (_content.empty() && !_task && (!_type || dynamic_cast<Value*>(this)) && !_default) {
+  if (_content.empty() && !_task && (!_type || dynamic_cast<Value *>(this)) && !_default) {
     return nullptr;
   }
 
@@ -270,7 +266,7 @@ std::string Object::toJsonString() {
 }
 
 void Object::setValue(std::shared_ptr<Object> const &value) {
- NOT_IMPLEMENTED();
+  NOT_IMPLEMENTED();
 }
 
 /// Internal digest function
@@ -439,7 +435,7 @@ void Object::validate() {
   LOGGER->debug("Validating");
 
   // (1) Validate the object arguments
-  for(auto type = _type; type; type = type->parentType()) {
+  for (auto type = _type; type; type = type->parentType()) {
     for (auto entry: type->arguments()) {
       auto &argument = *entry.second;
 
@@ -487,7 +483,7 @@ void Object::validate() {
 
   // (2) Generate values
   LOGGER->debug("Generating values...");
-  for(auto type = _type; type; type = type->parentType()) {
+  for (auto type = _type; type; type = type->parentType()) {
     for (auto entry: type->arguments()) {
       Argument &argument = *entry.second;
       Generator *generator = argument.generator();
@@ -507,7 +503,7 @@ void Object::validate() {
 }
 
 void Object::execute() {
-  throw exception("No execute method provided");
+  throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 
 typedef std::string stdstring;
@@ -530,8 +526,6 @@ Value::Union::~Union() {
 Value::Union::Union() {
   // Does nothing: handled by Scalar
 }
-
-
 
 Value::Value() : _scalarType(ValueType::NONE) {
 }
@@ -582,7 +576,7 @@ Value::Value(Value const &other) : Object(other), _scalarType(other._scalarType)
 }
 
 bool Value::equals(Object const &other) {
-  if (Value const *otherValue = dynamic_cast<Value const*>(&other)) {
+  if (Value const *otherValue = dynamic_cast<Value const *>(&other)) {
     return Helper::equals(*this, *otherValue);
   }
   return false;
@@ -620,7 +614,8 @@ double Value::asReal() {
 
     case ValueType::STRING: return !_value.string.empty();
       break;
-  }}
+  }
+}
 
 bool Value::asBoolean() {
   switch (_scalarType) {
@@ -680,7 +675,6 @@ json Value::toJson() {
   j[KEY_VALUE] = jsonValue();
   return j;
 }
-
 
 std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
   Digest d;
@@ -796,19 +790,19 @@ Argument &Argument::name(std::string const &name) {
 
 bool Argument::required() const { return _required; }
 
-Argument & Argument::required(bool required) {
+Argument &Argument::required(bool required) {
   _required = required;
   return *this;
 }
 const std::string &Argument::help() const {
   return _help;
 }
-Argument & Argument::help(const std::string &help) {
+Argument &Argument::help(const std::string &help) {
   _help = help;
   return *this;
 }
 
-Argument & Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
+Argument &Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
@@ -816,10 +810,16 @@ Argument & Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
 std::shared_ptr<Object> Argument::defaultValue() const { return _defaultValue; }
 
 Generator *Argument::generator() { return _generator; }
-Argument & Argument::generator(Generator *generator) { _generator = generator; return *this; }
+Argument &Argument::generator(Generator *generator) {
+  _generator = generator;
+  return *this;
+}
 
 std::shared_ptr<Type> const &Argument::type() const { return _type; }
-Argument & Argument::type(std::shared_ptr<Type> const &type) { _type = type; return *this; }
+Argument &Argument::type(std::shared_ptr<Type> const &type) {
+  _type = type;
+  return *this;
+}
 
 
 
@@ -874,7 +874,6 @@ void Type::parentType(Ptr const &type) {
 Type::Ptr Type::parentType() {
   return _parent;
 }
-
 
 TypeName const &Type::typeName() const { return _type; }
 
@@ -932,71 +931,6 @@ std::shared_ptr<Object> PathGenerator::generate(Object &object) {
 
   auto p = Path(Context::current().workdir(), {uuid});
   return std::make_shared<Value>(p.toString());
-}
-
-// ---- Task
-
-Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
-}
-
-TypeName Task::typeName() const { return _type->typeName(); }
-
-void Task::submit(std::shared_ptr<Object> const &object) const {
-  // Find dependencies
-  std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
-  object->findDependencies(dependencies);
-
-  // Validate and seal the task object
-  object->validate();
-  object->seal();
-
-  // Get generated directory as locator
-  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object)->asString());
-
-  // Prepare the command line
-  CommandContext context;
-  context.parameters = object->toJsonString();
-  auto command = _commandLine.rpc(context);
-
-  // Add dependencies
-  LOGGER->info("Adding {} dependencies", dependencies.size());
-  for (auto dependency: dependencies) {
-    LOGGER->info("Adding dependency {}", dependency->identifier());
-    command->add_dependency(dependency);
-  }
-
-  auto task = std::make_shared<rpc::CommandLineTask>(locator);
-  task->taskId(object->task()->identifier().toString());
-  task->command(command);
-  task->submit();
-}
-
-void Task::commandline(CommandLine command) {
-  _commandLine = command;
-}
-
-TypeName const &Task::identifier() const {
-  return _identifier;
-}
-
-void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _factory = factory;
-}
-
-std::shared_ptr<Object> Task::create() {
-  if (!_factory) {
-    throw argument_error("Task has no factory");
-  }
-  auto object = _factory->create();
-  object->type(_type);
-  object->task(this->shared_from_this());
-  LOGGER->debug("Setting task to {}", _identifier);
-  return object;
-}
-
-void Task::execute(std::shared_ptr<Object> const &object) const {
-  object->configure();
-  object->execute();
 }
 
 // ---- REGISTER
@@ -1103,6 +1037,18 @@ void Register::parse(std::vector<std::string> const &args) {
   }
 
   if (args[0] == "help") {
+    std::cerr << "[Commands]\n";
+    std::cerr << "   help" << std::endl;
+    std::cerr << "   generate" << std::endl;
+    std::cerr << "   run" << std::endl;
+
+    std::cerr << std::endl;
+
+    std::cerr << "[available tasks]\n";
+    for (auto &entry: _tasks) {
+      std::cerr << "   " << entry.first << std::endl;
+    }
+    std::cerr << std::endl;
     return;
   }
 
@@ -1116,15 +1062,12 @@ void Register::parse(std::vector<std::string> const &args) {
         std::cout << type.second->toJson() << std::endl;
       }
     }
-    std::cout << "]" << std::endl;
+    std::cout << "], " << std::endl;
 
     std::cout << R"("tasks": [)" << std::endl;
     first = true;
-    for (auto const &type: _types) {
-      if (!type.second->predefined()) {
-        if (!first) std::cout << ","; else first = false;
-        std::cout << type.second->toJson() << std::endl;
-      }
+    for (auto const &type: _tasks) {
+      std::cout << type.second->toJson() << std::endl;
     }
     std::cout << "]" << std::endl;
 
@@ -1150,7 +1093,9 @@ void Register::parse(std::vector<std::string> const &args) {
       throw argument_error(args[2] + " is not a file");
     }
     json j = json::parse(stream);
-    auto value = Object::createFromJson(*this, j);
+
+    auto value = task->create();
+    value->fill(*this, j);
 
     // Run the task
     task->execute(value);
@@ -1168,8 +1113,8 @@ std::shared_ptr<Object> Register::build(std::string const &value) {
 
 void Register::parse(int argc, const char **argv) {
   std::vector<std::string> args;
-  for(int i = 1; i < argc; ++i) {
-    args.emplace_back(std::string(argv[argc]));
+  for (int i = 1; i < argc; ++i) {
+    args.emplace_back(std::string(argv[i]));
   }
   parse(args);
 }

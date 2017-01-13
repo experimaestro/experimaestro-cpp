@@ -25,6 +25,7 @@ class XPM_PIMPL(AbstractCommandComponent) {
  public:
   virtual ~AbstractCommandComponent();
   std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const;
+  virtual nlohmann::json toJson() const;
 };
 
 /** A command argument */
@@ -32,6 +33,7 @@ class XPM_PIMPL_CHILD(CommandString, AbstractCommandComponent) {
  public:
   CommandString(const std::string &value);
   virtual ~CommandString();
+  virtual nlohmann::json toJson() const override;
   std::string toString() const;
 };
 
@@ -40,6 +42,7 @@ class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
  public:
   CommandPath(Path path);
   virtual ~CommandPath();
+  virtual nlohmann::json toJson() const override;
   std::string toString() const;
 };
 
@@ -47,6 +50,7 @@ class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
 class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
  public:
   CommandContent(const std::string &key, const std::string &value);
+  virtual nlohmann::json toJson() const override;
   virtual ~CommandContent();
   std::string toString() const;
 };
@@ -55,6 +59,7 @@ class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
 class XPM_PIMPL_CHILD(CommandParameters, AbstractCommandComponent) {
  public:
   CommandParameters();
+  virtual nlohmann::json toJson() const override;
   virtual ~CommandParameters();
 };
 
@@ -63,7 +68,9 @@ class Command {
   std::vector<AbstractCommandComponent> components;
  public:
   void add(AbstractCommandComponent component);
+
   std::shared_ptr<rpc::Command> rpc(CommandContext &context) const;
+  nlohmann::json toJson() const;
 };
 
 class CommandLine {
@@ -73,6 +80,7 @@ class CommandLine {
 
   std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context) const;
   void add(Command command);
+  nlohmann::json toJson() const;
 };
 }
 

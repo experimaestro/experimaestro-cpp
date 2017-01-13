@@ -34,6 +34,16 @@ class Register;
 struct Helper;
 class Value;
 
+SWIG_IMMUTABLE;
+extern std::shared_ptr<Type> IntegerType;
+extern std::shared_ptr<Type> RealType;
+extern std::shared_ptr<Type> StringType;
+extern std::shared_ptr<Type> BooleanType;
+extern std::shared_ptr<Type> ArrayType;
+extern std::shared_ptr<Type> AnyType;
+extern std::shared_ptr<Type> PathType;
+SWIG_MUTABLE;
+
 /// Valeur optionnelle
 template<typename T>
 class optional {
@@ -144,6 +154,8 @@ class Object
 #endif
 {
  public:
+  typedef std::shared_ptr<Object> Ptr;
+
   /// Default constructor
   Object();
 
@@ -280,6 +292,9 @@ class Object
   Object(Object &&other) = default;
 
   Object(Object const &other);
+
+  /// Fill from JSON
+  void fill(Register &xpmRegister, const nlohmann::json &jsonValue);
 
  private:
 
@@ -447,7 +462,7 @@ class Argument {
   std::string _name;
 
   /// The argument type
-  std::shared_ptr<Type> _type;
+  std::shared_ptr<Type> _type = AnyType;
 
   /// Help string (in Markdown syntax)
   std::string _help;
@@ -576,10 +591,16 @@ class Task
 {
  public:
   /**
-   * Defines a new task
+   * Defines a new task with a specific identifier
    * @param identifier The task identifier
-   * @param outputType The output type
+   * @param type The output type
    * @return
+   */
+  Task(TypeName const &typeName, std::shared_ptr<Type> const &type);
+
+  /**
+   * Initialize a task with the same identifier as the type
+   * @param type The output type, whose typename is used as the task identifier
    */
   Task(std::shared_ptr<Type> const &type);
 
@@ -606,6 +627,9 @@ class Task
 
   /** Creates an object with a given type */
   std::shared_ptr<Object> create();
+
+  /** Convert to JSON */
+  nlohmann::json toJson();
  private:
   /// Task identifier
   TypeName _identifier;
@@ -634,15 +658,7 @@ struct hash<xpm::Type> {
 
 namespace xpm {
 
-SWIG_IMMUTABLE;
-extern std::shared_ptr<Type> IntegerType;
-extern std::shared_ptr<Type> RealType;
-extern std::shared_ptr<Type> StringType;
-extern std::shared_ptr<Type> BooleanType;
-extern std::shared_ptr<Type> ArrayType;
-extern std::shared_ptr<Type> AnyType;
-extern std::shared_ptr<Type> PathType;
-SWIG_MUTABLE;
+
 
 // --- Building objects
 
