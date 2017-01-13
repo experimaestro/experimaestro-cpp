@@ -13,8 +13,5 @@ branches:
 
 # Build steps
 script:
-  - cd server && gradle build
-  - cd server && gradle test
-  - mkdir build && (cd build; cmake ../cpplib)
-  - make -C experimaestro-tests
+  - ./travis.sh
 
