@@ -12,7 +12,7 @@ log() {
 
 log "Build and testing the server"
 (
-    cd build
+    cd server
     gradle build
     gradle test
 )

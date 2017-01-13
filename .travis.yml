@@ -5,6 +5,8 @@ sudo: false
 cache:
   directories:
       - $HOME/.gradle
+install:
+  - sudo apt-get install swig
 branches:
   only:
    - master
