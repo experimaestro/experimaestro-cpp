@@ -437,6 +437,7 @@ SWIG_MUTABLE
  */
 class Argument {
  public:
+  typedef std::shared_ptr<Argument> Ptr;
   Argument();
   Argument(std::string const &name);
 
@@ -613,6 +614,9 @@ class Task
   /** Returns the type of this task */
   TypeName typeName() const;
 
+  /** Returns the type of this task */
+  Type::Ptr type();
+
   /** Sets the command line for the task */
   void commandline(CommandLine command);
 
@@ -669,6 +673,13 @@ class Register {
 
   /// Maps typenames to tasks
   std::unordered_map<TypeName, std::shared_ptr<Task>> _tasks;
+
+  /// Default object factory
+  std::shared_ptr<ObjectFactory> _defaultObjectFactory;
+
+  /// Default task factory
+  std::shared_ptr<ObjectFactory> _defaultTaskFactory;
+
  public:
   // Constructs a new register
   Register();
@@ -717,6 +728,26 @@ class Register {
 
   /// Build from a string
   std::shared_ptr<Object> build(std::string const &value);
+
+  /// Load new definitions from json
+  void load(nlohmann::json const &j);
+
+  /// Load new definitions from file
+  void load(std::string const &value);
+
+  /// Load new definitions from file
+  void load(Path const &value);
+
+  /// Outputs the JSON defition file
+  void generate() const;
+
+  /// Default object factory
+  void objectFactory(std::shared_ptr<ObjectFactory> const &);
+  std::shared_ptr<ObjectFactory> objectFactory();
+
+  /// Default task factory
+  void taskFactory(std::shared_ptr<ObjectFactory> const &);
+  std::shared_ptr<ObjectFactory> taskFactory();
 };
 
 // --- Useful functions

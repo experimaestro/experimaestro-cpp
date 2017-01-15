@@ -17,18 +17,18 @@ struct ArgumentHolder {
   virtual void setValue(T &self, xpm::Object::Ptr const &value) = 0;
 };
 
-void assignValue(xpm::Object::Ptr const &value, std::string &s) {
+inline void assignValue(xpm::Object::Ptr const &value, std::string &s) {
   s = value->asString();
 }
-void assignValue(xpm::Object::Ptr const &value, int &x) {
+inline void assignValue(xpm::Object::Ptr const &value, int &x) {
   x = value->asInteger();
 }
-void assignValue(xpm::Object::Ptr const &value, long &x) {
+inline void assignValue(xpm::Object::Ptr const &value, long &x) {
   x = value->asInteger();
 }
 
 template<typename T>
-void assignValue(xpm::Object::Ptr const &value, std::shared_ptr<T> &p) {
+inline void assignValue(xpm::Object::Ptr const &value, std::shared_ptr<T> &p) {
   p = std::dynamic_pointer_cast<T>(value);
 }
 
@@ -133,13 +133,24 @@ class CppObject : public Parent {
   }
 };
 
+extern CommandPath EXECUTABLE_PATH;
 
 template<typename _Type, typename _Task>
 struct TaskBuilder {
+
   static_assert(std::is_base_of<_Type, _Task>::value,  "Task should be a subclass of type");
   TaskBuilder(std::string const &tname) {
     auto task = std::make_shared<Task>(TypeName(tname), CppType<_Type>::SELF->type);
     task->objectFactory(std::make_shared<DefaultObjectFactory<_Task>>(CURRENT_REGISTER));
+
+    CommandLine commandLine;
+    Command command;
+    command.add(EXECUTABLE_PATH);
+    command.add(CommandString("run"));
+    command.add(CommandString(tname));
+    command.add(CommandParameters());
+    commandLine.add(command);
+    task->commandline(commandLine);
     CURRENT_REGISTER->addTask(task);
   }
 };

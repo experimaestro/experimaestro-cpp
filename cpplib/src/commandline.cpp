@@ -14,6 +14,9 @@ struct Reference<AbstractCommandComponent> {
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const {
     throw std::runtime_error("Pure virtual function for " + std::string(typeid(*this).name()));
   }
+  virtual nlohmann::json toJson() const {
+    throw std::runtime_error("Pure virtual function for " + std::string(typeid(*this).name()));
+  }
 };
 
 CommandLine::CommandLine() {
@@ -38,6 +41,14 @@ nlohmann::json CommandLine::toJson() const {
   }
   return j;
 }
+void CommandLine::load(nlohmann::json const &j) {
+  assert(j.is_array());
+  for(auto &e: j) {
+    Command c;
+    c.load(e);
+    this->commands.push_back(c);
+  }
+}
 
 template<>
 struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
@@ -45,6 +56,9 @@ struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   Reference(const std::string &value) : value(value) {}
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::CommandString>(value);
+  }
+  virtual nlohmann::json toJson() const override {
+    return value;
   }
 };
 
@@ -59,9 +73,6 @@ std::string CommandString::toString() const {
 CommandString::~CommandString() {
 
 }
-nlohmann::json CommandString::toJson() const {
-  return nlohmann::json();
-}
 
 void Command::add(AbstractCommandComponent component) {
   components.push_back(component);
@@ -74,6 +85,27 @@ std::shared_ptr<rpc::Command> Command::rpc(CommandContext &context) const {
   }
   return rpc;
 }
+
+void Command::load(nlohmann::json const &j) {
+  assert(j.is_array());
+  for(auto &e: j) {
+    if (e.is_string()) {
+      components.push_back(CommandString(e.get<std::string>()));
+    } else {
+      std::string type = e["type"];
+      if (type == "content") {
+        components.push_back(CommandContent(e["key"], e["content"]));
+      } else if (type == "parameters") {
+        components.push_back(CommandParameters());
+      } else if (type == "path") {
+        components.push_back(CommandPath(Path(e["path"].get<std::string>())));
+      } else {
+        throw std::invalid_argument("Unknown type for command component: " + type);
+      }
+    }
+  }
+}
+
 nlohmann::json Command::toJson() const {
   auto j = nlohmann::json::array();
   for(auto &component: this->components) {
@@ -91,7 +123,7 @@ AbstractCommandComponent::~AbstractCommandComponent() {
 
 }
 nlohmann::json AbstractCommandComponent::toJson() const {
-  return nullptr;
+  return self(this).toJson();
 }
 
 template<>
@@ -101,6 +133,14 @@ struct Reference<CommandContent> : public Reference<AbstractCommandComponent> {
   Reference(std::string const &key, std::string const &content) : key(key), content(content) {}
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::ParameterFile>(key, content);
+  }
+
+  virtual nlohmann::json toJson() const override {
+    auto j = nlohmann::json::object();
+    j["type"] = "content";
+    j["key"] = key;
+    j["content"] = content;
+    return j;
   }
 };
 
@@ -112,29 +152,22 @@ std::string CommandContent::toString() const {
 CommandContent::~CommandContent() {
 
 }
-nlohmann::json CommandContent::toJson() const {
-  auto j = nlohmann::json::object();
-  j["type"] = "content";
-  j["key"] = self(this).key;
-  j["content"] = self(this).content;
-  return j;
-}
+
 
 template<>
 struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::ParameterFile>("params.json", context.parameters);
   }
-
+  virtual nlohmann::json toJson() const override {
+    return { {"type", "parameters"} };
+  }
 };
 
 CommandParameters::~CommandParameters() {
 
 }
 CommandParameters::CommandParameters() {
-}
-nlohmann::json CommandParameters::toJson() const {
-  return { {"type", "parameters"} };
 }
 
 template<>
@@ -143,6 +176,12 @@ struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
   Reference(const Path &path) : path(path) {}
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::CommandPath>(path.toString());
+  }
+  virtual nlohmann::json toJson() const override {
+    auto j = nlohmann::json::object();
+    j["type"] = "path";
+    j["path"] = path.toString();
+    return j;
   }
 };
 
@@ -156,11 +195,8 @@ CommandPath::~CommandPath() {
 std::string CommandPath::toString() const {
   return self(this).path.toString();
 }
-
-nlohmann::json CommandPath::toJson() const {
-  auto j = nlohmann::json::object();
-  j["type"] = "path";
-  j["path"] = self(this).path.toString();
-  return j;
+void CommandPath::path(Path path) {
+  self(this).path = path;
 }
+
 }

@@ -73,6 +73,9 @@ class PythonRegister(Register):
     def __init__(self):
         # Initialize the base class
         Register.__init__(self)
+        # FIXME: when smart pointers are handled...
+        self.factory = PythonObjectFactory(self, PyObject)
+        self.objectFactory(self.factory)
 
         """Mapping for some built-in types"""
         self.builtins = {
@@ -91,6 +94,12 @@ class PythonRegister(Register):
         pyType.objectFactory(factory)
         super().addType(pyType)
 
+    def getTask(self, name):
+      task = super().getTask(name)
+      task.__task__ = task
+      task.create = wrap(task, create)
+      return task
+
     def getType(self, key):
         """Returns the Type object corresponding to the given type
         """
@@ -105,6 +114,9 @@ class PythonRegister(Register):
 
         if isinstance(key, TypeName):
             return super().getType(key)
+
+        if isinstance(key, Task):
+          return key.type()
 
         if issubclass(key, PyObject):
             return self.types.get(key, None)

@@ -63,10 +63,12 @@ void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
 }
 
 std::shared_ptr<Object> Task::create() {
+  Object::Ptr object;
   if (!_factory) {
-    throw argument_error("Task has no factory");
+    object = _type->create();
+  } else {
+    object = _factory->create();
   }
-  auto object = _factory->create();
   object->type(_type);
   object->task(this->shared_from_this());
   LOGGER->debug("Setting task to {}", _identifier);
@@ -85,5 +87,9 @@ nlohmann::json Task::toJson() {
   j["type"] = _type->typeName().toString();
   j["command"] = _commandLine.toJson();
   return j;
+}
+
+Type::Ptr Task::type() {
+  return _type;
 };
 }

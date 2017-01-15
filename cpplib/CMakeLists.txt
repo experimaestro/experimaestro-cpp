@@ -35,7 +35,7 @@ set(SOURCES
         src/rpc/objects.cpp
         src/rpc/utils.cpp
         src/rpc/notifications.cpp
-        include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp)
+        include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp src/jsonserialization.hpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})

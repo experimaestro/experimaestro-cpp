@@ -6,8 +6,9 @@
 #define PROJECT_COMMANDLINE_HPP
 
 #include <vector>
-#include <xpm/utils.hpp>
-#include <xpm/rpc/objects.hpp>
+
+#include "utils.hpp"
+#include "rpc/objects.hpp"
 #include "json.hpp"
 #include "filesystem.hpp"
 
@@ -33,7 +34,6 @@ class XPM_PIMPL_CHILD(CommandString, AbstractCommandComponent) {
  public:
   CommandString(const std::string &value);
   virtual ~CommandString();
-  virtual nlohmann::json toJson() const override;
   std::string toString() const;
 };
 
@@ -41,8 +41,8 @@ class XPM_PIMPL_CHILD(CommandString, AbstractCommandComponent) {
 class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
  public:
   CommandPath(Path path);
+  void path(Path path);
   virtual ~CommandPath();
-  virtual nlohmann::json toJson() const override;
   std::string toString() const;
 };
 
@@ -50,7 +50,6 @@ class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
 class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
  public:
   CommandContent(const std::string &key, const std::string &value);
-  virtual nlohmann::json toJson() const override;
   virtual ~CommandContent();
   std::string toString() const;
 };
@@ -59,7 +58,6 @@ class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
 class XPM_PIMPL_CHILD(CommandParameters, AbstractCommandComponent) {
  public:
   CommandParameters();
-  virtual nlohmann::json toJson() const override;
   virtual ~CommandParameters();
 };
 
@@ -71,6 +69,7 @@ class Command {
 
   std::shared_ptr<rpc::Command> rpc(CommandContext &context) const;
   nlohmann::json toJson() const;
+  void load(nlohmann::json const & j);
 };
 
 class CommandLine {
@@ -81,6 +80,7 @@ class CommandLine {
   std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context) const;
   void add(Command command);
   nlohmann::json toJson() const;
+  void load(nlohmann::json const & j);
 };
 }
 
