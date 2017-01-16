@@ -20,7 +20,7 @@ struct TestType {
 TEST(StructuredValue, defaultSet) {
   auto object = TestType().type->create();
   object->set("a", Value(1l));
-  object->validate();
+  object->validate(true);
 
   EXPECT_TRUE(object->get("a")->equals(Value(1)));
   EXPECT_TRUE(object->get("a")->isDefault());
@@ -29,7 +29,7 @@ TEST(StructuredValue, defaultSet) {
 TEST(StructuredValue, notDefault) {
   auto object = TestType().type->create();
   object->set("a", Value(2));
-  object->validate();
+  object->validate(true);
 
   EXPECT_TRUE(object->get("a")->equals(Value(2)));
   EXPECT_TRUE(!object->get("a")->isDefault());
@@ -38,7 +38,7 @@ TEST(StructuredValue, notDefault) {
 
 TEST(StructuredValue, defaultNotSet) {
   auto object = TestType().type->create();
-  object->validate();
+  object->validate(true);
 
   EXPECT_TRUE(object->get("a")->equals(Value(1)));
   EXPECT_TRUE(object->get("a")->isDefault());

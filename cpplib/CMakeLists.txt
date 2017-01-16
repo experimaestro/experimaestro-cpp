@@ -116,7 +116,7 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
     # Build module experimaestro
-    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
 
     # Build module experimaestro.rpc

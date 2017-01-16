@@ -5,6 +5,8 @@
 #ifndef PROJECT_LOGGING_HPP
 #define PROJECT_LOGGING_HPP
 
+#include <string>
+
 namespace xpm {
 enum class LogLevel {
   TRACE,

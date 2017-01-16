@@ -6,6 +6,7 @@
 #define EXPERIMAESTRO_CPP_HPP
 
 #include "xpm.hpp"
+#include "register.hpp"
 
 namespace xpm {
 
@@ -87,16 +88,22 @@ XPM_SIMPLETYPE_OF(long, IntegerType);
 XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
+XPM_SIMPLETYPE_OF(std::shared_ptr<Object>, AnyType);
 
 
-template<typename T>
+template<typename T, typename Parent>
 struct CppTypeBuilder {
   std::shared_ptr<CppType<T>> type;
   std::shared_ptr<Argument> _argument;
+  std::shared_ptr<Register> _register = CURRENT_REGISTER;
 
   CppTypeBuilder(std::string const &name) : type(std::make_shared<CppType<T>>(name)) {
     CURRENT_REGISTER->addType(type->type);
     CppType<T>::SELF = type;
+
+    if (!std::is_same<xpm::Object, Parent>::value) {
+      type->type->parentType(type_of<std::shared_ptr<Parent>>::value());
+    }
   }
 
   template<typename U>
@@ -112,6 +119,16 @@ struct CppTypeBuilder {
     return *this;
   }
 
+  template<typename U>
+  CppTypeBuilder &defaultValue(U const &v) {
+    _argument->defaultValue(std::make_shared<Value>(v));
+    return *this;
+  }
+
+  CppTypeBuilder &defaultJson(nlohmann::json const &j) {
+    _argument->defaultValue(Object::createFromJson(*_register, j));
+    return *this;
+  }
   operator std::shared_ptr<CppType<T>>() {
     return type;
   }
@@ -161,7 +178,8 @@ struct TaskBuilder {
 #define XPM_TASK(tname, TYPE, TASK) xpm::TaskBuilder<TYPE, TASK> TASK ## __LINE__ (tname);
 
 #define XPM_SUBTYPE(NAME, TYPE, PARENT) \
-  template<> std::shared_ptr<xpm::CppType<TYPE>> xpm::CppObject<TYPE, PARENT>::XPM_TYPE = xpm::CppTypeBuilder<TYPE>(NAME)
+  template<> std::shared_ptr<xpm::CppType<TYPE>> xpm::CppObject<TYPE, PARENT>::XPM_TYPE \
+     = xpm::CppTypeBuilder<TYPE, PARENT>(NAME)
 #define XPM_TYPE(NAME, TYPE) XPM_SUBTYPE(NAME, TYPE, xpm::Object)
 
 #endif //PROJECT_CPP_HPP

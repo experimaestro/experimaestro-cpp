@@ -40,7 +40,7 @@ struct TypeA : public CppObject<TypeA> {
 
 XPM_TYPE("TypeA", TypeA)
     .argument("name", &TypeA::name).required(true)
-    .argument("x", &TypeA::x);
+    .argument("x", &TypeA::x).defaultValue(1);
 
 struct TypeB : public CppObject<TypeB> {
   std::shared_ptr<TypeA> a;
@@ -63,14 +63,14 @@ XPM_SIMPLETASK("task.b1", TypeB1);
 
 TEST(CppInterface, missingArgument) {
   auto o = CURRENT_REGISTER->build(R"({ "$type": "TypeA" })");
-  ASSERT_THROW(o->validate(), xpm::argument_error);
+  ASSERT_THROW(o->validate(true), xpm::argument_error);
 }
 
 TEST(CppInterface, basic) {
   auto o = CURRENT_REGISTER->build(
       R"({ "$type": "TypeA", "name": "a name", "x": 1 })"
   );
-  o->validate();
+  o->validate(true);
 
   TypeA &a = dynamic_cast<TypeA&>(*o);
   ASSERT_EQ(a.name, "a name");
@@ -86,6 +86,6 @@ TEST(CppInterface, composed) {
 
   ASSERT_EQ(b1.a->x, 1);
 
-  o->validate();
+  o->validate(true);
 }
 

@@ -96,6 +96,8 @@ class PythonRegister(Register):
 
     def getTask(self, name):
       task = super().getTask(name)
+      if task is None:
+        raise KeyError("Task %s does not exist" % name)
       task.__task__ = task
       task.create = wrap(task, create)
       return task
@@ -106,6 +108,9 @@ class PythonRegister(Register):
         if key is None:
             return AnyType
 
+        if isinstance(key, Task):
+          return key.type()
+
         if key in self.builtins:
             return self.builtins[key]
 
@@ -114,9 +119,6 @@ class PythonRegister(Register):
 
         if isinstance(key, TypeName):
             return super().getType(key)
-
-        if isinstance(key, Task):
-          return key.type()
 
         if issubclass(key, PyObject):
             return self.types.get(key, None)
@@ -138,12 +140,14 @@ register = PythonRegister()
 def create(t, args, options, submit=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
+    print(xpmType)
 
     # Create the type and set the arguments
     o = xpmType.create()
+    logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     if hasattr(t, "__task__"):
         o.task(t.__task__)
-    logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
+
     for k, v in options.items():
       if type(v) == dict:
          v = Register.build(register, json.dumps(v))

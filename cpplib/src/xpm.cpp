@@ -8,6 +8,7 @@
 
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
+#include <xpm/register.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -405,8 +406,8 @@ void Object::submit() {
   return _task->submit(shared_from_this());
 }
 
-void Object::configure() {
-  validate();
+void Object::configure(bool generate) {
+  validate(generate);
   seal();
 }
 
@@ -430,18 +431,20 @@ bool Object::equals(Object const &other) {
   NOT_IMPLEMENTED();
 }
 
-void Object::validate() {
-  LOGGER->debug("Validating");
+void Object::validate(bool generate) {
+  LOGGER->debug("Validating (generate={})", generate);
 
   // (1) Validate the object arguments
   for (auto type = _type; type; type = type->parentType()) {
+    LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
     for (auto entry: type->arguments()) {
       auto &argument = *entry.second;
+      LOGGER->debug("Looking at argument {}", argument.name());
 
       if (_content.count(argument.name()) == 0) {
         LOGGER->debug("No value provided...");
         // No value provided
-        if (argument.required() && !argument.generator()) {
+        if (argument.required() && (!generate || !argument.generator())) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         } else {
@@ -470,7 +473,7 @@ void Object::validate() {
               auto object = valueType->create();
               object->setValue(value);
               LOGGER->debug("Looking at {}", entry.first);
-              object->validate();
+              object->validate(generate);
             }
           }
         }
@@ -481,23 +484,25 @@ void Object::validate() {
   }
 
   // (2) Generate values
-  LOGGER->debug("Generating values...");
-  for (auto type = _type; type; type = type->parentType()) {
-    for (auto entry: type->arguments()) {
-      Argument &argument = *entry.second;
-      Generator *generator = argument.generator();
+  if (generate) {
+    LOGGER->debug("Generating values...");
+    for (auto type = _type; type; type = type->parentType()) {
+      for (auto entry: type->arguments()) {
+        Argument &argument = *entry.second;
+        Generator *generator = argument.generator();
 
-      if (!hasKey(argument.name()) && generator) {
-        LOGGER->debug("Generating value...");
-        set(argument.name(), generator->generate(*this));
+        if (!hasKey(argument.name()) && generator) {
+          LOGGER->debug("Generating value...");
+          set(argument.name(), generator->generate(*this));
+        }
       }
     }
-  }
 
-  // (3) Add resource
-  if (_task) {
-    LOGGER->info("Setting resource to {}", PathGenerator::SINGLETON.generate(*this)->asString());
-    set(KEY_RESOURCE, PathGenerator::SINGLETON.generate(*this));
+    // (3) Add resource
+    if (_task) {
+      LOGGER->info("Setting resource to {}", PathGenerator::SINGLETON.generate(*this)->asString());
+      set(KEY_RESOURCE, PathGenerator::SINGLETON.generate(*this));
+    }
   }
 }
 
@@ -773,10 +778,10 @@ std::shared_ptr<Object> Array::copy() {
 // ---
 
 
-Argument::Argument(std::string const &name) : _name(name), _required(true) {
+Argument::Argument(std::string const &name) : _name(name), _required(true), _generator(nullptr) {
 }
 
-Argument::Argument() : _name(), _required(true) {
+Argument::Argument() : Argument("") {
 }
 
 std::string const &Argument::name() const {

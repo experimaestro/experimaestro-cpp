@@ -6,7 +6,8 @@
 
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
-#include <xpm/xpm.hpp>
+#include <xpm/register.hpp>
+
 #include "private.hpp"
 
 namespace xpm {
@@ -244,21 +245,13 @@ void Register::load(nlohmann::json const &j) {
     commandLine.load(e["command"]);
     auto task = std::make_shared<Task>(identifier, typePtr);
     task->commandline(commandLine);
-    task->objectFactory(_defaultTaskFactory);
+    task->objectFactory(_defaultObjectFactory);
     addTask(task);
   }
 }
 
 void Register::load(Path const &value) {
   NOT_IMPLEMENTED();
-}
-
-void Register::taskFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _defaultTaskFactory = factory;
-}
-
-std::shared_ptr<ObjectFactory> Register::taskFactory() {
-  return _defaultTaskFactory;
 }
 
 void Register::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {

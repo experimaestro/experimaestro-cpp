@@ -32,6 +32,7 @@
             if (object) {
                 if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
                     Py_INCREF(d->swig_get_self());
+                    PyObject *pyObject = d->swig_get_self();
                     return d->swig_get_self();
                 }
 
@@ -43,8 +44,14 @@
     }}
 %}
 
-%typemap(out) std::shared_ptr<xpm::Object> { $result = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*)); }
-%typemap(directorin) std::shared_ptr<xpm::Object> const & { $input = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));  }
+%typemap(out) std::shared_ptr<xpm::Object> {
+    // OUT-OBJECT
+    $result = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));
+}
+
+%typemap(directorin) std::shared_ptr<xpm::Object> const & {
+    $input = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));
+}
 
 %extend xpm::Object {
     /*void __setitem__(std::string const & key, std::shared_ptr<xpm::Object> const &value) {

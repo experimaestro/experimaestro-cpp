@@ -255,7 +255,7 @@ class Object
   /**
    * Validate values
    */
-  void validate();
+  void validate(bool generate);
 
   /** Get type */
   std::shared_ptr<Type> type();
@@ -270,7 +270,7 @@ class Object
    * <li>Seal the object</li>
    * </ol>
    */
-  void configure();
+  void configure(bool generate = true);
 
   /**
    * Submit the underlying task to experimaestro server
@@ -356,6 +356,7 @@ class Value : public Object {
   Value(int value);
   Value(long value);
   Value(std::string const &value);
+  inline Value(char const *value) : Value(std::string(value)) {}
   Value(Value const &other);
   Value &operator=(Value const &other);
 
@@ -662,93 +663,6 @@ struct hash<xpm::Type> {
 
 namespace xpm {
 
-
-
-// --- Building objects
-
-/** Register for types */
-class Register {
-  /// Maps typenames to types
-  std::unordered_map<TypeName, std::shared_ptr<Type>> _types;
-
-  /// Maps typenames to tasks
-  std::unordered_map<TypeName, std::shared_ptr<Task>> _tasks;
-
-  /// Default object factory
-  std::shared_ptr<ObjectFactory> _defaultObjectFactory;
-
-  /// Default task factory
-  std::shared_ptr<ObjectFactory> _defaultTaskFactory;
-
- public:
-  // Constructs a new register
-  Register();
-
-  virtual ~Register();
-
-  /** Parse command line
-   * <pre>[general options] command [command options]</pre>
-   * where command can be :
-   * <ul>
-   *    <li><code>help</code> that generates help</li>
-   *    <li><code>describe [type] [id]</code> that generates human readable information</li>
-   *    <li><code>generate</code> that generates the JSON corresponding to the registry</li>
-   *    <li><code>run <task-id> [task arguments...]</code> that runs a task</li>
-   * </ul>
-   * @param args
-   */
-  void parse(std::vector<std::string> const &args);
-
-  /**
-   * Parse command line
-   *
-   * @see parse(std::vector<strd::string> const &0
-   * @param argc
-   * @param argv
-   */
-  void parse(int argc, const char **argv);
-
-  /// Register a new task
-  void addTask(std::shared_ptr<Task> const &task);
-
-  /// Find a type given a t ype name
-  std::shared_ptr<Task> getTask(TypeName const &typeName);
-
-  /// Register a new type
-  void addType(std::shared_ptr<Type> const &type);
-
-  /// Find a type given a t ype name
-  std::shared_ptr<Type> getType(TypeName const &typeName);
-
-  /// Find a type given a t ype name
-  std::shared_ptr<Type> getType(std::shared_ptr<Object> const &object);
-
-  /// Build
-  std::shared_ptr<Object> build(std::shared_ptr<Object> const &value);
-
-  /// Build from a string
-  std::shared_ptr<Object> build(std::string const &value);
-
-  /// Load new definitions from json
-  void load(nlohmann::json const &j);
-
-  /// Load new definitions from file
-  void load(std::string const &value);
-
-  /// Load new definitions from file
-  void load(Path const &value);
-
-  /// Outputs the JSON defition file
-  void generate() const;
-
-  /// Default object factory
-  void objectFactory(std::shared_ptr<ObjectFactory> const &);
-  std::shared_ptr<ObjectFactory> objectFactory();
-
-  /// Default task factory
-  void taskFactory(std::shared_ptr<ObjectFactory> const &);
-  std::shared_ptr<ObjectFactory> taskFactory();
-};
 
 // --- Useful functions
 

@@ -3,6 +3,7 @@
 //
 
 #include <xpm/xpm.hpp>
+#include <xpm/register.hpp>
 #include <gtest/gtest.h>
 
 //using nlohmann::json;

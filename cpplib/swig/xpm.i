@@ -13,6 +13,7 @@
 #include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
+#include <xpm/register.hpp>
 #include <xpm/logging.hpp>
 %}
 
@@ -45,6 +46,7 @@
 // Implicit conversions
 %implicitconv;
 %implicitconv xpm::Path;
+%implicitconv xpm::TypeName;
 #endif
 
 
@@ -56,14 +58,6 @@
 %import "ignores.i";
 %import "xpm_rpc.i"
 
-#ifdef SWIGPYTHON
-%include "python/xpm.i"
-#endif
-
-#ifdef SWIGJAVA
-%include "java/xpm.i"
-#endif
-
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::Task)
@@ -74,6 +68,15 @@
 %shared_ptr(xpm::Array)
 %shared_ptr(xpm::Register)
 
+#ifdef SWIGPYTHON
+%include "python/xpm.i"
+#endif
+
+#ifdef SWIGJAVA
+%include "java/xpm.i"
+#endif
+
+
 // Object and object factory have virtual methods
 %feature("director") xpm::ObjectFactory;
 %feature("director") xpm::Object;
@@ -83,13 +86,14 @@
 
 %template(String2Object) std::map<std::string, std::shared_ptr<xpm::Object>>;
 
-
 // Include file
 %include <xpm/filesystem.hpp>
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
 %include <xpm/xpm.hpp>
+%include <xpm/register.hpp>
 %include <xpm/logging.hpp>
+
 
 // Optional
 %extend xpm::optional {

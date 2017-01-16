@@ -26,7 +26,7 @@ void Task::submit(std::shared_ptr<Object> const &object) const {
   object->findDependencies(dependencies);
 
   // Validate and seal the task object
-  object->validate();
+  object->validate(true);
   object->seal();
 
   // Get generated directory as locator
@@ -76,7 +76,7 @@ std::shared_ptr<Object> Task::create() {
 }
 
 void Task::execute(std::shared_ptr<Object> const &object) const {
-  object->configure();
+  object->configure(false);
   // FIXME: the object should not be executed, but the task!
   object->execute();
 }
