@@ -572,12 +572,17 @@ class Type
 
   /** Set parent type */
   void parentType(Ptr const &type);
+
+  /** Get placeholder status */
+  bool placeholder() const { return _placeholder; }
+  void placeholder(bool placeholder) { _placeholder = placeholder; }
  private:
   const TypeName _type;
   std::shared_ptr<Type> _parent;
   std::map<std::string, std::shared_ptr<Argument>> _arguments;
   bool _predefined;
   bool _canIgnore;
+  bool _placeholder = false;
 
   std::shared_ptr<ObjectFactory> _factory;
 

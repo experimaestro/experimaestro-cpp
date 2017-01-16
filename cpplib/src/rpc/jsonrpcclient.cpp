@@ -76,12 +76,17 @@ class _JSONRPCClient {
 
   ~_JSONRPCClient() {
     // Closing connection
-    c.close(hdl, 0, "Finished");
+    try {
+      LOGGER->info("Closing handle");
+      c.close(hdl, 0, "Finished");
 
-    // Wait for close signal
-    LOGGER->info("Waiting for close signal");
-    std::unique_lock<std::mutex> lk(m_open);
-    cv_open.wait(lk, [&] { return hdl.expired(); });
+      // Wait for close signal
+      LOGGER->info("Waiting for close signal");
+      std::unique_lock<std::mutex> lk(m_open);
+      cv_open.wait(lk, [&] { return hdl.expired(); });
+    } catch(std::exception &e) {
+      LOGGER->error("Caught exception \"{}\" while closing handle", e.what());
+    }
 
     // Wait for websocket to be closed
     _thread.join();

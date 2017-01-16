@@ -134,7 +134,9 @@ if (true)
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
 				MACOSX_RPATH TRUE
 				INSTALL_RPATH "@loader_path"
-				CXX_STANDARD 11)
+				CXX_STANDARD 11
+                EXCLUDE_FROM_ALL true
+        )
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
 		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python EXCLUDE_FROM_ALL DESTINATION ${PYTHON_INSTALL_LOCATION})
@@ -180,7 +182,8 @@ foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
     set_target_properties("${swigtargetname}_java" PROPERTIES
 			MACOSX_RPATH TRUE
 			INSTALL_RPATH "@loader_path"
-			CXX_STANDARD 11)
+			CXX_STANDARD 11
+            EXCLUDE_FROM_ALL true)
     target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
     swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
 endforeach()

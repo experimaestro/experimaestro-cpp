@@ -206,16 +206,32 @@ void Register::load(nlohmann::json const &j) {
     const TypeName typeName = TypeName(e["type"].get<std::string>());
     auto typeIt = _types.find(typeName);
     Type::Ptr type;
+
+    // Search for the type
     if (typeIt != _types.end()) {
       type = typeIt->second;
+      LOGGER->debug("Defining placeholder type {}", type->typeName().toString());
+      if (!type->placeholder()) {
+        throw std::runtime_error("Type " + type->typeName().toString() + " was already defined");
+      }
+      type->placeholder(false);
     } else {
       _types[typeName] = type = std::make_shared<Type>(typeName);
       type->objectFactory(_defaultObjectFactory);
     }
 
+    // Get the parent type
     if (e.count("parent")) {
-      auto parentTypeIt = _types.find(TypeName(e["parent"].get<std::string>()));
-
+      auto parentTypeName = TypeName(e["parent"].get<std::string>());
+      auto parentTypeIt = _types.find(parentTypeName);
+      if (parentTypeIt == _types.end()) {
+        auto parentType = std::make_shared<Type>(parentTypeName);
+        type->parentType(parentType);
+        parentType->placeholder(true);
+        _types[parentTypeName] = parentType;
+      } else {
+        type->parentType(parentTypeIt->second);
+      }
     }
 
     LOGGER->debug("Adding type {}", type->typeName());
@@ -239,6 +255,8 @@ void Register::load(nlohmann::json const &j) {
     }
     _types[type->typeName()] = type;
   }
+
+
 
   assert(j["tasks"].is_array());
   for (auto &e: j["tasks"]) {
