@@ -213,6 +213,11 @@ void Register::load(nlohmann::json const &j) {
       type->objectFactory(_defaultObjectFactory);
     }
 
+    if (e.count("parent")) {
+      auto parentTypeIt = _types.find(TypeName(e["parent"].get<std::string>()));
+
+    }
+
     LOGGER->debug("Adding type {}", type->typeName());
 
     // Parse arguments
