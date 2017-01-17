@@ -88,7 +88,7 @@ struct Digest {
 
   std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
     std::array<unsigned char, SHA_DIGEST_LENGTH> md;
-    if (!SHA1_Final(md.__elems_, &context)) {
+    if (!SHA1_Final(md.data(), &context)) {
       throw std::runtime_error("Error while retrieving SHA-1");
     }
     return md;
