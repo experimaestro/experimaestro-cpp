@@ -30,7 +30,7 @@ void Task::submit(std::shared_ptr<Object> const &object) const {
   object->seal();
 
   // Get generated directory as locator
-  auto locator = rpc::Path::toPath(PathGenerator::SINGLETON.generate(*object)->asString());
+  auto locator = rpc::Path::toPath(PathGenerator().generate(*object)->asString());
 
   // Prepare the command line
   CommandContext context;

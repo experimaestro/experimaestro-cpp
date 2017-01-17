@@ -423,9 +423,10 @@ class Generator {
  * Generates a path within a working folder
  */
 class PathGenerator : public Generator {
+  /// Last component name
+  std::string _name;
  public:
-  static PathGenerator SINGLETON;
-
+  PathGenerator(std::string const & = "");
   virtual std::shared_ptr<Object> generate(Object &object);
 };
 
@@ -451,8 +452,8 @@ class Argument {
   Argument &defaultValue(std::shared_ptr<Object> const &defaultValue);
   std::shared_ptr<Object> defaultValue() const;
 
-  Generator *generator();
-  Argument &generator(Generator *generator);
+  std::shared_ptr<Generator> generator();
+  Argument &generator(std::shared_ptr<Generator> const &generator);
 
   std::shared_ptr<Type> const &type() const;
   Argument &type(std::shared_ptr<Type> const &type);
@@ -476,7 +477,7 @@ class Argument {
   std::shared_ptr<Object> _defaultValue;
 
   /// A generator
-  Generator *_generator;
+  std::shared_ptr<Generator> _generator;
 };
 
 bool operator==(Value const &a, Value const &b);

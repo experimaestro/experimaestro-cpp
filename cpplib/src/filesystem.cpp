@@ -69,6 +69,10 @@ std::string Path::toString() const {
   if (_this->share.empty()) return _this->path;
   return _this->share + ":" + _this->node + ":" + _this->path;
 }
-
+std::string Path::localpath() const {
+  if (!self().node.empty() || !self().share.empty())
+    throw std::logic_error("Path " + toString() + " is not local");
+  return self().path;
+}
 
 }

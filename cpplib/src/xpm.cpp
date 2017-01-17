@@ -489,7 +489,7 @@ void Object::validate(bool generate) {
     for (auto type = _type; type; type = type->parentType()) {
       for (auto entry: type->arguments()) {
         Argument &argument = *entry.second;
-        Generator *generator = argument.generator();
+        auto generator = argument.generator();
 
         if (!hasKey(argument.name()) && generator) {
           LOGGER->debug("Generating value...");
@@ -500,8 +500,9 @@ void Object::validate(bool generate) {
 
     // (3) Add resource
     if (_task) {
-      LOGGER->info("Setting resource to {}", PathGenerator::SINGLETON.generate(*this)->asString());
-      set(KEY_RESOURCE, PathGenerator::SINGLETON.generate(*this));
+      auto object = PathGenerator().generate(*this);
+      LOGGER->info("Setting resource to {}", object->asString());
+      set(KEY_RESOURCE, object);
     }
   }
 }
@@ -813,8 +814,8 @@ Argument &Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
 }
 std::shared_ptr<Object> Argument::defaultValue() const { return _defaultValue; }
 
-Generator *Argument::generator() { return _generator; }
-Argument &Argument::generator(Generator *generator) {
+std::shared_ptr<Generator> Argument::generator() { return _generator; }
+Argument &Argument::generator(std::shared_ptr<Generator> const &generator) {
   _generator = generator;
   return *this;
 }
@@ -918,23 +919,29 @@ int Type::hash() const {
 
 // ---- Generators
 
-
-PathGenerator PathGenerator::SINGLETON = PathGenerator();
-PathGenerator &pathGenerator = PathGenerator::SINGLETON;
+const std::shared_ptr<PathGenerator> SIMPLEPATHGENERATOR = std::make_shared<PathGenerator>("");
 
 std::shared_ptr<Object> PathGenerator::generate(Object &object) {
   auto uuid = object.uniqueIdentifier();
 
   // We have a task, so we use it
   std::shared_ptr<Task> task = object.task();
+  Path p;
   if (task) {
     std::string localName = task->identifier().localName();
-    auto p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
-    return std::make_shared<Value>(p.toString());
+    p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
+  } else {
+    p = Path(Context::current().workdir(), {uuid});
   }
 
-  auto p = Path(Context::current().workdir(), {uuid});
+  if (!_name.empty()) {
+    p = Path(p, { _name });
+  }
   return std::make_shared<Value>(p.toString());
+}
+
+PathGenerator::PathGenerator(std::string const &name) : _name(name) {
+
 }
 
 // ---- REGISTER

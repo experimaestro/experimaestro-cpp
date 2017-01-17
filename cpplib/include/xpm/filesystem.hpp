@@ -46,6 +46,12 @@ class Path : public Pimpl<Path> {
 
   /// Returns a string representation of the path (that can be parsed)
   std::string toString() const;
+
+  /** Local path.
+   * Returns a path on the current host
+   * @throws std::logic_error If the path is on a shared host
+   */
+  std::string localpath() const;
 };
 
 }

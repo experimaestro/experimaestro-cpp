@@ -5,12 +5,14 @@
 #ifndef EXPERIMAESTRO_CPP_HPP
 #define EXPERIMAESTRO_CPP_HPP
 
+#include "common.hpp"
 #include "xpm.hpp"
 #include "register.hpp"
 
 namespace xpm {
 
 extern std::shared_ptr<Register> CURRENT_REGISTER;
+template<typename T>  struct type_of {};
 
 
 template<typename T>
@@ -27,10 +29,17 @@ inline void assignValue(xpm::Object::Ptr const &value, int &x) {
 inline void assignValue(xpm::Object::Ptr const &value, long &x) {
   x = value->asInteger();
 }
+inline void assignValue(xpm::Object::Ptr const &value, Path &s) {
+  s = Path(value->asString());
+}
 
 template<typename T>
 inline void assignValue(xpm::Object::Ptr const &value, std::shared_ptr<T> &p) {
   p = std::dynamic_pointer_cast<T>(value);
+  if (!p && value) {
+    throw xpm::argument_error(std::string("Expected ") + type_of<std::shared_ptr<T>>::value()->toString()
+                                  + " but got " + value->type()->toString());
+  }
 }
 
 
@@ -71,7 +80,6 @@ template<typename T> std::shared_ptr<CppType<T>>
     CppType<T>::SELF;
 
 /// Type of a variable
-template<typename T>  struct type_of {};
 template<typename T>  struct type_of<std::shared_ptr<T>> {
   static std::shared_ptr<Type> value() {
     return CppType<T>::SELF->type;
@@ -89,6 +97,7 @@ XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
 XPM_SIMPLETYPE_OF(std::shared_ptr<Object>, AnyType);
+XPM_SIMPLETYPE_OF(Path, PathType);
 
 
 template<typename T, typename Parent>
@@ -116,6 +125,11 @@ struct CppTypeBuilder {
   }
   CppTypeBuilder &required(bool r) {
     _argument->required(r);
+    return *this;
+  }
+
+  CppTypeBuilder &generator(std::shared_ptr<Generator> const &g) {
+    _argument->generator(g);
     return *this;
   }
 

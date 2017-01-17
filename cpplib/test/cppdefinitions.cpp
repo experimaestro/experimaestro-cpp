@@ -36,11 +36,13 @@ using namespace xpm;
 struct TypeA : public CppObject<TypeA> {
   std::string name;
   int x = 0;
+  Path path;
 };
 
 XPM_TYPE("TypeA", TypeA)
     .argument("name", &TypeA::name).required(true)
-    .argument("x", &TypeA::x).defaultValue(1);
+    .argument("x", &TypeA::x).defaultValue(1)
+    .argument("path", &TypeA::path).generator(std::make_shared<PathGenerator>());
 
 struct TypeB : public CppObject<TypeB> {
   std::shared_ptr<TypeA> a;
