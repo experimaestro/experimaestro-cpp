@@ -35,7 +35,8 @@ struct Progress {
                        std::regex_constants::ECMAScript | std::regex_constants::icase);
 
     std::smatch match;
-    if (std::regex_search(std::string(notification_url), match, re_http)) {
+    std::string _notification_url(notification_url);
+    if (std::regex_search(_notification_url, match, re_http)) {
       hostname = match[1];
       port = match[2];
       path = match[3];

@@ -1,15 +1,19 @@
 include(ExternalProject)
+
+
 ExternalProject_Add(googletest
         SOURCE_DIR ${CMAKE_SOURCE_DIR}/ext/googletest/googletest
         EXCLUDE_FROM_ALL 1
+        BINARY_DIR ${CMAKE_BINARY_DIR}/external/googletest.build
+        CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${EXT_INSTALL_DIR}"
 )
 
 
-link_directories(${CMAKE_BINARY_DIR}/ext/googletest/googletest)
+link_directories("${EXT_INSTALL_DIR}/lib")
 
 add_executable(experimaestro-tests tests.cpp digest.cpp structuredvalues.cpp cppdefinitions.cpp)
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
-target_include_directories(experimaestro-tests PUBLIC ${CMAKE_SOURCE_DIR}/googletest/googletest/include)
+target_include_directories(experimaestro-tests PUBLIC ${CMAKE_BINARY_DIR}/external/googletest/include)
 add_dependencies(experimaestro-tests googletest)
 set_property(TARGET experimaestro-tests PROPERTY CXX_STANDARD 11)
 

@@ -39,6 +39,7 @@ set(SOURCES
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
 include_directories("${CMAKE_SOURCE_DIR}/ext" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/ext/websocketpp" "${CMAKE_SOURCE_DIR}/ext/asio/include" "${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 
