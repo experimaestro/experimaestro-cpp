@@ -375,8 +375,8 @@ std::string Object::uniqueIdentifier() const {
 
   std::array<char, 3> b;
   for (size_t i = 0; i < array.size(); ++i) {
-    sprintf(b.__elems_, "%02x", array[i]);
-    s += b.__elems_;
+    sprintf(b.data(), "%02x", array[i]);
+    s += b.data();
   }
 
   return s;
