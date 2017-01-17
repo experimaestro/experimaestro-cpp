@@ -29,6 +29,16 @@ class PimplChild : public Parent {
     this->_this = std::make_shared<Reference<T>>(std::forward<_Args>(__args)...);
   }
 
+
+  Reference<T> &self() {
+    if (!this->_this) throw std::runtime_error("Unitialized object");
+    return *std::dynamic_pointer_cast<Reference<T>>(this->_this);
+  }
+  Reference<T> const &self() const {
+    if (!this->_this) throw std::runtime_error("Unitialized object");
+    return *std::dynamic_pointer_cast<Reference<T>>(this->_this);
+  }
+
 };
 
 
@@ -41,27 +51,13 @@ class Pimpl {
   typedef std::shared_ptr<Reference<T>> ThisPtr;
   friend struct Reference<T>;
 
-  template<typename U, typename V>
-  friend Reference<U> &self(PimplChild<U, V> *p) {
-    if (!p->_this) throw std::runtime_error("Unitialized object");
-    return *std::dynamic_pointer_cast<Reference<U>>(p->_this);
-  };
-
-  template<typename U>
-  friend Reference<U> &self(Pimpl<U> *p) {
-    if (!p->_this) throw std::runtime_error("Unitialized object");
-    return *p->_this;
+  Reference<T> &self() {
+    if (!this->_this) throw std::runtime_error("Unitialized object");
+    return *std::dynamic_pointer_cast<Reference<T>>(_this);
   }
-  template<typename U, typename V>
-  friend Reference<U> const &self(PimplChild<U, V> const *p) {
-    if (!p->_this) throw std::runtime_error("Unitialized object");
-    return *std::dynamic_pointer_cast<Reference<U>>(p->_this);
-  };
-
-  template<typename U>
-  friend Reference<U> const &self(Pimpl<U> const *p) {
-    if (!p->_this) throw std::runtime_error("Unitialized object");
-    return *p->_this;
+  Reference<T> const &self() const {
+    if (!this->_this) throw std::runtime_error("Unitialized object");
+    return *std::dynamic_pointer_cast<Reference<T>>(_this);
   }
 
   template<typename... _Args>

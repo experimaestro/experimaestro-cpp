@@ -67,7 +67,7 @@ CommandString::CommandString(const std::string &value)
 }
 
 std::string CommandString::toString() const {
-  return self(this).value;
+  return self().value;
 }
 
 CommandString::~CommandString() {
@@ -117,13 +117,13 @@ AbstractCommandComponent::AbstractCommandComponent() {
 
 }
 std::shared_ptr<rpc::AbstractCommandComponent> AbstractCommandComponent::rpc(CommandContext &context) const {
-  return self(this).rpc(context);
+  return self().rpc(context);
 }
 AbstractCommandComponent::~AbstractCommandComponent() {
 
 }
 nlohmann::json AbstractCommandComponent::toJson() const {
-  return self(this).toJson();
+  return self().toJson();
 }
 
 template<>
@@ -193,10 +193,10 @@ CommandPath::~CommandPath() {
 }
 
 std::string CommandPath::toString() const {
-  return self(this).path.toString();
+  return self().path.toString();
 }
 void CommandPath::path(Path path) {
-  self(this).path = path;
+  self().path = path;
 }
 
 }
