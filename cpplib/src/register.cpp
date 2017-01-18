@@ -195,7 +195,11 @@ void Register::parse(int argc, const char **argv) {
 
 void Register::load(const std::string &value) {
   LOGGER->info("Loading XPM register file " + value);
-  auto j = json::parse(std::ifstream(value));
+  std::ifstream in(value);
+  if (!in) {
+    throw std::runtime_error("Register file " + value + " does not exist");
+  }
+  auto j = json::parse(in);
   load(j);
 }
 

@@ -6,7 +6,29 @@
 
 namespace xpm {
 
-std::shared_ptr<Register> CURRENT_REGISTER = std::make_shared<Register>();
 CommandPath EXECUTABLE_PATH = CommandPath(Path("."));
+
+namespace {
+  std::shared_ptr<Register> CURRENTREGISTER;
+  void init() {
+    static bool initialized = false;
+    if (!initialized) {
+      CURRENTREGISTER = std::make_shared<Register>();
+
+      initialized = true;
+    }
+  }
+}
+
+std::shared_ptr<Register> currentRegister() {
+  init();
+  return CURRENTREGISTER;
+}
+
+void currentRegister(std::shared_ptr<Register> const &_register) {
+  CURRENTREGISTER = _register;
+}
+
+
 
 }
