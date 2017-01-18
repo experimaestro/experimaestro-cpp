@@ -430,10 +430,6 @@ class PathGenerator : public Generator {
   virtual std::shared_ptr<Object> generate(Object &object);
 };
 
-SWIG_IMMUTABLE
-extern PathGenerator &pathGenerator;
-SWIG_MUTABLE
-
 /**
  * Argument
  */

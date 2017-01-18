@@ -41,7 +41,13 @@ find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
-include_directories("${CMAKE_SOURCE_DIR}/ext" "${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/ext/websocketpp" "${CMAKE_SOURCE_DIR}/ext/asio/include" "${CMAKE_SOURCE_DIR}/ext/spdlog/include")
+include_directories(
+        "${CMAKE_CURRENT_SOURCE_DIR}/ext"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
+)
 
 # --- experimaestro library
 
@@ -53,6 +59,14 @@ set_target_properties(experimaestro_shared PROPERTIES
 
 install(TARGETS experimaestro_shared LIBRARY DESTINATION lib)
 install(DIRECTORY include/xpm DESTINATION include)
+
+add_library(experimaestro_static STATIC ${SOURCES})
+target_link_libraries(experimaestro_static ${LINKED_LIBRARIES})
+set_target_properties(experimaestro_static PROPERTIES
+        CXX_STANDARD 11
+        OUTPUT_NAME experimaestro)
+
+install(TARGETS experimaestro_static ARCHIVE DESTINATION lib)
 
 # ---- experimaestro executable
 
@@ -84,7 +98,7 @@ add_custom_target(documentation_index DEPENDS xml/index.xml)
 
 add_custom_command(
         OUTPUT documentation.i
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/doxy2swig.py
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxy2swig.py
             --function-signature --type-info --overloaded-functions --attribute-list --constructor-list
             ${CMAKE_CURRENT_BINARY_DIR}/xml/index.xml ${CMAKE_CURRENT_BINARY_DIR}/documentation.i
         DEPENDS documentation_index
@@ -136,7 +150,6 @@ if (true)
 				MACOSX_RPATH TRUE
 				INSTALL_RPATH "@loader_path"
 				CXX_STANDARD 11
-                EXCLUDE_FROM_ALL true
         )
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
@@ -154,7 +167,7 @@ if (true)
 #    set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_SWIG_OUTDIR}")
 
 	# Add install target
-	add_custom_target(install-python
+	add_custom_target(install-experimaestro-python
 	  DEPENDS _experimaestro_python
 	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   	)
@@ -184,9 +197,12 @@ foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
 			MACOSX_RPATH TRUE
 			INSTALL_RPATH "@loader_path"
 			CXX_STANDARD 11
-            EXCLUDE_FROM_ALL true)
+    )
     target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
     swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
 endforeach()
 
 add_dependencies(experimaestro_java documentation experimaestro_rpc_java)
+
+export(PACKAGE experimaestro)
+export(TARGETS experimaestro experimaestro_static experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

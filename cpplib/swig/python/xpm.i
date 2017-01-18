@@ -15,7 +15,7 @@
 /*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, Object, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
 */
-%attribute(xpm::Argument, Generator *, generator, generator, generator)
+%attributeval(xpm::Argument, std::shared_ptr<xpm::Generator>, generator, generator, generator)
 %ignore xpm::Argument::generator;
 
 %attribute(xpm::Argument, std::string, help, help, help)

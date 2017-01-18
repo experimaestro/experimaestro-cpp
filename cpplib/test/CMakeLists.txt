@@ -2,7 +2,7 @@ include(ExternalProject)
 
 
 ExternalProject_Add(googletest
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/ext/googletest/googletest
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ext/googletest/googletest
         EXCLUDE_FROM_ALL 1
         BINARY_DIR ${CMAKE_BINARY_DIR}/external/googletest.build
         CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${EXT_INSTALL_DIR}"
