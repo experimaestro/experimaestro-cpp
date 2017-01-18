@@ -448,13 +448,11 @@ void Object::validate(bool generate) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         } else {
-          LOGGER->warn("Setting default value for {}...", argument.name());
           if (argument.defaultValue()) {
+            LOGGER->warn("Setting default value for {}...", argument.name());
             auto value = argument.defaultValue()->copy();
             value->_default = true;
             set(argument.name(), value);
-          } else {
-            set(argument.name(), std::make_shared<Object>());
           }
         }
       } else {
@@ -492,8 +490,9 @@ void Object::validate(bool generate) {
         auto generator = argument.generator();
 
         if (!hasKey(argument.name()) && generator) {
-          LOGGER->debug("Generating value...");
-          set(argument.name(), generator->generate(*this));
+          auto generated = generator->generate(*this);
+          LOGGER->debug("Generating value for {}", argument.name());
+          set(argument.name(), generated);
         }
       }
     }
@@ -815,6 +814,7 @@ Argument &Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
 std::shared_ptr<Object> Argument::defaultValue() const { return _defaultValue; }
 
 std::shared_ptr<Generator> Argument::generator() { return _generator; }
+std::shared_ptr<Generator> const &Argument::generator() const { return _generator; }
 Argument &Argument::generator(std::shared_ptr<Generator> const &generator) {
   _generator = generator;
   return *this;
@@ -900,6 +900,9 @@ std::string Type::toJson() const {
         {"type", arg.type()->typeName().toString()},
     };
 
+    if (arg.generator())
+      definition["generator"] = std::const_pointer_cast<Generator>(arg.generator())->toJson();
+
     if (arg.defaultValue())
       definition["default"] = arg.defaultValue()->toJson();
 
@@ -919,7 +922,27 @@ int Type::hash() const {
 
 // ---- Generators
 
-const std::shared_ptr<PathGenerator> SIMPLEPATHGENERATOR = std::make_shared<PathGenerator>("");
+const std::shared_ptr<PathGenerator> SIMPLEPATHGENERATOR = std::make_shared<PathGenerator>(std::string());
+const std::string PathGenerator::TYPE = "path";
+
+std::shared_ptr<Generator> Generator::createFromJSON(nlohmann::json const &j) {
+  std::string type = j["type"];
+  if (type == PathGenerator::TYPE) {
+    return std::make_shared<PathGenerator>(j);
+  }
+
+  throw std::invalid_argument("Generator type " + type + " not recognized");
+}
+
+PathGenerator::PathGenerator(nlohmann::json const &j) : _name((std::string const &)j["name"]) {
+}
+
+nlohmann::json PathGenerator::toJson() const {
+  return {
+      { "type", PathGenerator::TYPE },
+      { "name", _name }
+  };
+}
 
 std::shared_ptr<Object> PathGenerator::generate(Object &object) {
   auto uuid = object.uniqueIdentifier();
@@ -955,5 +978,4 @@ std::shared_ptr<Object> ObjectFactory::create() {
 ObjectFactory::ObjectFactory(std::shared_ptr<Register> const &theRegister) : _register(theRegister) {
 
 }
-
 } // xpm namespace

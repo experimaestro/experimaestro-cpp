@@ -417,6 +417,9 @@ class Generator {
  public:
   virtual std::shared_ptr<Object> generate(Object &object) = 0;
   virtual ~Generator() {}
+
+  static std::shared_ptr<Generator> createFromJSON(nlohmann::json const &);
+  virtual nlohmann::json toJson() const = 0;
 };
 
 /**
@@ -426,8 +429,12 @@ class PathGenerator : public Generator {
   /// Last component name
   std::string _name;
  public:
+  static const std::string TYPE;
+  PathGenerator(const char *s) : PathGenerator(std::string(s)) {}
   PathGenerator(std::string const & = "");
+  PathGenerator(nlohmann::json const &);
   virtual std::shared_ptr<Object> generate(Object &object);
+  virtual nlohmann::json toJson() const;
 };
 
 /**
@@ -449,6 +456,7 @@ class Argument {
   std::shared_ptr<Object> defaultValue() const;
 
   std::shared_ptr<Generator> generator();
+  std::shared_ptr<Generator> const &generator() const;
   Argument &generator(std::shared_ptr<Generator> const &generator);
 
   std::shared_ptr<Type> const &type() const;

@@ -214,7 +214,7 @@ void Register::load(nlohmann::json const &j) {
     // Search for the type
     if (typeIt != _types.end()) {
       type = typeIt->second;
-      LOGGER->debug("Defining placeholder type {}", type->typeName().toString());
+      LOGGER->debug("Using placeholder type {}", type->typeName().toString());
       if (!type->placeholder()) {
         throw std::runtime_error("Type " + type->typeName().toString() + " was already defined");
       }
@@ -229,6 +229,7 @@ void Register::load(nlohmann::json const &j) {
       auto parentTypeName = TypeName(e["parent"].get<std::string>());
       auto parentTypeIt = _types.find(parentTypeName);
       if (parentTypeIt == _types.end()) {
+        LOGGER->debug("Creating placeholder type {} ", parentTypeName);
         auto parentType = std::make_shared<Type>(parentTypeName);
         type->parentType(parentType);
         parentType->placeholder(true);
@@ -250,10 +251,21 @@ void Register::load(nlohmann::json const &j) {
       auto valueType = getType(valueTypename);
       if (!valueType) {
         addType(valueType = std::make_shared<Type>(valueTypename));
+        valueType->placeholder(true);
       }
       a->type(valueType);
       a->help(value["help"]);
       a->required(value["required"]);
+
+      if (value.count("default")) {
+        LOGGER->debug("    -> Found a default value");
+        a->defaultValue(Object::createFromJson(*this, value["default"]));
+      }
+
+      if (value.count("generator")) {
+        LOGGER->debug("    -> Found a generator");
+        a->generator(Generator::createFromJSON(value["generator"]));
+      }
 
       type->addArgument(a);
     }

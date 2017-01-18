@@ -69,6 +69,21 @@ class PythonObjectFactory(ObjectFactory):
       OBJECTS.append(newObject)
       return newObject
 
+class TypeWrapper():
+    def __init__(self, xpmtype):
+        self.xpmtype = xpmtype
+
+    def __call__(self, *args, **options):
+        return create(self.xpmtype, args, options)
+
+    @staticmethod
+    def wrap(xpmtype):
+        if xpmtype is None:
+            return None
+        return TypeWrapper(xpmtype)
+
+
+
 class PythonRegister(Register):
     def __init__(self):
         # Initialize the base class
@@ -100,6 +115,7 @@ class PythonRegister(Register):
         raise KeyError("Task %s does not exist" % name)
       task.__task__ = task
       task.create = wrap(task, create)
+      task.submit_ = wrap(task, create, submit=True)
       return task
 
     def getType(self, key):
@@ -114,16 +130,18 @@ class PythonRegister(Register):
         if key in self.builtins:
             return self.builtins[key]
 
-        if isinstance(key, Type):
+        if isinstance(key, Type) or isinstance(key, TypeWrapper):
             return key
 
         if isinstance(key, TypeName):
-            return super().getType(key)
+            return TypeWrapper.wrap(super().getType(key))
 
-        if issubclass(key, PyObject):
+        if inspect.isclass(key) and issubclass(key, PyObject):
             return self.types.get(key, None)
 
-        return super().getType(key)
+        print("Key type", type(key))
+        return TypeWrapper.wrap(super().getType(key))
+
 
     def parse(self, arguments=None):
         if arguments is None:
@@ -140,7 +158,6 @@ register = PythonRegister()
 def create(t, args, options, submit=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
-    print(xpmType)
 
     # Create the type and set the arguments
     o = xpmType.create()
@@ -191,7 +208,7 @@ class RegisterType:
         t = type(t.__name__, bases, dict(t.__dict__))
 
         # Add the create method
-        t.create = wrap(t, create)
+        t.__call__ = t.create = wrap(t, create)
 
         # Find first registered ancestor
         parentinfo = None
@@ -226,7 +243,12 @@ class RegisterTask():
         self.scriptpath = op.abspath(self.scriptpath)
 
         logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
-        pyType = register.getType(t)
+        for mro in t.__mro__:
+            pyType = register.getType(mro)
+            if pyType is not None:
+                break
+        if pyType is None:
+            raise Exception("Class %s has no associated experimaestro type" %t)
         task = Task(pyType)
         t.__task__ = task
         task.objectFactory(pyType.objectFactory())
@@ -242,7 +264,7 @@ class RegisterTask():
         commandLine.add(command)
         task.commandline(commandLine)
 
-        t.autoSubmit = wrap(t, create, submit=True)
+        t.submit_ = wrap(t, create, submit=True)
         return t
 
 
@@ -262,7 +284,7 @@ class AbstractArgument:
         return t
 
 class TypeArgument(AbstractArgument):
-    def __init__(self, name, default=None, choices=None, required=None, type=None, help=None):
+    def __init__(self, name, type=None, default=None, required=None, help=None):
         AbstractArgument.__init__(self, name, register.getType(type), help=help)
         self.argument.required = (default is None) if required is None else required
         if default is not None:
