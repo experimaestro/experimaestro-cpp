@@ -332,6 +332,8 @@ class AbstractArgument:
 class TypeArgument(AbstractArgument):
     def __init__(self, name, type=None, default=None, required=None, help=None):
         AbstractArgument.__init__(self, name, register.getType(type), help=help)
+        if default is not None and required is not None and required:
+            raise Exception("Argument is required but default value is given")
         self.argument.required = (default is None) if required is None else required
         if default is not None:
             self.argument.defaultValue(Value(default))
