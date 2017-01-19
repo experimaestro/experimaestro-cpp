@@ -26,35 +26,66 @@ JSON_ENCODER = JsonEncoder()
 # Used as a metaclass for C++ classes that can be extended
 TYPES_DICT = {}
 
+# Flag for simulating
+SUBMIT_TASKS = True
+
 # Only way to get through _SwigPyType
 _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
-   def __init__(self, *args):
+   """
+   Meta class for all objects in python interface
+
+   It handles the creation of objects, and the definition of new attributes
+   (blocked by SWIG)
+   """
+   def __init__(self, name, bases, dct):
+      _SwigPyType.__init__(self, name, bases, dct)
       TYPES_DICT[self] = {}
    def __del__(self):
       del TYPES_DICT[self]
    def __setattr__(self, name, value):
       TYPES_DICT[self][name] = value
    def __getattribute__(self, name):
+      logging.debug("Searching for %s in %s", name, self)
       if name in TYPES_DICT[self]:
          return TYPES_DICT[self][name]
       return _SwigPyType.__getattribute__(self, name)
+
+   def __call__(cls, *args, **kwds):
+      if "create" in TYPES_DICT[cls]:
+         return TYPES_DICT[cls]["create"](*args, **kwds)
+      return _SwigPyType.__call__(cls, *args, **kwds)
 
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
     IntegerType.toString(): lambda v: v.asInteger(),
     StringType.toString(): lambda v: v.asString(),
     RealType.toString(): lambda v: v.asReal(),
+    PathType.toString(): lambda v: v.asPath()
 }
 
 class PyObject(Object, metaclass=PyObjectType):
-    """Base type for all objects"""
+    """Base type for all objects in python interface"""
     def __init__(self):
         Object.__init__(self)
+
+    def __getattribute__(self, name):
+       logging.debug("Searching for %s in %s", name, self)
+       d = TYPES_DICT.get(type(self), None)
+       if d is not None and name in d:
+         from types import MethodType
+         return MethodType(d[name], self)
+       return super().__getattribute__(name)
+
 
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
         super().set(name, value)
+
+    def submit(self, send=None):
+      if send is None:
+         send = SUBMIT_TASKS
+      super().submit(send)
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
@@ -75,8 +106,10 @@ class PythonObjectFactory(ObjectFactory):
       self.pythonType = pythonType
 
     def _create(self):
-      logger.debug("Created new object of type [%s]", self.pythonType)
-      newObject = self.pythonType()
+      logger.debug("Created new object of type [%s]", self.pythonType.__mro__)
+      # Create and call the PyObject init
+      newObject = self.pythonType.__new__(self.pythonType)
+      PyObject.__init__(newObject)
       OBJECTS.append(newObject)
       return newObject
 
@@ -179,7 +212,10 @@ def create(t, args, options, submit=False):
       if type(v) == dict:
          v = Register.build(register, json.dumps(v))
       logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
-      setattr(o, k, v)
+      if isinstance(o, PyObject):
+         setattr(o, k, v)
+      else:
+         PyObject.set(o, k, v)
 
     if hasattr(t, "__task__"):
         o.task(t.__task__)
@@ -313,12 +349,29 @@ def tojson(t=None):
         return types
     return register.types[t].toJson()
 
+class Definitions:
+    """Allow easy access to XPM tasks"""
+    def __init__(self, retriever, path=None):
+        self.__retriever = retriever
+        self.__path = path
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            return object.__getattr__(self, name)
+        if self.__path is None:
+            return Definitions(self.__retriever, name)
+        return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
+    def __call__(self, *args, **options):
+        return self.__retriever(self.__path)(*args, **options)
+
+types = Definitions(register.getType)
+tasks = Definitions(register.getTask)
+
 
 class MergeClass:
     """Merge class annotation
 
     class A:
-        def x(self): print("x")
+        def x(self): ("x")
 
     a = A()
 

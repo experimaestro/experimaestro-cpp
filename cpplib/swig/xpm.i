@@ -15,6 +15,8 @@
 #include <xpm/commandline.hpp>
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
+#include <xpm/value.hpp>
+#undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
 
@@ -91,6 +93,7 @@
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
 %include <xpm/xpm.hpp>
+%include <xpm/value.hpp>
 %include <xpm/register.hpp>
 %include <xpm/logging.hpp>
 

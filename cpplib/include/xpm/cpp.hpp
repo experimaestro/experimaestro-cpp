@@ -7,6 +7,7 @@
 
 #include "common.hpp"
 #include "xpm.hpp"
+#include "value.hpp"
 #include "register.hpp"
 
 namespace xpm {

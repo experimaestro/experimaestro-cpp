@@ -2,7 +2,7 @@
 // Created by Benjamin Piwowarski on 13/12/2016.
 //
 
-#include <xpm/xpm.hpp>
+#include <xpm/value.hpp>
 #include <gtest/gtest.h>
 
 //using nlohmann::json;

@@ -4,11 +4,11 @@
 #include <unordered_set>
 #include <fstream>
 
-#include <openssl/sha.h>
 
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
+#include <xpm/value.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -30,26 +30,26 @@ using nlohmann::json;
 namespace xpm {
 
 // Type and task should be included
-static const std::string KEY_TYPE = "$type";
-static const std::string KEY_TASK = "$task";
+const std::string KEY_TYPE = "$type";
+const std::string KEY_TASK = "$task";
 
-static const std::string KEY_PATH = "$path";
-static const std::string KEY_VALUE = "$value";
-static const std::string KEY_IGNORE = "$ignore";
-static const std::string KEY_DEFAULT = "$default";
-static const std::string KEY_RESOURCE = "$resource";
+const std::string KEY_PATH = "$path";
+const std::string KEY_VALUE = "$value";
+const std::string KEY_IGNORE = "$ignore";
+const std::string KEY_DEFAULT = "$default";
+const std::string KEY_RESOURCE = "$resource";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
 
-static const TypeName STRING_TYPE("string");
-static const TypeName BOOLEAN_TYPE("boolean");
-static const TypeName INTEGER_TYPE("integer");
-static const TypeName REAL_TYPE("real");
-static const TypeName ARRAY_TYPE("array");
-static const TypeName ANY_TYPE("any");
+const TypeName STRING_TYPE("string");
+const TypeName BOOLEAN_TYPE("boolean");
+const TypeName INTEGER_TYPE("integer");
+const TypeName REAL_TYPE("real");
+const TypeName ARRAY_TYPE("array");
+const TypeName ANY_TYPE("any");
 
-static const TypeName PATH_TYPE("path");
-static const TypeName RESOURCE_TYPE("resource");
+const TypeName PATH_TYPE("path");
+const TypeName RESOURCE_TYPE("resource");
 
 static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE, RESOURCE_TYPE};
 
@@ -61,61 +61,6 @@ not_implemented_error::not_implemented_error(const std::string &message,
     "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
 
 
-namespace {
-
-struct Digest {
-  SHA_CTX context;
-
-  Digest() {
-    if (!SHA1_Init(&context)) {
-      throw std::runtime_error("Error while initializing SHA-1");
-    }
-  }
-  template<typename T>
-  void updateDigest(T const &value) {
-    static_assert(std::is_pod<T>::value, "Expected a POD value");
-
-    if (!SHA1_Update(&context, &value, sizeof(T))) {
-      throw std::runtime_error("Error while computing SHA-1");
-    }
-  }
-
-  void updateDigest(std::string const &value) {
-    if (!SHA1_Update(&context, value.c_str(), value.size())) {
-      throw std::runtime_error("Error while computing SHA-1");
-    }
-  }
-
-  std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
-    std::array<unsigned char, SHA_DIGEST_LENGTH> md;
-    if (!SHA1_Final(md.data(), &context)) {
-      throw std::runtime_error("Error while retrieving SHA-1");
-    }
-    return md;
-  }
-};
-}
-
-struct Helper {
-  static bool equals(Value const &a, Value const &b) {
-    if (a._scalarType != b._scalarType) return false;
-    switch (a._scalarType) {
-      case ValueType::STRING:return a._value.string == b._value.string;
-
-      case ValueType::INTEGER:return a._value.integer == b._value.integer;
-
-      case ValueType::REAL:return a._value.real == b._value.real;
-
-      case ValueType::BOOLEAN:return a._value.boolean == b._value.boolean;
-
-      case ValueType::NONE:throw std::runtime_error("none has no type");
-    }
-  }
-};
-
-bool operator==(Value const &a, Value const &b) {
-  return Helper::equals(a, b);
-}
 
 // ---
 // --- Type names
@@ -145,14 +90,14 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-Object::Object() : _sealed(false), _default(false), _type(AnyType) {
+Object::Object() : _flags(0), _type(AnyType) {
 }
 
 Object::Object(std::map<std::string, std::shared_ptr<Object>> &map)
-    : _sealed(false), _default(false), _content(map) {
+    : _flags(0), _content(map) {
 }
 
-Object::Object(Object const &other) : _sealed(other._sealed), _default(other._default), _content(other._content) {
+Object::Object(Object const &other) : _flags(other._flags), _content(other._content) {
 }
 
 void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
@@ -162,7 +107,11 @@ void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
     } else if (it.key() == KEY_TYPE) {
       _type = xpmRegister.getType(TypeName((std::string const &) it.value()));
     } else if (it.key() == KEY_DEFAULT) {
-      _default = it.value();
+      if (!it.value().is_boolean())
+         throw std::runtime_error("Default flag is not boolean in object");
+      set(Flag::DEFAULT, it.value());
+    } else if (it.key() == KEY_TASK) {
+      _task = xpmRegister.getTask(it.value(), true);
     } else {
       set(it.key(), createFromJson(xpmRegister, it.value()));
     }
@@ -234,11 +183,14 @@ long Object::asInteger() {
 double Object::asReal() {
   throw cast_error("Cannot convert to real");
 }
+Path Object::asPath() const {
+  throw cast_error("Cannot convert to path");
+}
 
 // Convert to JSON
 json Object::toJson() {
   // No content
-  if (_content.empty() && !_task && (!_type || dynamic_cast<Value *>(this)) && !_default) {
+  if (_content.empty() && !_task && (!_type || dynamic_cast<Value *>(this)) && !get(Flag::DEFAULT)) {
     return nullptr;
   }
 
@@ -248,10 +200,14 @@ json Object::toJson() {
     o[entry.first] = entry.second->toJson();
   }
 
-  if (_default)
+  if (get(Flag::DEFAULT))
     o[KEY_DEFAULT] = true;
   if (_type) {
     o[KEY_TYPE] = _type->typeName().toString();
+  }
+
+  if (_task) {
+    o[KEY_TASK] = _task->identifier().toString();
   }
 
   return o;
@@ -273,7 +229,12 @@ void Object::setValue(std::shared_ptr<Object> const &value) {
 std::array<unsigned char, DIGEST_LENGTH> Object::digest() const {
   Digest d;
 
-  // Signal a full object
+  d.updateDigest("task");
+  if (_task) {
+    d.updateDigest(_task->identifier().toString());
+  } else {
+    d.updateDigest(0);
+  }
 
   for (auto &item: _content) {
     auto const &key = item.first;
@@ -308,7 +269,7 @@ bool Object::hasKey(std::string const &key) const {
 }
 
 std::shared_ptr<Object> Object::set(const std::string &key, std::shared_ptr<Object> const &value) {
-  if (_sealed) {
+  if (get(Flag::SEALED)) {
     throw sealed_error();
   }
 
@@ -331,20 +292,21 @@ std::shared_ptr<Object> Object::get(const std::string &key) {
 }
 
 void Object::seal() {
-  if (_sealed) return;
+  if (get(Flag::SEALED)) return;
 
-  _sealed = true;
   for (auto &item: _content) {
     item.second->seal();
   }
+
+  set(Flag::SEALED, true);
 }
 
 bool Object::isSealed() const {
-  return _sealed;
+  return get(Flag::SEALED);
 }
 
 bool Object::isDefault() const {
-  return _default;
+  return get(Flag::DEFAULT);
 }
 
 bool Object::canIgnore() {
@@ -399,11 +361,11 @@ std::shared_ptr<Task> Object::task() {
   return _task;
 }
 
-void Object::submit() {
+void Object::submit(bool send) {
   if (!_task) {
     throw exception("No underlying task for this object: cannot run");
   }
-  return _task->submit(shared_from_this());
+  return _task->submit(shared_from_this(), send);
 }
 
 void Object::configure(bool generate) {
@@ -427,81 +389,96 @@ void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dep
   }
 }
 
-bool Object::equals(Object const &other) {
+bool Object::equals(Object const &other) const {
   NOT_IMPLEMENTED();
 }
 
 void Object::validate(bool generate) {
   LOGGER->debug("Validating (generate={})", generate);
 
+  if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
+
   // (1) Validate the object arguments
-  for (auto type = _type; type; type = type->parentType()) {
-    LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
-    for (auto entry: type->arguments()) {
-      auto &argument = *entry.second;
-      LOGGER->debug("Looking at argument {}", argument.name());
+  if (!get(Flag::VALIDATED)) {
+    for (auto type = _type; type; type = type->parentType()) {
+      LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
+      for (auto entry: type->arguments()) {
+        auto &argument = *entry.second;
+        LOGGER->debug("Looking at argument {}", argument.name());
 
-      if (_content.count(argument.name()) == 0) {
-        LOGGER->debug("No value provided...");
-        // No value provided
-        if (argument.required() && (!generate || !argument.generator())) {
-          throw argument_error(
-              "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-        } else {
-          if (argument.defaultValue()) {
-            LOGGER->warn("Setting default value for {}...", argument.name());
-            auto value = argument.defaultValue()->copy();
-            value->_default = true;
-            set(argument.name(), value);
-          }
-        }
-      } else {
-        // Sets the value
-        LOGGER->debug("Checking value of {}...", argument.name());
-        auto value = get(argument.name());
-
-        if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-          LOGGER->debug("Value is default");
-          value->_default = true;
-        } else {
-          if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
-            auto v = value->get(KEY_TYPE);
-            auto valueType = value->type();
-            if (valueType) {
-              auto object = valueType->create();
-              object->setValue(value);
-              LOGGER->debug("Looking at {}", entry.first);
-              object->validate(generate);
+        if (_content.count(argument.name()) == 0) {
+          LOGGER->debug("No value provided...");
+          // No value provided
+          if (argument.required() && (!generate || !argument.generator())) {
+            throw argument_error(
+                "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
+          } else {
+            if (argument.defaultValue()) {
+              LOGGER->warn("Setting default value for {}...", argument.name());
+              auto value = argument.defaultValue()->copy();
+              value->set(Flag::DEFAULT, true);
+              set(argument.name(), value);
             }
           }
+        } else {
+          // Sets the value
+          LOGGER->debug("Checking value of {}...", argument.name());
+          auto value = get(argument.name());
+
+          if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+            LOGGER->debug("Value is default");
+            value->set(Flag::DEFAULT, true);
+          } else {
+            if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
+              auto v = value->get(KEY_TYPE);
+              auto valueType = value->type();
+              if (valueType) {
+                auto object = valueType->create();
+                object->setValue(value);
+                LOGGER->debug("Looking at {}", entry.first);
+                object->validate(generate);
+              }
+            }
+          }
+
+          value->validate(generate);
+          LOGGER->debug("Setting {}...", argument.name());
+          setValue(argument.name(), value);
         }
-        LOGGER->debug("Setting...");
-        setValue(argument.name(), value);
       }
     }
+    set(Flag::VALIDATED, true);
+  } else {
+    LOGGER->debug("Object already validated");
   }
+
 
   // (2) Generate values
   if (generate) {
-    LOGGER->debug("Generating values...");
-    for (auto type = _type; type; type = type->parentType()) {
-      for (auto entry: type->arguments()) {
-        Argument &argument = *entry.second;
-        auto generator = argument.generator();
+    if (get(Flag::GENERATED)) {
+      LOGGER->debug("Object already generated");
+    } else {
+      // (3) Add resource
+      if (_task) {
+        auto identifier = _task->getPathGenerator()->generate(*this)->asString();
+        LOGGER->info("Setting resource to {}", identifier);
+        set(KEY_RESOURCE, identifier);
+      }
 
-        if (!hasKey(argument.name()) && generator) {
-          auto generated = generator->generate(*this);
-          LOGGER->debug("Generating value for {}", argument.name());
-          set(argument.name(), generated);
+      LOGGER->debug("Generating values...");
+      for (auto type = _type; type; type = type->parentType()) {
+        for (auto entry: type->arguments()) {
+          Argument &argument = *entry.second;
+          auto generator = argument.generator();
+
+          if (!hasKey(argument.name()) && generator) {
+            auto generated = generator->generate(*this);
+            LOGGER->debug("Generating value for {}", argument.name());
+            set(argument.name(), generated);
+          }
         }
       }
-    }
-
-    // (3) Add resource
-    if (_task) {
-      auto object = PathGenerator().generate(*this);
-      LOGGER->info("Setting resource to {}", object->asString());
-      set(KEY_RESOURCE, object);
+      set(Flag::GENERATED, true);
     }
   }
 }
@@ -510,267 +487,23 @@ void Object::execute() {
   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 
-typedef std::string stdstring;
-
-Value::~Value() {
-  switch (_scalarType) {
-    case ValueType::STRING:_value.string.~stdstring();
-      break;
-    default:
-      // Do nothing for other values
-      break;
+Path Object::outputPath() const {
+  auto resource = static_cast<Object>(*this).get(KEY_RESOURCE);
+  if (!resource) {
+    throw std::invalid_argument("No resource associated to this object");
   }
-  _scalarType = ValueType::NONE;
+  return Path(resource->asString() + ".out");
 }
 
-Value::Union::~Union() {
-  // Does nothing: handled by Scalar
+void Object::set(Object::Flag flag, bool value) {
+  if (value) _flags |= (Flags)flag;
+  else _flags &= ~((Flags)flag);
+
+  assert(get(flag) == value);
 }
 
-Value::Union::Union() {
-  // Does nothing: handled by Scalar
-}
-
-Value::Value() : _scalarType(ValueType::NONE) {
-}
-
-Value::Value(double value) : Object(), _scalarType(ValueType::REAL) {
-  _value.real = value;
-  _type = RealType;
-}
-
-Value::Value(long value) : _scalarType(ValueType::INTEGER) {
-  _value.integer = value;
-  _type = IntegerType;
-}
-
-Value::Value(int value) : _scalarType(ValueType::INTEGER) {
-  _value.integer = value;
-  _type = IntegerType;
-}
-
-Value::Value(bool value) : _scalarType(ValueType::BOOLEAN) {
-  _value.boolean = value;
-  _type = BooleanType;
-}
-
-Value::Value(std::string const &value) : _scalarType(ValueType::STRING) {
-  // placement new
-  new(&_value.string) std::string(value);
-  _type = StringType;
-}
-
-Value::Value(Value const &other) : Object(other), _scalarType(other._scalarType) {
-  switch (_scalarType) {
-    case ValueType::NONE:break;
-
-    case ValueType::REAL:_value.real = other._value.real;
-      break;
-
-    case ValueType::INTEGER:_value.integer = other._value.integer;
-      break;
-
-    case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
-      break;
-
-    case ValueType::STRING:new(&_value.string) std::string(other._value.string);
-      break;
-
-  }
-}
-
-bool Value::equals(Object const &other) {
-  if (Value const *otherValue = dynamic_cast<Value const *>(&other)) {
-    return Helper::equals(*this, *otherValue);
-  }
-  return false;
-}
-
-long Value::asInteger() {
-  switch (_scalarType) {
-    case ValueType::NONE:return false;
-
-    case ValueType::REAL: throw cast_error("cannot convert real to integer");
-      break;
-
-    case ValueType::INTEGER:return _value.integer;
-      break;
-
-    case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
-      break;
-
-    case ValueType::STRING: throw cast_error("cannot convert real to integer");
-      break;
-  }
-}
-double Value::asReal() {
-  switch (_scalarType) {
-    case ValueType::NONE:return false;
-
-    case ValueType::REAL: return _value.real;
-      break;
-
-    case ValueType::INTEGER:return _value.integer;
-      break;
-
-    case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
-      break;
-
-    case ValueType::STRING: return !_value.string.empty();
-      break;
-  }
-}
-
-bool Value::asBoolean() {
-  switch (_scalarType) {
-    case ValueType::NONE:return false;
-
-    case ValueType::REAL: return _value.real;
-      break;
-
-    case ValueType::INTEGER:return _value.integer;
-      break;
-
-    case ValueType::BOOLEAN: return _value.boolean;
-      break;
-
-    case ValueType::STRING: return !_value.string.empty();
-      break;
-  }
-}
-
-std::string Value::asString() {
-  switch (_scalarType) {
-    case ValueType::NONE:return "";
-
-    case ValueType::REAL: return std::to_string(_value.real);
-      break;
-
-    case ValueType::INTEGER:return std::to_string(_value.integer);
-      break;
-
-    case ValueType::BOOLEAN: return std::to_string(_value.boolean);
-      break;
-
-    case ValueType::STRING: return _value.string;
-      break;
-  }
-}
-
-json Value::jsonValue() const {
-  switch (scalarType()) {
-    case ValueType::STRING:return json(_value.string);
-
-    case ValueType::INTEGER:return json(_value.integer);
-
-    case ValueType::REAL:return json(_value.real);
-
-    case ValueType::BOOLEAN:return json(_value.boolean);
-
-    case ValueType::NONE:throw std::runtime_error("none has no type");
-  }
-}
-
-json Value::toJson() {
-  json j = Object::toJson();
-  if (j.is_null())
-    return jsonValue();
-
-  j[KEY_VALUE] = jsonValue();
-  return j;
-}
-
-std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
-  Digest d;
-
-  d.updateDigest(scalarType());
-
-  // Hash value
-  switch (_scalarType) {
-    case ValueType::NONE:break;
-    case ValueType::BOOLEAN:d.updateDigest(_value.boolean);
-      break;
-    case ValueType::INTEGER:d.updateDigest(_value.integer);
-      break;
-    case ValueType::REAL:d.updateDigest(_value.real);
-      break;
-    case ValueType::STRING:d.updateDigest(_value.string);
-      break;
-  }
-
-  return d.get();
-}
-
-Value &Value::operator=(Value const &other) {
-  this->~Value();
-
-  _scalarType = other._scalarType;
-  switch (_scalarType) {
-    case ValueType::NONE:break;
-    case ValueType::REAL:_value.real = other._value.real;
-      break;
-    case ValueType::INTEGER:_value.integer = other._value.integer;
-      break;
-    case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
-      break;
-    case ValueType::STRING:new(&_value.string) std::string(other._value.string);
-      break;
-  }
-
-  return *this;
-}
-
-bool Value::defined() const {
-  return _scalarType != ValueType::NONE;
-}
-
-ValueType const Value::scalarType() const {
-  return _scalarType;
-}
-
-bool Value::getBoolean() const {
-  if (_scalarType != ValueType::BOOLEAN) throw std::runtime_error("Value is not a boolean");
-  return _value.boolean;
-}
-
-double Value::getReal() const {
-  if (_scalarType != ValueType::REAL) throw std::runtime_error("Value is not a boolean");
-  return _value.real;
-}
-
-long Value::getInteger() const {
-  if (_scalarType != ValueType::INTEGER) throw std::runtime_error("Value is not a boolean");
-  return _value.integer;
-}
-
-std::string const &Value::getString() {
-  if (_scalarType != ValueType::STRING) throw std::runtime_error("Value is not a string");
-  return _value.string;
-}
-
-void Value::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies) {}
-
-std::shared_ptr<Object> Value::copy() {
-  return std::make_shared<Value>(*this);
-}
-
-Array::~Array() {}
-
-std::array<unsigned char, DIGEST_LENGTH> Array::digest() const {
-  Digest d;
-  for (auto x: _array) {
-    auto xDigest = x->digest();
-    d.updateDigest(xDigest);
-  }
-  return d.get();
-}
-
-void Array::add(std::shared_ptr<Object> const &element) {
-  _array.push_back(element);
-}
-
-std::shared_ptr<Object> Array::copy() {
-  return std::make_shared<Array>(*this);
+bool Object::get(Object::Flag flag) const {
+  return (Flags)flag & _flags;
 }
 
 // ---
@@ -836,7 +569,7 @@ std::shared_ptr<Type> IntegerType = std::make_shared<Type>(INTEGER_TYPE, nullptr
 std::shared_ptr<Type> RealType = std::make_shared<Type>(REAL_TYPE, nullptr, true);
 std::shared_ptr<Type> StringType = std::make_shared<Type>(STRING_TYPE, nullptr, true);
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
-std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true);
+std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true, true);
 std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true);
 
 /** Creates an object with a given type */
@@ -922,7 +655,6 @@ int Type::hash() const {
 
 // ---- Generators
 
-const std::shared_ptr<PathGenerator> SIMPLEPATHGENERATOR = std::make_shared<PathGenerator>(std::string());
 const std::string PathGenerator::TYPE = "path";
 
 std::shared_ptr<Generator> Generator::createFromJSON(nlohmann::json const &j) {
@@ -945,22 +677,19 @@ nlohmann::json PathGenerator::toJson() const {
 }
 
 std::shared_ptr<Object> PathGenerator::generate(Object &object) {
+  Path p = Context::current().workdir();
   auto uuid = object.uniqueIdentifier();
 
-  // We have a task, so we use it
-  std::shared_ptr<Task> task = object.task();
-  Path p;
-  if (task) {
-    std::string localName = task->identifier().localName();
-    p = Path(Context::current().workdir(), {task->identifier().toString(), uuid, localName});
-  } else {
-    p = Path(Context::current().workdir(), {uuid});
+  if (std::shared_ptr<Task> task = object.task()) {
+    p = Path(p, {task->identifier().toString()});
   }
+
+  p = Path(p, {uuid});
 
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return std::make_shared<Value>(p.toString());
+  return std::make_shared<Value>(p);
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

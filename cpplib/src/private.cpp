@@ -16,6 +16,8 @@ void initLogging() {
   static bool initialized = false;
   if (!initialized) {
     initialized = true;
+
+    spdlog::set_pattern("[%x %H:%M:%S/%n] %v");
     spdlog::set_async_mode(8192);
 
     auto errsink = spdlog::sinks::stderr_sink_mt::instance();

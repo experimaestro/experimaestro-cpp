@@ -42,6 +42,15 @@ extern std::shared_ptr<Type> BooleanType;
 extern std::shared_ptr<Type> ArrayType;
 extern std::shared_ptr<Type> AnyType;
 extern std::shared_ptr<Type> PathType;
+
+extern const std::string KEY_TYPE;
+extern const std::string KEY_TASK;
+
+extern const std::string KEY_PATH;
+extern const std::string KEY_VALUE;
+extern const std::string KEY_IGNORE;
+extern const std::string KEY_DEFAULT;
+extern const std::string KEY_RESOURCE;
 SWIG_MUTABLE;
 
 /// Valeur optionnelle
@@ -118,6 +127,17 @@ class TypeName {
   }
 };
 
+SWIG_IMMUTABLE;
+extern const TypeName STRING_TYPE;
+extern const TypeName BOOLEAN_TYPE;
+extern const TypeName INTEGER_TYPE;
+extern const TypeName REAL_TYPE;
+extern const TypeName ARRAY_TYPE;
+extern const TypeName ANY_TYPE;
+extern const TypeName PATH_TYPE;
+extern const TypeName RESOURCE_TYPE;
+SWIG_MUTABLE;
+
 }
 
 #ifndef SWIG
@@ -138,7 +158,7 @@ namespace xpm {
 // ---
 
 enum class ValueType : int8_t {
-  NONE, INTEGER, REAL, STRING, BOOLEAN
+  NONE, INTEGER, REAL, STRING, PATH, BOOLEAN
 };
 
 
@@ -154,6 +174,11 @@ class Object
 #endif
 {
  public:
+  typedef uint8_t Flags;
+  enum class Flag : Flags {
+    SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8
+  };
+
   typedef std::shared_ptr<Object> Ptr;
 
   /// Default constructor
@@ -166,7 +191,7 @@ class Object
   static std::shared_ptr<Object> createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue);
 
   /// Returns true if objects are equal
-  virtual bool equals(Object const &other);
+  virtual bool equals(Object const &other) const;
 
   /// Returns the string
   virtual std::string asString();
@@ -180,9 +205,18 @@ class Object
   /// Returns an integer
   virtual double asReal();
 
+  /// Returns a path
+  virtual Path asPath() const;
 
   /// Checks whether a key exists
   bool hasKey(std::string const &key) const;
+
+  /** Get the standard output path
+   *
+   * @return The path corresponding to the standard output stream
+   * @throws std::invalid_argument if the object is not a resource
+   */
+  Path outputPath() const;
 
   /// Get access to one value
   std::shared_ptr<Object> set(const std::string &key, std::shared_ptr<Object> const &);
@@ -275,7 +309,7 @@ class Object
   /**
    * Submit the underlying task to experimaestro server
    */
-  void submit();
+  void submit(bool send = true);
 
   /**
    * Execute the underlying task
@@ -297,6 +331,9 @@ class Object
   void fill(Register &xpmRegister, const nlohmann::json &jsonValue);
 
  private:
+  /// Set flag
+  void set(Flag flag, bool value);
+  bool get(Flag flag) const;
 
   /// Associated task, if any
   std::shared_ptr<Task> _task;
@@ -307,10 +344,7 @@ class Object
   friend class ObjectFactory;
 
   /// Whether this value is sealed or not
-  bool _sealed;
-
-  /// Whether the value is default
-  bool _default;
+  Flags _flags;
 
   /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
   std::map<std::string, std::shared_ptr<Object>> _content;
@@ -331,77 +365,6 @@ class Array : public Object {
   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
  private:
   Content _array;
-};
-
-/**
- * A value
- */
-class Value : public Object {
-  union Union {
-    long integer;
-    double real;
-    bool boolean;
-    std::string string;
-
-    ~Union();
-    Union();
-  } _value;
-  ValueType _scalarType;
- public:
-  typedef std::shared_ptr<Value> Ptr;
-
-  Value();
-  Value(double value);
-  Value(bool value);
-  Value(int value);
-  Value(long value);
-  Value(std::string const &value);
-  inline Value(char const *value) : Value(std::string(value)) {}
-  Value(Value const &other);
-  Value &operator=(Value const &other);
-
-  template<typename T>
-  static Ptr create(T const &t) {
-    return std::make_shared<Value>(t);
-  }
-
-  virtual ~Value();
-  virtual std::shared_ptr<Object> copy() override;
-
-  ValueType const scalarType() const;
-
-  /** Is the value defined? */
-  bool defined() const;
-
-  /// Get the value
-  bool getBoolean() const;
-  double getReal() const;
-  long getInteger() const;
-
-  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies) override;
-
-  std::string const &getString();
-  virtual nlohmann::json toJson() override;
-
-  virtual bool equals(Object const &) override ;
-
-  /// Returns the string
-  virtual std::string asString() override;
-
-  /// Returns the string
-  virtual bool asBoolean() override;
-
-  /// Returns an integer
-  virtual long asInteger() override;
-
-  /// Returns an integer
-  virtual double asReal() override;
-
-  virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
-
- protected:
-  friend struct Helper;
-  nlohmann::json jsonValue() const;
 };
 
 
@@ -464,6 +427,7 @@ class Argument {
 
   const std::string &help() const;
   Argument &help(const std::string &help);
+
  private:
   /// The argument name
   std::string _name;
@@ -483,8 +447,6 @@ class Argument {
   /// A generator
   std::shared_ptr<Generator> _generator;
 };
-
-bool operator==(Value const &a, Value const &b);
 
 /**
  * Object factory
@@ -619,8 +581,9 @@ class Task
   /**
    * Configure the object
    * @param object The object corresponding to the task type
+   * @param send If false, the job will not be sent to the experimaestro server
    */
-  void submit(std::shared_ptr<Object> const &object) const;
+  void submit(std::shared_ptr<Object> const &object, bool send = true) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;
@@ -645,6 +608,9 @@ class Task
 
   /** Convert to JSON */
   nlohmann::json toJson();
+
+  /** Get path generator for resource location */
+  std::shared_ptr<PathGenerator> getPathGenerator() const;
  private:
   /// Task identifier
   TypeName _identifier;

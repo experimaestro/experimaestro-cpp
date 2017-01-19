@@ -33,7 +33,7 @@ void Register::addTask(std::shared_ptr<Task> const &task) {
   _tasks[task->identifier()] = task;
 }
 
-std::shared_ptr<Task> Register::getTask(TypeName const &typeName) {
+std::shared_ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
   auto it = _tasks.find(typeName);
   if (it != _tasks.end()) {
     return it->second;

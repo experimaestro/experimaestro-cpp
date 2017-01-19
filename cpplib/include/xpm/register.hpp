@@ -51,7 +51,7 @@ class Register {
   void addTask(std::shared_ptr<Task> const &task);
 
   /// Find a type given a t ype name
-  std::shared_ptr<Task> getTask(TypeName const &typeName);
+  std::shared_ptr<Task> getTask(TypeName const &typeName, bool allowPlaceholder = false);
 
   /// Register a new type
   void addType(std::shared_ptr<Type> const &type);

@@ -37,7 +37,8 @@ set(SOURCES
         src/rpc/notifications.cpp
         src/xpmssh.cpp
         src/xpmssh.hpp
-        include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp src/jsonserialization.hpp)
+        include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp
+        src/jsonserialization.hpp src/value.cpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
@@ -57,10 +58,7 @@ add_library(experimaestro_shared SHARED ${SOURCES})
 install(TARGETS experimaestro_shared LIBRARY DESTINATION lib)
 install(DIRECTORY include/xpm DESTINATION include)
 
-add_library(experimaestro_static STATIC ${SOURCES})
-install(TARGETS experimaestro_static ARCHIVE DESTINATION lib)
-
-foreach(xpmlib experimaestro_static experimaestro_shared)
+foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
     target_include_directories(${xpmlib} PRIVATE ${LIBSSH_INCLUDE_DIR})
     set_target_properties(${xpmlib} PROPERTIES
@@ -206,4 +204,4 @@ endforeach()
 add_dependencies(experimaestro_java documentation experimaestro_rpc_java)
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_static experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

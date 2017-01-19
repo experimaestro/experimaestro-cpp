@@ -20,34 +20,44 @@ Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(std::shared_ptr<Object> const &object) const {
+void Task::submit(std::shared_ptr<Object> const &object, bool send) const {
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
-  object->findDependencies(dependencies);
+  if (send) {
+    object->findDependencies(dependencies);
+  }
 
   // Validate and seal the task object
   object->validate(true);
   object->seal();
 
-  // Get generated directory as locator
-  auto locator = rpc::Path::toPath(PathGenerator().generate(*object)->asString());
-
   // Prepare the command line
   CommandContext context;
   context.parameters = object->toJsonString();
-  auto command = _commandLine.rpc(context);
 
-  // Add dependencies
-  LOGGER->info("Adding {} dependencies", dependencies.size());
-  for (auto dependency: dependencies) {
-    LOGGER->info("Adding dependency {}", dependency->identifier());
-    command->add_dependency(dependency);
+  if (send) {
+    // Get generated directory as locator
+    auto path = getPathGenerator()->generate(*object)->asString();
+    auto resource = object->get(KEY_RESOURCE)->asString();
+    if (path != resource) {
+      throw std::runtime_error("Resource [" + resource + "] and resource path [" + path + "] do not match");
+    }
+    auto locator = rpc::Path::toPath(path);
+    auto command = _commandLine.rpc(context);
+
+    // Add dependencies
+    LOGGER->info("Adding {} dependencies", dependencies.size());
+    for (auto dependency: dependencies) {
+      LOGGER->info("Adding dependency {}", dependency->identifier());
+      command->add_dependency(dependency);
+    }
+    auto task = std::make_shared<rpc::CommandLineTask>(locator);
+    task->taskId(object->task()->identifier().toString());
+    task->command(command);
+    task->submit();
+  } else {
+    LOGGER->warn("Not sending task {}", object->task()->identifier());
   }
-
-  auto task = std::make_shared<rpc::CommandLineTask>(locator);
-  task->taskId(object->task()->identifier().toString());
-  task->command(command);
-  task->submit();
 }
 
 void Task::commandline(CommandLine command) {
@@ -91,5 +101,8 @@ nlohmann::json Task::toJson() {
 
 Type::Ptr Task::type() {
   return _type;
+}
+std::shared_ptr<PathGenerator> Task::getPathGenerator() const {
+  return std::make_shared<PathGenerator>(_identifier.localName());
 };
 }
