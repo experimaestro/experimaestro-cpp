@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.0.0)
 
 include(UseSWIG)
 find_package(SWIG REQUIRED)
-
 find_package(OpenSSL REQUIRED)
+find_package(PythonInterp 3 REQUIRED)
+find_package(libssh REQUIRED)
 
-FIND_PACKAGE(PythonInterp 3 REQUIRED)
 add_definitions("-Wall")
 enable_testing()
 
@@ -35,10 +35,12 @@ set(SOURCES
         src/rpc/objects.cpp
         src/rpc/utils.cpp
         src/rpc/notifications.cpp
+        src/xpmssh.cpp
+        src/xpmssh.hpp
         include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp src/jsonserialization.hpp)
 
 find_package (Threads)
-set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
 include_directories(
@@ -52,21 +54,20 @@ include_directories(
 # --- experimaestro library
 
 add_library(experimaestro_shared SHARED ${SOURCES})
-target_link_libraries(experimaestro_shared ${LINKED_LIBRARIES})
-set_target_properties(experimaestro_shared PROPERTIES
-    CXX_STANDARD 11
-    OUTPUT_NAME experimaestro)
-
 install(TARGETS experimaestro_shared LIBRARY DESTINATION lib)
 install(DIRECTORY include/xpm DESTINATION include)
 
 add_library(experimaestro_static STATIC ${SOURCES})
-target_link_libraries(experimaestro_static ${LINKED_LIBRARIES})
-set_target_properties(experimaestro_static PROPERTIES
+install(TARGETS experimaestro_static ARCHIVE DESTINATION lib)
+
+foreach(xpmlib experimaestro_static experimaestro_shared)
+    target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
+    target_include_directories(${xpmlib} PRIVATE ${LIBSSH_INCLUDE_DIR})
+    set_target_properties(${xpmlib} PROPERTIES
         CXX_STANDARD 11
         OUTPUT_NAME experimaestro)
 
-install(TARGETS experimaestro_static ARCHIVE DESTINATION lib)
+endforeach()
 
 # ---- experimaestro executable
 

@@ -24,9 +24,21 @@ class JsonEncoder(json.JSONEncoder):
 JSON_ENCODER = JsonEncoder()
 
 # Used as a metaclass for C++ classes that can be extended
+TYPES_DICT = {}
+
+# Only way to get through _SwigPyType
 _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
-    pass
+   def __init__(self, *args):
+      TYPES_DICT[self] = {}
+   def __del__(self):
+      del TYPES_DICT[self]
+   def __setattr__(self, name, value):
+      TYPES_DICT[self][name] = value
+   def __getattribute__(self, name):
+      if name in TYPES_DICT[self]:
+         return TYPES_DICT[self][name]
+      return _SwigPyType.__getattribute__(self, name)
 
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
@@ -37,7 +49,6 @@ VALUECONVERTERS = {
 
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects"""
-
     def __init__(self):
         Object.__init__(self)
 
@@ -139,7 +150,6 @@ class PythonRegister(Register):
         if inspect.isclass(key) and issubclass(key, PyObject):
             return self.types.get(key, None)
 
-        print("Key type", type(key))
         return TypeWrapper.wrap(super().getType(key))
 
 
@@ -208,7 +218,7 @@ class RegisterType:
         t = type(t.__name__, bases, dict(t.__dict__))
 
         # Add the create method
-        t.__call__ = t.create = wrap(t, create)
+        t.create = wrap(t, create)
 
         # Find first registered ancestor
         parentinfo = None
