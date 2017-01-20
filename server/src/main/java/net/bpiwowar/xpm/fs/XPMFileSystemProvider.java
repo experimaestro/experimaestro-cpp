@@ -97,7 +97,6 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
             } catch (IOException e) {
                 LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
-                continue;
             }
         }
         return null;

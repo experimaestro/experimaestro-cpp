@@ -52,6 +52,16 @@ class Path : public Pimpl<Path> {
    * @throws std::logic_error If the path is on a shared host
    */
   std::string localpath() const;
+
+  /**
+   * Is local
+   */
+   bool isLocal() const;
+
+  /**
+   * Get file content
+   */
+   std::string getContent() const;
 };
 
 }

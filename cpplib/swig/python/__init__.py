@@ -141,7 +141,8 @@ class PythonRegister(Register):
             int: cvar.IntegerType,
             bool: cvar.BooleanType,
             str: cvar.StringType,
-            float: cvar.RealType
+            float: cvar.RealType,
+            Path: PathType
         }
 
         self.types = {}
@@ -154,12 +155,14 @@ class PythonRegister(Register):
         super().addType(pyType)
 
     def getTask(self, name):
+      logger.debug("Getting task %s", name)
       task = super().getTask(name)
       if task is None:
         raise KeyError("Task %s does not exist" % name)
       task.__task__ = task
       task.create = wrap(task, create)
       task.submit_ = wrap(task, create, submit=True)
+      task.__call__ = wrap(task, create)
       return task
 
     def getType(self, key):
@@ -363,11 +366,13 @@ class Definitions:
             return Definitions(self.__retriever, name)
         return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
     def __call__(self, *args, **options):
-        return self.__retriever(self.__path)(*args, **options)
+        definition = self.__retriever(self.__path)
+        if definition is None:
+            raise AttributeError("Task/Type %s not found" % self.__path)
+        return definition.__call__(*args, **options)
 
 types = Definitions(register.getType)
 tasks = Definitions(register.getTask)
-
 
 class MergeClass:
     """Merge class annotation

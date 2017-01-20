@@ -126,6 +126,12 @@ public class JsonObject extends Json {
                     return value;
 
                 case "integer":
+                    if (value instanceof JsonReal) {
+                        double v = (double) value.get();
+                        if (v == Math.round(v)) {
+                            return new JsonInteger((long)v);
+                        }
+                    }
                     if (!(value instanceof JsonInteger))
                         throw new AssertionError("json value is not an integer but " + value.getClass());
                     return value;

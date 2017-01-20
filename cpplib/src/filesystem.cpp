@@ -4,6 +4,10 @@
 
 #include <numeric>
 #include <vector>
+#include <fstream>
+#include <streambuf>
+
+#include <xpm/rpc/objects.hpp>
 #include <xpm/filesystem.hpp>
 
 namespace xpm {
@@ -37,13 +41,13 @@ Path::Path() : Pimpl("", "", "/")  {
 
 Path::Path(Path const &parent, std::initializer_list<std::string> const &relative) :
     Pimpl(parent._this->share, parent._this->node,
-          std::accumulate(relative.begin(), relative.end(), parent._this->path,
+          std::accumulate(relative.begin(), relative.end(), parent._this->path == "/" ?  "" :  parent._this->path,
                           [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
 
 }
 Path::Path(Path const &parent, std::vector<std::string> const &relative) :
     Pimpl(parent._this->share, parent._this->node,
-          std::accumulate(relative.begin(), relative.end(), parent._this->path,
+          std::accumulate(relative.begin(), relative.end(), parent._this->path == "/" ?  "" :  parent._this->path,
                           [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
 
 }
@@ -67,12 +71,34 @@ Path::Path(std::string const &share, std::string const &node, std::string const 
 }
 std::string Path::toString() const {
   if (_this->share.empty()) return _this->path;
-  return _this->share + ":" + _this->node + ":" + _this->path;
+  return "shares:" + _this->share + ":" + _this->node + ":" + _this->path;
 }
 std::string Path::localpath() const {
-  if (!self().node.empty() || !self().share.empty())
+  if (!isLocal())
     throw std::logic_error("Path " + toString() + " is not local");
   return self().path;
+}
+
+bool Path::isLocal() const {
+  return self().node.empty() && self().share.empty();
+}
+
+std::string Path::getContent() const {
+  if (isLocal()) {
+    std::ifstream t(localpath());
+    std::string str;
+
+    t.seekg(0, std::ios::end);
+    str.reserve(t.tellg());
+    t.seekg(0, std::ios::beg);
+
+    str.assign((std::istreambuf_iterator<char>(t)),
+               std::istreambuf_iterator<char>());
+    return str;
+  }
+
+  auto rpcPath = rpc::Path::toPath(toString());
+  return rpcPath->read_all();
 }
 
 }

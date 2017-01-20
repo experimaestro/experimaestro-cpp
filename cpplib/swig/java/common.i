@@ -41,7 +41,7 @@ namespace std {
                     throw std::out_of_range("vector index out of range");
 
                 // FIXME: should return value_type *
-                return std::move(previous);
+                return previous;
             }
         }
     };

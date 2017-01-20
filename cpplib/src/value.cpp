@@ -27,6 +27,8 @@ bool Value::equals(Value const &b) const {
 
     case ValueType::NONE:throw std::runtime_error("none has no type");
   }
+
+  throw std::out_of_range("Scalar type is not known (comparing)");
 }
 
 

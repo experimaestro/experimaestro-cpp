@@ -174,7 +174,8 @@ void Register::generate() const {
   std::cout << R"("tasks": [)" << std::endl;
   first = true;
   for (auto const &type: this->_tasks) {
-      std::cout << type.second->toJson() << std::endl;
+    if (!first) std::cout << ","; else first = false;
+    std::cout << type.second->toJson() << std::endl;
     }
   std::cout << "]" << std::endl;
 
@@ -289,8 +290,10 @@ void Register::load(nlohmann::json const &j) {
   }
 }
 
-void Register::load(Path const &value) {
-  NOT_IMPLEMENTED();
+void Register::load(Path const &path) {
+  std::string content = path.getContent();
+  auto j = json::parse(content);
+  load(j);
 }
 
 void Register::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {

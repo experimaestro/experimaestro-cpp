@@ -61,7 +61,12 @@ public class JsonConverter {
         }
     }
 
-    private Json readNext(JsonReader jsonReader) throws IOException {
+    static public Json convert(String data) throws IOException {
+        final JsonReader jsonReader = new JsonReader(new StringReader(data));
+        return readNext(jsonReader);
+    }
+
+    static private Json readNext(JsonReader jsonReader) throws IOException {
         final JsonToken token = jsonReader.peek();
         switch (token) {
             case BEGIN_ARRAY: {

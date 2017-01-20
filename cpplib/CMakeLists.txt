@@ -19,6 +19,7 @@ set(PUBLIC_HEADERS
         include/xpm/logging.hpp)
 
 set(RPC_HEADERS
+        include/xpm/rpc/optional.hpp
         include/xpm/rpc/objects.hpp
 )
 
@@ -38,7 +39,8 @@ set(SOURCES
         src/xpmssh.cpp
         src/xpmssh.hpp
         include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp
-        src/jsonserialization.hpp src/value.cpp)
+        src/jsonserialization.hpp
+        src/value.cpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
@@ -137,6 +139,13 @@ if (true)
     set(SWIG_MODULE_experimaestro_rpc_python_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_rpc_python python swig/xpm_rpc.i)
 
+    # Determine appropriate loader path
+    if(APPLE)
+        set(XPM_LOADER_PATH @loader_path)
+    else()
+        set(XPM_LOADER_PATH "$ORIGIN")
+    endif()
+
     # Set output name and path
     foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
         # set(swigtargetlist ${swigtarget})
@@ -147,7 +156,7 @@ if (true)
                 LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
 				MACOSX_RPATH TRUE
-				INSTALL_RPATH "@loader_path"
+				INSTALL_RPATH "${XPM_LOADER_PATH}"
 				CXX_STANDARD 11
         )
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)

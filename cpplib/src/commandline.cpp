@@ -157,7 +157,7 @@ CommandContent::~CommandContent() {
 template<>
 struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
-    return std::make_shared<rpc::ParameterFile>("params.json", context.parameters);
+    return std::make_shared<rpc::JsonParameterFile>("params.json", context.parameters);
   }
   virtual nlohmann::json toJson() const override {
     return { {"type", "parameters"} };

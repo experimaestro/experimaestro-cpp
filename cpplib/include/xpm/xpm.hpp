@@ -53,47 +53,6 @@ extern const std::string KEY_DEFAULT;
 extern const std::string KEY_RESOURCE;
 SWIG_MUTABLE;
 
-/// Valeur optionnelle
-template<typename T>
-class optional {
-  T *t;
- public:
-  optional() : t(nullptr) {}
-
-  optional(T &t) : t(&t) {}
-
-  ~optional() {
-  }
-
-  operator optional<T>() const {
-    return t != nullptr ? optional<T>(*t) : optional<T>();
-  }
-
-  T &operator*() {
-    if (t == nullptr) throw std::runtime_error("Optional value is not set");
-    return *t;
-  }
-
-  T const &operator*() const {
-    if (t == nullptr) throw std::runtime_error("Optional value is not set");
-    return *t;
-  }
-
-  T *operator->() {
-    if (t == nullptr) throw std::runtime_error("Optional value is not set");
-    return t;
-  }
-
-  T const *operator->() const {
-    if (t == nullptr) throw std::runtime_error("Optional value is not set");
-    return t;
-  }
-
-  operator bool() const {
-    return t != nullptr;
-  }
-};
-
 
 // ---
 // --- Namespace and type names
