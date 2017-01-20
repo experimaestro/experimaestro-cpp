@@ -117,6 +117,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final Path runFile = path;
         String pathString = launcher.getMainConnector().resolve(path);
         final Path basepath = runFile.getParent();
+        Files.createDirectories(basepath);
         final String baseName = runFile.getFileName().toString();
 
         try (CommandContext env = new CommandContext.FolderContext(launcher, basepath, baseName)) {
