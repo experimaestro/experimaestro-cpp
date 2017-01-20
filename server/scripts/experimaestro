@@ -27,7 +27,7 @@ import errno
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
+xpmdir = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
 xpminidir = os.path.join(os.path.expanduser("~/.experimaestro"))
 
 version = "0.0.1-SNAPSHOT"

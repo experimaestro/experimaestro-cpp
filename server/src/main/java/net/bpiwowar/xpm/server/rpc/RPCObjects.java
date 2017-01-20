@@ -16,7 +16,6 @@ import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Hierarchy;
-import sun.jvm.hotspot.utilities.Assert;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
