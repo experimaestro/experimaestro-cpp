@@ -30,6 +30,7 @@ import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.fs.XPMFileSystemProvider;
 import net.bpiwowar.xpm.fs.XPMPath;
+import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
@@ -772,6 +773,14 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     @RPCMethod(help = "Get build information about experimaestro")
     public XPMInformation buildInformation() {
         return XPMInformation.get();
+    }
+
+    @RPCMethod(help = "Get ssh-agent information")
+    public JsonObject sshAgentInformation() {
+        JsonObject object = new JsonObject();
+        object.addProperty("SSH_AUTH_SOCK", System.getenv("SSH_AUTH_SOCK"));
+        object.addProperty("SSH_AGENT_PID", System.getenv("SSH_AGENT_PID"));
+        return object;
     }
 
     @RPCMethod(help = "Change path prefix of resources")

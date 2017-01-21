@@ -99,6 +99,7 @@ p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification]
 p_ls.add_argument("--color", action="store_true", default=False, help="Whether to color the output")
 
 subparsers.add_parser("list-methods", help="List Json RPC methods")
+subparsers.add_parser("ssh-agent", help="List Json RPC methods")
 
 p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
 p_invalidate.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
@@ -691,6 +692,10 @@ def command_log_level(args):
 def command_move_resources(args):
     server = Configuration(args).getJsonServer()
     server.changeResourcesPrefix({"old": args.old, "new": args.new})
+
+def command_ssh_agent(args):
+    server = Configuration(args).getJsonServer()
+    server.sshAgentInformation({})
 
 # --- Utility functions
 
