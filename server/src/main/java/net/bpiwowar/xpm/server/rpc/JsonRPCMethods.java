@@ -33,6 +33,7 @@ import net.bpiwowar.xpm.fs.XPMPath;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
+import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.XPMInformation;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Level;
@@ -61,7 +62,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     private final JsonRPCSettings settings;
 
-    /** Our logger */
+    /**
+     * Our logger
+     */
     final Logger rootLogger;
 
     /**
@@ -257,9 +260,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     // -------- RPC METHODS -------
 
     /**
-     * Get a resource by ID or by locator
+     * Get a resource by ID or by setLocator
      *
-     * @param resourceId The resource ID or locator
+     * @param resourceId The resource ID or setLocator
      * @return
      */
     static private Resource getResource(String resourceId) throws SQLException {
@@ -409,7 +412,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                     if (recursive && rsrcState == ResourceState.DONE) {
                         nbUpdated += invalidate(resource, restart);
                     }
-                } catch(Throwable t) {
+                } catch (Throwable t) {
                     logger.error("Could not invalidate job %s: %s", id, t);
                 }
             }
@@ -769,6 +772,32 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     @RPCMethod(help = "Get build information about experimaestro")
     public XPMInformation buildInformation() {
         return XPMInformation.get();
+    }
+
+    @RPCMethod(help = "Change path prefix of resources")
+    public int changeResourcesPrefix(
+            @RPCArgument(name = "old") String oldPrefix,
+            @RPCArgument(name = "new") String newPrefix) throws SQLException, CloseException, IOException {
+        int count = 0;
+        int oldLength = oldPrefix.length();
+        try (CloseableIterable<Resource> resources = Scheduler.get().resources().find(
+                Resource.SELECT_BEGIN + " WHERE LEFT(path,?) = ?",
+                st -> {
+                    st.setInt(1, oldLength);
+                    st.setString(2, oldPrefix);
+                })) {
+            for (Resource resource : resources) {
+                String locator = PathUtils.normalizedString(resource.getLocator());
+                if (locator.substring(0, oldLength) != oldPrefix) {
+                    rootLogger.warn("Prefixes [%s] and [%s] do not match");
+                } else {
+                    resource.setLocator(PathUtils.toPath(newPrefix + locator.substring(oldLength)));
+                }
+
+            }
+
+        }
+        return count;
     }
 
     /**

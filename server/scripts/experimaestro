@@ -149,6 +149,11 @@ p_tokenlimit.add_argument('limit', help="The new limit")
 
 subparsers.add_parser("build-information", help="Returns experimaestro build information")
 
+p_move_resources = subparsers.add_parser("move-resources", help="Change path prefix")
+p_move_resources.add_argument("old", type=str)
+p_move_resources.add_argument("new", type=str)
+
+
 # Parse arguments
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
@@ -682,6 +687,10 @@ def command_rm(args):
 def command_log_level(args):
     server = Configuration(args).getJsonServer()
     server.setLogLevel({"identifier": args.id[0], "level": args.level[0]})
+
+def command_move_resources(args):
+    server = Configuration(args).getJsonServer()
+    server.changeResourcesPrefix({"old": args.old, "new": args.new})
 
 # --- Utility functions
 

@@ -779,7 +779,7 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Get a resource by locator
+     * Get a resource by setLocator
      *
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
@@ -980,6 +980,19 @@ public class Resource implements Identifiable {
      */
     static public class PrintConfig {
         public String detailURL;
+    }
+
+    synchronized public void setLocator(Path locator) throws SQLException {
+        if (!this.locator.equals(locator)) {
+            if (inDatabase()) {
+                Scheduler.statement("UPDATE RESOURCES SET path=? WHERE id=?")
+                        .setString(1, locator.toString())
+                        .setLong(2, resourceID)
+                        .executeUpdate();
+            }
+            this.locator = locator;
+
+        }
     }
 
 }
