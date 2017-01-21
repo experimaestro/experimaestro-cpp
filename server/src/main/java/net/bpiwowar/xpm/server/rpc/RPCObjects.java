@@ -55,18 +55,34 @@ public class RPCObjects implements AutoCloseable {
 
     static public class ClassDescription {
         final Class<?> wrappedClass;
-        final Class<?> aClass;
+        final Class<?> wrapperClass;
         final ArrayList<ConstructorDeclaration> constructors = new ArrayList<>();
         final ArrayList<MethodDeclaration> methods = new ArrayList<>();
         public String className;
+        private final Constructor<?> constructor;
 
-        public ClassDescription(Class<?> aClass) {
-            this.aClass = aClass;
+        public Object wrap(Object object) {
+            if (!wrappedClass.isInstance(object))
+                 throw new IllegalArgumentException(String.format("Cannot wrap %s into %s", object.getClass(), wrappedClass.getClass()));
+            if (constructor != null) {
+                try {
+                    return constructor.newInstance(object);
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                    throw new AssertionError("Unexpected construction error", e);
+                }
+            }
+            return object;
+        }
+
+        public ClassDescription(Class<?> aClass) throws NoSuchMethodException {
+            this.wrapperClass = aClass;
             if (WrapperObject.class.isAssignableFrom(aClass)) {
                 final TypeToken<? extends WrapperObject> wrapperType = TypeToken.of((Class<? extends WrapperObject>) aClass);
                 wrappedClass = (Class) wrapperType.resolveType(WrapperObject.class.getTypeParameters()[0]).getType();
+                constructor = wrapperClass.getConstructor(wrappedClass);
             } else {
                 wrappedClass = aClass;
+                constructor = null;
             }
 
             // Get class name
@@ -98,7 +114,7 @@ public class RPCObjects implements AutoCloseable {
         }
     }
 
-    private static void init() {
+    private static void init() throws NoSuchMethodException {
         if (!initialized) {
             // Initialize flag set
             initialized = true;
@@ -136,6 +152,8 @@ public class RPCObjects implements AutoCloseable {
     }
 
     private long store(Object object) {
+        object = RPCObjects.this.wrap(object);
+        // Store
         final Integer id = object2id.get(object);
         if (id == null) {
             int newId = currentId++;
@@ -144,6 +162,32 @@ public class RPCObjects implements AutoCloseable {
             return newId;
         }
         return id;
+    }
+
+    private Object wrap(Object object) {
+        // Try to wrap
+        final ClassDescription cd = findDefinition(object.getClass());
+        if (cd == null) {
+            throw new IllegalArgumentException(String.format("Could not find wrapper for class %s", object.getClass()));
+        }
+        return cd.wrap(object);
+    }
+
+    private ClassDescription findDefinition(Class<?> aClass) {
+        if (aClass == null || aClass == Object.class) return null;
+
+        ClassDescription cd = types.get(aClass);
+        if (cd != null) return cd;
+
+        for (Class<?> anInterface : aClass.getInterfaces()) {
+            cd = findDefinition(anInterface);
+            if (cd != null) return cd;
+        }
+
+        cd = findDefinition(aClass.getSuperclass());
+        if (cd != null) return cd;
+
+        return null;
     }
 
 
@@ -194,7 +238,7 @@ public class RPCObjects implements AutoCloseable {
                         int objectId = gson.fromJson(jsonElement, Integer.TYPE);
                         thisObject = rpcObjects.objects.get(objectId);
                     } else {
-                        args[descriptor.position] = gson.fromJson(jsonElement, types[descriptor.position]);
+                        args[descriptor.position] = unwrap(gson.fromJson(jsonElement, types[descriptor.position]));
                     }
                 } catch (XPMRuntimeException e) {
                     throw e.addContext("while processing parameter %s", descriptor.name);
@@ -212,6 +256,12 @@ public class RPCObjects implements AutoCloseable {
 
             return result;
         }
+
+        private Object unwrap(Object o) {
+            if (o instanceof Wrapper) return ((Wrapper) o).unwrap();
+            return o;
+        }
+
 
         @Override
         public Class<?> getDeclaringClass() {
@@ -307,7 +357,7 @@ public class RPCObjects implements AutoCloseable {
 
     }
 
-    static public void main(String[] args) throws IOException {
+    static public void main(String[] args) throws IOException, NoSuchMethodException {
         RPCObjects.init();
 
         String hppPath = args[0];
@@ -321,7 +371,7 @@ public class RPCObjects implements AutoCloseable {
         // Build the hierarchy
         for (Map.Entry<Class<?>, ClassNode> entry : nodes.entrySet()) {
             ClassNode node = entry.getValue();
-            Class<?> aClass = node.classDescription.aClass;
+            Class<?> aClass = node.classDescription.wrapperClass;
             addInterfaces(nodes, node, aClass);
 
             for (aClass = aClass.getSuperclass(); aClass != null && !Object.class.equals(aClass); aClass = aClass.getSuperclass()) {
@@ -339,6 +389,7 @@ public class RPCObjects implements AutoCloseable {
             out.println();
             out.println("#include <vector>");
             out.println("#include <xpm/rpc/utils.hpp>");
+            out.println("#include <xpm/rpc/optional.hpp>");
             out.println();
 
             out.format("#ifdef SWIG%n");
@@ -371,7 +422,7 @@ public class RPCObjects implements AutoCloseable {
 
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
-                boolean isInterface = description.aClass.isInterface();
+                boolean isInterface = description.wrapperClass.isInterface();
 
                 out.format("class %s", classNode.classDescription.getClassName());
                 for (int i = 0; i < classNode.parents.size(); ++i) {
@@ -421,7 +472,7 @@ public class RPCObjects implements AutoCloseable {
             out.format("namespace xpm {%nnamespace rpc{%n");
             for (ClassNode classNode : Lists.reverse(sorted)) {
                 final ClassDescription description = classNode.classDescription;
-                boolean isInterface = description.aClass.isInterface();
+                boolean isInterface = description.wrapperClass.isInterface();
                 final String className = description.getClassName();
 
                 String prefix = OBJECTS + "." + className;
@@ -539,9 +590,13 @@ public class RPCObjects implements AutoCloseable {
         out.println(" {");
         out.println("  nlohmann::json params = nlohmann::json::object();");
         int n = declaration.getParameterCount();
+        final Expose expose = declaration.executable().getAnnotation(Expose.class);
+        int optional = (expose != null) ? expose.optional() : 0;
+
         for (int i = 0; i < n; ++i) {
+            final boolean isOptional = i >= n - optional;
             out.format("  params[\"%s\"] = RPCConverter<%s>::toJson(%s);%n", parameterNames[i],
-                    cppname(executable.getParameterTypes()[i]), parameterNames[i]);
+                    cppname(executable.getParameterTypes()[i], isOptional), parameterNames[i]);
         }
 
         String callName = declaration.isStatic() ? "__static_call__" : "__call__";
@@ -553,14 +608,16 @@ public class RPCObjects implements AutoCloseable {
             if (returnType == Void.TYPE) {
                 out.format("  %s(\"%s.%s\", params);%n", callName, prefix, declaration.getName());
             } else {
-                out.format("  return RPCConverter<%s>::toCPP(%s(\"%s.%s\", params));%n", cppname(returnType),
+                out.format("  return RPCConverter<%s>::toCPP(%s(\"%s.%s\", params));%n",
+                        cppname(returnType, false),
                         callName, prefix, declaration.getName());
             }
         }
         out.format("}%n%n");
     }
 
-    private static void outputSignature(PrintStream out, boolean definition, String className, Declaration<?> declaration) {
+    private static void outputSignature(PrintStream out, boolean definition, String className,
+                                        Declaration<?> declaration) {
         final Executable executable = declaration.executable();
 
         if (executable instanceof Method) {
@@ -571,7 +628,7 @@ public class RPCObjects implements AutoCloseable {
                     out.print("virtual ");
                 }
             }
-            out.print(cppname(executable.getAnnotatedReturnType().getType()));
+            out.print(cppname(executable.getAnnotatedReturnType().getType(), false));
             out.print(' ');
         }
 
@@ -584,9 +641,18 @@ public class RPCObjects implements AutoCloseable {
 
         final String[] parameterNames = declaration.getParameterNames();
 
-        for (int i = 0; i < declaration.executable().getParameterCount(); ++i) {
+        final Expose expose = declaration.executable().getAnnotation(Expose.class);
+        int optional = (expose != null) ? expose.optional() : 0;
+        assert expose == null || !expose.optionalsAtStart();
+
+        final int parameterCount = declaration.executable().getParameterCount();
+        for (int i = 0; i < parameterCount; ++i) {
             if (i > 0) out.print(", ");
-            out.format("%s const &%s", cppname(executable.getParameterTypes()[i]), parameterNames[i]);
+            final boolean isOptional = i >= parameterCount - optional;
+            out.format("%s const &%s", cppname(executable.getParameterTypes()[i], isOptional), parameterNames[i]);
+            if (!definition && isOptional) {
+                out.format(" = %s()", cppname(executable.getParameterTypes()[i], isOptional));
+            }
         }
         out.print(")");
 
@@ -613,12 +679,15 @@ public class RPCObjects implements AutoCloseable {
     }
 
     private static boolean isRegistered(Type type) {
-        return cppname(type) != null;
+        return cppname(type, false) != null;
     }
 
-    private static String cppname(Type type) {
+    private static String cppname(Type type, boolean isOptional) {
         final String s = type2cppType.get(type);
         if (s != null) {
+            if (isOptional) {
+                return "optional<" + s + ">";
+            }
             return s;
         }
 
@@ -636,14 +705,14 @@ public class RPCObjects implements AutoCloseable {
 
         Class<?> aClass = (Class) type;
         if (aClass.isArray()) {
-            String cppname = cppname(aClass.getComponentType());
+            String cppname = cppname(aClass.getComponentType(), false);
             return cppname == null ? null : "std::vector<" + cppname + ">";
         }
 
         if (List.class.isAssignableFrom(aClass)) {
             final TypeToken<? extends List> wrapperType = TypeToken.of((Class<? extends List>) aClass);
 
-            String cppname = cppname(wrapperType.resolveType(List.class.getTypeParameters()[0]).getType());
+            String cppname = cppname(wrapperType.resolveType(List.class.getTypeParameters()[0]).getType(), isOptional);
 
             return cppname == null ? null : "std::vector<" + cppname + ">";
 

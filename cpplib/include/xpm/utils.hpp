@@ -5,6 +5,7 @@
 #ifndef PROJECT_UTILS_HPP
 #define PROJECT_UTILS_HPP
 
+#include <stdexcept>
 #include <memory>
 
 #ifndef SWIG

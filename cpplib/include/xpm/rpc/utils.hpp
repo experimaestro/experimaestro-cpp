@@ -6,6 +6,7 @@
 #define XPM_UTILS_HPP
 
 #include <xpm/json.hpp>
+#include <xpm/rpc/optional.hpp>
 
 namespace xpm {
 namespace rpc {
@@ -45,7 +46,6 @@ class ServerObject {
   struct RPCConverter;
 };
 
-
 template<typename T>
 struct RPCConverter {
   static inline nlohmann::json toJson(T x) { return x; }
@@ -58,7 +58,7 @@ struct RPCConverter<std::shared_ptr<T>> {
     return x ? x->_identifier : -1;
   }
   static inline std::shared_ptr<T> toCPP(nlohmann::json const &x) {
-    ObjectIdentifierType id = (ObjectIdentifierType)x;
+    ObjectIdentifierType id = (ObjectIdentifierType) x;
     if (id >= 0) {
       return std::shared_ptr<T>(new T(ObjectIdentifier(id)));
     }
@@ -67,10 +67,20 @@ struct RPCConverter<std::shared_ptr<T>> {
 };
 
 template<typename T>
+struct RPCConverter<optional<T>> {
+static inline nlohmann::json toJson(optional<T> const &x) {
+  return x ? nlohmann::json(*x) : nlohmann::json(nullptr);
+}
+static inline T toCPP(nlohmann::json const &x) {
+  return x;
+}
+};
+
+template<typename T>
 struct RPCConverter<std::vector<T>> {
   static inline nlohmann::json toJson(std::vector<T> const &list) {
     nlohmann::json array = nlohmann::json::array();
-    for(auto &el: list) {
+    for (auto &el: list) {
       array.push_back(RPCConverter<T>::toJson(el));
     }
     return array;
@@ -84,7 +94,6 @@ struct RPCConverter<std::vector<T>> {
     return vector;
   }
 };
-
 
 }
 }

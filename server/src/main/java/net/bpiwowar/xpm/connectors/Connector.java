@@ -114,6 +114,11 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         return create(identifier, new URI(uriString), options);
     }
 
+    @Expose
+    public SingleHostConnector asSingleHostConnector() {
+        return (SingleHostConnector)this;
+    }
+
     @Expose()
     public Launcher default_launcher() {
         return new DirectLauncher(this);

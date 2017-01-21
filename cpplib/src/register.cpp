@@ -33,7 +33,7 @@ void Register::addTask(std::shared_ptr<Task> const &task) {
   _tasks[task->identifier()] = task;
 }
 
-std::shared_ptr<Task> Register::getTask(TypeName const &typeName) {
+std::shared_ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
   auto it = _tasks.find(typeName);
   if (it != _tasks.end()) {
     return it->second;
@@ -174,7 +174,8 @@ void Register::generate() const {
   std::cout << R"("tasks": [)" << std::endl;
   first = true;
   for (auto const &type: this->_tasks) {
-      std::cout << type.second->toJson() << std::endl;
+    if (!first) std::cout << ","; else first = false;
+    std::cout << type.second->toJson() << std::endl;
     }
   std::cout << "]" << std::endl;
 
@@ -195,7 +196,11 @@ void Register::parse(int argc, const char **argv) {
 
 void Register::load(const std::string &value) {
   LOGGER->info("Loading XPM register file " + value);
-  auto j = json::parse(std::ifstream(value));
+  std::ifstream in(value);
+  if (!in) {
+    throw std::runtime_error("Register file " + value + " does not exist");
+  }
+  auto j = json::parse(in);
   load(j);
 }
 
@@ -210,7 +215,7 @@ void Register::load(nlohmann::json const &j) {
     // Search for the type
     if (typeIt != _types.end()) {
       type = typeIt->second;
-      LOGGER->debug("Defining placeholder type {}", type->typeName().toString());
+      LOGGER->debug("Using placeholder type {}", type->typeName().toString());
       if (!type->placeholder()) {
         throw std::runtime_error("Type " + type->typeName().toString() + " was already defined");
       }
@@ -225,6 +230,7 @@ void Register::load(nlohmann::json const &j) {
       auto parentTypeName = TypeName(e["parent"].get<std::string>());
       auto parentTypeIt = _types.find(parentTypeName);
       if (parentTypeIt == _types.end()) {
+        LOGGER->debug("Creating placeholder type {} ", parentTypeName);
         auto parentType = std::make_shared<Type>(parentTypeName);
         type->parentType(parentType);
         parentType->placeholder(true);
@@ -246,10 +252,21 @@ void Register::load(nlohmann::json const &j) {
       auto valueType = getType(valueTypename);
       if (!valueType) {
         addType(valueType = std::make_shared<Type>(valueTypename));
+        valueType->placeholder(true);
       }
       a->type(valueType);
       a->help(value["help"]);
       a->required(value["required"]);
+
+      if (value.count("default")) {
+        LOGGER->debug("    -> Found a default value");
+        a->defaultValue(Object::createFromJson(*this, value["default"]));
+      }
+
+      if (value.count("generator")) {
+        LOGGER->debug("    -> Found a generator");
+        a->generator(Generator::createFromJSON(value["generator"]));
+      }
 
       type->addArgument(a);
     }
@@ -273,8 +290,10 @@ void Register::load(nlohmann::json const &j) {
   }
 }
 
-void Register::load(Path const &value) {
-  NOT_IMPLEMENTED();
+void Register::load(Path const &path) {
+  std::string content = path.getContent();
+  auto j = json::parse(content);
+  load(j);
 }
 
 void Register::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {

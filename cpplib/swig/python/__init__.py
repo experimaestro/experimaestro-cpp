@@ -24,26 +24,68 @@ class JsonEncoder(json.JSONEncoder):
 JSON_ENCODER = JsonEncoder()
 
 # Used as a metaclass for C++ classes that can be extended
+TYPES_DICT = {}
+
+# Flag for simulating
+SUBMIT_TASKS = True
+
+# Only way to get through _SwigPyType
 _SwigPyType = type(Object)
 class PyObjectType(_SwigPyType):
-    pass
+   """
+   Meta class for all objects in python interface
+
+   It handles the creation of objects, and the definition of new attributes
+   (blocked by SWIG)
+   """
+   def __init__(self, name, bases, dct):
+      _SwigPyType.__init__(self, name, bases, dct)
+      TYPES_DICT[self] = {}
+   def __del__(self):
+      del TYPES_DICT[self]
+   def __setattr__(self, name, value):
+      TYPES_DICT[self][name] = value
+   def __getattribute__(self, name):
+      logging.debug("Searching for %s in %s", name, self)
+      if name in TYPES_DICT[self]:
+         return TYPES_DICT[self][name]
+      return _SwigPyType.__getattribute__(self, name)
+
+   def __call__(cls, *args, **kwds):
+      if "create" in TYPES_DICT[cls]:
+         return TYPES_DICT[cls]["create"](*args, **kwds)
+      return _SwigPyType.__call__(cls, *args, **kwds)
 
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
     IntegerType.toString(): lambda v: v.asInteger(),
     StringType.toString(): lambda v: v.asString(),
     RealType.toString(): lambda v: v.asReal(),
+    PathType.toString(): lambda v: v.asPath()
 }
 
 class PyObject(Object, metaclass=PyObjectType):
-    """Base type for all objects"""
-
+    """Base type for all objects in python interface"""
     def __init__(self):
         Object.__init__(self)
+
+    def __getattribute__(self, name):
+       logging.debug("Searching for %s in %s", name, self)
+       d = TYPES_DICT.get(type(self), None)
+       if d is not None and name in d:
+         from types import MethodType
+         return MethodType(d[name], self)
+       return super().__getattribute__(name)
+
 
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
         super().set(name, value)
+
+    def submit(self, send=None):
+      if send is None:
+         send = SUBMIT_TASKS
+      super().submit(send)
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
@@ -64,10 +106,27 @@ class PythonObjectFactory(ObjectFactory):
       self.pythonType = pythonType
 
     def _create(self):
-      logger.debug("Created new object of type [%s]", self.pythonType)
-      newObject = self.pythonType()
+      logger.debug("Created new object of type [%s]", self.pythonType.__mro__)
+      # Create and call the PyObject init
+      newObject = self.pythonType.__new__(self.pythonType)
+      PyObject.__init__(newObject)
       OBJECTS.append(newObject)
       return newObject
+
+class TypeWrapper():
+    def __init__(self, xpmtype):
+        self.xpmtype = xpmtype
+
+    def __call__(self, *args, **options):
+        return create(self.xpmtype, args, options)
+
+    @staticmethod
+    def wrap(xpmtype):
+        if xpmtype is None:
+            return None
+        return TypeWrapper(xpmtype)
+
+
 
 class PythonRegister(Register):
     def __init__(self):
@@ -82,7 +141,8 @@ class PythonRegister(Register):
             int: cvar.IntegerType,
             bool: cvar.BooleanType,
             str: cvar.StringType,
-            float: cvar.RealType
+            float: cvar.RealType,
+            Path: PathType
         }
 
         self.types = {}
@@ -95,11 +155,14 @@ class PythonRegister(Register):
         super().addType(pyType)
 
     def getTask(self, name):
+      logger.debug("Getting task %s", name)
       task = super().getTask(name)
       if task is None:
         raise KeyError("Task %s does not exist" % name)
       task.__task__ = task
       task.create = wrap(task, create)
+      task.submit_ = wrap(task, create, submit=True)
+      task.__call__ = wrap(task, create)
       return task
 
     def getType(self, key):
@@ -114,16 +177,17 @@ class PythonRegister(Register):
         if key in self.builtins:
             return self.builtins[key]
 
-        if isinstance(key, Type):
+        if isinstance(key, Type) or isinstance(key, TypeWrapper):
             return key
 
         if isinstance(key, TypeName):
-            return super().getType(key)
+            return TypeWrapper.wrap(super().getType(key))
 
-        if issubclass(key, PyObject):
+        if inspect.isclass(key) and issubclass(key, PyObject):
             return self.types.get(key, None)
 
-        return super().getType(key)
+        return TypeWrapper.wrap(super().getType(key))
+
 
     def parse(self, arguments=None):
         if arguments is None:
@@ -140,7 +204,6 @@ register = PythonRegister()
 def create(t, args, options, submit=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
     xpmType = register.getType(t)
-    print(xpmType)
 
     # Create the type and set the arguments
     o = xpmType.create()
@@ -152,7 +215,10 @@ def create(t, args, options, submit=False):
       if type(v) == dict:
          v = Register.build(register, json.dumps(v))
       logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
-      setattr(o, k, v)
+      if isinstance(o, PyObject):
+         setattr(o, k, v)
+      else:
+         PyObject.set(o, k, v)
 
     if hasattr(t, "__task__"):
         o.task(t.__task__)
@@ -226,7 +292,12 @@ class RegisterTask():
         self.scriptpath = op.abspath(self.scriptpath)
 
         logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
-        pyType = register.getType(t)
+        for mro in t.__mro__:
+            pyType = register.getType(mro)
+            if pyType is not None:
+                break
+        if pyType is None:
+            raise Exception("Class %s has no associated experimaestro type" %t)
         task = Task(pyType)
         t.__task__ = task
         task.objectFactory(pyType.objectFactory())
@@ -242,7 +313,7 @@ class RegisterTask():
         commandLine.add(command)
         task.commandline(commandLine)
 
-        t.autoSubmit = wrap(t, create, submit=True)
+        t.submit_ = wrap(t, create, submit=True)
         return t
 
 
@@ -262,8 +333,10 @@ class AbstractArgument:
         return t
 
 class TypeArgument(AbstractArgument):
-    def __init__(self, name, default=None, choices=None, required=None, type=None, help=None):
+    def __init__(self, name, type=None, default=None, required=None, help=None):
         AbstractArgument.__init__(self, name, register.getType(type), help=help)
+        if default is not None and required is not None and required:
+            raise Exception("Argument is required but default value is given")
         self.argument.required = (default is None) if required is None else required
         if default is not None:
             self.argument.defaultValue(Value(default))
@@ -281,12 +354,31 @@ def tojson(t=None):
         return types
     return register.types[t].toJson()
 
+class Definitions:
+    """Allow easy access to XPM tasks"""
+    def __init__(self, retriever, path=None):
+        self.__retriever = retriever
+        self.__path = path
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            return object.__getattr__(self, name)
+        if self.__path is None:
+            return Definitions(self.__retriever, name)
+        return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
+    def __call__(self, *args, **options):
+        definition = self.__retriever(self.__path)
+        if definition is None:
+            raise AttributeError("Task/Type %s not found" % self.__path)
+        return definition.__call__(*args, **options)
+
+types = Definitions(register.getType)
+tasks = Definitions(register.getTask)
 
 class MergeClass:
     """Merge class annotation
 
     class A:
-        def x(self): print("x")
+        def x(self): ("x")
 
     a = A()
 

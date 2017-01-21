@@ -3,8 +3,10 @@ package net.bpiwowar.xpm.commands;
 import com.google.common.collect.ImmutableSet;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonConverter;
 import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
+import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
@@ -26,6 +28,10 @@ public class JsonParameterFile extends CommandComponent {
     }
 
     @Expose
+    public JsonParameterFile(@Argument(name="key") String key, @Argument(name="value") String json) throws IOException {
+        this(key, JsonConverter.convert(json));
+    }
+
     public JsonParameterFile(String key, Json json) {
         this.key = key;
         this.json = json;

@@ -7,11 +7,14 @@
 
 #include "common.hpp"
 #include "xpm.hpp"
+#include "value.hpp"
 #include "register.hpp"
 
 namespace xpm {
 
-extern std::shared_ptr<Register> CURRENT_REGISTER;
+std::shared_ptr<Register> currentRegister();
+void currentRegister(std::shared_ptr<Register> const &_register);
+
 template<typename T>  struct type_of {};
 
 
@@ -73,7 +76,7 @@ struct CppType  {
   static std::shared_ptr<CppType<T>> SELF;
 
   CppType(std::string const &name) : type(std::make_shared<Type>(TypeName(name))) {
-    type->objectFactory(std::make_shared<DefaultObjectFactory<T>>(CURRENT_REGISTER));
+    type->objectFactory(std::make_shared<DefaultObjectFactory<T>>(currentRegister()));
   }
 };
 template<typename T> std::shared_ptr<CppType<T>>
@@ -104,10 +107,10 @@ template<typename T, typename Parent>
 struct CppTypeBuilder {
   std::shared_ptr<CppType<T>> type;
   std::shared_ptr<Argument> _argument;
-  std::shared_ptr<Register> _register = CURRENT_REGISTER;
+  std::shared_ptr<Register> _register = currentRegister();
 
   CppTypeBuilder(std::string const &name) : type(std::make_shared<CppType<T>>(name)) {
-    CURRENT_REGISTER->addType(type->type);
+    currentRegister()->addType(type->type);
     CppType<T>::SELF = type;
 
     if (!std::is_same<xpm::Object, Parent>::value) {
@@ -172,7 +175,7 @@ struct TaskBuilder {
   static_assert(std::is_base_of<_Type, _Task>::value,  "Task should be a subclass of type");
   TaskBuilder(std::string const &tname) {
     auto task = std::make_shared<Task>(TypeName(tname), CppType<_Type>::SELF->type);
-    task->objectFactory(std::make_shared<DefaultObjectFactory<_Task>>(CURRENT_REGISTER));
+    task->objectFactory(std::make_shared<DefaultObjectFactory<_Task>>(currentRegister()));
 
     CommandLine commandLine;
     Command command;
@@ -182,7 +185,7 @@ struct TaskBuilder {
     command.add(CommandParameters());
     commandLine.add(command);
     task->commandline(commandLine);
-    CURRENT_REGISTER->addTask(task);
+    currentRegister()->addTask(task);
   }
 };
 

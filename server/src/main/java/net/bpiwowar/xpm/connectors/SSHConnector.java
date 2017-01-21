@@ -100,6 +100,11 @@ public class SSHConnector extends SingleHostConnector {
         setId(id);
     }
 
+    @Expose
+    public SSHConnector(String identifier, String uri, ConnectorOptions options) throws URISyntaxException {
+        this(identifier, new URI(uri), options);
+    }
+
     public SSHConnector(String identifier, URI uri, ConnectorOptions options) {
         this(identifier, uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
         this.basePath = uri.getPath();

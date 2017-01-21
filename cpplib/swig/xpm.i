@@ -15,8 +15,18 @@
 #include <xpm/commandline.hpp>
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
+#include <xpm/value.hpp>
+#undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
+
+
+#ifdef SWIGPYTHON
+// Implicit conversions
+%implicitconv;
+%implicitconv xpm::Path;
+%implicit(xpm::TypeName, std::string);
+#endif
 
 %include "std_string.i"
 
@@ -42,12 +52,6 @@
 // Handle attributes for languages supporting this (Python)
 %include "attribute.i"
 
-#ifdef SWIGPYTHON
-// Implicit conversions
-%implicitconv;
-%implicitconv xpm::Path;
-%implicitconv xpm::TypeName;
-#endif
 
 
 // Documentation
@@ -91,19 +95,16 @@
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
 %include <xpm/xpm.hpp>
+%include <xpm/value.hpp>
 %include <xpm/register.hpp>
 %include <xpm/logging.hpp>
 
-
-// Optional
-%extend xpm::optional {
-    bool hasValue() const { return *$self; }
-}
 
 %template(set) xpm::Object::set<std::string>;
 %template(set) xpm::Object::set<long>;
 %template(set) xpm::Object::set<double>;
 %template(set) xpm::Object::set<bool>;
+%template(set) xpm::Object::set<xpm::Path>;
 
 
 // Template instanciation

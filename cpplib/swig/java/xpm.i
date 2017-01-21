@@ -16,6 +16,7 @@
 %nspace xpm::TypeName;
 %nspace xpm::Value;
 %nspace xpm::ValueType;
+%nspace xpm::optional;
 
 %nspace xpm::AbstractCommandComponent;
 %nspace xpm::CommandContext;
