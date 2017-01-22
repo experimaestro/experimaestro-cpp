@@ -162,7 +162,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
         static private JsonObject toJson(Resource r) {
             JsonObject o = new JsonObject();
             o.add("id", new JsonPrimitive(r.getId()));
-            o.add("setLocator", new JsonPrimitive(r.getLocator().toString()));
+            o.add("locator", new JsonPrimitive(r.getLocator().toString()));
             o.add("state", new JsonPrimitive(r.getState().toString()));
             if (r instanceof Job) {
                 o.add("progress", new JsonPrimitive(((Job) r).getProgress()));

@@ -261,9 +261,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     // -------- RPC METHODS -------
 
     /**
-     * Get a resource by ID or by setLocator
+     * Get a resource by ID or by locator
      *
-     * @param resourceId The resource ID or setLocator
+     * @param resourceId The resource ID or locator
      * @return
      */
     static private Resource getResource(String resourceId) throws SQLException {
@@ -797,8 +797,8 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 })) {
             for (Resource resource : resources) {
                 String locator = PathUtils.normalizedString(resource.getLocator());
-                if (locator.substring(0, oldLength) != oldPrefix) {
-                    rootLogger.warn("Prefixes [%s] and [%s] do not match");
+                if (!locator.substring(0, oldLength).equals(oldPrefix)) {
+                    rootLogger.warn("Prefixes [%s] and [%s] do not match", locator.substring(0, oldLength), oldPrefix);
                 } else {
                     resource.setLocator(PathUtils.toPath(newPrefix + locator.substring(oldLength)));
                 }

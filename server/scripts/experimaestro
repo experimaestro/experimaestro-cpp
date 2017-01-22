@@ -690,12 +690,12 @@ def command_log_level(args):
     server.setLogLevel({"identifier": args.id[0], "level": args.level[0]})
 
 def command_move_resources(args):
-    server = Configuration(args).getJsonServer()
-    server.changeResourcesPrefix({"old": args.old, "new": args.new})
+    client = Configuration(args).getWebSocketServer()
+    run_server_command(client, "changeResourcesPrefix", {"old": args.old, "new": args.new})
 
 def command_ssh_agent(args):
     server = Configuration(args).getJsonServer()
-    server.sshAgentInformation({})
+    print(json.dumps(server.sshAgentInformation({})))
 
 # --- Utility functions
 

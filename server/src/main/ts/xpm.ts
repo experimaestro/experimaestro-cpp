@@ -72,7 +72,7 @@ class Resource {
 
         var link = $e("a")
             .attr("href", "javascript:void(0)")
-            .append($("<span class='setLocator'>" + this.locator + "</span>"))
+            .append($("<span class='locator'>" + this.locator + "</span>"))
             .on("click", $.proxy(xpm.resource_link_callback, xpm));
 
 

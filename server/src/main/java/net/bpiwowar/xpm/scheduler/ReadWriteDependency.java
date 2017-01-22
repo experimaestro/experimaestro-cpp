@@ -52,7 +52,7 @@ public class ReadWriteDependency extends Dependency {
     }
 
     @Expose
-    public ReadWriteDependency(@Argument(name="setLocator") String fromLocator) throws SQLException, IOException {
+    public ReadWriteDependency(@Argument(name="locator") String fromLocator) throws SQLException, IOException {
         super(getByLocator(fromLocator));
     }
 

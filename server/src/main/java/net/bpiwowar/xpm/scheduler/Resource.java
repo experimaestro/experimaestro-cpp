@@ -779,7 +779,7 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Get a resource by setLocator
+     * Get a resource by locator
      *
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
