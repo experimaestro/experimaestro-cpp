@@ -459,12 +459,12 @@ class Type
   /**
    * Get the arguments
    */
-  std::map<std::string, std::shared_ptr<Argument>> &arguments();
+  std::unordered_map<std::string, std::shared_ptr<Argument>> &arguments();
 
   /**
    * Get the arguments
    */
-  std::map<std::string, std::shared_ptr<Argument>> const &arguments() const;
+  std::unordered_map<std::string, std::shared_ptr<Argument>> const &arguments() const;
 
   /// Returns the JSON string corresponding to this type
   std::string toJson() const;
@@ -502,10 +502,34 @@ class Type
   /** Get placeholder status */
   bool placeholder() const { return _placeholder; }
   void placeholder(bool placeholder) { _placeholder = placeholder; }
+
+  /** Get placeholder status */
+  std::string const & description() const { return _description; }
+  void description(std::string const &description) { _description = description; }
+
+  /** Set a property */
+  void setProperty(std::string const &name, Object::Ptr const &value);
+  Object::Ptr getProperty(std::string const &name);
+
  private:
   const TypeName _type;
+  /**
+   * Parent type
+   */
   std::shared_ptr<Type> _parent;
-  std::map<std::string, std::shared_ptr<Argument>> _arguments;
+
+  /**
+   * Argument of this type.
+   */
+  std::unordered_map<std::string, std::shared_ptr<Argument>> _arguments;
+
+  /**
+   * Properties of this type.
+   * They are useful to characterize a type when building experiments
+   */
+  std::unordered_map<std::string, std::shared_ptr<Object>> _properties;
+
+  std::string _description;
   bool _predefined;
   bool _canIgnore;
   bool _placeholder = false;

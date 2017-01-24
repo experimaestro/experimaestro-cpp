@@ -141,18 +141,19 @@ long Value::asInteger() {
   switch (_scalarType) {
     case ValueType::NONE:return false;
 
-    case ValueType::REAL: throw cast_error("cannot convert real to integer");
-      break;
+    case ValueType::REAL:
+      if (_value.real == (int)_value.real) {
+        return (int)_value.real;
+      }
+      throw cast_error("cannot convert real " + std::to_string(_value.real) + " to integer");
+
 
     case ValueType::INTEGER:return _value.integer;
-      break;
 
     case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
-      break;
 
     case ValueType::STRING: throw cast_error("cannot convert string to integer");
     case ValueType::PATH: throw cast_error("cannot convert path to integer");
-      break;
     default:throw std::out_of_range("Scalar type is not known (converting to integer)");
   }
 

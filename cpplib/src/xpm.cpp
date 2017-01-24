@@ -597,11 +597,11 @@ void Type::addArgument(std::shared_ptr<Argument> const &argument) {
   _arguments[argument->name()] = argument;
 }
 
-std::map<std::string, std::shared_ptr<Argument>> &Type::arguments() {
+std::unordered_map<std::string, std::shared_ptr<Argument>> &Type::arguments() {
   return _arguments;
 }
 
-std::map<std::string, std::shared_ptr<Argument>> const &Type::arguments() const {
+std::unordered_map<std::string, std::shared_ptr<Argument>> const &Type::arguments() const {
   return _arguments;
 }
 
@@ -642,8 +642,16 @@ std::string Type::toJson() const {
     jsonArguments[entry.first] = definition;
   }
 
-  response["arguments"] = jsonArguments;
+  json jsonProperties = json::object();
+  for (auto const &entry: _properties) {
+    jsonProperties[entry.first] = entry.second->toJson();
+  }
+
+
+  response["arguments"] = std::move(jsonArguments);
+  response["properties"] = std::move(jsonProperties);
   response["type"] = typeName().toString();
+  response["description"] = _description;
   if (_parent) {
     response["parent"] = _parent->_type.toString();
   }
@@ -651,6 +659,17 @@ std::string Type::toJson() const {
 }
 int Type::hash() const {
   return std::hash<Type>()(*this);
+}
+
+
+void Type::setProperty(std::string const &name, Object::Ptr const &value) {
+  _properties[name] = value;
+}
+
+Object::Ptr Type::getProperty(std::string const &name) {
+  auto it = _properties.find(name);
+  if (it == _properties.end()) return nullptr;
+  return it->second;
 }
 
 // ---- Generators

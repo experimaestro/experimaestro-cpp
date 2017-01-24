@@ -225,6 +225,10 @@ void Register::load(nlohmann::json const &j) {
       type->objectFactory(_defaultObjectFactory);
     }
 
+    if (e.count("description")) {
+      type->description(e["description"]);
+    }
+
     // Get the parent type
     if (e.count("parent")) {
       auto parentTypeName = TypeName(e["parent"].get<std::string>());
@@ -241,6 +245,14 @@ void Register::load(nlohmann::json const &j) {
     }
 
     LOGGER->debug("Adding type {}", type->typeName());
+
+    if (e.count("properties")) {
+      auto properties = e["properties"];
+      for (json::iterator it = properties.begin(); it != properties.end(); ++it) {
+        auto object = Object::createFromJson(*this, it.value());
+        type->setProperty(it.key(), object);
+      }
+    }
 
     // Parse arguments
     auto arguments = e["arguments"];

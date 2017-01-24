@@ -140,7 +140,7 @@ public:
   /**   */
   virtual std::shared_ptr<SingleHostConnector> asSingleHostConnector();
   /**   */
-  virtual std::shared_ptr<Launcher> default_launcher();
+  virtual std::shared_ptr<Launcher> defaultlauncher();
 };
 
 class Resource : public virtual ServerObject {
@@ -161,9 +161,9 @@ public:
   /**   */
   virtual std::shared_ptr<Path> output();
   /**   */
-  virtual void taskId(std::string const &string);
-  /**   */
   virtual std::string taskId();
+  /**   */
+  virtual void taskId(std::string const &string);
 };
 
 class Job : public Resource {
@@ -207,12 +207,12 @@ public:
   virtual std::shared_ptr<LauncherParameters> parameters();
   /**   */
   virtual std::string environment(std::string const &key);
-  /** Sets an environment variable and returns the old value (if any)
-  */
-  virtual std::string env(std::string const &key, std::string const &value);
   /** Gets the value of the environment variable
   */
   virtual std::string env(std::string const &string);
+  /** Sets an environment variable and returns the old value (if any)
+  */
+  virtual std::string env(std::string const &key, std::string const &value);
   /**   */
   virtual void set_notification_url(std::string const &string);
   /** Sets the temporary directory for this launcher
@@ -294,14 +294,14 @@ already exists.
   /**   */
   static std::shared_ptr<Path> toPath(std::string const &path);
   /**   */
+  virtual std::string uri();
+  /**   */
   virtual std::string read_all();
   /**   */
   virtual int64_t get_size();
   /** Get the file path, ignoring the file scheme
   */
   virtual std::string get_path();
-  /**   */
-  virtual std::string uri();
   /**   */
   virtual std::string toSource();
 };
@@ -354,23 +354,23 @@ protected:
   XPM() {}
 
 public:
-  /**   */
-  virtual bool simulate();
   /** Set the simulate flag: When true, the jobs are not submitted but just output
   */
   virtual bool simulate(bool const &boolean);
-  /** com.sun.javafx.binding.StringConstant@a1cdc6d  */
-  static std::shared_ptr<TokenResource> token(std::string const &path);
   /**   */
-  virtual std::string ns();
-  /** com.sun.javafx.binding.StringConstant@610f7aacom.sun.javafx.binding.StringConstant@6a03bcb1  */
+  virtual bool simulate();
+  /** com.sun.javafx.binding.StringConstant@a1cdc6dcom.sun.javafx.binding.StringConstant@175b9425  */
   static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
   /** Retrieve (or creates) a token resource with a given xpath
-com.sun.javafx.binding.StringConstant@21b2e768  */
+com.sun.javafx.binding.StringConstant@3098cf3b  */
   static std::shared_ptr<TokenResource> token_resource(std::string const &path);
   /** Sets the logger debug level
   */
   virtual void log_level(std::string const &name, std::string const &level);
+  /**   */
+  virtual std::string ns();
+  /** com.sun.javafx.binding.StringConstant@76ed1b7c  */
+  static std::shared_ptr<TokenResource> token(std::string const &path);
 };
 
 class SubCommand : public CommandComponent {
@@ -394,11 +394,11 @@ protected:
 
 public:
   /**   */
-  virtual void set_limit(int32_t const &int_1);
-  /**   */
   virtual int32_t getLimit();
   /**   */
   virtual int32_t used();
+  /**   */
+  virtual void set_limit(int32_t const &int_1);
 };
 
 class CommandOutput : public CommandComponent {
@@ -568,9 +568,9 @@ public:
   /**   */
   Command();
   /**   */
-  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
-  /**   */
   virtual void add(std::vector<std::string> const &string);
+  /**   */
+  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
   /**   */
   virtual void add_subcommand(std::shared_ptr<Commands> const &commands);
 };

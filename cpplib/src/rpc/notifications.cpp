@@ -5,6 +5,7 @@
 #include <regex>
 #include <ostream>
 #include <sstream>
+#include <chrono>
 
 #include <asio.hpp>
 #include "../private.hpp"
@@ -16,6 +17,7 @@ namespace xpm {
 using namespace asio::ip;
 
 namespace {
+
 struct Progress {
   float last_progress = -1.;
   std::string hostname;
@@ -23,6 +25,14 @@ struct Progress {
   std::string port;
   asio::io_service io_service;
   tcp::resolver::iterator endpoint_iterator;
+
+  // Threshold for reporting something
+  double threshold = 0.001;
+  /// Last update time
+  std::chrono::time_point<std::chrono::system_clock> last_update_time;
+  // No more than one update every 5 seconds for changes above the threshold
+  std::chrono::milliseconds time_threshold =  std::chrono::seconds(5);
+
 
   Progress() {
     const char *notification_url = getenv("XPM_NOTIFICATION_URL");
@@ -50,9 +60,17 @@ struct Progress {
   }
 
   void update(float percentage) {
-    if (last_progress == percentage || hostname.empty())
+    // No change or no host, do not notify
+    if (hostname.empty() || last_progress == percentage)
       return;
+
+    // Threshold on time or progress
+    auto now = std::chrono::system_clock::now();
+    if (std::abs(last_progress - percentage) < threshold && (last_update_time - now) < time_threshold)
+      return;
+
     last_progress = percentage;
+    last_update_time = now;
 
     try {
       asio::ip::tcp::socket socket(io_service);

@@ -120,7 +120,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     }
 
     @Expose()
-    public Launcher default_launcher() {
+    public Launcher defaultlauncher() {
         return new DirectLauncher(this);
     }
 

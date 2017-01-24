@@ -86,6 +86,7 @@ class PyObject(Object, metaclass=PyObjectType):
       if send is None:
          send = SUBMIT_TASKS
       super().submit(send)
+      return self
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
@@ -147,8 +148,10 @@ class PythonRegister(Register):
 
         self.types = {}
 
-    def addType(self, pythonType, typeName, parentType):
+    def addType(self, pythonType, typeName, parentType, description=None):
         pyType = self.types[pythonType] = Type(typeName, parentType)
+        if description is not None:
+          pyType.description(description)
         factory = PythonObjectFactory(self, pythonType)
         FACTORIES.append(factory)
         pyType.objectFactory(factory)
@@ -195,8 +198,8 @@ class PythonRegister(Register):
         return super().parse(StringList(arguments))
 
 
-    def build(self, params):
-        _params = StructuredValue.parse(JSON_ENCODER.encode(params))
+    def createObject(self, params):
+        return Value(params)
         return super().build(_params)
 
 register = PythonRegister()
@@ -236,11 +239,12 @@ def wrap(self, function, **options):
 
 class RegisterType:
     """Declares an experimaestro type"""
-    def __init__(self, qname):
+    def __init__(self, qname, description=None):
         if type(qname) == TypeName:
             self.qname = qname
         else:
             self.qname = TypeName(qname)
+        self.description = description
 
     def __call__(self, t):
         if not is_new_style(t):
@@ -354,17 +358,32 @@ def tojson(t=None):
         return types
     return register.types[t].toJson()
 
+
+class TypeProperty:
+  def __init__(self, name, value):
+    self.name = name
+    self.value = value
+
+  def __call__(self, type):
+    xpmType = register.getType(type)
+    object = register.createObject(self.value)
+    xpmType.setProperty(self.name, object)
+    return type
+
+
 class Definitions:
     """Allow easy access to XPM tasks"""
     def __init__(self, retriever, path=None):
         self.__retriever = retriever
         self.__path = path
+
     def __getattr__(self, name):
         if name.startswith("__"):
             return object.__getattr__(self, name)
         if self.__path is None:
             return Definitions(self.__retriever, name)
         return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
+
     def __call__(self, *args, **options):
         definition = self.__retriever(self.__path)
         if definition is None:
@@ -378,17 +397,16 @@ class MergeClass:
     """Merge class annotation
 
     class A:
-        def x(self): ("x")
+        def x(self): return "x"
 
     a = A()
 
     @MergeClass(A)
     class A:
-        def y(self): print("y")
+        def y(self): return "y"
 
     a.x() # prints x
     a.y() # prints y
-
     """
     def __init__(self, original):
         self.original = original
