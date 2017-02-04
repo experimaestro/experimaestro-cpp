@@ -18,6 +18,11 @@ apply plugin: 'application'
 
 def generatedResources = "$buildDir/classes/main"
 
+node {
+    // Download node for typescript compilation
+    download = true
+}
+
 repositories {
     mavenLocal()
 

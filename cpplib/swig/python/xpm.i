@@ -4,8 +4,6 @@
 %feature("python:slot", "tp_repr", functype = "reprfunc") *::toString;
 %feature("python:slot", "tp_call", functype = "ternarycallfunc") *::call;
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
-/*%feature("python:slot", "mp_subscript", functype = "binaryfunc") *::__getitem__;*/
-/*%feature("python:slot", "mp_ass_subscript", functype = "objobjargproc") *::__getitem__;*/
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
 // Attributes
@@ -89,5 +87,35 @@
       std::cerr << "Could not find attribute\n";
       PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
       return nullptr;
+    }
+
+    PyObject *call() {
+        // If we have a value, just return it
+        if (auto valuePtr = dynamic_cast<xpm::Value*>($self)) {
+            switch(valuePtr->scalarType()) {
+                case xpm::ValueType::BOOLEAN:
+                    if (valuePtr->asBoolean()) { Py_RETURN_TRUE; } else { Py_RETURN_FALSE; }
+
+                case xpm::ValueType::NONE:
+                    return SWIG_Py_Void();
+
+                case xpm::ValueType::PATH: {
+                    auto pathPtr = new xpm::Path($self->asPath());
+                    return SWIG_InternalNewPointerObj(pathPtr, $descriptor(xpm::Path*), SWIG_POINTER_OWN );
+                }
+
+                case xpm::ValueType::STRING:
+                    return PyUnicode_FromString($self->asString().c_str());
+
+                case xpm::ValueType::INTEGER:
+                    return PyLong_FromLong($self->asInteger());
+
+                case xpm::ValueType::REAL:
+                    return PyFloat_FromDouble($self->asReal());
+            }
+        }
+
+        // Otherwise return void
+        return SWIG_Py_Void();
     }
 }

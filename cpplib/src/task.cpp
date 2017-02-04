@@ -12,6 +12,8 @@ namespace xpm {
 
 using nlohmann::json;
 
+bool Task::_running = false;
+
 Task::Task(TypeName const &typeName, std::shared_ptr<Type> const &type) : _identifier(typeName), _type(type) {
 }
 
@@ -87,8 +89,14 @@ std::shared_ptr<Object> Task::create() {
 
 void Task::execute(std::shared_ptr<Object> const &object) const {
   object->configure(false);
-  // FIXME: the object should not be executed, but the task!
-  object->execute();
+  try {
+    _running = true;
+    object->execute();
+    _running = false;
+  } catch(std::exception &e) {
+    _running = false;
+    throw;
+  }
 }
 
 nlohmann::json Task::toJson() {

@@ -77,10 +77,12 @@ class PyObject(Object, metaclass=PyObjectType):
          return MethodType(d[name], self)
        return super().__getattribute__(name)
 
-
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
-        super().set(name, value)
+        if Task.isRunning():
+          dict.__setattr__(self, name, value)
+        else:
+          super().set(name, value)
 
     def submit(self, send=None):
       if send is None:

@@ -594,6 +594,9 @@ class Task
 
   /** Get path generator for resource location */
   std::shared_ptr<PathGenerator> getPathGenerator() const;
+
+  /** Gets the running status */
+  static bool isRunning() { return _running; }
  private:
   /// Task identifier
   TypeName _identifier;
@@ -606,6 +609,9 @@ class Task
 
   /// Command line
   CommandLine _commandLine;
+
+  /// True if a task is running
+  static bool _running;
 };
 
 } // namespace xpm
