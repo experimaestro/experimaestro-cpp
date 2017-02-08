@@ -45,6 +45,7 @@ import org.apache.commons.dbcp2.PoolingDataSource;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -84,6 +85,8 @@ final public class Scheduler {
 
     final static private Logger LOGGER = Logger.getLogger();
     public static final int JOB_CHECKING_LATENCY = 60;
+    private static final int MAX_IDLE_CONNECTIONS = 20;
+    private static final int MAX_ACTIVE_CONNECTIONS = 20;
 
     /**
      * Thread local instance (there should be only one scheduler per thread)
@@ -201,7 +204,12 @@ final public class Scheduler {
         String connectURI = format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory);
         DriverManagerConnectionFactory connectionFactory = new DriverManagerConnectionFactory(connectURI, null);
         PoolableConnectionFactory poolableConnectionFactory = new PoolableConnectionFactory(connectionFactory, null);
-        ObjectPool<PoolableConnection> connectionPool = new GenericObjectPool<>(poolableConnectionFactory);
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+
+        poolConfig.setMaxTotal(MAX_ACTIVE_CONNECTIONS);
+        poolConfig.setMaxIdle(MAX_IDLE_CONNECTIONS);
+        GenericObjectPool<PoolableConnection> connectionPool = new GenericObjectPool<>(poolableConnectionFactory, poolConfig);
+
         poolableConnectionFactory.setPool(connectionPool);
         dataSource = new PoolingDataSource<>(connectionPool);
 

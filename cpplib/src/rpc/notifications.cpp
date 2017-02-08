@@ -27,7 +27,7 @@ struct Progress {
   tcp::resolver::iterator endpoint_iterator;
 
   // Threshold for reporting something
-  double threshold = 0.001;
+  double threshold = 0.01;
   /// Last update time
   std::chrono::time_point<std::chrono::system_clock> last_update_time;
   // No more than one update every 5 seconds for changes above the threshold
@@ -61,7 +61,7 @@ struct Progress {
 
   void update(float percentage) {
     // No change or no host, do not notify
-    if (hostname.empty() || last_progress == percentage)
+    if (last_progress == percentage)
       return;
 
     // Threshold on time or progress
@@ -71,6 +71,12 @@ struct Progress {
 
     last_progress = percentage;
     last_update_time = now;
+
+    // just outputs
+    if (hostname.empty()) {
+      LOGGER->info("Progress: {} %", last_progress * 100);
+      return;
+    }
 
     try {
       asio::ip::tcp::socket socket(io_service);

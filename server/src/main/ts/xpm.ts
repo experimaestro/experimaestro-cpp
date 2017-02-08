@@ -76,18 +76,23 @@ class Resource {
             .on("click", $.proxy(xpm.resource_link_callback, xpm));
 
 
+        var actions = $("<div class='actions'></div>");
+
         this.node = $e("li")
             .addClass("state-" + this.state)
             .addClass("resource")
             .attr("id", "R" + this.id)
             .append($e("span").addClass("resource-actions")
-                .append($("<span class='resource-id'>" + this.id + "</span>"))
-                .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
-                .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
-                .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
-                .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
-                .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
-                .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
+                    .append($("<span class='resource-id'>" + this.id + "</span>"))
+                    .append(
+                        $e("div").addClass("actions")
+                        .append($("<i class=\"fa fa-eye link\" title='View' name='fileview-out'></i>"))
+                        .append($("<i class=\"fa fa-eye link\" style=\"color: red\" title='View' name='fileview-err'></i>"))
+                        .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
+                        .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                        .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
+                        .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
+                    )
             ).append(
                 $e("div")
                     .addClass("resource-link")

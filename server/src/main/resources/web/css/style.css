@@ -230,36 +230,46 @@ ul.buttons {
 
 /* Restart */
 
+#resources .resource-actions > div.actions {
+    position: absolute;
+    background: white;
+    display: none;
+    transition: 5s ease-out;
+}
+
+#resources .resource-actions:hover > div.actions {
+    display: inline-block;
+    padding: 2px;
+    border: 1px solid black;
+    transition: 1s ease-out;
+}
+
 #resources .resource-actions i.fa {
     display: none;
-    transition: width 1s ease-out;
-    width: 0;
     padding: 2px;
 }
 
-#resources .resource-actions:hover i.fa {
+#resources .resource-actions i.fa {
     display:  inline;
-    transition: width 1s ease-out;
-    width: auto;
 }
 
-#resources .resource-actions:hover i.fa[name="restart"] {
+#resources .resource-actions i.fa[name="restart"] {
     display: none;
 }
 
-#resources .resource-actions:hover i.fa[name="kill"] {
+#resources .resource-actions i.fa[name="kill"] {
     display: none;
 }
-#resources li.state-running .resource-actions:hover i.fa[name="kill"] {
+#resources li.state-running .resource-actions i.fa[name="kill"] {
     display: inline;
 }
-#resources li.state-on_hold .resource-actions:hover i.fa[name="restart"] {
+#resources li.state-on_hold .resource-actions i.fa[name="restart"] {
     display: inline;
 }
-#resources li.state-error .resource-actions:hover i.fa[name="restart"] {
+#resources li.state-error .resource-actions i.fa[name="restart"] {
     display: inline;
 }
-#resources li.state-done .resource-actions:hover i.fa[name="restart"] {
+#resources li.state-done .resource-actions i.fa[name="restart"] {
     display: inline;
 }
 

@@ -7,6 +7,9 @@ plugins {
     id 'org.ajoberstar.grgit' version '1.2.0'
 }
 
+import com.moowork.gradle.node.NodeExtension
+import com.moowork.gradle.node.variant.VariantBuilder
+
 apply plugin: 'java'
 apply plugin: 'idea'
 sourceCompatibility = 1.8
@@ -45,7 +48,15 @@ test {
     }
 }
 
+String nodeExecutable() {
+    NodeExtension nodeExt = NodeExtension.get(project)
+    return new VariantBuilder(nodeExt).build().nodeExec
+}
+
+
 compileTypeScript {
+    compilerExecutable "${nodeExecutable()} node_modules/typescript/lib/tsc.js"
+    dependsOn "npmInstall"
     outFile = file("${generatedResources}/web/js/xpm.js")
     target = "ES5"
 }
