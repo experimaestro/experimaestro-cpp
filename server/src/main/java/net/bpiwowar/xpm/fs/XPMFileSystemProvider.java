@@ -35,6 +35,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -72,7 +73,6 @@ public class XPMFileSystemProvider extends FileSystemProvider {
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         final Path hostPathObject = resolvePath(path);
-
 
         SeekableByteChannel channel = Files.newByteChannel(hostPathObject, options, attrs);
         if (channel == null) {

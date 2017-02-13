@@ -145,8 +145,14 @@ void Register::parse(std::vector<std::string> const &args) {
     if (!stream) {
       throw argument_error(args[2] + " is not a file");
     }
-    json j = json::parse(stream);
 
+    json j;
+    try {
+      j = json::parse(stream);
+    } catch (...) {
+      LOGGER->error("Error while parsing " + args[2]);
+      throw;
+    }
     auto value = task->create();
     value->fill(*this, j);
 
@@ -164,11 +170,11 @@ void Register::generate() const {
   std::cout << R"("types": [)" << std::endl;
   bool first = true;
   for (auto const &type: this->_types) {
-      if (!type.second->predefined()) {
-        if (!first) std::cout << ","; else first = false;
-        std::cout << type.second->toJson() << std::endl;
-      }
+    if (!type.second->predefined()) {
+      if (!first) std::cout << ","; else first = false;
+      std::cout << type.second->toJson() << std::endl;
     }
+  }
   std::cout << "], " << std::endl;
 
   std::cout << R"("tasks": [)" << std::endl;
@@ -176,7 +182,7 @@ void Register::generate() const {
   for (auto const &type: this->_tasks) {
     if (!first) std::cout << ","; else first = false;
     std::cout << type.second->toJson() << std::endl;
-    }
+  }
   std::cout << "]" << std::endl;
 
   std::cout << "}" << std::endl;
@@ -284,8 +290,6 @@ void Register::load(nlohmann::json const &j) {
     }
     _types[type->typeName()] = type;
   }
-
-
 
   assert(j["tasks"].is_array());
   for (auto &e: j["tasks"]) {

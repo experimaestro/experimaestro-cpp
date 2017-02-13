@@ -62,7 +62,10 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
         if ( create ) {
             attributes = provider.createFile( path, createFileAttributes );
+        } else if (openOptions.contains( StandardOpenOption.TRUNCATE_EXISTING )) {
+            truncate(0);
         }
+
 
         open = true;
 
