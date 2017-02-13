@@ -6,6 +6,6 @@
 [subrepo]
 	remote = git@github.com:bpiwowar/jsch-nio.git
 	branch = master
-	commit = d742afcb5938dbe89bc13b4961a95d32b89d70b0
-	parent = 86b3c2fcbba6788aed947f92b2834da97efe7e92
-	cmdver = 0.3.0
+	commit = 31bf70f120381dfb441baf975d152d97d846d128
+	parent = 1d1e58b438d4c550abafab525d29593aed54ca44
+	cmdver = 0.3.1
