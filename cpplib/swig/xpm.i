@@ -71,6 +71,8 @@
 %shared_ptr(xpm::Value)
 %shared_ptr(xpm::Array)
 %shared_ptr(xpm::Register)
+%shared_ptr(xpm::Generator)
+%shared_ptr(xpm::PathGenerator)
 
 #ifdef SWIGPYTHON
 %include "python/xpm.i"

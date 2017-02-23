@@ -13,8 +13,11 @@
 /*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, Object, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
 */
-%attributeval(xpm::Argument, std::shared_ptr<xpm::Generator>, generator, generator, generator)
+
+/*%feature("naturalvar", 0) std::shared_ptr<xpm::Generator>;
+attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 %ignore xpm::Argument::generator;
+*/
 
 %attribute(xpm::Argument, std::string, help, help, help)
 %ignore xpm::Argument::help;
@@ -30,7 +33,6 @@
             if (object) {
                 if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
                     Py_INCREF(d->swig_get_self());
-                    PyObject *pyObject = d->swig_get_self();
                     return d->swig_get_self();
                 }
 

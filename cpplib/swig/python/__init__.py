@@ -70,7 +70,6 @@ class PyObject(Object, metaclass=PyObjectType):
         Object.__init__(self)
 
     def __getattribute__(self, name):
-       logging.debug("Searching for %s in %s", name, self)
        d = TYPES_DICT.get(type(self), None)
        if d is not None and name in d:
          from types import MethodType
@@ -328,7 +327,7 @@ class AbstractArgument:
     def __init__(self, name, type, help=""):
         self.argument = Argument(name)
         self.argument.help = help if help is not None else ""
-        self.argument.type = register.getType(type)
+        self.argument.type = type
 
     def __call__(self, t):
         xpminfo = register.getType(t)
@@ -340,7 +339,9 @@ class AbstractArgument:
 
 class TypeArgument(AbstractArgument):
     def __init__(self, name, type=None, default=None, required=None, help=None):
-        AbstractArgument.__init__(self, name, register.getType(type), help=help)
+        xpmtype = register.getType(type)
+        logging.debug("Registering type argument %s [%s -> %s]", name, type, xpmtype)
+        AbstractArgument.__init__(self, name, xpmtype, help=help)
         if default is not None and required is not None and required:
             raise Exception("Argument is required but default value is given")
         self.argument.required = (default is None) if required is None else required
@@ -350,7 +351,8 @@ class TypeArgument(AbstractArgument):
 class PathArgument(AbstractArgument):
     def __init__(self, name, path, help=""):
         AbstractArgument.__init__(self, name, PathType, help=help)
-        self.argument.generator = pathGenerator
+        generator = PathGenerator(path)
+        self.argument.generator(generator)
 
 def tojson(t=None):
     if t is None:
