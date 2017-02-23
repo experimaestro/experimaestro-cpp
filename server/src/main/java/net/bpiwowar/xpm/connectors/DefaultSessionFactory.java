@@ -10,6 +10,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.Session;
+import com.jcraft.jsch.UserInfo;
 import com.jcraft.jsch.agentproxy.AgentProxyException;
 import com.jcraft.jsch.agentproxy.Connector;
 import com.jcraft.jsch.agentproxy.ConnectorFactory;
@@ -38,6 +39,39 @@ public class DefaultSessionFactory implements SessionFactory {
     private int port;
     private Proxy proxy;
     private String username;
+    private MyUserInfo userInfo;
+
+    class MyUserInfo implements UserInfo {
+        @Override
+        public String getPassphrase() {
+            return null;
+        }
+
+        @Override
+        public String getPassword() {
+            return null;
+        }
+
+        @Override
+        public boolean promptPassword(String message) {
+            throw new RuntimeException("Cannot ask for password");
+        }
+
+        @Override
+        public boolean promptPassphrase(String message) {
+            throw new RuntimeException("Cannot ask for passphrase");
+        }
+
+        @Override
+        public boolean promptYesNo(String message) {
+            throw new RuntimeException("Cannot ask for yes/no");
+        }
+
+        @Override
+        public void showMessage(String message) {
+            throw new RuntimeException("Cannot show message");
+        }
+    }
 
     public DefaultSessionFactory(boolean useAgent) {
         this(null, null, null, useAgent);
@@ -47,6 +81,8 @@ public class DefaultSessionFactory implements SessionFactory {
         this.port = 22;
         JSch.setLogger(new Slf4jBridge());
         this.jsch = new JSch();
+
+        this.userInfo = new MyUserInfo();
 
         try {
             if (useAgent) {
@@ -125,6 +161,11 @@ public class DefaultSessionFactory implements SessionFactory {
         return this.username;
     }
 
+    @Override
+    public UserInfo getUserInfo() {
+        return userInfo;
+    }
+
     public Session newSession() throws JSchException {
         Session session = this.jsch.getSession(this.username, this.hostname, this.port);
         if(this.config != null) {
@@ -144,7 +185,8 @@ public class DefaultSessionFactory implements SessionFactory {
     }
 
     public SessionFactoryBuilder newSessionFactoryBuilder() {
-        return new SessionFactoryBuilder(this.jsch, this.username, this.hostname, this.port, this.proxy, this.config) {
+        return new SessionFactoryBuilder(this.jsch, this.username, this.hostname, this.port, this.proxy,
+                this.config, this.userInfo) {
             public SessionFactory build() {
                 DefaultSessionFactory sessionFactory = new DefaultSessionFactory(this.jsch, this.username, this.hostname, this.port, this.proxy);
                 sessionFactory.config = this.config;
