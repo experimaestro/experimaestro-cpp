@@ -56,6 +56,8 @@ spdlog::level::level_enum convert(LogLevel l) {
     case LogLevel::ERROR:return spdlog::level::err;
     case LogLevel::CRITICAL:return spdlog::level::critical;
     case LogLevel::OFF:return spdlog::level::off;
+    default:
+      throw std::runtime_error("Unhandled log level"); // safeguard
   }
 }
 }
