@@ -212,6 +212,8 @@ class XPM {
 
     /** Get the experiments */
     get_experiments() {
+        var selection = sessionStorage.getItem("experiment.selection");
+
         var _this = this;
         this.server.call('experiments.latest-names', {},
             function (r) {
@@ -220,7 +222,12 @@ class XPM {
                 $.each(r, function (ix, e) {
                     select.append($e("option").append($t(e.identifier)));
                 });
-                _this.load_experiment(0);
+
+                if (selection) {
+                    select.val(selection).change();
+                } else {
+                    _this.load_experiment(0);
+                }
             },
 
             jsonrpc_error
@@ -544,7 +551,7 @@ class XPM {
                 buttons: {
                     "Yes, I understand": function () {
                         $(this).dialog("close");
-                        this.request('remove', {
+                        _this.request('remove', {
                             params: {"id": r.id, "recursive": false},
                             success: function () {
                                 // We just notify - but wait for the server notification to
@@ -572,7 +579,7 @@ class XPM {
                 buttons: {
                     "Yes, I understand": function () {
                         $(this).dialog("close");
-                        this.request('kill', {
+                        _this.request('kill', {
                             params: {"jobs": [r.id]},
                             success: function () {
                                 // We just notify - but wait for the server notification to
@@ -719,7 +726,8 @@ $().ready(function () {
 
     // When changing, load experiment
     $("#experiment-chooser").change(function () {
-        xpm.load_experiment(0)
+        xpm.load_experiment(0);
+        sessionStorage.setItem("experiment.selection", $("#experiment-chooser").val());
     });
 
     function showexperiments(element) {
