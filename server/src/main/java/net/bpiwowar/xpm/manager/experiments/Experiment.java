@@ -311,6 +311,18 @@ public class Experiment implements Identifiable {
         }
     }
 
+    public int delete() throws SQLException {
+        final String query = "DELETE FROM Experiments WHERE name=? AND timestamp=?";
+        try (XPMStatement st = Scheduler.statement(query)
+                .setString(1, identifier)
+                .setTimestamp(2, new Timestamp(timestamp))) {
+            final int count = st.executeUpdate();
+            this.id = null; // Not anymore in DB
+            return count;
+        }
+
+    }
+
     /**
      * List resources that are neither part of an experiment nor a dependency
      * of a resource part of an experiment

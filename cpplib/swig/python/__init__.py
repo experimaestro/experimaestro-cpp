@@ -324,10 +324,10 @@ class RegisterTask():
 
 
 class AbstractArgument:
-    def __init__(self, name, type, help=""):
+    def __init__(self, name, _type, help=""):
         self.argument = Argument(name)
         self.argument.help = help if help is not None else ""
-        self.argument.type = type
+        self.argument.type(_type.xpmtype if type(_type) == TypeWrapper else _type)
 
     def __call__(self, t):
         xpminfo = register.getType(t)

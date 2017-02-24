@@ -250,6 +250,15 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
         element.add("group", new JsonPrimitive(1));
     }
 
+    @RPCMethod(name = "delete", help = "Delete an experiment")
+    public static int delete(@RPCArgument(name="identifier") String identifier) throws SQLException {
+        int count = 0;
+        for (Experiment experiment : Experiment.findAllByIdentifier(identifier)) {
+            count += experiment.delete();
+        }
+        return count;
+    }
+
     @RPCMethod(name = "kill", help = "Kill all jobs from an experiment")
     public class Kill implements JsonCallable {
         @RPCArgument

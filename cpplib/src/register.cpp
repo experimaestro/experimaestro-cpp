@@ -156,6 +156,13 @@ void Register::parse(std::vector<std::string> const &args) {
     auto value = task->create();
     value->fill(*this, j);
 
+    // Parse further command line options
+    size_t ix = 3;
+    while (ix < args.size()) {
+      std::string const & arg = args[ix];
+      auto p_equals = arg.find("=");
+    }
+
     // Run the task
     task->execute(value);
 

@@ -110,9 +110,6 @@ p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
-p_cleanup = subparsers.add_parser("clean", help="Cleanup obsolete experiments")
-p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
-p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
 p_cleanup = subparsers.add_parser("process-obsolete", help="Process obsolete resources")
 p_cleanup.add_argument("--command", dest="what", default="list", choices=["list", "delete", "kill"], help="Command to apply")
@@ -130,9 +127,24 @@ p_rm.add_argument('jobid', nargs="*", help="The job ids")
 p_kill = subparsers.add_parser("kill", help="Kill a job")
 p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
 
-p_xp_kill = subparsers.add_parser("experiment-kill", help="Kill jobs from an experiment")
+# --- Experiments
+
+p_xp = subparsers.add_parser("experiments", help="Manage experiments")
+xp_subparsers = p_xp.add_subparsers(help='Command', dest='subcommand')
+
+p_xp_kill = xp_subparsers.add_parser("kill", help="Kill jobs from an experiment")
 p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States").completer = statesCompleter
 p_xp_kill.add_argument('experimentid', help="The experiment ID")
+
+p_cleanup = xp_subparsers.add_parser("clean", help="Cleanup obsolete experiments")
+p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
+p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
+
+
+p_xp_delete = xp_subparsers.add_parser("delete", help="Delete an experiment")
+p_xp_delete.add_argument('experimentid', help="The experiment ID")
+
+# --- Other
 
 p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
 p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
@@ -553,7 +565,6 @@ def command_run_js(args):
 
 # Run a command using web sockets
 def run_server_command(client, command, params):
-    code = 0
     msg = json.dumps({"id": 1, "method": command, "params": params})
     client.send(msg)
     while client is not None:
@@ -564,7 +575,8 @@ def run_server_command(client, command, params):
                 if o.get("error", 0) != 0:
                     code = o["error"]["code"]
                     sys.stderr.write("%s\n" % o["error"]["message"])
-                break
+                    sys.exit(code)
+                return o["result"]
             else:
                 result = o["result"]
                 if result["stream"] == "out":
@@ -572,7 +584,6 @@ def run_server_command(client, command, params):
                 else:
                     sys.stdout.write(result["value"])
 
-    sys.exit(code)
 
 def command_update(args):
     server = Configuration(args).getJsonServer()
@@ -647,10 +658,15 @@ def command_kill(args):
     n = server.kill({"jobs": args.jobid})
     logging.info("Killed %d jobs" % n)
 
-def command_experiment_kill(args):
+def command_experiments_kill(args):
     server = Configuration(args).getJsonServer()
     n = server["experiments.kill"]({"identifier": args.experimentid, "states": get_states(args.states)})
     logging.info("Killed %d jobs" % n)
+
+def command_experiments_delete(args):
+    client = Configuration(args).getWebSocketServer()
+    count = run_server_command(client, "experiments.delete", {"identifier": args.experimentid})
+    print("%d experiments deleted" % count)
 
 def command_generate_files(args):
     client = Configuration(args).getWebSocketServer()
@@ -721,7 +737,10 @@ if args.command is None:
     sys.exit(0)
 
 try:
-    fname = "command_%s" % args.command.replace("-", "_")
+    fname = "command_%s" % (args.command.replace("-", "_"))
+    subcommand = getattr(args, "subcommand", None)
+    if subcommand is not None:
+        fname = "%s_%s" % (fname, subcommand.replace("-", "_"))
     locals()[fname](args)
 except Exception as e:
     print(e)

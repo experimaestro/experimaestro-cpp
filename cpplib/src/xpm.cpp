@@ -120,6 +120,8 @@ void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
 
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
+
+    // --- Object
     case nlohmann::json::value_t::object: {
       std::shared_ptr<Object> object;
 
@@ -149,6 +151,9 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       return object;
     }
 
+
+    // --- Array
+
     case nlohmann::json::value_t::array: {
       auto array = std::make_shared<Array>();
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
@@ -156,6 +161,8 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       }
       return array;
     }
+
+    // --- Simple type
 
     case nlohmann::json::value_t::null:
     case nlohmann::json::value_t::discarded:return std::make_shared<Value>();
@@ -167,7 +174,14 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
     case nlohmann::json::value_t::number_integer:
     case nlohmann::json::value_t::number_unsigned:return std::make_shared<Value>((long) jsonValue);
 
-    case nlohmann::json::value_t::number_float:return std::make_shared<Value>((double) jsonValue);
+    case nlohmann::json::value_t::number_float:{
+      // Try first as integer
+      if (std::trunc((double)jsonValue) == (double)jsonValue) {
+        return std::make_shared<Value>((long) jsonValue);
+      }
+
+      return std::make_shared<Value>((double) jsonValue);
+    }
   }
 }
 
@@ -422,14 +436,17 @@ void Object::validate(bool generate) {
           }
         } else {
           // Sets the value
-          LOGGER->debug("Checking value of {}...", argument.name());
           auto value = get(argument.name());
+          LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
 
+          // If the value is default, add a flag
           if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
             LOGGER->debug("Value is default");
             value->set(Flag::DEFAULT, true);
           } else {
+            // If the value has a type, handles this
             if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
+              // Create an object of the key type
               auto v = value->get(KEY_TYPE);
               auto valueType = value->type();
               if (valueType) {
@@ -441,6 +458,7 @@ void Object::validate(bool generate) {
             }
           }
 
+          LOGGER->debug("Validating {}...", argument.name());
           value->validate(generate);
           LOGGER->debug("Setting {}...", argument.name());
           setValue(argument.name(), value);
