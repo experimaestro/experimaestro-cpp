@@ -119,6 +119,8 @@ class Resource {
         } else {
             pb.progressbar("option", "value", r.progress * 100);
         }
+
+        pb.attr("title", "Progress: " + Math.floor(r.progress * 10000) / 100 + "%");
     }
 
     /// Set the resource state

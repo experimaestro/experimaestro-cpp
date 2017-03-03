@@ -66,7 +66,7 @@ struct Progress {
 
     // Threshold on time or progress
     auto now = std::chrono::system_clock::now();
-    if (std::abs(last_progress - percentage) < threshold && (last_update_time - now) < time_threshold)
+    if (std::abs(last_progress - percentage) < threshold && (now - last_update_time) < time_threshold)
       return;
 
     last_progress = percentage;

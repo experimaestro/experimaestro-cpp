@@ -87,13 +87,15 @@ public class CommandRunner implements Closeable {
 
         ByteArrayOutputStream stdErr = new ByteArrayOutputStream();
         ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
-        int exitCode;
+        int exitCode = 0;
         ChannelExecWrapper channel = null;
         try {
             channel = new ChannelExecWrapper( session, command, null, stdOut, stdErr );
         }
         finally {
-            exitCode = channel.close();
+            if (channel != null) {
+                exitCode = channel.close();
+            }
         }
 
         return new ExecuteResult( exitCode,
