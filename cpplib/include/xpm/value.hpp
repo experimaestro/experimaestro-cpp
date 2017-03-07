@@ -8,6 +8,9 @@
 #include <xpm/xpm.hpp>
 
 namespace xpm {
+
+class Type;
+
 /**
  * A value
  */
@@ -62,6 +65,9 @@ class Value : public Object {
 
   virtual bool equals(Object const &) const override;
   bool equals(Value const &b) const;
+
+  /// Cast to other simple type
+  std::shared_ptr<Object> cast(Type::Ptr const &type);
 
   /// Returns the string
   virtual std::string asString() override;

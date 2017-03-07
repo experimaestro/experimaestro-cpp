@@ -64,6 +64,7 @@
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
+%shared_ptr(xpm::SimpleType)
 %shared_ptr(xpm::Task)
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Argument)

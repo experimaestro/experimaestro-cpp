@@ -31,6 +31,28 @@ bool Value::equals(Value const &b) const {
   throw std::out_of_range("Scalar type is not known (comparing)");
 }
 
+std::shared_ptr<Object> Value::cast(Type::Ptr const &type) {
+  if (!type || type == this->type()) return this->shared_from_this();
+
+  auto *simpleType = dynamic_cast<SimpleType*>(type.get());
+  if (!simpleType) {
+    throw std::runtime_error("Cannot value cast to " + type->toString());
+  }
+
+  switch (simpleType->valueType()) {
+    case ValueType::PATH: return std::make_shared<Value>(this->asPath());
+    case ValueType::STRING: return std::make_shared<Value>(this->asString());
+    case ValueType::INTEGER: return std::make_shared<Value>(this->asInteger());
+    case ValueType::REAL: return std::make_shared<Value>(this->asReal());
+
+    case ValueType::NONE:throw std::runtime_error("none has no type");
+  }
+
+  throw std::out_of_range("Scalar type is not known (comparing)");
+
+}
+
+
 
 Value::~Value() {
   switch (_scalarType) {

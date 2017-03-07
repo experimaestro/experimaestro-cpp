@@ -161,11 +161,12 @@ namespace {
   void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Object> const & object) {
     if (auto value = dynamic_cast<Value*>(object.get())) {
       if (value->type() == xpm::PathType) {
-        oss << '"';
+        oss << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
+            << xpm::KEY_VALUE << "\": \"";
         f.add(oss.str());
         oss.str("");
         f.add(rpc::Path::toPath(value->asPath().toString()));
-        oss << '"';
+        oss << "\"}";
       } else {
         oss << value->jsonValue();
       }

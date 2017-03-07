@@ -126,23 +126,26 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       std::shared_ptr<Object> object;
 
       auto _key = jsonValue.find(KEY_VALUE);
-      if (_key != jsonValue.end()) {
-        object = createFromJson(xpmRegister, *_key);
-      } else {
-        std::shared_ptr<Type> type;
-        if (jsonValue.count(KEY_TYPE) > 0) {
-          auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
-          type = xpmRegister.getType(typeName);
-          if (!type) {
-            LOGGER->debug("Could not find type {} in registry", typeName);
-          }
+      std::shared_ptr<Type> type;
+      if (jsonValue.count(KEY_TYPE) > 0) {
+        auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
+        type = xpmRegister.getType(typeName);
+        if (!type) {
+          LOGGER->debug("Could not find type {} in registry", typeName);
         }
+      }
 
+      if (_key != jsonValue.end()) {
+        // Infer type from value
+        object = createFromJson(xpmRegister, *_key);
+        if (type) object = dynamic_cast<Value&>(*object).cast(type);
+      } else {
         if (type) {
           LOGGER->debug("Creating object of type {} using type->create()", *type);
           object = type->create();
         } else {
-          object = std::make_shared<Object>();
+          LOGGER->debug("Creating object of unknown type default object factory");
+          object = xpmRegister.objectFactory()->create();
         }
       }
 
@@ -581,14 +584,14 @@ Argument &Argument::type(std::shared_ptr<Type> const &type) {
 
 // ---- Type
 
-
-std::shared_ptr<Type> BooleanType = std::make_shared<Type>(BOOLEAN_TYPE, nullptr, true);
-std::shared_ptr<Type> IntegerType = std::make_shared<Type>(INTEGER_TYPE, nullptr, true);
-std::shared_ptr<Type> RealType = std::make_shared<Type>(REAL_TYPE, nullptr, true);
-std::shared_ptr<Type> StringType = std::make_shared<Type>(STRING_TYPE, nullptr, true);
-std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
-std::shared_ptr<Type> PathType = std::make_shared<Type>(PATH_TYPE, nullptr, true, true);
+std::shared_ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
+std::shared_ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
+std::shared_ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
+std::shared_ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
+std::shared_ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH);
 std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true);
+
+std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
 /** Creates an object with a given type */
 std::shared_ptr<Object> Type::create() {
