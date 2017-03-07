@@ -30,7 +30,6 @@ import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.fs.XPMFileSystemProvider;
 import net.bpiwowar.xpm.fs.XPMPath;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;

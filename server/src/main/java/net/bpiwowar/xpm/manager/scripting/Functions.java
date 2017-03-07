@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.JsonElement;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShare;
@@ -26,11 +27,6 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.UserCache;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
-import net.bpiwowar.xpm.manager.json.Json;
-import net.bpiwowar.xpm.manager.json.JsonArray;
-import net.bpiwowar.xpm.manager.json.JsonObject;
-import net.bpiwowar.xpm.manager.json.JsonSimple;
-import net.bpiwowar.xpm.manager.json.JsonString;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -107,64 +103,6 @@ public class Functions {
         Context.get().setDefaultLauncher(launcher);
     }
 
-    @Expose()
-    @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
-            "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(JsonObject json, DependencyParameters... parameters) throws SQLException {
-        ArrayList<Dependency> dependencies = new ArrayList<>();
-
-        IdentityHashMap<Object, DependencyParameters> pmap = new IdentityHashMap<>();
-        for (DependencyParameters parameter : parameters) {
-            pmap.put(parameter.getKey(), parameter);
-        }
-
-        get_locks(json, pmap, dependencies);
-
-        return dependencies;
-    }
-
-    static private void get_locks(Json json, IdentityHashMap<Object, DependencyParameters> pmap, ArrayList<Dependency> dependencies) throws SQLException {
-        if (json instanceof JsonObject) {
-            final Resource resource = getResource((JsonObject) json);
-            if (resource != null) {
-                final Dependency dependency = resource.createDependency(pmap);
-                dependencies.add(dependency);
-            } else {
-                for (Json element : ((JsonObject) json).values()) {
-                    get_locks(element, pmap, dependencies);
-                }
-
-            }
-        } else if (json instanceof JsonArray) {
-            for (Json arrayElement : ((JsonArray) json)) {
-                get_locks(arrayElement, pmap, dependencies);
-            }
-
-        }
-    }
-
-    private static Resource getResource(JsonObject json) throws SQLException {
-        if (json.containsKey(Constants.XP_RESOURCE.toString())) {
-            final Object o = json.get(Constants.XP_RESOURCE.toString()).get();
-            if (o instanceof Resource) {
-                return (Resource) o;
-            } else {
-                final String uri = o instanceof JsonString ? o.toString() : (String) o;
-                Path path = NetworkShare.uriToPath(uri);
-                if (Context.get().simulate()) {
-                    final Resource resource = Context.get().getSubmittedJobs().get(uri).resource;
-                    if (resource == null) {
-                        return Resource.getByLocator(path);
-                    }
-                    return resource;
-                } else {
-                    return Resource.getByLocator(path);
-                }
-            }
-
-        }
-        return null;
-    }
 
     @Expose(optional = 1)
     @Help("Set the experiment for all future commands")
@@ -208,12 +146,6 @@ public class Functions {
     }
 
 
-    @Expose
-    @Help("Find all tags and return a hash map")
-    static public Map<String, JsonSimple> find_tags(Json json) {
-        return json.findTags();
-    }
-
 
     @Expose
     @Help("Returns the notification URL")
@@ -223,15 +155,15 @@ public class Functions {
 
     @Expose
     static public void cache(@Argument(name = "id") String id,
-                             @Argument(name = "key") Json key,
-                             @Argument(name = "value") Json value,
+                             @Argument(name = "key") JsonElement key,
+                             @Argument(name = "value") JsonElement value,
                              @Argument(name = "duration") long duration) throws NoSuchAlgorithmException, SQLException, IOException {
         UserCache.store(id, duration, key, value);
     }
 
     @Expose
-    static public Json cache(@Argument(name = "id") String id,
-                             @Argument(name = "key") Json key) throws NoSuchAlgorithmException, SQLException, IOException {
+    static public JsonElement cache(@Argument(name = "id") String id,
+                                    @Argument(name = "key") JsonElement key) throws NoSuchAlgorithmException, SQLException, IOException {
         return UserCache.retrieve(id, key);
     }
 

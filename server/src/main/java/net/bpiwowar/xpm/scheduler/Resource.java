@@ -19,14 +19,13 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.json.JsonSimple;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.CloseableIterable;
@@ -167,7 +166,7 @@ public class Resource implements Identifiable {
     /**
      * Tags
      */
-    transient private Map<String, JsonSimple> tags;
+    transient private Map<String, JsonPrimitive> tags;
 
     public Resource(Path locator) {
         this.locator = locator;
@@ -367,7 +366,7 @@ public class Resource implements Identifiable {
     }
 
     @Expose
-    public void setTags(Map<String, JsonSimple> tags) {
+    public void setTags(Map<String, JsonPrimitive> tags) {
         this.tags = tags;
         if (inDatabase()) {
             try (XPMStatement st1 = Scheduler.statement("DELETE FROM ResourceTags WHERE resource=?");
@@ -377,9 +376,9 @@ public class Resource implements Identifiable {
 
                 st.setLong(1, getId());
                 if (tags != null) {
-                    for (Map.Entry<String, JsonSimple> entry : tags.entrySet()) {
+                    for (Map.Entry<String, JsonPrimitive> entry : tags.entrySet()) {
                         st.setString(2, entry.getKey());
-                        st.setString(3, entry.getValue().get().toString());
+                        st.setString(3, entry.getValue().toString());
                         st.execute();
                     }
                 }

@@ -38,8 +38,13 @@
         <class>net.bpiwowar.xpm.commands.CommandComponent</class>
         <class>net.bpiwowar.xpm.commands.CommandPath</class>
         <class>net.bpiwowar.xpm.commands.CommandString</class>
+
         <class>net.bpiwowar.xpm.commands.ParameterFile</class>
-        <class>net.bpiwowar.xpm.commands.JsonParameterFile</class>
+
+        <class>net.bpiwowar.xpm.commands.ContentsFile</class>
+        <class>net.bpiwowar.xpm.commands.Content</class>
+        <class>net.bpiwowar.xpm.commands.StringContent</class>
+        <class>net.bpiwowar.xpm.commands.PathContent</class>
 
         <!-- Dependencies -->
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>

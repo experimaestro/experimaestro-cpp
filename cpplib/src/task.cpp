@@ -34,8 +34,7 @@ void Task::submit(std::shared_ptr<Object> const &object, bool send) const {
   object->seal();
 
   // Prepare the command line
-  CommandContext context;
-  context.parameters = object->toJsonString();
+  CommandContext context = { object };
 
   if (send) {
     // Get generated directory as locator

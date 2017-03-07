@@ -15,8 +15,10 @@
 namespace xpm {
 
 
+class Object;
+
 struct CommandContext {
-  std::string parameters;
+  std::shared_ptr<Object> parameters;
 };
 
 /// Base class for all command arguments
@@ -54,7 +56,7 @@ class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
   std::string toString() const;
 };
 
-/** Just a placeholder */
+/** Just a placeholder for JSON command line parameters */
 class XPM_PIMPL_CHILD(CommandParameters, AbstractCommandComponent) {
  public:
   CommandParameters();

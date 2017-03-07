@@ -1,6 +1,6 @@
 package net.bpiwowar.xpm.manager.scripting;
 
-import net.bpiwowar.xpm.manager.json.Json;
+import com.google.gson.JsonElement;
 import org.apache.commons.lang.ClassUtils;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
@@ -107,19 +107,19 @@ public class Converter {
         }
 
 
-        // JSON inputs
-        if (Json.class.isAssignableFrom(targetType)) {
-            if (object instanceof Map
-                    || object instanceof List || object instanceof Double || object instanceof Float
-                    || object instanceof Integer || object instanceof Long
-                    || object instanceof Path || object instanceof Boolean
-                    || object instanceof Resource || object instanceof ScriptingPath
-                    || object instanceof BigInteger || object instanceof String) {
-                score -= 10;
-                return x -> Json.toJSON(x);
-            }
-
-        }
+//        // JSON inputs
+//        if (JsonElement.class.isAssignableFrom(targetType)) {
+//            if (object instanceof Map
+//                    || object instanceof List || object instanceof Double || object instanceof Float
+//                    || object instanceof Integer || object instanceof Long
+//                    || object instanceof Path || object instanceof Boolean
+//                    || object instanceof Resource || object instanceof ScriptingPath
+//                    || object instanceof BigInteger || object instanceof String) {
+//                score -= 10;
+//                return x -> JsonElement.toJSON(x);
+//            }
+//
+//        }
 
         return nonMatching();
     }

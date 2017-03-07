@@ -5,6 +5,8 @@
 #include <string>
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
+#include <xpm/xpm.hpp>
+#include <xpm/value.hpp>
 
 namespace xpm {
 
@@ -146,18 +148,53 @@ struct Reference<CommandContent> : public Reference<AbstractCommandComponent> {
 
 CommandContent::CommandContent(std::string const &key, std::string const &value) : PimplChild(key, value) {
 }
+
 std::string CommandContent::toString() const {
   return std::string();
 }
-CommandContent::~CommandContent() {
 
+CommandContent::~CommandContent() {
 }
 
+
+namespace {
+  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Object> const & object) {
+    if (auto value = dynamic_cast<Value*>(object.get())) {
+      if (value->type() == xpm::PathType) {
+        oss << '"';
+        f.add(oss.str());
+        oss.str("");
+        f.add(rpc::Path::toPath(value->asPath().toString()));
+        oss << '"';
+      } else {
+        oss << value->jsonValue();
+      }
+    } else {
+      oss << "{";
+      bool first = true;
+      for(auto &entry: object->content()) {
+        if (first) first = false;
+        else oss << ',';
+        oss << "\"" << entry.first << "\":";
+        fill(f, oss, entry.second);
+      }
+      oss << "}";
+    }
+  }
+}
 
 template<>
 struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
-    return std::make_shared<rpc::JsonParameterFile>("params.json", context.parameters);
+    auto r = std::make_shared<rpc::ContentsFile>("params", ".json");
+    std::ostringstream oss;
+    fill(*r, oss, context.parameters);
+    std::string s = oss.str();
+    if (!s.empty()) {
+      r->add(oss.str());
+    }
+
+    return r;
   }
   virtual nlohmann::json toJson() const override {
     return { {"type", "parameters"} };

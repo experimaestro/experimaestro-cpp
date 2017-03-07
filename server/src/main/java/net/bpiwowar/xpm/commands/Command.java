@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.commands;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
@@ -187,8 +186,6 @@ public class Command extends AbstractCommand implements AbstractCommandComponent
                 list.add((AbstractCommandComponent) t);
             } else if (t instanceof java.nio.file.Path) {
                 list.add(new CommandPath((java.nio.file.Path) t));
-            } else if (t instanceof JsonPath) {
-                list.add(new CommandPath(((JsonPath) t).get()));
             } else {
                 list.add(new CommandString(t.toString()));
             }

@@ -18,15 +18,14 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.JsonArray;
 import net.bpiwowar.xpm.utils.PathUtils;
-import net.bpiwowar.xpm.manager.json.Json;
-import net.bpiwowar.xpm.manager.json.JsonArray;
-import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -129,13 +128,6 @@ public class ScriptingPath extends WrapperObject<Path> {
         if (arg == null)
             throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
 
-
-        if (arg instanceof Json) {
-            Json json = (Json)arg;
-            if (json instanceof JsonArray)
-                return path(current, json);
-        }
-
         String name = arg.toString();
         current = current.resolve(name);
         return current;
@@ -185,14 +177,14 @@ public class ScriptingPath extends WrapperObject<Path> {
 
     @Expose
     @Help("Find all the matching files within this folder")
-    public JsonArray find_matching_files(@Argument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
+    public List<Path> find_matching_files(@Argument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
         final Pattern pattern = Pattern.compile(regexp);
-        final JsonArray array = new JsonArray();
+        final ArrayList<Path> array = new ArrayList<>();
         DirectoryStream<java.nio.file.Path> paths = Files.newDirectoryStream(object, f -> pattern.matcher(f.getFileName().toString()).matches());
 
         Iterator<java.nio.file.Path> iterator = paths.iterator();
         while (iterator.hasNext()) {
-            array.add(new JsonPath(iterator.next()));
+            array.add(iterator.next());
         }
         return array;
     }

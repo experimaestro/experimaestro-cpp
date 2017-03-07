@@ -1,7 +1,7 @@
 package net.bpiwowar.xpm.manager;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.utils.XPMEnvironment;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -26,12 +26,13 @@ public class UserCacheTest extends XPMEnvironment {
         String id1 = "xpm.id1";
         String id2 = "xpm.id2";
 
-        Json key1 = Json.toJSON(new JsonParser().parse("{\"a\": 1 }"));
-        Json key2 = Json.toJSON(new JsonParser().parse("{\"a\": 2 }"));
 
-        Json value1 = Json.toJSON(new JsonParser().parse("{\"b\": 1 }"));
-        Json value2 = Json.toJSON(new JsonParser().parse("{\"b\": 2 }"));
-        Json value3 = Json.toJSON(new JsonParser().parse("{\"b\": 3 }"));
+        JsonElement key1 = new JsonParser().parse("{\"a\": 1 }");
+        JsonElement key2 = new JsonParser().parse("{\"a\": 2 }");
+
+        JsonElement value1 = new JsonParser().parse("{\"b\": 1 }");
+        JsonElement value2 = new JsonParser().parse("{\"b\": 2 }");
+        JsonElement value3 = new JsonParser().parse("{\"b\": 3 }");
 
         store(id1, 1000, key1, value1);
         store(id2, 1000, key1, value2);
@@ -47,13 +48,13 @@ public class UserCacheTest extends XPMEnvironment {
     public void forget() throws NoSuchAlgorithmException, SQLException, IOException {
         String id1 = "xpm.id1";
 
-        Json key1 = Json.toJSON(new JsonParser().parse("{\"a\": 1 }"));
+        JsonElement key1 = new JsonParser().parse("{\"a\": 1 }");
 
-        Json value1 = Json.toJSON(new JsonParser().parse("{\"b\": 1 }"));
+        JsonElement value1 = new JsonParser().parse("{\"b\": 1 }");
 
         store(id1, 0, key1, value1);
 
-        final Json retrieved = retrieve(id1, key1);
+        final JsonElement retrieved = retrieve(id1, key1);
 
         Assert.assertNull(retrieved);
     }

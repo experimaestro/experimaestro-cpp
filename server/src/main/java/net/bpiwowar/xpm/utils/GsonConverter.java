@@ -27,17 +27,14 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.connectors.Connector;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.utils.gson.ByteArrayAdapter;
 import net.bpiwowar.xpm.utils.gson.ConnectorAdapter;
-import net.bpiwowar.xpm.utils.gson.JsonAdapter;
 import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
-import java.util.HashSet;
 
 /**
  * Converts a command into a JSON string
@@ -61,8 +58,6 @@ public class GsonConverter {
         connectorBuilder.registerTypeAdapterFactory(new AbstractObjectFactory(Connector.class));
 
         for (GsonBuilder gsonBuilder : new GsonBuilder[]{defaultBuilder, connectorBuilder}) {
-
-            gsonBuilder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
             gsonBuilder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
             gsonBuilder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
 

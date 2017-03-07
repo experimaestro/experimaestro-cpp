@@ -80,9 +80,11 @@ class Value : public Object {
 
   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
 
+  /// Json value
+  nlohmann::json jsonValue() const;
+
  protected:
   friend struct Helper;
-  nlohmann::json jsonValue() const;
 };
 inline bool operator==(Value const &a, Value const &b) {
   return a.equals(b);

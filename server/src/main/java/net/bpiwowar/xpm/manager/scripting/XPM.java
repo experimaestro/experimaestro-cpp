@@ -37,8 +37,6 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.json.JsonObject;
-import net.bpiwowar.xpm.manager.json.JsonResource;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
@@ -172,41 +170,6 @@ public class XPM {
 
         context().getLogger(name).setLevel(Level.toLevel(level));
     }
-
-    @Expose(value = "command_line_job", optional = 1)
-    @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
-                                   @Argument(type = "Array", name = "command") @NotNull List<?> jsargs,
-                                   @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-        return commandlineJob(path, Command.getCommand(jsargs), options);
-    }
-
-    @Expose(value = "command_line_job", optional = 1)
-    @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(
-            @Argument(name = "json") JsonObject json,
-            @Argument(name = "jobId") Object jobId,
-            @Argument(name = "commands") Object commands,
-            @Argument(type = "Map", name = "options") Map<String, Object> jsOptions) throws Exception {
-
-        Commands _commands;
-        if (commands instanceof Commands) {
-            _commands = (Commands) commands;
-        } else if (commands instanceof AbstractCommand) {
-            _commands = new Commands((AbstractCommand) commands);
-        } else if (commands instanceof List) {
-            _commands = new Commands(Command.getCommand((List) commands));
-        } else {
-            throw new XPMScriptRuntimeException("2nd argument of command_line_job must be a command");
-        }
-
-        Resource resource = commandlineJob(jobId, _commands, jsOptions);
-
-        // Update the json
-        json.put(Constants.XP_RESOURCE.toString(), new JsonResource(resource));
-        return resource;
-    }
-
 
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")

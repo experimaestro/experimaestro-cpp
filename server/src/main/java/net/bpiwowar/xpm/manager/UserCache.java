@@ -1,9 +1,9 @@
 package net.bpiwowar.xpm.manager;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonReader;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.XPMResultSet;
 import net.bpiwowar.xpm.utils.GsonConverter;
@@ -31,9 +31,9 @@ public class UserCache {
      * @param key      The JSON key
      * @param value    The json value
      */
-    public static void store(String id, long validity, Json key, Json value) throws NoSuchAlgorithmException, IOException, SQLException {
+    public static void store(String id, long validity, JsonElement key, JsonElement value) throws NoSuchAlgorithmException, IOException, SQLException {
         MessageDigestWriter writer = new MessageDigestWriter(Charset.forName("UTF-8"), "MD5");
-        key.write(writer);
+        writer.write(key.toString());
         final String md5 = writer.getHexDigest();
 
         Scheduler.statement("DELETE FROM UserCache WHERE identifier=? and keyhash=?")
@@ -61,13 +61,13 @@ public class UserCache {
      * @return
      * @throws SQLException
      */
-    public static Json retrieve(String id, Json key) throws SQLException, IOException, NoSuchAlgorithmException {
+    public static JsonElement retrieve(String id, JsonElement key) throws SQLException, IOException, NoSuchAlgorithmException {
         Scheduler.statement("DELETE FROM UserCache WHERE validity < ?")
                 .setTimestamp(1, new Timestamp(System.currentTimeMillis()))
                 .executeUpdate();
 
         MessageDigestWriter writer = new MessageDigestWriter(Charset.forName("UTF-8"), "MD5");
-        key.write(writer);
+        writer.write(key.toString());
         final String md5 = writer.getHexDigest();
 
         try (final XPMResultSet rs = Scheduler.statement("SELECT jsonkey, jsondata FROM UserCache WHERE identifier=? and keyhash=?")
@@ -81,13 +81,13 @@ public class UserCache {
                  final InputStream is2 = rs.getBinaryStream(2)) {
                 final Gson gson = GsonConverter.defaultBuilder.create();
 
-                Json dbkey = getJson(is1, gson);
+                JsonElement dbkey = getJson(is1, gson);
                 if (!dbkey.equals(key)) {
                     // MD5 collision, return null
                     return null;
                 }
 
-                Json value = getJson(is2, gson);
+                JsonElement value = getJson(is2, gson);
 
                 return value;
             }
@@ -96,9 +96,9 @@ public class UserCache {
 
     }
 
-    private static Json getJson(InputStream is1, Gson gson) {
+    private static JsonElement getJson(InputStream is1, Gson gson) {
         try (Reader reader = new InputStreamReader(is1); JsonReader jsonReader = new JsonReader(reader)) {
-            return gson.fromJson(jsonReader, Json.class);
+            return gson.fromJson(jsonReader, JsonElement.class);
         } catch (IOException e) {
             throw new XPMRuntimeException(e, "Error while deserializing JSON");
         }
