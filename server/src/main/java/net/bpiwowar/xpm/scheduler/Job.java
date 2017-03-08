@@ -692,7 +692,7 @@ abstract public class Job extends Resource {
         }
 
         if (changes && inDatabase()) {
-            jobData.save(true, getId());
+            jobData().save(true, getId());
         }
         return changes;
     }

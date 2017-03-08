@@ -1,6 +1,7 @@
 package net.bpiwowar.xpm.commands;
 
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
  * Path content, to be converted in function of the context
  */
 @Exposed
+@JsonAbstract
 public class PathContent implements Content {
     private Path path;
 

@@ -99,6 +99,10 @@ public class GsonConverter {
 
     }
 
+    /**
+     * Objects are represented as an array containing
+     * the java class (fully qualified) and the serialized Json
+     */
     private static class AbstractObjectAdapter extends TypeAdapter {
         private final Gson gson;
         // This is for debug - remove ?
