@@ -210,7 +210,7 @@ def create(t, args, options, submit=False):
     xpmType = register.getType(t)
 
     # Create the type and set the arguments
-    o = xpmType.create()
+    o = xpmType.create(register.objectFactory())
     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
     if hasattr(t, "__task__"):
         o.task(t.__task__)

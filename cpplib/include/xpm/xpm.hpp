@@ -488,7 +488,7 @@ class Type
   std::shared_ptr<ObjectFactory> const &objectFactory();
 
   /** Creates an object with a given type */
-  std::shared_ptr<Object> create();
+  std::shared_ptr<Object> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
 
   /** Can ignore */
   inline bool canIgnore() { return _canIgnore; }
@@ -594,7 +594,7 @@ class Task
   void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
 
   /** Creates an object with a given type */
-  std::shared_ptr<Object> create();
+  std::shared_ptr<Object> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
 
   /** Convert to JSON */
   nlohmann::json toJson();

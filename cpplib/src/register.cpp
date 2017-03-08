@@ -16,7 +16,18 @@ DEFINE_LOGGER("xpm");
 
 using nlohmann::json;
 
-Register::Register() {
+namespace {
+struct DefaultObjectFactory : public ObjectFactory {
+  DefaultObjectFactory(const std::shared_ptr<Register> &theRegister) : ObjectFactory(theRegister) {
+  }
+
+  std::shared_ptr<Object> _create() const override {
+    return std::make_shared<Object>();
+  }
+};
+}
+
+Register::Register() : _defaultObjectFactory(std::make_shared<DefaultObjectFactory>(nullptr)) {
   addType(IntegerType);
   addType(RealType);
   addType(StringType);
@@ -60,7 +71,7 @@ std::shared_ptr<Object> Register::build(std::shared_ptr<Object> const &value) {
 
   // Create the object
   std::cerr << "Creating object..." << std::endl;
-  auto object = objectType ? objectType->create() : std::make_shared<Object>();
+  auto object = objectType ? objectType->create(_defaultObjectFactory) : _defaultObjectFactory->create();
 
   std::cerr << "Created object... " << object.get() << std::endl;
   object->setValue(value);
@@ -153,7 +164,7 @@ void Register::parse(std::vector<std::string> const &args) {
       LOGGER->error("Error while parsing " + args[2]);
       throw;
     }
-    auto value = task->create();
+    auto value = task->create(_defaultObjectFactory);
     value->fill(*this, j);
 
     // Parse further command line options

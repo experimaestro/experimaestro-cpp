@@ -142,7 +142,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       } else {
         if (type) {
           LOGGER->debug("Creating object of type {} using type->create()", *type);
-          object = type->create();
+          object = type->create(xpmRegister.objectFactory());
         } else {
           LOGGER->debug("Creating object of unknown type default object factory");
           object = xpmRegister.objectFactory()->create();
@@ -453,7 +453,7 @@ void Object::validate(bool generate) {
               auto v = value->get(KEY_TYPE);
               auto valueType = value->type();
               if (valueType) {
-                auto object = valueType->create();
+                auto object = valueType->create(nullptr);
                 object->setValue(value);
                 LOGGER->debug("Looking at {}", entry.first);
                 object->validate(generate);
@@ -594,9 +594,9 @@ std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, tr
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
 /** Creates an object with a given type */
-std::shared_ptr<Object> Type::create() {
-  LOGGER->debug("Creating object from type {} with {}", _type, _factory ? "a factory" : "NO factory");
-  const std::shared_ptr<Object> object = _factory ? _factory->create() : std::make_shared<Object>();
+std::shared_ptr<Object> Type::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
+  LOGGER->debug("Creating object from type {} with {}", _type, _factory ? "a factory" : "default factory");
+  const std::shared_ptr<Object> object = _factory ? _factory->create() : defaultFactory->create();
   object->type(shared_from_this());
   return object;
 }

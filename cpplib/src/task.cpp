@@ -73,10 +73,10 @@ void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
   _factory = factory;
 }
 
-std::shared_ptr<Object> Task::create() {
+std::shared_ptr<Object> Task::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
   Object::Ptr object;
   if (!_factory) {
-    object = _type->create();
+    object = _type->create(defaultFactory);
   } else {
     object = _factory->create();
   }

@@ -8,6 +8,10 @@
 #include <xpm/xpm.hpp>
 #include <xpm/value.hpp>
 
+#include "private.hpp"
+
+DEFINE_LOGGER("xpm")
+
 namespace xpm {
 
 template<>
@@ -173,6 +177,10 @@ namespace {
     } else {
       oss << "{";
       bool first = true;
+      if (object->type()) {
+        oss << "\"" << KEY_TYPE << "\": \"" << object->type()->typeName() << "\"";
+        first = false;
+      }
       for(auto &entry: object->content()) {
         if (first) first = false;
         else oss << ',';
