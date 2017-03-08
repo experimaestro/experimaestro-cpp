@@ -540,7 +540,8 @@ class Type
 class SimpleType : public Type {
   ValueType _valueType;
  public:
-  SimpleType(TypeName const &tname, ValueType valueType) : Type(tname, nullptr, true), _valueType(valueType) {}
+  SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false)
+      : Type(tname, nullptr, true, canIgnore), _valueType(valueType) {}
   inline ValueType valueType() { return _valueType; }
 };
 
