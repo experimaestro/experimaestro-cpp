@@ -191,8 +191,13 @@ public class CommandLineTask extends Job {
     }
 
     public JsonObject toJSON() throws IOException {
-        loadData();
         JsonObject info = super.toJSON();
+        try {
+            loadData();
+        } catch(Throwable e) {
+            info.addProperty("error", e.toString());
+            return info;
+        }
         info.addProperty("command", command.toString());
         info.addProperty("working-directory", workingDirectory);
 
