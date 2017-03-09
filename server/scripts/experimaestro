@@ -659,8 +659,8 @@ def command_kill(args):
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_kill(args):
-    server = Configuration(args).getJsonServer()
-    n = server["experiments.kill"]({"identifier": args.experimentid, "states": get_states(args.states)})
+    server = Configuration(args).getWebSocketServer()
+    n = run_server_command(server, "experiments.kill", {"identifier": args.experimentid, "states": get_states(args.states)})
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_delete(args):
