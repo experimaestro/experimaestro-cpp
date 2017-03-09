@@ -205,7 +205,7 @@ abstract public class Job extends Resource {
         if (fake) {
             start(locks, true);
         } else {
-            setProcess(start(locks, fake));
+            setProcess(start(locks, false));
         }
         return getProcess();
     }
@@ -325,9 +325,13 @@ abstract public class Job extends Resource {
 
                 // Commits all the changes so far
 
-                // Now, starts the job
+                // Now, really starts the job
                 startJob(locks, false);
+
+                // Adopt all the locks
                 getProcess().adopt(locks);
+
+                // And prevents their removal
                 locks = null;
 
                 // Store the current state

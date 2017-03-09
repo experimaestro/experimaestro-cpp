@@ -85,6 +85,11 @@ public class Resource implements Identifiable {
      */
     public static final FileNameTransformer LOCK_EXTENSION = new FileNameTransformer("", ".lock");
 
+    /**
+     * Extension for the lock start file (used to ensure that the job is not started twice)
+     */
+    public static final FileNameTransformer LOCKSTART_EXTENSION = new FileNameTransformer("", ".lock.start");
+
     // --- Resource description
 
     /**

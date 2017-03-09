@@ -27,14 +27,10 @@ import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
-import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
-import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.apache.log4j.Level;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -187,6 +183,13 @@ public class CommandLineTask extends Job {
         builder.removeLock(Resource.LOCK_EXTENSION.transform(getLocator()));
 
         // Start
+
+        if (!fake) {
+            // Create a start lock file
+            final Path startlockPath = Resource.LOCKSTART_EXTENSION.transform(getLocator());
+            builder.startlock(startlockPath);
+            Files.createFile(startlockPath);
+        }
         return builder.start(fake);
     }
 

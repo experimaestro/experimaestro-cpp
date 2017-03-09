@@ -22,6 +22,7 @@ package net.bpiwowar.xpm.commands;
 import com.google.common.collect.Iterables;
 import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.manager.Constants;
@@ -89,6 +90,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     private Path pidFile;
 
     /**
+     * Path for preventing bad starts
+     */
+    private Path startlockPath;
+
+    /**
      * Commands
      *
      * @param file
@@ -115,7 +121,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     final public XPMProcess start(boolean fake) throws LaunchException, IOException {
         final Path runFile = path;
-        String pathString = launcher.getMainConnector().resolve(path);
+        final SingleHostConnector mainConnector = launcher.getMainConnector();
+        String pathString = mainConnector.resolve(path);
         final Path basepath = runFile.getParent();
         Files.createDirectories(basepath);
         final String baseName = runFile.getFileName().toString();
@@ -199,6 +206,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // --- END CLEANUP
 
+            if (startlockPath != null) {
+                writer.format("# Checks that the start lock is set, and removes it%n");
+                writer.format("test -f %s || exit 017%n", mainConnector.resolve(startlockPath));
+                writer.format("rm -f %s", mainConnector.resolve(startlockPath));
+            }
 
             if (!lockFiles.isEmpty()) {
                 writer.format("# Checks that the locks are set%n");
@@ -399,6 +411,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     public void doneFile(Path donePath) throws IOException {
         this.donePath = donePath;
+    }
+
+    @Override
+    public void startlock(Path donePath) throws IOException {
+        this.startlockPath = donePath;
     }
 
     public void setDoCleanup(boolean doCleanup) {
