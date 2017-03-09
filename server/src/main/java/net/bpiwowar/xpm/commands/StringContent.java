@@ -10,7 +10,6 @@ import java.io.PrintStream;
  * String content
  */
 @Exposed
-@JsonAbstract
 public class StringContent implements Content {
     private final String content;
 

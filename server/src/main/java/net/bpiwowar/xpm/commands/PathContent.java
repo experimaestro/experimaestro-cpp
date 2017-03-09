@@ -12,7 +12,6 @@ import java.nio.file.Path;
  * Path content, to be converted in function of the context
  */
 @Exposed
-@JsonAbstract
 public class PathContent implements Content {
     private Path path;
 
