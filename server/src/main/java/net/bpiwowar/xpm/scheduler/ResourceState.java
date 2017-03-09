@@ -60,10 +60,10 @@ public enum ResourceState {
     DONE;
 
     /**
-     * States in which a resource can replaced
+     * Resources can be replaced anytime unless they are running
      */
     final static EnumSet<ResourceState> UPDATABLE_STATES
-            = EnumSet.of(READY, ON_HOLD, ERROR, WAITING);
+            = EnumSet.complementOf(EnumSet.of(RUNNING));
 
     /*
     * Running or pre-running states

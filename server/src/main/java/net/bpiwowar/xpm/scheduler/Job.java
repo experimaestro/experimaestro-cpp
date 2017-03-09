@@ -875,14 +875,12 @@ abstract public class Job extends Resource {
 
         // Replace old if necessary
         if (old != null) {
-            if (!old.canBeReplaced()) {
-                LOGGER.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
-                        "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+            if (old.replaceBy(this)) {
+                LOGGER.info("Replaced resource %s [%d]", old.getLocator(), old.getId());
+            } else {
+                LOGGER.log(Level.INFO,"Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
                 context.postProcess(old);
                 return old;
-            } else {
-                LOGGER.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
-                old.replaceBy(this);
             }
         } else {
             // Store in scheduler

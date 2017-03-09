@@ -239,8 +239,9 @@ public class Resource implements Identifiable {
             boolean b = doUpdateStatus();
             return b;
         } catch (Exception e) {
+            // Do not do anything if an exception was thrown
             LOGGER.error(e, "Exception while updating status");
-            return setState(ResourceState.ON_HOLD);
+            return false;
         }
     }
 
@@ -660,20 +661,20 @@ public class Resource implements Identifiable {
         return extension.transform(locator);
     }
 
-    synchronized final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
+    synchronized final public boolean replaceBy(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         if (!resource.getLocator().equals(this.locator)) {
             throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), getLocator());
         }
 
-        updateStatus(); // Update before
         if (!canBeReplaced()) {
-            throw new ExperimaestroCannotOverwrite("Cannot replace %s [state is %s]", this, getState());
+            return false;
         }
 
         resource.save(Scheduler.get().resources(), this);
 
         // Not in DB anymore
         this.setId(null);
+        return true;
     }
 
     public void save() throws SQLException {
