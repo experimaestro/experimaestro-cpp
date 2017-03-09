@@ -141,6 +141,7 @@ abstract public class Job extends Resource {
         if (!getState().isActive()) {
             // Set state status waiting
             setState(restart ? ResourceState.WAITING : ResourceState.ERROR);
+            dependencyCheck();
 
             if (getState().isFinished()) {
                 clean(false);
@@ -162,7 +163,6 @@ abstract public class Job extends Resource {
             }
 
             // Update status
-            updateStatus();
             Scheduler.notifyRunners();
         }
     }
@@ -665,6 +665,22 @@ abstract public class Job extends Resource {
             setProcess(null);
         }
 
+        changes |= dependencyCheck();
+
+
+        if (changes && inDatabase()) {
+            jobData().save(true, getId());
+        }
+        return changes;
+    }
+
+    /**
+     * Count the number of unsatisfied dependencies and update state (if needed)
+     * @return True if there was a changed in the stored data
+     * @throws SQLException If an exception occurs
+     */
+    synchronized public boolean dependencyCheck() throws SQLException {
+        boolean changes = false;
 
         // Check dependencies if we are in waiting or ready
         if (getState() == ResourceState.WAITING || getState() == ResourceState.READY || getState() == ResourceState.ON_HOLD) {
@@ -690,17 +706,13 @@ abstract public class Job extends Resource {
             LOGGER.debug("After update, state of %s is %s [unsatisfied=%d, holding=%d]", this, state, nbUnsatisfied, nbHolding);
             changes |= setState(state);
         }
-
-        if (changes && inDatabase()) {
-            jobData().save(true, getId());
-        }
         return changes;
     }
 
     /**
      * Stop the job
      */
-    public boolean stop() throws SQLException {
+    synchronized public boolean stop() throws SQLException {
         // Process is running
         if (getProcess() != null) {
             try {
@@ -866,12 +878,14 @@ abstract public class Job extends Resource {
         // --- Set defaults
         context.prepare(this);
 
-
-        setState(ResourceState.WAITING);
-
         final Resource old = Resource.getByLocator(getLocator());
 
-        updateStatus();
+        if (old != null && (old.getState() == ResourceState.DONE)) {
+            setState(ResourceState.DONE);
+        } else {
+            setState(ResourceState.WAITING);
+            dependencyCheck();
+        }
 
         // Replace old if necessary
         if (old != null) {

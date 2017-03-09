@@ -232,7 +232,11 @@ public class Resource implements Identifiable {
      * Update the state of the resource by checking all that could have changed externally
      * <p>
      * Calls {@linkplain #doUpdateStatus()}.
-     * If the update fails for some reason, then we just put the state into HOLD
+     * If the update fails for some reason, then does nothing (no reason to change state)
+     *
+     * This method should be called only when needed:
+     * - when requested by the user
+     * - before launching a job (to avoid problems)
      */
     synchronized final public boolean updateStatus() throws SQLException {
         try {
@@ -585,42 +589,6 @@ public class Resource implements Identifiable {
         return count;
     }
 
-    ;
-
-
-    /**
-     * Store a resource
-     *
-     * @param resource
-     * @return The old resource, or null if there was nothing
-     * @throws ExperimaestroCannotOverwrite If the old resource could not be overriden
-     */
-    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
-        // Get the group
-        final boolean newResource = !resource.isStored();
-        if (newResource) {
-            resource.updateStatus();
-        }
-
-        // TODO implement
-        final Resource old = null;
-        if (old == null) {
-            throw new NotImplementedException();
-        }
-
-        LOGGER.debug("Storing resource %s [%x@%s] in state %s", resource, System.identityHashCode(resource), resource.getId(), resource.getState());
-
-        if (newResource) {
-            final long id = resource.getId();
-            LOGGER.debug("Adding a new resource [%s] in database [id=%d/%x]", resource, id, System.identityHashCode(resource));
-
-            // Notify
-            ResourceMessage.added(resource).send();
-        }
-
-
-        return old;
-    }
 
     /**
      * Delete a resource
@@ -715,9 +683,6 @@ public class Resource implements Identifiable {
         } else if (!update && getId() != null) {
             throw new SQLException("Resource already in database");
         }
-
-        // Update the status
-        updateStatus();
 
         // Save resource
         // Save on file

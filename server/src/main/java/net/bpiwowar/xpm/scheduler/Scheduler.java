@@ -314,6 +314,8 @@ final public class Scheduler {
                                     job.setState(ResourceState.ERROR);
                                     LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
                                 }
+
+                                // Needs a refresh
                                 job.updateStatus();
 
                             } catch (SQLException e) {
@@ -796,7 +798,9 @@ final public class Scheduler {
                                     } catch (LockException e) {
                                         // We could not lock the resources: update the job state
                                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                        job.updateStatus();
+
+                                        // Reset the job to a waiting state
+                                        job.setState(ResourceState.READY);
                                     } catch (Throwable t) {
                                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                         job.setState(ResourceState.ERROR);
@@ -1021,7 +1025,6 @@ final public class Scheduler {
                 try {
                     final Resource resource = Resource.getById(rid);
                     resource.setState(ResourceState.RUNNING);
-                    resource.updateStatus();
                 } catch (Throwable e) {
                     LOGGER.error(e, "[cleanup] Could not update resource %d", rid);
                 }

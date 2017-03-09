@@ -260,7 +260,7 @@ public abstract class XPMProcess {
             if (!checker.cancel(true)) {
                 checker = null;
             } else
-                LOGGER.warn("Could not cancel the checker");
+                LOGGER.warn("Could not cancel the checker (null)");
 
         }
     }

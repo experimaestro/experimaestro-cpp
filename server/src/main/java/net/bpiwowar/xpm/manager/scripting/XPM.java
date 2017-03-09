@@ -22,11 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandContext;
-import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
 import net.bpiwowar.xpm.connectors.Connector;
@@ -35,26 +32,17 @@ import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.scheduler.CommandLineTask;
-import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
-import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TokenResource;
-import net.bpiwowar.xpm.utils.Output;
-import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Level;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -180,11 +168,6 @@ public class XPM {
     }
 
     @Expose
-    public boolean simulate() {
-        return Context.get().simulate();
-    }
-
-    @Expose
     public String evaluate(List<Object> command) throws Exception {
         return evaluate(command, ImmutableMap.of());
     }
@@ -233,195 +216,6 @@ public class XPM {
 
             return builder.execute(sc.getMainLogger());
         }
-    }
-
-
-    @Expose(value = "command_line_job", optional = 1)
-    @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(@Argument(name = "jobId") Object path,
-                                   AbstractCommand command,
-                                   @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-        final Context context = context();
-        final Logger rootLogger = context.getLogger("xpm");
-
-        if (path == null) {
-            throw new XPMScriptRuntimeException("Locator was null for command line job");
-        }
-
-        CommandLineTask job = null;
-        // --- XPMProcess arguments: convert the javascript array into a Java array
-        // of String
-        LOGGER.debug("Adding command line job");
-
-        // --- Create the task
-
-
-        final Connector connector = (Connector) options.get("connector");
-
-        // Resolve the path for the given connector
-        if (!(path instanceof java.nio.file.Path)) {
-            path = NetworkShare.uriToPath(path.toString());
-        }
-
-        job = new CommandLineTask((java.nio.file.Path) path);
-
-        // Inherit output for main commands
-        command.setOutputRedirect(Redirect.INHERIT);
-        if (command instanceof Commands) {
-            for (AbstractCommand subcommand : command) {
-                subcommand.setOutputRedirect(Redirect.INHERIT);
-            }
-        }
-
-        job.setCommand(command);
-        if (context.getSubmittedJobs().containsKey(path)) {
-            rootLogger.info("Not submitting %s [duplicate]", path);
-            if (simulate()) {
-                return job;
-            }
-
-            return Resource.getByLocator(connector.resolve((java.nio.file.Path) path));
-        }
-
-
-        // --- Environment
-        ArrayList<Dependency> dependencies = new ArrayList<>();
-
-        // --- Set defaults
-        context.prepare(job);
-
-        // --- Options
-        if (options != null) {
-
-            final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
-            if (!unmatched.isEmpty()) {
-                throw new IllegalArgumentException(format("Some options are not allowed: %s",
-                        Output.toString(", ", unmatched)));
-            }
-
-
-            // --- XPMProcess launcher
-            if (options.containsKey("launcher")) {
-                final Object launcher = options.get("launcher");
-                if (launcher != null)
-                    job.setLauncher((Launcher) launcher, (LauncherParameters) context.getParameter(launcher));
-
-            }
-
-            // --- Redirect standard output
-            if (options.containsKey("stdin")) {
-                final Object stdin = options.get("stdin");
-                if (stdin instanceof String) {
-                    job.setInput((String) stdin);
-                } else if (stdin instanceof java.nio.file.Path) {
-                    job.setInput((java.nio.file.Path) stdin);
-                } else
-                    throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
-            }
-
-            // --- Redirect standard output
-            if (options.containsKey("stdout")) {
-                java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stdout"));
-                job.setOutput(fileObject);
-            }
-
-            // --- Redirect standard error
-            if (options.containsKey("stderr")) {
-                java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stderr"));
-                job.setError(fileObject);
-            }
-
-
-            // --- Resources to lock
-            if (options.containsKey("lock")) {
-                List locks = (List) options.get("lock");
-                for (int i = locks.size(); --i >= 0; ) {
-                    Object lock_i = locks.get(i);
-                    Dependency dependency = null;
-
-                    if (lock_i instanceof Dependency) {
-                        dependency = (Dependency) lock_i;
-                    } else if (lock_i instanceof List) {
-                        List array = (List) lock_i;
-                        if (array.size() != 2) {
-                            throw new XPMScriptRuntimeException(new IllegalArgumentException("Wrong number of arguments for lock"));
-                        }
-
-                        final Object depObject = array.get(0);
-                        Resource resource = null;
-                        if (depObject instanceof Resource) {
-                            resource = (Resource) depObject;
-                        } else {
-                            final String rsrcPath = depObject.toString();
-                            resource = Resource.getByLocator(rsrcPath);
-                            if (resource == null)
-                                if (simulate()) {
-                                    if (!context.getSubmittedJobs().containsKey(rsrcPath))
-                                        LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
-                                } else {
-                                    throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
-                                }
-                        }
-
-                        final DependencyParameters lockType = (DependencyParameters) array.get(1);
-                        LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
-
-                        if (!simulate()) {
-                            dependency = resource.createDependency(lockType);
-                        }
-                    } else {
-                        throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
-                                i, lock_i.getClass());
-                    }
-
-                    if (!simulate()) {
-                        dependencies.add(dependency);
-                    }
-                }
-
-            }
-
-
-        }
-
-
-        job.setState(ResourceState.WAITING);
-        if (simulate()) {
-            PrintWriter pw = new LoggerPrintWriter(rootLogger, Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", job.toString());
-            pw.format("Command: %s%n", job.getCommand().toString());
-            pw.format("Locator: %s", path.toString());
-            pw.flush();
-        } else {
-
-            // Add dependencies
-            dependencies.forEach(job::addDependency);
-
-            final Resource old = Resource.getByLocator(job.getLocator());
-
-            job.updateStatus();
-
-            // Replace old if necessary
-            if (old != null) {
-                if (!old.canBeReplaced()) {
-                    rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
-                            "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                    context.postProcess(old);
-                    return old;
-                } else {
-                    rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
-                    old.replaceBy(job);
-                }
-            } else {
-                // Store in scheduler
-                job.save();
-            }
-
-        }
-
-        context.postProcess(job);
-
-        return job;
     }
 
 
