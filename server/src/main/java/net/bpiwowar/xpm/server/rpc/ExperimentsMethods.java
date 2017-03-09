@@ -12,6 +12,7 @@ import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -89,13 +90,13 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
                 switch (command) {
                     case kill:
                         if (resource instanceof Job) {
-                            ((Job)resource).stop();
+                            ((Job) resource).stop();
                         }
                         break;
 
                     case delete:
                         if (resource instanceof Job && ((Job) resource).checkProcess()) {
-                            ((Job)resource).stop();
+                            ((Job) resource).stop();
                         }
                         resource.delete(false);
                         break;
@@ -251,7 +252,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
     }
 
     @RPCMethod(name = "delete", help = "Delete an experiment")
-    public static int delete(@RPCArgument(name="identifier") String identifier) throws SQLException {
+    public static int delete(@RPCArgument(name = "identifier") String identifier) throws SQLException {
         int count = 0;
         for (Experiment experiment : Experiment.findAllByIdentifier(identifier)) {
             count += experiment.delete();
@@ -284,5 +285,63 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
             }
             return n;
         }
+    }
+
+
+    @RPCMethod(name = "invalidate", help = "Restart all jobs from an experiment")
+    public class Invalidate implements JsonCallable {
+        @RPCArgument(name = "experimentId")
+        String experimentId;
+
+        @RPCArgument
+        EnumSet<ResourceState> states = ResourceState.RUNNABLE_STATES;
+
+        @RPCArgument(name = "recursive", required = false, help = "Whether we should invalidate dependent results when the job was done")
+        boolean recursive = true;
+
+        @RPCArgument(name = "restart", help = "Whether we should restart the job (false = error)")
+        boolean restart = true;
+
+        @Override
+        public Object call() throws Throwable {
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+            int nbUpdated = 0;
+
+            for (Resource resource : Experiment.resourcesByIdentifier(experimentId, states)) {
+
+                try {
+                    logger.info("Invalidating resource %s", resource);
+
+                    final ResourceState rsrcState = resource.getState();
+
+                    // Stop running jobs
+                    if (rsrcState == ResourceState.RUNNING) {
+                        ((Job) resource).stop();
+                    }
+
+                    // The job is active, so we have nothing to do
+                    if (rsrcState.isActive() && rsrcState != ResourceState.RUNNING) {
+                        // Just notify in case
+                        Scheduler.notifyRunners();
+                        continue;
+                    }
+
+                    if (restart || !resource.getState().isFinished()) {
+                        ((Job) resource).invalidate(restart);
+                        nbUpdated++;
+
+                        // If the job was done, we need to invalidate the dependences
+                        if (recursive && rsrcState == ResourceState.DONE) {
+                            nbUpdated += JsonRPCMethods.invalidate(resource, restart);
+                        }
+                    }
+                } catch (Throwable t) {
+                    logger.error("Could not invalidate job %s: %s", resource, t);
+                }
+            }
+
+            return nbUpdated;
+        }
+
     }
 }

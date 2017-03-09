@@ -259,7 +259,7 @@ public class Experiment implements Identifiable {
      */
     static public List<Resource> resourcesByIdentifier(String identifier, EnumSet<ResourceState> states) throws SQLException {
         final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
-        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status, et.id, et.identifier " +
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
                 "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.name=? AND r.status in ("
                 + states.stream().map(s -> Integer.toString(s.value())).collect(Collectors.joining(","))

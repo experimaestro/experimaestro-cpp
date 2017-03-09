@@ -622,7 +622,7 @@ abstract public class Job extends Resource {
                 try {
                     code = Integer.parseInt(line);
                 } catch (NumberFormatException e) {
-                    LOGGER.info("Could not isStopped exit code file (number format exception for [%s]) %s", line, this);
+                    LOGGER.info("Could not read exit code file (number format exception for [%s]) %s", line, this);
                 }
                 newState = code == 0 ? ResourceState.DONE : ResourceState.ERROR;
             }

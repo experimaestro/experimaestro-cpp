@@ -328,7 +328,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     // Restart all the job (recursion)
-    static private int invalidate(Resource resource, boolean restart) throws Exception {
+    static public int invalidate(Resource resource, boolean restart) throws Exception {
         int nbUpdated = 0;
         try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies(false)) {
 
@@ -361,7 +361,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     @RPCMethod(name = "invalidate", help = "Puts back a job into the waiting queue")
-    public class Restart implements JsonCallable {
+    public class Invalidate implements JsonCallable {
         @RPCArgument(name = "ids", help = "The id of the job(s) (string or integer)")
         String[] ids;
 

@@ -38,7 +38,7 @@ jarname = "experimaestro-%s.jar" % version
 
 class StatesCompleter(object):
     def __init__(self):
-        self.choices = set(["DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"])
+        self.choices = {"DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"}
 
     def __call__(self, prefix, **kwargs):
         ix = prefix.rfind(",")
@@ -56,8 +56,12 @@ statesCompleter = StatesCompleter()
 
 # create the top-level parser
 
-parser = argparse.ArgumentParser(description='experimaestro script.')
+parser = argparse.ArgumentParser(description='experimaestro script.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers(help='Command', dest='command')
+
+p_xp = subparsers.add_parser("experiments", help="Manage experiments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+xp_subparsers = p_xp.add_subparsers(help='Command', dest='subcommand')
+
 parser.set_defaults(dir=xpmdir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
                     choices=("debug", "info", "warn"), default="info")
@@ -102,9 +106,15 @@ subparsers.add_parser("list-methods", help="List Json RPC methods")
 subparsers.add_parser("ssh-agent", help="List Json RPC methods")
 
 p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
-p_invalidate.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
-p_invalidate.add_argument('--keep-done', dest="keep_done", action="store_true", default=False, help="Keep done jobs as is")
-p_invalidate.add_argument('--restart', dest="restart", action="store_true", default=False, help="Set the job state to error instead of waiting")
+p_experiments_invalidate = xp_subparsers.add_parser("invalidate", help="Invalidate jobs for an experiment")
+
+for subp in [p_invalidate, p_experiments_invalidate]:
+    subp.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
+    subp.add_argument('--restart', dest="restart", action="store_true", default=False, help="Restart instead of setting to ERROR")
+
+p_experiments_invalidate.add_argument('--states', dest="states", default="ERROR", help="States to invalidate").completer = statesCompleter
+p_experiments_invalidate.add_argument('experimentId', help='The experiment ID')
+
 p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
@@ -129,8 +139,6 @@ p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
 
 # --- Experiments
 
-p_xp = subparsers.add_parser("experiments", help="Manage experiments")
-xp_subparsers = p_xp.add_subparsers(help='Command', dest='subcommand')
 
 p_xp_kill = xp_subparsers.add_parser("kill", help="Kill jobs from an experiment")
 p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States").completer = statesCompleter
@@ -143,6 +151,7 @@ p_cleanup.add_argument("--run", default=False, action="store_true", help="Really
 
 p_xp_delete = xp_subparsers.add_parser("delete", help="Delete an experiment")
 p_xp_delete.add_argument('experimentid', help="The experiment ID")
+
 
 # --- Other
 
@@ -651,6 +660,14 @@ def command_invalidate(args):
     server = Configuration(args).getJsonServer()
     json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
     print(server.invalidate(json_args))
+
+
+def command_experiments_invalidate(args):
+    server = Configuration(args).getWebSocketServer()
+    json_args = { "experimentId": args.experimentId, "restart": args.restart, "recursive": args.recursive,
+                  "states": args.states.split(",")}
+    count = run_server_command(server, "experiments.invalidate", json_args)
+    print("Restarted %d jobs " % count)
 
 
 def command_kill(args):
