@@ -7,6 +7,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 
 import static java.lang.Math.max;
@@ -22,7 +23,11 @@ public class FileViewer implements AutoCloseable {
     private final String uri;
 
     public FileViewer(String uri) throws IOException {
-        channel = Files.newByteChannel(Paths.get(URI.create(uri)));
+        try {
+            channel = Files.newByteChannel(Paths.get(URI.create(uri)));
+        } catch(NoSuchFileException e) {
+            LOGGER.warn("File not found: %s", uri);
+        }
         this.uri = uri;
     }
 
@@ -47,13 +52,17 @@ public class FileViewer implements AutoCloseable {
     }
 
     synchronized public ByteBuffer read(long position, int size) throws IOException {
-        if (position < 0) {
-            position = max(0, channel.size() + position);
+        if (channel != null) {
+            if (position < 0) {
+                position = max(0, channel.size() + position);
+            }
+
+            channel.position(position);
+            final ByteBuffer byteBuffer = ByteBuffer.allocate(size);
+            channel.read(byteBuffer);
+            return byteBuffer;
         }
 
-        channel.position(position);
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(size);
-        channel.read(byteBuffer);
-        return byteBuffer;
+        return ByteBuffer.allocate(0);
     }
 }
