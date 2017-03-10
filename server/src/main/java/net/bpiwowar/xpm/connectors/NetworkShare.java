@@ -163,8 +163,7 @@ final public class NetworkShare implements Identifiable {
             String hostname = result.getString(2);
             String name = result.getString(3);
 
-            final NetworkShare networkShare = new NetworkShare(id, hostname, name);
-            return networkShare;
+            return new NetworkShare(id, hostname, name);
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not construct network share");
         }

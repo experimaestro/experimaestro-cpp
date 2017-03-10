@@ -77,13 +77,15 @@ struct Progress {
     tcp::resolver::query query(hostname, port, asio::ip::resolver_query_base::flags::all_matching);
     endpoint_iterator = resolver.resolve(query);
 
+    // Creates a new thread that will run independently of the rest
     notifierThread = std::thread(&Progress::tick, this);
+    notifierThread.detach();
   }
 
   void tick() {
     // First tick
-    LOGGER->debug("First notification...");
-    notify(-1);
+    LOGGER->debug("First XPM notification...");
+    notify(0);
 
     while (true) {
       std::unique_lock<std::mutex> lk(mx);
@@ -110,6 +112,10 @@ struct Progress {
     }
   }
 
+  /**
+   * Sends progress information to XPM
+   * @param value The current progress value (or -1)
+   */
   void notify(float value) {
     try {
         tcp::socket socket(io_service);

@@ -190,7 +190,6 @@ public class StatusLock extends Lock {
 
         if (!Files.exists(statusFile)) {
             writers = readers = 0;
-            return;
         } else {
             // Check if we need status read the file
             long lastModified = Files.getLastModifiedTime(statusFile).toMillis();

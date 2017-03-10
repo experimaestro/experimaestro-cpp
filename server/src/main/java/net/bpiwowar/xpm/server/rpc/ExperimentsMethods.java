@@ -194,7 +194,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
                 IdentityHashMap<Object, Integer> map = new IdentityHashMap<>();
                 List<TaskReference> tasks = experiment.getTasks();
                 for (TaskReference taskReference : tasks) {
-                    addNode(nodes, map, taskReference, taskReference.getTaskId().toString());
+                    addNode(nodes, map, taskReference, taskReference.getTaskId());
                     for (Resource resource : taskReference.getResources()) {
                         addNode(nodes, map, resource, resource.getIdentifier());
                     }
@@ -209,7 +209,6 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
                         addLink(links, map, taskReference, resource);
                     }
                 }
-                break;
             }
             return response;
         }

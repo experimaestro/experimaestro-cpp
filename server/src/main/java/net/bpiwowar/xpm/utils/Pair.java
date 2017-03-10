@@ -88,9 +88,8 @@ public class Pair<T, U> implements Serializable, Map.Entry<T, U> {
 
     @Override
     public U setValue(U value) {
-        U old = value;
         this.second = value;
-        return old;
+        return value;
     }
 
     @Override

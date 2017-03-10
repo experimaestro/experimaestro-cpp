@@ -498,7 +498,7 @@ public abstract class XPMProcess {
     public void setProgress(double progress) {
         try {
             final Timestamp value = new Timestamp(System.currentTimeMillis());
-            Scheduler.statement(format("UPDATE Processes SET progress=?, last_update=? WHERE resource=?"))
+            Scheduler.statement("UPDATE Processes SET progress=?, last_update=? WHERE resource=?")
                     .setDouble(1, progress)
                     .setTimestamp(2, value)
                     .setLong(3, job.getId())

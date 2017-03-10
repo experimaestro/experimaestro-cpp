@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -55,7 +56,7 @@ public class ParameterFile extends CommandComponent implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         ParameterFile that = (ParameterFile) o;
         return Objects.equals(key, that.key) &&
-                Objects.equals(content, that.content);
+                Arrays.equals(content, that.content);
     }
 
     @Override

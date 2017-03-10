@@ -85,7 +85,7 @@ public abstract class GenericFunction {
                 scoredDeclarations[i++] = declaration.score(arguments, true);
             }
 
-            Arrays.sort(scoredDeclarations, (a, b) -> Integer.compare(a.score, b.score));
+            Arrays.sort(scoredDeclarations, Comparator.comparingInt(a -> a.score));
 
 
             final Logger logger = Context.mainLogger();
@@ -117,9 +117,8 @@ public abstract class GenericFunction {
                     logger.warn(deprecated.value());
                 }
             }
-            final Object result = argmax.declaration.invoke(thisObj, transformedArgs);
 
-            return result;
+            return argmax.declaration.invoke(thisObj, transformedArgs);
         } catch (InvocationTargetException e) {
             throw new WrappedException(new XPMScriptRuntimeException(e.getCause()));
         } catch (RuntimeException e) {

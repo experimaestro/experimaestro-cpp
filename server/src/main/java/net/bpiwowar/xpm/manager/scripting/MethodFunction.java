@@ -20,11 +20,8 @@ package net.bpiwowar.xpm.manager.scripting;
 
 import com.google.common.collect.Iterables;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;

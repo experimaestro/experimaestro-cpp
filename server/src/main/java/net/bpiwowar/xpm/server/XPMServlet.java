@@ -61,8 +61,7 @@ public abstract class XPMServlet extends HttpServlet {
             throws IOException {
         response.setContentType("text/html");
         response.setStatus(HttpServletResponse.SC_OK);
-        final PrintWriter out = response.getWriter();
-        return out;
+        return response.getWriter();
     }
 
     void header(PrintWriter out, String title) {

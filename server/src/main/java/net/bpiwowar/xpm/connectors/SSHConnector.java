@@ -68,7 +68,7 @@ public class SSHConnector extends SingleHostConnector {
      * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
      */
-    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<>();
+    static private final HashMap<SSHConnector, SSHSession> sessions = new HashMap<>();
 
     /**
      * Temporary path on host
@@ -397,7 +397,6 @@ public class SSHConnector extends SingleHostConnector {
         final Logger logger = Context.get().getMainLogger();
         AbstractProcessBuilder builder = launcher.processBuilder(null);
         builder.command(command);
-        String returned = builder.execute(logger);
-        return returned;
+        return builder.execute(logger);
     }
 }

@@ -33,7 +33,7 @@ public class Router extends WriterAppender {
         this.setWriter(new RouterWriter());
     }
 
-    final static private Writer writer() {
+    static private Writer writer() {
         Writer stream = threadOutput.get();
         if (stream == null) {
             return ERROR_STREAM_WRITER;
@@ -41,7 +41,7 @@ public class Router extends WriterAppender {
         return stream;
     }
 
-    final static public void writer(Writer writer) {
+    static public void writer(Writer writer) {
         threadOutput.set(writer);
     }
 

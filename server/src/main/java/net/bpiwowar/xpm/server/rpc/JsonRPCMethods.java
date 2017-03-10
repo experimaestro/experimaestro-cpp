@@ -75,7 +75,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     /**
      * Opened files
      */
-    Map<String, FileViewer> fileViewers = new HashMap<>();
+    final Map<String, FileViewer> fileViewers = new HashMap<>();
 
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
@@ -194,7 +194,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             }
 
             if (argmax == null)
-                throw new XPMCommandException("Cannot find a matching method for " + command.toString());
+                throw new XPMCommandException("Cannot find a matching method for " + command);
             final Class<?> declaringClass = argmax.getDeclaringClass();
 
             Object result = argmax.call(objects.get(declaringClass), p);
@@ -455,7 +455,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             for (Resource resource : resources) {
                 if (resource.updateStatus()) {
                     updated.put(resource.getIdentifier(), resource.getState());
-                } else {
                 }
             }
         } catch (CloseException e) {

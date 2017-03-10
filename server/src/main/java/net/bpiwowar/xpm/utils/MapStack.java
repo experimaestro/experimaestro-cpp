@@ -31,7 +31,7 @@ import java.util.*;
  */
 public class MapStack<Key, Value> extends AbstractMap<Key, Value> {
     MapStack<Key, Value> previous;
-    Map<Key, Value> map = new HashMap<>();
+    final Map<Key, Value> map = new HashMap<>();
 
     public MapStack(MapStack<Key, Value> previous) {
         this.previous = previous;
@@ -47,7 +47,7 @@ public class MapStack<Key, Value> extends AbstractMap<Key, Value> {
             public Iterator<Entry<Key, Value>> iterator() {
                 return new AbstractIterator<Entry<Key, Value>>() {
                     Iterator<Entry<Key, Value>> iterator = map.entrySet().iterator();
-                    MapStack<Key, Value> current = MapStack.this;
+                    final MapStack<Key, Value> current = MapStack.this;
 
                     @Override
                     protected Entry<Key, Value> computeNext() {

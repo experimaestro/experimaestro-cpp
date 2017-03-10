@@ -22,7 +22,6 @@ import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.DirectLauncher;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
-import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;

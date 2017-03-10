@@ -138,8 +138,7 @@ public class Experiment implements Identifiable {
             String identifier = result.getString(2);
             long timestamp = result.getTimestamp(3).getTime();
 
-            final Experiment experiment = new Experiment(id, identifier, timestamp);
-            return experiment;
+            return new Experiment(id, identifier, timestamp);
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not load experiment from DB");
         }

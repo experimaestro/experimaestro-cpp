@@ -12,7 +12,7 @@ public class ExperimentResourceAddedMessage extends ExperimentMessage {
 
     public ExperimentResourceAddedMessage(TaskReference taskReference, Resource resource) {
         super(Event.EXPERIMENT_RESOURCE_ADDED, taskReference.experiment);
-        this.taskId = taskReference.getTaskId().toString();
+        this.taskId = taskReference.getTaskId();
         this.resource = ResourceMessage.added(resource);
     }
 }

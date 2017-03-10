@@ -22,9 +22,9 @@ import java.lang.reflect.Array;
 import java.util.AbstractList;
 
 public class ListAdaptator<T> extends AbstractList<T> {
-    private Object array;
-    private int size;
-    private int from;
+    private final Object array;
+    private final int size;
+    private final int from;
 
     /**
      * Construct a list adaptator from an array

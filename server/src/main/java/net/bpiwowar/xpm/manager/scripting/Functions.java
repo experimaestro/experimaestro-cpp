@@ -21,14 +21,10 @@ package net.bpiwowar.xpm.manager.scripting;
 import com.google.gson.JsonElement;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
-import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.UserCache;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
-import net.bpiwowar.xpm.scheduler.Dependency;
-import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
@@ -42,9 +38,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.Map;
 
 /**
  * General functions available to all scripting languages

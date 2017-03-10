@@ -35,7 +35,7 @@ import java.util.Set;
  */
 public class SetStack<Value> extends AbstractSet<Value> {
     SetStack<Value> previous;
-    Set<Value> set = new HashSet<>();
+    final Set<Value> set = new HashSet<>();
 
     public SetStack(SetStack<Value> previous) {
         this.previous = previous;

@@ -47,8 +47,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
-
 /**
  * XPM Object in scripting languages
  */

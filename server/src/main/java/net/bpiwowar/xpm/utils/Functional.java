@@ -78,7 +78,7 @@ public class Functional {
     }
 
     public interface ExceptionalFunction<R, T> {
-        T apply(R r) throws Throwable;
+        T apply(R r) throws Exception;
     }
 
     /**

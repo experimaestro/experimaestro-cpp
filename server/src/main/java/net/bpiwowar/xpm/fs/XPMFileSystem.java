@@ -23,7 +23,6 @@ import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;

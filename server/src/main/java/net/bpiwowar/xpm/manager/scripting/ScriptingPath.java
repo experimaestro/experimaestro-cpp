@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.JsonArray;
 import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -197,14 +196,12 @@ public class ScriptingPath extends WrapperObject<Path> {
     @Expose
     public PrintWriter output_stream() throws IOException {
         final OutputStream output = Files.newOutputStream(object);
-        final PrintWriter writer = new MyPrintWriter(Context.get(), output);
-        return writer;
+        return new MyPrintWriter(Context.get(), output);
     }
 
     @Expose
     public BufferedReader input_stream() throws IOException {
-        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(Context.get(), Files.newInputStream(object)));
-        return reader;
+        return new BufferedReader(new MyInputStreamReader(Context.get(), Files.newInputStream(object)));
     }
 
     public java.nio.file.Path getObject() {

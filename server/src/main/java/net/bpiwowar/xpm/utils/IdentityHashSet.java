@@ -26,7 +26,7 @@ import java.util.Iterator;
  * A hash set where the hash is computed directly on the object
  */
 public class IdentityHashSet<T> extends AbstractSet<T> {
-    IdentityHashMap<T, T> map = new IdentityHashMap<>();
+    final IdentityHashMap<T, T> map = new IdentityHashMap<>();
 
     @Override
     public Iterator<T> iterator() {

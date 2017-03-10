@@ -22,5 +22,5 @@ package net.bpiwowar.xpm.utils;
  *
  */
 public interface ExceptionalRunnable {
-    void apply() throws Throwable;
+    void apply() throws Exception;
 }

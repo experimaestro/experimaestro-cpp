@@ -27,13 +27,13 @@ public final class Logger extends org.apache.log4j.Logger {
 
 
     private static final String FQCN = Logger.class.getName();
-    private static DefaultFactory myFactory = new DefaultFactory();
+    private static final DefaultFactory myFactory = new DefaultFactory();
 
     public Logger(String name) {
         super(name);
     }
 
-    public final static Factory factory() {
+    public static Factory factory() {
         return myFactory;
     }
 

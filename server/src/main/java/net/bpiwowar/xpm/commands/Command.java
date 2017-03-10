@@ -101,7 +101,7 @@ public class Command extends AbstractCommand implements AbstractCommandComponent
      */
     private static void argumentWalkThrough(StringBuilder sb, Command command, Object object) {
         if (object == null)
-            throw new IllegalArgumentException(java.lang.String.format("Null argument in command line"));
+            throw new IllegalArgumentException("Null argument in command line");
 
         if (object instanceof java.nio.file.Path) {
             if (sb.length() > 0) {

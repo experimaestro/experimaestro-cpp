@@ -47,7 +47,7 @@ import java.util.Map;
 public class LocalhostConnector extends SingleHostConnector {
 
     static final private Logger LOGGER = Logger.getLogger();
-    private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
+    private static final String TMPDIR = System.getProperty("java.io.tmpdir");
 
     public static final String IDENTIFIER = "file://";
 

@@ -1,14 +1,10 @@
 package net.bpiwowar.xpm.manager.scripting;
 
-import com.google.gson.JsonElement;
 import org.apache.commons.lang.ClassUtils;
-import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
-import java.math.BigInteger;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 

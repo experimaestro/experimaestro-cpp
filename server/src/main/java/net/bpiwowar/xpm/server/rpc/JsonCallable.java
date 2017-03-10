@@ -21,8 +21,6 @@
 
 package net.bpiwowar.xpm.server.rpc;
 
-import com.google.gson.JsonObject;
-
 /**
  * Classes that can be called via RPC
  */

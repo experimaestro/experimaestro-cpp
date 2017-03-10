@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
-import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 
 import java.lang.reflect.Constructor;

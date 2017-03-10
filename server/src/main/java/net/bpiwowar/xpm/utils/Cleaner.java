@@ -31,7 +31,7 @@ import java.util.Iterator;
 public class Cleaner implements AutoCloseable {
     final private static Logger LOGGER = Logger.getLogger();
 
-    private ArrayList<AutoCloseable> list = new ArrayList<>();
+    private final ArrayList<AutoCloseable> list = new ArrayList<>();
 
     synchronized public void register(AutoCloseable closeable) {
         list.add(closeable);

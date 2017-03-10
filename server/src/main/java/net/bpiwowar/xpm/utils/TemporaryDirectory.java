@@ -62,19 +62,16 @@ public class TemporaryDirectory implements AutoCloseable {
         directory = basedir != null ? File.createTempFile(prefix, suffix,
                 basedir) : File.createTempFile(prefix, suffix);
         directory.delete();
-        deleteThread = new Thread() {
-            @Override
-            public void run() {
-                logger.info("Deleting temporary directory " + directory);
-                if (directory.exists()) {
-                    try {
-                        FileSystem.recursiveDelete(directory);
-                    } catch (IOException e) {
-                        logger.error("Could not remove directory %s", directory);
-                    }
+        deleteThread = new Thread(() -> {
+            logger.info("Deleting temporary directory " + directory);
+            if (directory.exists()) {
+                try {
+                    FileSystem.recursiveDelete(directory);
+                } catch (IOException e) {
+                    logger.error("Could not remove directory %s", directory);
                 }
             }
-        };
+        });
         setAutomaticDelete(true);
         directory.mkdir();
         logger.debug("Created temporary directory " + directory);

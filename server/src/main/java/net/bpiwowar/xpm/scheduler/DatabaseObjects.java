@@ -69,7 +69,7 @@ final public class DatabaseObjects<T extends Identifiable, Information> {
     /**
      * Keeps a cache of resources
      */
-    Cache<Long, T> map = CacheBuilder.newBuilder()
+    final Cache<Long, T> map = CacheBuilder.newBuilder()
             .concurrencyLevel(4)
             .softValues()
             .build();

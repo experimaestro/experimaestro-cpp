@@ -56,7 +56,6 @@ public class Trie<C extends Comparable, O extends List<? extends C>> {
             return false;
 
         final C key = iterator.next();
-        Comparable x = key;
         Trie<C, O> child = null;
         if (children == null) {
             children = new TreeMap<>();

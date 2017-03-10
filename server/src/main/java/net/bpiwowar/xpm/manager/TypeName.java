@@ -51,14 +51,10 @@ public class TypeName implements Comparable<TypeName> {
     final static Pattern QNAME_PATTERN;
 
     static {
-        try {
-            // See on http://www.regexpal.com/
-            // [$1] [$2] [$3]
-            QNAME_PATTERN =
-                    Pattern.compile("^(?:(\\w(?:\\w|[/\\.:-])+)\\.|(\\w+):)?([^:\\.]+)$");
-        } catch (PatternSyntaxException e) {
-            throw e;
-        }
+        // See on http://www.regexpal.com/
+        // [$1] [$2] [$3]
+        QNAME_PATTERN =
+                Pattern.compile("^(?:(\\w(?:\\w|[/\\.:-])+)\\.|(\\w+):)?([^:\\.]+)$");
     }
 
     /**

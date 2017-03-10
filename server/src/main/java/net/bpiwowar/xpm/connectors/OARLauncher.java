@@ -319,8 +319,7 @@ public class OARLauncher extends Launcher {
                 if (output != null) builder.redirectOutput(output);
 
                 try {
-                    final XPMProcess process = builder.start();
-                    return process;
+                    return builder.start();
                 } catch(LaunchException e) {
                     if (e.getCause() instanceof JSchException) {
                         if (e.getCause().getMessage().contains("many authentication failures")) {

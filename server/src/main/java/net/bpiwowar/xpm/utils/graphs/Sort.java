@@ -86,7 +86,7 @@ public class Sort {
      * Useful to use a hash
      */
     static public class NodeRef<T extends Node> {
-        T node;
+        final T node;
 
         public NodeRef(T node) {
             this.node = node;

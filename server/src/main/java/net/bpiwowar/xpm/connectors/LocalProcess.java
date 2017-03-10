@@ -63,16 +63,13 @@ public class LocalProcess extends XPMProcess {
         this.process = process;
         if (!detach) {
             // If we need to destroy this process
-            destroyThread = new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        LocalProcess.this.destroy();
-                    } catch (FileSystemException e) {
-                        LOGGER.error("Process %s could not be destroyed", LocalProcess.this);
-                    }
+            destroyThread = new Thread(() -> {
+                try {
+                    LocalProcess.this.destroy();
+                } catch (FileSystemException e) {
+                    LOGGER.error("Process %s could not be destroyed", LocalProcess.this);
                 }
-            };
+            });
             Runtime.getRuntime().addShutdownHook(destroyThread);
         }
 

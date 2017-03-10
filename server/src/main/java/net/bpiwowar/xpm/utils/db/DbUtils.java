@@ -23,7 +23,6 @@ import net.bpiwowar.xpm.utils.ExceptionalConsumer;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.function.Consumer;
 
 /**
  *

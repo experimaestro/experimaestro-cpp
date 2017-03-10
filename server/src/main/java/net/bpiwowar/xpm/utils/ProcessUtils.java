@@ -85,8 +85,7 @@ public class ProcessUtils {
     public static int getPID() {
         RuntimeMXBean rtb = ManagementFactory.getRuntimeMXBean();
         String processName = rtb.getName();
-        Integer pid = tryPattern1(processName);
-        return pid;
+        return tryPattern1(processName);
     }
 
     private static Integer tryPattern1(String processName) {
@@ -102,7 +101,7 @@ public class ProcessUtils {
                 Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(processName);
         if (matcher.matches()) {
-            result = new Integer(Integer.parseInt(matcher.group(1)));
+            result = Integer.parseInt(matcher.group(1));
         }
         return result;
 

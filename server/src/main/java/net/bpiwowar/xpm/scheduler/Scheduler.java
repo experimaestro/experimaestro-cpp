@@ -43,7 +43,6 @@ import org.apache.commons.dbcp2.PoolableConnection;
 import org.apache.commons.dbcp2.PoolableConnectionFactory;
 import org.apache.commons.dbcp2.PoolingDataSource;
 import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
@@ -131,7 +130,7 @@ final public class Scheduler {
     /**
      * Listeners
      */
-    HashSet<Listener> listeners = new HashSet<>();
+    final HashSet<Listener> listeners = new HashSet<>();
 
     /**
      * True when the application is stopping
@@ -168,7 +167,7 @@ final public class Scheduler {
     /**
      * The queue for notifications
      */
-    private LongOpenHashSet changedResources = new LongOpenHashSet();
+    private final LongOpenHashSet changedResources = new LongOpenHashSet();
 
     /**
      * The network shares
@@ -733,6 +732,7 @@ final public class Scheduler {
         }
 
 
+        @SuppressWarnings("EmptyFinallyBlock")
         @Override
         public void run() {
             try {
@@ -760,6 +760,7 @@ final public class Scheduler {
                     try (final CloseableIterable<Resource> resources = Resource.find(EnumSet.of(ResourceState.READY))) {
                         /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
                         for (Resource resource : resources) {
+                            //noinspection EmptyFinallyBlock
                             try {
                                 Job job = (Job) resource;
                                 synchronized (job) {
@@ -814,7 +815,6 @@ final public class Scheduler {
                             } catch (Exception e) {
                                 // FIXME: should do something smarter
                                 LOGGER.error(e, "Caught an exception");
-                            } finally {
                             }
                         }
                     } catch (CloseException e) {
@@ -927,7 +927,8 @@ final public class Scheduler {
                             if (changedResources.isEmpty()) {
                                 try {
                                     changedResources.wait();
-                                } catch (InterruptedException e) {
+                                } catch (InterruptedException ignored) {
+                                    /** Do nothing */
                                 }
                                 continue;
 

@@ -76,7 +76,7 @@ abstract public class Declaration<T extends Executable> {
 
     static private Expose DEFAULT_EXPOSE;
 
-    {
+    static {
         try {
             DEFAULT_EXPOSE = Declaration.class.getDeclaredMethod("exposemethod").getAnnotation(Expose.class);
         } catch (NoSuchMethodException e) {

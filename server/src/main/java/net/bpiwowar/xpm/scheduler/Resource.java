@@ -37,7 +37,6 @@ import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
 import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.apache.commons.lang.NotImplementedException;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -245,8 +244,7 @@ public class Resource implements Identifiable {
      */
     synchronized final public boolean updateStatus() throws SQLException {
         try {
-            boolean b = doUpdateStatus();
-            return b;
+            return doUpdateStatus();
         } catch (Exception e) {
             // Do not do anything if an exception was thrown
             LOGGER.error(e, "Exception while updating status");

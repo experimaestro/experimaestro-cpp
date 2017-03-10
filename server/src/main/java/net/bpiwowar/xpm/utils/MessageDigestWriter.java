@@ -18,8 +18,6 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.scheduler.Scheduler;
-
 import javax.xml.bind.DatatypeConverter;
 import java.io.Closeable;
 import java.io.IOException;

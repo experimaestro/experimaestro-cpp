@@ -267,9 +267,8 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
             String uri = result.getString(3);
 
             final Constructor<? extends Connector> constructor = REGISTRY.get(type);
-            final Connector connector = constructor.newInstance(id, uri);
 
-            return connector;
+            return constructor.newInstance(id, uri);
         } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
             throw new XPMRuntimeException(e, "Error retrieving database object");
         }

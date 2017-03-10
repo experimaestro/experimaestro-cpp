@@ -31,8 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 
-import static java.lang.String.format;
-
 /**
  * A connector that corresponds to a single host.
  * <p>

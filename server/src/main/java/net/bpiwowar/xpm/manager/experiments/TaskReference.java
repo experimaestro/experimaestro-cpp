@@ -21,7 +21,6 @@ package net.bpiwowar.xpm.manager.experiments;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
 import net.bpiwowar.xpm.scheduler.Identifiable;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -123,7 +122,7 @@ public class TaskReference implements Identifiable {
         final Scheduler scheduler = Scheduler.get();
         DatabaseObjects<TaskReference, Void> references = scheduler.taskReferences();
         references.save(this, "INSERT INTO ExperimentTasks(identifier, experiment) VALUES(?, ?)", st -> {
-            st.setString(1, taskId.toString());
+            st.setString(1, taskId);
             st.setLong(2, experiment.getId());
         });
 
@@ -188,16 +187,14 @@ public class TaskReference implements Identifiable {
 
     public Collection<TaskReference> getChildren() {
         if (children == null) {
-            ArrayList<TaskReference> list = getHierarchy(false);
-            children = list;
+            children = getHierarchy(false);
         }
         return children;
     }
 
     public Collection<TaskReference> getParents() {
         if (parents == null) {
-            ArrayList<TaskReference> list = getHierarchy(true);
-            parents = list;
+            parents = getHierarchy(true);
         }
 
         return parents;

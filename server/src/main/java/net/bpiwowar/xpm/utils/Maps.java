@@ -33,8 +33,8 @@ public class Maps {
      * @param map2
      * @param converter
      */
-    public static final <Key, Value1, Value2> Map<Key, Value2> convert(Map<Key, Value1> map1,
-                                                                       Map<Key, Value2> map2, Converter<Value1, Value2> converter) {
+    public static <Key, Value1, Value2> Map<Key, Value2> convert(Map<Key, Value1> map1,
+                                                                 Map<Key, Value2> map2, Converter<Value1, Value2> converter) {
         for (Entry<Key, Value1> entry : map1.entrySet())
             map2.put(entry.getKey(), converter.convert(entry.getValue()));
         return map2;

@@ -68,7 +68,7 @@ public class GsonConverter {
     }
 
     private static class AbstractObjectFactory implements TypeAdapterFactory {
-        Class<?>[] classes;
+        final Class<?>[] classes;
 
         public AbstractObjectFactory(Class<?>... classes) {
             this.classes = classes;

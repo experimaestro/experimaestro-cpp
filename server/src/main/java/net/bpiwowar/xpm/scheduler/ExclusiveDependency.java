@@ -23,7 +23,6 @@ import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -57,7 +56,6 @@ public class ExclusiveDependency extends Dependency {
     synchronized protected Lock _lock(String pid) throws LockException {
         Resource from = getFrom();
         Path file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
-        final Lock lockFile = new FileLock(file, true);
-        return lockFile;
+        return new FileLock(file, true);
     }
 }

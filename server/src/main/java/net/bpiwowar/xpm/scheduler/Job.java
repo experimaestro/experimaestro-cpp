@@ -169,6 +169,7 @@ abstract public class Job extends Resource {
 
     @Override
     protected void finalize() {
+        super.finalize();
     }
 
     /**

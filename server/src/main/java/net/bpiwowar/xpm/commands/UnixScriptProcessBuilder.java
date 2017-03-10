@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
 import static net.bpiwowar.xpm.utils.PathUtils.QUOTED_SPECIAL;
 import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
 import static net.bpiwowar.xpm.utils.PathUtils.protect;

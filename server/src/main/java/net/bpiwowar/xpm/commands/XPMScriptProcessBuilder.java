@@ -25,7 +25,6 @@ import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * An abstract class that allows building scripts in different scripting languages

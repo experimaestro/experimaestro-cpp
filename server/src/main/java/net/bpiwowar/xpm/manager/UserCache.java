@@ -87,9 +87,7 @@ public class UserCache {
                     return null;
                 }
 
-                JsonElement value = getJson(is2, gson);
-
-                return value;
+                return getJson(is2, gson);
             }
         }
 

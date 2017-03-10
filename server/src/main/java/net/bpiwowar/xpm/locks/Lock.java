@@ -27,7 +27,6 @@ import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.Identifiable;
-import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.StatusLock;
 import net.bpiwowar.xpm.scheduler.TokenLock;

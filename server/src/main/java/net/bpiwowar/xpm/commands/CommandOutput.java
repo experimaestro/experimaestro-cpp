@@ -8,7 +8,6 @@ import net.bpiwowar.xpm.utils.UUIDObject;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 

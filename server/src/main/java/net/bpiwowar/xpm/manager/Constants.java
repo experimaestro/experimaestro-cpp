@@ -32,51 +32,12 @@ import java.util.TreeMap;
 public class Constants {
     public static final String XPM_NOTIFICATION_URL = "XPM_NOTIFICATION_URL";
 
-    /** Marks whether the value is a default value */
-    public static final String JSON_KEY_DEFAULT = "$default";
     // Set of all atomic types
     public static HashSet<TypeName> ATOMIC_TYPES = new HashSet<>();
 
     public static final String EXPERIMAESTRO_NS = "xpm";
-    /** Corresponds to a directory on disk */
-    public static final TypeName XP_DIRECTORY = registerAtomicType(null, "directory");
-    /** Corresponds to a file on disk */
-    public static final TypeName XP_FILE = registerAtomicType(null, "file");
-    /** Type path is generic (file or directory) */
-    public static final TypeName XP_PATH = registerAtomicType(null, "path");
-    static final public TypeName XP_RESOURCE_TYPE = registerAtomicType(null, "resource");
-    static final public TypeName XP_BOOLEAN = registerAtomicType(null, "boolean");
-    static final public TypeName XP_INTEGER = registerAtomicType(null, "integer");
-    static final public TypeName XP_REAL = registerAtomicType(null, "real");
-    static final public TypeName XP_STRING = registerAtomicType(null, "string");
-    public static final TypeName XP_ANY = new TypeName(null, "any");
-    public static final TypeName XP_OBJECT = new TypeName(null, "object");
-    public static final TypeName XP_INPUT_STREAM = new TypeName(null, "input-stream");
-    public static final TypeName XP_ARRAY = new TypeName(null, "array");
     public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
     public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
-    public static final String EXPERIMAESTRO_PREFIX = "xp";
-    public static final TypeName XP_TYPE = new TypeName(null, "$type");
-    /**
-     * The simple value of the object
-     */
-    public static final TypeName XP_VALUE = new TypeName(null, "$value");
-    /**
-     * The resource associated with the object
-     */
-    public static final TypeName XP_RESOURCE = new TypeName(null, "$resource");
-    /// Ignored value
-    public static final TypeName XP_IGNORE = new TypeName(null, "$ignore");
-    /** Tag */
-    public static final String JSON_TAG_NAME = "$tag";
-    /** Default value for retrieve tags key */
-    public static final String JSON_TAGS_NAME = "tags";
-
-    public static final String XPM_SIGNATURE = "signature.xpm";
-    public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
-
-    public static final String JAVATASK_INTROSPECTION_PATH = "META-INF/net.bpiwowar.experimaestro/introspection.json";
-    public static final String JAVATASK_TASKS_PATH = "META-INF/net.bpiwowar.experimaestro/tasks.json";
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);

@@ -35,8 +35,8 @@ public class SQLInsert {
     final int nbFields;
     final boolean generatedId;
 
-    String insertSQL;
-    String updateSQL;
+    final String insertSQL;
+    final String updateSQL;
 
     public SQLInsert(String dbName, boolean generatedId, String idField, String... fieldnames) {
         this.generatedId = generatedId;
@@ -45,8 +45,8 @@ public class SQLInsert {
         StringBuilder _insert = new StringBuilder();
         StringBuilder _update = new StringBuilder();
 
-        _insert.append("INSERT INTO " + dbName + "(");
-        _update.append("UPDATE " + dbName + " SET ");
+        _insert.append("INSERT INTO ").append(dbName).append("(");
+        _update.append("UPDATE ").append(dbName).append(" SET ");
 
         boolean first = true;
         for (String fieldname : fieldnames) {
@@ -65,7 +65,7 @@ public class SQLInsert {
         }
 
         if (!generatedId) {
-            _insert.append(", " + idField);
+            _insert.append(", ").append(idField);
         }
 
         _insert.append(") VALUES(");
@@ -84,7 +84,7 @@ public class SQLInsert {
         }
 
         _insert.append(")");
-        _update.append(" WHERE " + idField + "=?");
+        _update.append(" WHERE ").append(idField).append("=?");
 
         insertSQL = _insert.toString();
         updateSQL = _update.toString();

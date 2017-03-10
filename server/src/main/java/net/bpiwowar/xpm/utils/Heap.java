@@ -41,7 +41,7 @@ import java.util.List;
  */
 final public class Heap<Element extends HeapElement<Element>> implements Iterable<Element> {
 
-    List<Element> list = new ArrayList<>();
+    final List<Element> list = new ArrayList<>();
     Comparator<Element> comparator = null;
 
     /**
