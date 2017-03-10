@@ -24,7 +24,8 @@ import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Functional;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -43,7 +44,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 public class Command extends AbstractCommand implements AbstractCommandComponent, Serializable {
-    public final static Logger LOGGER = Logger.getLogger();
+    public final static Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The list of components in this command

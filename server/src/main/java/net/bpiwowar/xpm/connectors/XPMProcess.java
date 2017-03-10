@@ -34,7 +34,8 @@ import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -73,7 +74,7 @@ public abstract class XPMProcess {
     static ConstructorRegistry<XPMProcess> REGISTRY
             = new ConstructorRegistry(new Class[]{}).add(LocalProcess.class, SSHProcess.class, OARProcess.class);
 
-    static private Logger LOGGER = Logger.getLogger();
+    static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * True when the process is stored in DB
@@ -218,7 +219,7 @@ public abstract class XPMProcess {
                         st.execute();
                     }
                 } catch (Throwable e) {
-                    LOGGER.error(e, "Could not adopt lock %s", lock);
+                    LOGGER.error(() -> String.format("Could not adopt lock %s", lock), e);
                 }
             }
         }

@@ -24,7 +24,8 @@ import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 import net.bpiwowar.xpm.utils.ProcessUtils;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +39,7 @@ import static java.lang.String.format;
  */
 @TypeIdentifier("local")
 public class LocalProcess extends XPMProcess {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The running process: if we have it, easier to monitor

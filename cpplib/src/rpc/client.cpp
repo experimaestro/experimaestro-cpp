@@ -17,6 +17,7 @@ using nlohmann::json;
 
 namespace {
   auto LOGGER = logger("rpc");
+  auto SERVER_LOGGER = logger("server");
 }
 
 Client *Client::DEFAULT_CLIENT = nullptr;
@@ -85,9 +86,21 @@ bool Client::ping() {
 }
 
 void Client::handler(nlohmann::json const &message) {
-  if (message["result"].count("stream")) {
-    std::string value = message["result"]["value"];
-    LOGGER->info("{}", (std::string)value);
+  if (message["result"].count("type") && message["result"]["type"] == "log") {
+    std::string logLevel = message["result"]["level"];
+    std::string logMessage = message["result"]["message"];
+
+    if (logLevel == "DEBUG") {
+      SERVER_LOGGER->debug("{}", logMessage);
+    } else if (logLevel == "INFO") {
+      SERVER_LOGGER->info("{}", logMessage);
+    } else if (logLevel == "WARN") {
+      SERVER_LOGGER->warn("{}", logMessage);
+    } else if (logLevel == "ERROR") {
+      SERVER_LOGGER->error("{}", logMessage);
+    } else {
+      SERVER_LOGGER->error("RPC message with unknown level {}: {}", logLevel, logMessage);
+    }
   } else {
     LOGGER->warn("Unhandled notification: {}", message.dump());
   }

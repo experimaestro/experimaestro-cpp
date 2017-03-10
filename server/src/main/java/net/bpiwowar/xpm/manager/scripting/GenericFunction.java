@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.utils.Output;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -32,6 +33,7 @@ import java.util.function.Function;
  * Base class for scripting methods or constructors
  */
 public abstract class GenericFunction {
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * Get the name of the method or constructor
@@ -88,17 +90,16 @@ public abstract class GenericFunction {
             Arrays.sort(scoredDeclarations, Comparator.comparingInt(a -> a.score));
 
 
-            final Logger logger = Context.mainLogger();
             final String message = String.format("Could not find a matching method for %s(%s)%s",
                     getKey(),
                     Output.toString(", ", args, o -> o.getClass().toString()),
                     context
             );
 
-            logger.error(message);
-            logger.error("Candidates are:");
+            LOGGER.error(message);
+            LOGGER.error("Candidates are:");
             for (Converter scoredDeclaration : scoredDeclarations) {
-                logger.error("[%d] %s", scoredDeclaration.score, scoredDeclaration.declaration);
+                LOGGER.error("[%d] %s", scoredDeclaration.score, scoredDeclaration.declaration);
             }
 
             throw new XPMScriptRuntimeException(message);
@@ -111,10 +112,9 @@ public abstract class GenericFunction {
             // Show deprecated methods
             final Deprecated deprecated = argmax.declaration.executable().getAnnotation(Deprecated.class);
             if (deprecated != null) {
-                final Logger logger = Context.get().getMainLogger();
-                logger.warn("Method %s is deprecated", argmax.declaration);
+                LOGGER.warn("Method %s is deprecated", argmax.declaration);
                 if (!deprecated.value().isEmpty()) {
-                    logger.warn(deprecated.value());
+                    LOGGER.warn(deprecated.value());
                 }
             }
 

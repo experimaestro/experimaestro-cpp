@@ -18,10 +18,13 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import static java.lang.String.format;
 
 /**
  * A cleaner closes all the resources when finished
@@ -29,7 +32,7 @@ import java.util.Iterator;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Cleaner implements AutoCloseable {
-    final private static Logger LOGGER = Logger.getLogger();
+    final private static Logger LOGGER = LogManager.getFormatterLogger();
 
     private final ArrayList<AutoCloseable> list = new ArrayList<>();
 
@@ -56,7 +59,7 @@ public class Cleaner implements AutoCloseable {
             try {
                 value.close();
             } catch (Exception e) {
-                LOGGER.error(e, "Error while closing %s", value);
+                LOGGER.error(() -> format("Error while closing %s", value), e);
             }
         }
         list.clear();

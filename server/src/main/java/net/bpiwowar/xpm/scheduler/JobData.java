@@ -20,7 +20,8 @@ package net.bpiwowar.xpm.scheduler;
 
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,7 +34,7 @@ import static java.lang.String.format;
  * Data associated to a job
  */
 public class JobData {
-    final static public Logger LOGGER = Logger.getLogger();
+    final static public Logger LOGGER = LogManager.getFormatterLogger();
 
     static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding");
 

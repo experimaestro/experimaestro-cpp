@@ -19,7 +19,8 @@ package net.bpiwowar.xpm.utils;
  */
 
 import org.apache.log4j.Level;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -28,7 +29,7 @@ import net.bpiwowar.xpm.utils.log.Logger;
  * @author bpiwowar
  */
 public class ThreadCount {
-    private final static Logger LOGGER = Logger.getLogger();
+    private final static Logger LOGGER = LogManager.getFormatterLogger();
 
     volatile int counter;
 
@@ -81,10 +82,7 @@ public class ThreadCount {
             } catch (IllegalMonitorStateException e) {
                 LOGGER.warn("Illegal monitor exception while sleeping (SHOULD NOT HAPPEN)", e);
             } catch (Exception e) {
-                LOGGER.debug("Interrupted while sleeping: %s", e.toString());
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.printException(Level.DEBUG, e);
-                }
+                LOGGER.debug("Interrupted while sleeping: %s", e);
             }
         }
     }

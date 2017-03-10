@@ -27,7 +27,8 @@ import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.*;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.log4j.spi.LoggerRepository;
 
 import java.io.Closeable;
@@ -47,7 +48,7 @@ import static java.lang.String.format;
  * what if part of the dynamic one
  */
 final public class Context implements AutoCloseable {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The thread local context
@@ -104,16 +105,6 @@ final public class Context implements AutoCloseable {
     Scheduler scheduler;
 
     /**
-     * The logger
-     */
-    LoggerRepository loggerRepository;
-
-    /**
-     * Main logger
-     */
-    final Logger mainLogger;
-
-    /**
      * The resource cleaner
      * <p>
      * Used to close objects at the end of the execution of a script
@@ -129,10 +120,6 @@ final public class Context implements AutoCloseable {
         cleaner.unregister(autoCloseable);
     }
 
-    public Logger getMainLogger() {
-        return mainLogger;
-    }
-
     @Override
     public void close() {
         threadContext.remove();
@@ -144,12 +131,10 @@ final public class Context implements AutoCloseable {
     boolean simulate;
 
 
-    public Context(Scheduler scheduler, LoggerRepository loggerRepository) {
+    public Context(Scheduler scheduler) {
         LOGGER.debug("Creating script context [%s] from static context", this);
 
         this.scheduler = scheduler;
-        this.loggerRepository = loggerRepository;
-        this.mainLogger = (Logger)loggerRepository.getLogger("xpm", Logger.factory());
         this.cleaner = new Cleaner();
 
         defaultLocks = new HashMap<>();
@@ -187,10 +172,6 @@ final public class Context implements AutoCloseable {
 
     public Scheduler getScheduler() {
         return scheduler;
-    }
-
-    public Logger getLogger(String loggerName) {
-        return (Logger) loggerRepository.getLogger(loggerName, Logger.factory());
     }
 
     /**
@@ -340,8 +321,7 @@ final public class Context implements AutoCloseable {
             // Add resource
             taskReference.add(resource);
         } catch (SQLException e) {
-            // FIXME: do something better?
-            getMainLogger().error(e, "Error while registering experiment");
+            LOGGER.error("Error while registering experiment", e);
         }
 
         final SubmittedJob submittedJob = new SubmittedJob(resource, taskReference);
@@ -363,12 +343,6 @@ final public class Context implements AutoCloseable {
     public Context simulate(boolean simulate) {
         this.simulate = simulate;
         return this;
-    }
-
-    public static Logger mainLogger() {
-        final Context sc = Context.get();
-        if (sc == null) return LOGGER;
-        return sc.getMainLogger();
     }
 
 

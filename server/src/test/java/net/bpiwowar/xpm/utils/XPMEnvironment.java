@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.utils;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.lang.RandomStringUtils;
 import net.bpiwowar.xpm.tasks.ServerTask;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +36,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class XPMEnvironment {
-    private static final Logger LOGGER = Logger.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger();
 
     static final private Integer token = 0;
 
@@ -127,7 +128,7 @@ public class XPMEnvironment {
                         server.close();
                         tmpDirectory.close();
                     } catch (Exception e) {
-                        LOGGER.error(e, "Could not close the server");
+                        LOGGER.error("Could not close the server", e);
                     }
                     LOGGER.info("Scheduler server");
                 }));

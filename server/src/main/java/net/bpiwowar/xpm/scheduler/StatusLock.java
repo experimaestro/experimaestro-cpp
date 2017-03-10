@@ -24,7 +24,8 @@ import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.FileNameTransformer;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,6 +36,7 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static java.lang.String.format;
 import static net.bpiwowar.xpm.scheduler.Resource.LOCK_EXTENSION;
 import static net.bpiwowar.xpm.scheduler.Resource.STATUS_EXTENSION;
 
@@ -45,7 +47,7 @@ import static net.bpiwowar.xpm.scheduler.Resource.STATUS_EXTENSION;
 @Exposed
 @TypeIdentifier("status")
 public class StatusLock extends Lock {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     Path path;
 
@@ -94,7 +96,7 @@ public class StatusLock extends Lock {
             updateStatusFile(pid, null, /*not used*/false);
             LOGGER.debug("Removed status lock [pid=%s] on %s", pid, path);
         } catch (LockException e) {
-            LOGGER.error(e, "Could not remove the status lock on %s", path);
+            LOGGER.error(() -> format("Could not remove the status lock on %s", path), e);
         }
     }
 
@@ -107,7 +109,7 @@ public class StatusLock extends Lock {
 
     @Override
     public String toString() {
-        return String.format("Locks(r=%d/w=%d)", readers, writers);
+        return format("Locks(r=%d/w=%d)", readers, writers);
     }
 
     /**

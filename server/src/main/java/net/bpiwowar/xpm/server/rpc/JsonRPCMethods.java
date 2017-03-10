@@ -35,8 +35,8 @@ import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.XPMInformation;
-import net.bpiwowar.xpm.utils.log.Logger;
-import org.apache.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -56,16 +56,11 @@ import static java.lang.String.format;
  */
 @JsonRPCMethodsHolder("")
 public class JsonRPCMethods extends BaseJsonRPCMethods {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     private static Multimap<String, RPCCaller> methods;
 
     private final JsonRPCSettings settings;
-
-    /**
-     * Our logger
-     */
-    final Logger rootLogger;
 
     /**
      * Listeners associated to this
@@ -79,9 +74,8 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
-    public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException, NoSuchMethodException {
+    public JsonRPCMethods(JsonRPCSettings settings, boolean isWebSocket, JSONRPCRequest mos) throws IOException, NoSuchMethodException {
         super(mos);
-        rootLogger = (Logger) getScriptLogger().getLogger("rpc");
         initMethods();
         this.settings = settings;
         addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos), new RPCObjects(this, settings));
@@ -139,12 +133,12 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 JsonParser parser = new JsonParser();
                 object = parser.parse(message).getAsJsonObject();
             } catch (Throwable t) {
-                LOGGER.warn(t, "Error while handling JSON request");
+                LOGGER.warn("Error while handling JSON request", t);
 
                 try {
                     mos.error(null, 1, "Could not parse JSON: " + t.getMessage());
                 } catch (IOException e) {
-                    LOGGER.error(e, "Could not send the error message");
+                    LOGGER.error("Could not send the error message", e);
                 }
                 return;
             }
@@ -205,21 +199,20 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 while (t.getCause() != null) {
                     t = t.getCause();
                 }
-                LOGGER.info(e, "Error while handling JSON request [%s]", e.toString());
-                rootLogger.error(t, "Error while running request");
+                LOGGER.info(() -> format("Error while handling JSON request [%s]", e.toString()), e);
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
-                LOGGER.error(e2, "Could not send the return code");
+                LOGGER.error("Could not send the return code", e2);
             }
         } catch (XPMRuntimeException t) {
             try {
-                rootLogger.error(t, "Error while running request");
+                LOGGER.error("Error while running request", t);
                 mos.error(requestID, 1, "Error while running request: " + t.toString());
             } catch (IOException e) {
                 LOGGER.error("Could not send the return code");
             }
         } catch (Throwable t) {
-            LOGGER.info(t, "Internal error while handling JSON request");
+            LOGGER.info("Internal error while handling JSON request", t);
             try {
                 mos.error(requestID, 1, "Internal error while running request");
             } catch (IOException e) {
@@ -284,8 +277,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     @RPCMethod(help = "Sets a log level")
     public int setLogLevel(@RPCArgument(name = "identifier") String identifier, @RPCArgument(name = "level") String level) {
-        final Logger logger = Logger.getLogger(identifier);
-        logger.setLevel(Level.toLevel(level));
+        org.apache.logging.log4j.core.config.Configurator.setLevel(identifier, org.apache.logging.log4j.Level.toLevel(level));
         return 0;
     }
 
@@ -308,7 +300,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                     settings.server.stop();
                     stopped = true;
                 } catch (Exception e) {
-                    LOGGER.error(e, "Could not stop properly jetty");
+                    LOGGER.error("Could not stop properly jetty", e);
                 }
                 if (!stopped)
                     synchronized (this) {
@@ -377,13 +369,12 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         @Override
         public Integer call() throws Throwable {
             int nbUpdated = 0;
-            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
 
             for (String id : ids) {
                 try {
                     Resource resource = getResource(id);
                     if (resource == null) {
-                        logger.error("Job not found [%s]", id);
+                        LOGGER.error("Job not found [%s]", id);
                         continue;
                     }
                     LOGGER.info("Invalidating resource %s", resource);
@@ -413,7 +404,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                         nbUpdated += invalidate(resource, restart);
                     }
                 } catch (Throwable t) {
-                    logger.error("Could not invalidate job %s: %s", id, t);
+                    LOGGER.error("Could not invalidate job %s: %s", id, t);
                 }
             }
 
@@ -489,7 +480,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                                     .toAbsolutePath()
                                     .toString());
                 } catch (IOException e) {
-                    LOGGER.warn(e, "Cannot get path");
+                    LOGGER.warn("Cannot get path", e);
                 }
 
 
@@ -582,9 +573,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 // Just serialize and output
                 mos.message(message);
             } catch (IOException e) {
-                LOGGER.error(e, "Could not output");
+                LOGGER.error("Could not output", e);
             } catch (RuntimeException e) {
-                LOGGER.error(e, "Error while trying to notify RPC client");
+                LOGGER.error("Error while trying to notify RPC client", e);
             }
         };
 
@@ -614,7 +605,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 try {
                     ((AutoCloseable) o).close();
                 } catch (Exception e) {
-                    LOGGER.error(e, "while closing %s", o);
+                    LOGGER.error(() -> format("while closing %s", o), e);
                 }
             }
         }
@@ -696,7 +687,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     @RPCMethod(help = "Generate files for starting associated process")
     public void generateFiles(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
-        final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
         for (String id : JobIds) {
             try {
                 final Resource resource = getResource(id);
@@ -704,7 +694,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                     ((Job) resource).generateFiles();
                 }
             } catch (Throwable throwable) {
-                logger.error(throwable, "Could not generate files for resource [%s]", id);
+                LOGGER.error(() -> format("Could not generate files for resource [%s]", id), throwable);
             }
         }
     }
@@ -716,7 +706,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
         @Override
         public Object call() throws Throwable {
-            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
             int n = 0;
             for (String id : jobs) {
                 try {
@@ -727,7 +716,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                         }
                     }
                 } catch (Throwable throwable) {
-                    logger.error("Error while killing jbo [%s]", id);
+                    LOGGER.error("Error while killing jbo [%s]", id);
                 }
             }
             return n;
@@ -796,7 +785,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
             for (Resource resource : resources) {
                 String locator = PathUtils.normalizedString(resource.getLocator());
                 if (!locator.substring(0, oldLength).equals(oldPrefix)) {
-                    rootLogger.warn("Prefixes [%s] and [%s] do not match", locator.substring(0, oldLength), oldPrefix);
+                    LOGGER.warn("Prefixes [%s] and [%s] do not match", locator.substring(0, oldLength), oldPrefix);
                 } else {
                     resource.setLocator(PathUtils.toPath(newPrefix + locator.substring(oldLength)));
                 }
@@ -805,24 +794,6 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
         }
         return count;
-    }
-
-    /**
-     * Utility function that transforms an array with paired values into a map
-     *
-     * @param envArray The array, must contain an even number of elements
-     * @return a map
-     */
-    private Map<String, String> arrayToMap(Object[] envArray) {
-        Map<String, String> env = new TreeMap<>();
-        for (Object x : envArray) {
-            Object[] o = (Object[]) x;
-            if (o.length != 2)
-                // FIXME: should be a proper one
-                throw new RuntimeException();
-            env.put((String) o[0], (String) o[1]);
-        }
-        return env;
     }
 
 

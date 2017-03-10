@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.server;
 import jnr.unixsocket.UnixServerSocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
+import org.apache.logging.log4j.LogManager;
 import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
@@ -29,7 +30,7 @@ import org.eclipse.jetty.util.annotation.ManagedAttribute;
 import org.eclipse.jetty.util.annotation.Name;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.Scheduler;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +45,7 @@ import java.util.concurrent.Future;
  * @date 26/3/13
  */
 public class UnixSocketConnector extends AbstractNetworkConnector implements Connector {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     private final ServerConnectorManager _manager;
     volatile UnixServerSocketChannel _acceptChannel;
     private File socketFile;

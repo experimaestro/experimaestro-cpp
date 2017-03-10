@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.commands;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang.mutable.MutableInt;
 
 import java.io.Closeable;
@@ -49,7 +50,7 @@ public abstract class CommandContext implements Closeable {
     private IdentityHashMap<AbstractCommand, NamedPipeRedirections> namedPipeRedirectionsMap
             = new IdentityHashMap<>();
 
-    private final static Logger LOGGER = Logger.getLogger();
+    private final static Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The launcher
@@ -163,7 +164,7 @@ public abstract class CommandContext implements Closeable {
                 try {
                     Files.delete(file);
                 } catch (IOException e) {
-                    LOGGER.error(e, "Could not delete %s", file);
+                    LOGGER.error(() ->format("Could not delete %s", file), e);
                 }
             }
         }

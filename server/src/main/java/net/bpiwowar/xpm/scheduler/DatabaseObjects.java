@@ -31,7 +31,8 @@ import net.bpiwowar.xpm.exceptions.XPMSQLException;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.ExceptionalConsumer;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +52,7 @@ import static net.bpiwowar.xpm.scheduler.Scheduler.prepareStatement;
  * A set of objects stored in database
  */
 final public class DatabaseObjects<T extends Identifiable, Information> {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The name of the table

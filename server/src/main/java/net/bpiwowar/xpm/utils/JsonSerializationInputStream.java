@@ -22,7 +22,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 
@@ -32,7 +33,7 @@ import java.io.*;
 public class JsonSerializationInputStream extends InputStream {
     private final PipedInputStream inputStream;
     private final PipedOutputStream outputStream;
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * Creates an input stream for an object to serialize
@@ -62,7 +63,7 @@ public class JsonSerializationInputStream extends InputStream {
             try (OutputStreamWriter writer = new OutputStreamWriter(outputStream)) {
                 f.apply(writer);
             } catch (IOException e) {
-                LOGGER.warn(e, "I/O exception");
+                LOGGER.warn("I/O exception", e);
             } catch (Exception e) {
                 throw new XPMRuntimeException(e);
             }

@@ -25,7 +25,8 @@ import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +37,7 @@ import java.io.OutputStream;
  */
 @TypeIdentifier("ssh")
 public class SSHProcess extends XPMProcess {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     transient private ChannelExec channel;
     boolean detached = true;
 
@@ -114,7 +115,7 @@ public class SSHProcess extends XPMProcess {
                 if (isRunning()) {
                     // First check that the job is running
                     final AbstractProcessBuilder killCommand = getConnector().processBuilder().command("kill", pid);
-                    killCommand.execute(LOGGER);
+                    killCommand.execute();
                 }
             } catch (LaunchException | ConnectorException | InterruptedException | IOException e) {
                 throw new WrappedException(e);

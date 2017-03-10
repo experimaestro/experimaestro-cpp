@@ -32,7 +32,8 @@ import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.Output;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -89,7 +90,7 @@ public class OARLauncher extends Launcher {
      */
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
-    static private final Logger LOGGER = Logger.getLogger();
+    static private final Logger LOGGER = LogManager.getFormatterLogger();
     private final String oarUser = "oar";
     private final int oarPort = 6667;
 
@@ -330,7 +331,7 @@ public class OARLauncher extends Launcher {
 //                            return start(false);
                         }
                     }
-                    LOGGER.error(e, "Error while launching process");
+                    LOGGER.error("Error while launching process", e);
                     throw e;
                 }
 
@@ -465,7 +466,7 @@ public class OARLauncher extends Launcher {
                                 throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
                             }
                         } catch (InterruptedException e) {
-                            LOGGER.error(e, "Waiting interrupted");
+                            LOGGER.error("Waiting interrupted", e);
                         }
                     }
                 }
@@ -532,7 +533,7 @@ public class OARLauncher extends Launcher {
                         throw new XPMScriptRuntimeException("Error while starting OAR job: code %d", code);
                     }
                 } catch (InterruptedException e) {
-                    LOGGER.error(e, "Waiting interrupted");
+                    LOGGER.error("Waiting interrupted", e);
                 }
 
                 // Wait that the job is launched

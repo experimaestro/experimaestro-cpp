@@ -77,6 +77,10 @@ dependencies {
     // Command line
     compile group: 'net.bpiwowar', name: 'argj', version: '1.1.4'
 
+    // logging
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.8.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.1'
+
     // Database
     compile group: 'org.hsqldb', name: 'hsqldb', version: '2.3.4'
     compile group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.1.1'

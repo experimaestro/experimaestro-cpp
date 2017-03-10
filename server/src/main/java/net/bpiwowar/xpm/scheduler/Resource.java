@@ -36,7 +36,8 @@ import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
 import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -133,7 +134,7 @@ public class Resource implements Identifiable {
     public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer("", ".xpm.input.");
 
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The path with the launcher
@@ -247,7 +248,7 @@ public class Resource implements Identifiable {
             return doUpdateStatus();
         } catch (Exception e) {
             // Do not do anything if an exception was thrown
-            LOGGER.error(e, "Exception while updating status");
+            LOGGER.error("Exception while updating status", e);
             return false;
         }
     }
@@ -391,7 +392,7 @@ public class Resource implements Identifiable {
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.error(e, "Could not save resource tags");
+                LOGGER.error("Could not save resource tags", e);
             }
         }
     }
@@ -524,19 +525,19 @@ public class Resource implements Identifiable {
                                 LOGGER.error("Could not delete %s while cleaning resource %s: unknown file type", uri, this);
                             }
                         } catch (Throwable e) {
-                            LOGGER.error(e, "Could not delete %s while cleaning resource %s", uri, this);
+                            LOGGER.error(() ->format("Could not delete %s while cleaning resource %s ", uri, this), e);
                         }
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.error(e, "while cleaning resource %s", this);
+                LOGGER.error(() -> format("while cleaning resource %s", this), e);
             }
             // Clean DB
             try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ResourcePaths WHERE id=?")) {
                 st.setLong(1, resourceID);
                 st.execute();
             } catch (SQLException e) {
-                LOGGER.error(e, "while removing associated path in DB for resource %s", this);
+                LOGGER.error(() ->format( "while removing associated path in DB for resource %s", this), e);
             }
         }
     }
@@ -616,7 +617,7 @@ public class Resource implements Identifiable {
                 }
             }
         } catch (CloseException e) {
-            LOGGER.error(e, "Error while closing iterator");
+            LOGGER.error("Error while closing iterator", e);
         }
 
         // Remove

@@ -25,7 +25,8 @@ import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.PathUtils;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,7 +41,7 @@ import java.sql.SQLException;
 @TypeIdentifier("READ-WRITE")
 @Exposed
 public class ReadWriteDependency extends Dependency {
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
 
     public ReadWriteDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
         super(fromId, toId, lock, status);

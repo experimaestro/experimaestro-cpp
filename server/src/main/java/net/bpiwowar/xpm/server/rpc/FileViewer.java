@@ -1,6 +1,7 @@
 package net.bpiwowar.xpm.server.rpc;
 
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,7 +18,7 @@ import static java.lang.String.format;
  *
  */
 public class FileViewer implements AutoCloseable {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     private SeekableByteChannel channel;
     private final String uri;

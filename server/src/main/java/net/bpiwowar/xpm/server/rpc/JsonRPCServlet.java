@@ -22,7 +22,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.server.ServerSettings;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 
 import javax.servlet.ServletException;
@@ -42,7 +43,7 @@ import java.io.PrintWriter;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JsonRPCServlet extends HttpServlet {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     private final JsonRPCSettings settings;
 
     public JsonRPCServlet(Server server, ServerSettings serverSettings, Scheduler scheduler) {
@@ -64,7 +65,7 @@ public class JsonRPCServlet extends HttpServlet {
             JsonParser parser = new JsonParser();
             handler.handleJSON(parser.parse(queryString).getAsJsonObject());
         } catch (RuntimeException |NoSuchMethodException e) {
-            LOGGER.error(e, "Error while handling request");
+            LOGGER.error("Error while handling request", e);
         } finally {
             ServletOutputStream outputStream = resp.getOutputStream();
             outputStream.flush();
@@ -83,7 +84,7 @@ public class JsonRPCServlet extends HttpServlet {
             final JsonObject message = parser.parse(reader).getAsJsonObject();
             handler.handleJSON(message);
         } catch (NoSuchMethodException e) {
-            LOGGER.error(e, "Error while handling request");
+            LOGGER.error("Error while handling request", e);
         } finally {
             ServletOutputStream outputStream = resp.getOutputStream();
             outputStream.flush();
@@ -102,7 +103,7 @@ public class JsonRPCServlet extends HttpServlet {
             resp.setContentType("application/json");
             resp.setStatus(HttpServletResponse.SC_OK);
 
-            jsonRPCMethods = new JsonRPCMethods(settings, new JSONRPCRequest() {
+            jsonRPCMethods = new JsonRPCMethods(settings, false, new JSONRPCRequest() {
                 @Override
                 public void sendJSONString(String message) throws IOException {
                     pw.print(message);

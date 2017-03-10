@@ -28,7 +28,8 @@ import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.UUIDObject;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUIDObject {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * List of dependencies attached to this command

@@ -28,6 +28,7 @@ import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import net.bpiwowar.xpm.server.rpc.JsonRPCServlet;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
+import org.apache.logging.log4j.LogManager;
 import org.eclipse.jetty.security.AbstractLoginService;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
@@ -41,7 +42,7 @@ import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.server.*;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -62,7 +63,7 @@ import static java.lang.String.format;
 public class ServerTask extends AbstractTask {
     public static final String KEY_SERVER_SOCKET = "server.socket";
     public static final String XPM_REALM = "xpm-realm";
-    final static Logger LOGGER = Logger.getLogger();
+    final static Logger LOGGER = LogManager.getFormatterLogger();
     public static final String JSON_RPC_PATH = "/json-rpc";
 
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
@@ -274,7 +275,7 @@ public class ServerTask extends AbstractTask {
                     webServer.stop();
                     stopped = true;
                 } catch (Exception e) {
-                    LOGGER.error(e, "Could not stop properly jetty");
+                    LOGGER.error("Could not stop properly jetty", e);
                 }
                 if (!stopped)
                     synchronized (this) {

@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.scheduler;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LockException;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  */
 @TypeIdentifier("WAITING")
 class WaitingJobProcess extends XPMProcess {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getLogger();
 
     transient private Thread waitingThread;
 

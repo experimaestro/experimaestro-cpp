@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -43,7 +44,7 @@ public class FileSystem {
      * A filter for files
      */
     final public static FileFilter FILE_FILTER = pathname -> pathname.isFile();
-    private static final Logger logger = Logger.getLogger();
+    private static final Logger logger = LogManager.getFormatterLogger();
 
     /**
      * Get a file filter

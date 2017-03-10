@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.scheduler;
 
 import bpiwowar.argparser.utils.Output;
 import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.logging.log4j.LogManager;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
@@ -28,7 +29,7 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.utils.RandomSampler;
 import net.bpiwowar.xpm.utils.ThreadCount;
 import net.bpiwowar.xpm.utils.XPMEnvironment;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +50,7 @@ public class SchedulerTest extends XPMEnvironment {
     // Time to  process a job
     static final long JOB_PROCESSING_TIME = 50;
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getLogger();
 
     @BeforeSuite
     public static void setup() throws Throwable {
@@ -209,7 +210,7 @@ public class SchedulerTest extends XPMEnvironment {
             try {
                 wait(1000);
             } catch (InterruptedException e) {
-                LOGGER.error(e, "error while waiting");
+                LOGGER.error("error while waiting", e);
             }
         }
     }
@@ -564,7 +565,7 @@ public class SchedulerTest extends XPMEnvironment {
                 try {
                     jobs[j].save();
                 } catch (SQLException e) {
-                    LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getLocator());
+                    LOGGER.error(String.format("Error while saving job %d: path=%s", j, jobs[j].getLocator()), e);
                 }
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             }

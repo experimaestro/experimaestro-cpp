@@ -19,7 +19,8 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import net.bpiwowar.xpm.utils.PathUtils;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -36,7 +37,7 @@ import java.util.regex.Pattern;
  */
 @Exposed(value = "Path")
 public class ScriptingPath extends WrapperObject<Path> {
-    final static Logger LOGGER = Logger.getLogger();
+    final static Logger LOGGER = LogManager.getFormatterLogger();
 
     public ScriptingPath() {
         super(null);

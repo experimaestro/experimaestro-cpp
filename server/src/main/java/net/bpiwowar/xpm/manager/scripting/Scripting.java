@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.commands.Pipe;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -47,7 +48,7 @@ import java.util.stream.Stream;
  *
  */
 public class Scripting {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     public static MethodFunction[] FUNCTIONS = getMethodFunctions(Functions.class);
 
     public static MethodFunction[] getMethodFunctions(Class<?> aClass) {

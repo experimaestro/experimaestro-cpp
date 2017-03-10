@@ -25,7 +25,8 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
@@ -56,7 +57,7 @@ abstract public class Dependency implements Serializable {
 
     public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, lock, data, fromId, toId) VALUES(?,?,?,?,?,?)";
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     @GsonSerialization(serialize = false)
     ResourceReference from;

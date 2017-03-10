@@ -24,7 +24,8 @@ import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.db.DbUtils;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -44,7 +45,7 @@ import java.sql.SQLException;
 @TypeIdentifier("TOKEN")
 public class TokenResource extends Resource {
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     private static final SQLInsert SQL_INSERT = new SQLInsert("TokenResources", false, "id", "limit", "used");
 

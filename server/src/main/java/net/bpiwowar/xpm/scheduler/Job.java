@@ -35,7 +35,8 @@ import net.bpiwowar.xpm.utils.FileNameTransformer;
 import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.log4j.Level;
 
 import java.io.BufferedReader;
@@ -52,6 +53,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
+
 /**
  * A job is a resource that can be run - that starts and ends (which
  * differentiate it with a server) and generate data
@@ -63,7 +66,7 @@ abstract public class Job extends Resource {
 
     final static DateFormat longDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     public static final ImmutableList<String> KILLED_ERROR_LINE = ImmutableList.of("1");
 
     transient private JobData jobData;
@@ -284,7 +287,7 @@ abstract public class Job extends Resource {
                     Files.createDirectories(getLocator().getParent());
                     locks.add(FileLock.of(LOCK_EXTENSION.transform(getLocator()), false));
                 } catch (LockException e) {
-                    LOGGER.info(e, "Could not lock job [%s]: %s", this, e);
+                    LOGGER.info(() -> format("Could not lock job [%s]: %s", this), e);
                     throw e;
                 }
 
@@ -349,10 +352,10 @@ abstract public class Job extends Resource {
             LOGGER.warn("Could not lock job %s or one of its dependencies", this);
             throw e;
         } catch (RuntimeException e) {
-            LOGGER.error(e, "Caught exception for %s", this);
+            LOGGER.error(() -> format( "Caught exception for %s", this), e);
             throw e;
         } catch (Throwable e) {
-            LOGGER.error(e, "Caught exception for %s", this);
+            LOGGER.error(() -> format( "Caught exception for %s", this), e);
             throw new RuntimeException(e);
         } finally {
             if (locks != null) {
@@ -371,7 +374,7 @@ abstract public class Job extends Resource {
                             dependency.unlock();
                         }
                     } catch (Throwable e) {
-                        LOGGER.error(e, "Could not close lock of dependency %s", dependency);
+                        LOGGER.error(() -> format("Could not close lock of dependency %s", dependency), e);
                     }
                 }
 
@@ -382,7 +385,7 @@ abstract public class Job extends Resource {
                             LOGGER.info("Disposing of lock %s", lock);
                             lock.close();
                         } catch (Throwable e) {
-                            LOGGER.error(e, "Could not close lock %s", lock);
+                            LOGGER.error(format("Could not close lock %s", lock), e);
                         }
                     }
                 }
@@ -451,7 +454,7 @@ abstract public class Job extends Resource {
             jobData.setRequired(jobData.getNbUnsatisfied() - diff, jobData.getNbHolding() + diffHold);
             // Store the result
             assert jobData.getNbHolding() >= 0;
-            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("[job %s] Number of unsatisfied (%d) < number of holding (%d)",
+            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : format("[job %s] Number of unsatisfied (%d) < number of holding (%d)",
                     this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
 
             // Change the state in function of the number of unsatisfied requirements
@@ -492,12 +495,12 @@ abstract public class Job extends Resource {
                 try {
                     dependency.unlock();
                 } catch (Throwable e) {
-                    LOGGER.error(e, "Error while unlocking dependency %s", dependency);
+                    LOGGER.error(() -> format("Error while unlocking dependency %s", dependency), e);
                 }
             }
 
         } catch (RuntimeException e) {
-            LOGGER.error(e, "Error while unactivating dependencies");
+            LOGGER.error("Error while unactivating dependencies", e);
         }
 
 
@@ -731,7 +734,7 @@ abstract public class Job extends Resource {
                     LOGGER.error("Could not create error file");
                 }
             } catch (FileSystemException e) {
-                LOGGER.error(e, "The process could not be stopped");
+                LOGGER.error("The process could not be stopped", e);
                 return false;
             }
             setState(ResourceState.ERROR);
@@ -768,7 +771,7 @@ abstract public class Job extends Resource {
                 Files.delete(file);
             }
         } catch (IOException e) {
-            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getLocator(), t);
+            LOGGER.info(() -> format("Could not remove '%s' file: %s / %s", getLocator(), t), e);
         }
     }
 
@@ -900,7 +903,7 @@ abstract public class Job extends Resource {
             if (old.replaceBy(this)) {
                 LOGGER.info("Replaced resource %s [%d]", old.getLocator(), old.getId());
             } else {
-                LOGGER.log(Level.INFO,"Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                LOGGER.info("Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
                 context.postProcess(old);
                 return old;
             }

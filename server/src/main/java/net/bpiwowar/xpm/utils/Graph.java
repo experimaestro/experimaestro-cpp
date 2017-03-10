@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
@@ -26,7 +27,7 @@ import java.util.*;
  * Created by bpiwowar on 26/9/14.
  */
 public class Graph {
-    final static public Logger LOGGER = Logger.getLogger();
+    final static public Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * Topological sort of a set of nodes

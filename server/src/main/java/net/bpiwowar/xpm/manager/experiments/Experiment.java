@@ -32,7 +32,8 @@ import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.XPMResultSet;
 import net.bpiwowar.xpm.scheduler.XPMStatement;
 import net.bpiwowar.xpm.utils.CloseableIterable;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -51,7 +52,7 @@ import static java.lang.String.format;
  */
 @Exposed
 public class Experiment implements Identifiable {
-    static private final Logger LOGGER = Logger.getLogger();
+    static private final Logger LOGGER = LogManager.getFormatterLogger();
     static private final String SELECT_BEGIN = "SELECT id, name, timestamp FROM Experiments";
 
     /**
@@ -190,7 +191,7 @@ public class Experiment implements Identifiable {
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e);
             } catch (CloseException e) {
-                LOGGER.error(e, "Error while closing the iterator");
+                LOGGER.error("Error while closing the iterator", e);
             }
             tasks = _tasks;
         }

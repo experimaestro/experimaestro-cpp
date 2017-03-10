@@ -23,7 +23,8 @@ import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.WrappedIOException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.scheduler.Job;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,6 +38,8 @@ import java.util.function.Consumer;
  * Base class for command builders
  */
 public abstract class AbstractCommandBuilder {
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
+
     /**
      * The different input/output
      */
@@ -135,15 +138,14 @@ public abstract class AbstractCommandBuilder {
     /**
      * Execute and returns the full output
      *
-     * @param errLogger
      * @return
      * @throws IOException
      * @throws LaunchException
      * @throws InterruptedException
      */
-    public String execute(Logger errLogger) throws IOException, LaunchException, InterruptedException {
+    public String execute() throws IOException, LaunchException, InterruptedException {
         final StringBuilder sb = new StringBuilder();
-        final XPMProcess p = execute(errLogger, is -> {
+        final XPMProcess p = execute(is -> {
             try (BufferedReader input = new BufferedReader(new InputStreamReader(is))) {
                 int len = 0;
                 char[] buffer = new char[8192];
@@ -157,7 +159,7 @@ public abstract class AbstractCommandBuilder {
 
         int error = p.waitFor();
         if (error != 0) {
-            errLogger.warn("Output was: %s", sb.toString());
+            LOGGER.warn("Output was: %s", sb.toString());
             throw new XPMScriptRuntimeException("Command returned an error code %d", error);
         }
         return sb.toString();
@@ -166,13 +168,12 @@ public abstract class AbstractCommandBuilder {
     /**
      * Execute and returns the full output
      *
-     * @param errLogger
      * @return
      * @throws IOException
      * @throws LaunchException
      * @throws InterruptedException
      */
-    public XPMProcess execute(Logger errLogger, Consumer<InputStream> inputHandler) throws IOException, LaunchException, InterruptedException {
+    public XPMProcess execute(Consumer<InputStream> inputHandler) throws IOException, LaunchException, InterruptedException {
         // Settings
         output = Redirect.PIPE;
         error = Redirect.PIPE;
@@ -181,17 +182,16 @@ public abstract class AbstractCommandBuilder {
         // Start process
         XPMProcess p = start();
 
-        if (errLogger != null) {
-            redirectError(Redirect.PIPE);
-            BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+        redirectError(Redirect.PIPE);
+        BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
-            new Thread("stderr") {
-                @Override
-                public void run() {
-                    errorStream.lines().forEach(errLogger::info);
-                }
-            }.start();
-        }
+        new Thread("stderr") {
+            @Override
+            public void run() {
+                errorStream.lines().forEach(l -> LOGGER.info(l));
+            }
+        }.start();
+
 
         inputHandler.accept(p.getInputStream());
 

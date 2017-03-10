@@ -23,7 +23,8 @@ import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.NetworkShareAccess;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,7 +47,7 @@ import static java.lang.String.format;
 public class XPMFileSystemProvider extends FileSystemProvider {
 
     public static final String SCHEME = "shares";
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     public static XPMFileSystemProvider instance = new XPMFileSystemProvider();
 
     @Override
@@ -95,7 +96,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
                         .normalize();
 
             } catch (IOException e) {
-                LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
+                LOGGER.error(() -> format( "Error trying to access %s from %s", hostPath, connector), e);
             }
         }
         return null;

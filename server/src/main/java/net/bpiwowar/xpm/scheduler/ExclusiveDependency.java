@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.scheduler;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,7 +34,7 @@ import java.nio.file.Path;
  */
 @TypeIdentifier("EXCLUSIVE")
 public class ExclusiveDependency extends Dependency {
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
 
     public ExclusiveDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
         super(fromId, toId, lock, status);

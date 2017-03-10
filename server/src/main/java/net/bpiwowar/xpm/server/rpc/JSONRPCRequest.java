@@ -18,13 +18,17 @@ package net.bpiwowar.xpm.server.rpc;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -33,6 +37,7 @@ import java.util.stream.Stream;
  */
 public abstract class JSONRPCRequest {
     abstract protected void sendJSONString(String message) throws IOException;
+    private HashMap<String, BufferedWriter> writers = new HashMap<>();
 
     public void endMessage(String requestID, Object result) throws IOException {
         JsonObject answer = getJSONPartialAnswer(requestID);
@@ -82,5 +87,46 @@ public abstract class JSONRPCRequest {
      */
     public void message(Object message) throws IOException {
         endMessage(null, message);
+    }
+
+    /**
+     * Return the output stream for the request
+     */
+    BufferedWriter getRequestOutputStream() {
+        return getRequestStream("out");
+    }
+
+    /**
+     * Return the error stream for the request
+     */
+    public BufferedWriter getRequestErrorStream() {
+        return getRequestStream("err");
+    }
+
+    /**
+     * Return a stream with the given ID
+     */
+    private BufferedWriter getRequestStream(final String id) {
+        BufferedWriter bufferedWriter = writers.get(id);
+        if (bufferedWriter == null) {
+            bufferedWriter = new BufferedWriter(new Writer() {
+                @Override
+                public void write(char[] cbuf, int off, int len) throws IOException {
+                    ImmutableMap<String, String> map = ImmutableMap.of("stream", id, "value", new String(cbuf, off, len));
+                    message(map);
+                }
+
+                @Override
+                public void flush() throws IOException {
+                }
+
+                @Override
+                public void close() throws IOException {
+                    throw new UnsupportedOperationException();
+                }
+            });
+            writers.put(id, bufferedWriter);
+        }
+        return bufferedWriter;
     }
 }

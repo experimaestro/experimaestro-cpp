@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.utils.graphs;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang.mutable.MutableInt;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
@@ -32,7 +33,7 @@ import java.util.*;
  * @date 8/2/13
  */
 public class Sort {
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
 
 
     /**

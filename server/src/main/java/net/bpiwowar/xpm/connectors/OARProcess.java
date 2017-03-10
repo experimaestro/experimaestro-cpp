@@ -22,7 +22,8 @@ import net.bpiwowar.xpm.exceptions.ConnectorException;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.io.InputStream;
@@ -33,7 +34,7 @@ import java.io.OutputStream;
  */
 @TypeIdentifier("oar")
 public class OARProcess extends XPMProcess {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * Used for serialization
@@ -75,7 +76,7 @@ public class OARProcess extends XPMProcess {
             final AbstractProcessBuilder builder = getConnector().processBuilder();
             builder.command("oardel", "--signal", "TERM", pid);
             builder.detach(false);
-            builder.execute(LOGGER);
+            builder.execute();
         } catch (Exception e) {
             throw new WrappedException(e);
         }

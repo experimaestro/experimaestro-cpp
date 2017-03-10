@@ -24,7 +24,8 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.ResourceMessage;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -36,7 +37,7 @@ import java.sql.SQLException;
  * Handles notification
  */
 public class NotificationServlet extends XPMServlet {
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
 
     private static final String END_OF_JOB = "eoj";
 
@@ -94,7 +95,7 @@ public class NotificationServlet extends XPMServlet {
                                 }
                             }
                         } catch (Exception e) {
-                            LOGGER.error(e, "Error while processing the end of job notification (job %d)", resourceId);
+                            LOGGER.error(() -> String.format("Error while processing the end of job notification (job %d)", resourceId), e);
                             // FIXME: what to do here?
                         }
                     }

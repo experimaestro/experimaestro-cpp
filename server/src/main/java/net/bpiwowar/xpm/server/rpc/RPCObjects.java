@@ -14,7 +14,8 @@ import net.bpiwowar.xpm.manager.scripting.ConstructorFunction.ConstructorDeclara
 import net.bpiwowar.xpm.manager.scripting.MethodFunction.MethodDeclaration;
 import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.log4j.Hierarchy;
 
 import java.io.FileOutputStream;
@@ -32,7 +33,7 @@ import static com.sun.javafx.binding.StringFormatter.format;
 public class RPCObjects implements AutoCloseable {
 
     private static final String OBJECTS = "objects";
-    private static final Logger LOGGER = Logger.getLogger();
+    private static final Logger LOGGER = LogManager.getFormatterLogger();
     static private boolean initialized = false;
     static private final HashMap<Class<?>, ClassDescription> types = new HashMap<>();
     private final Context context;
@@ -43,8 +44,7 @@ public class RPCObjects implements AutoCloseable {
     int currentId = 0;
 
     public RPCObjects(JsonRPCMethods mos, JsonRPCSettings settings) {
-        final Hierarchy loggerRepository = mos.getScriptLogger();
-        context = new Context(settings.scheduler, loggerRepository);
+        context = new Context(settings.scheduler);
     }
 
     @Override

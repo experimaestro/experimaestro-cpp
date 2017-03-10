@@ -21,7 +21,8 @@ package net.bpiwowar.xpm.scheduler;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.utils.ThreadCount;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.nio.file.FileSystemException;
@@ -39,7 +40,7 @@ import static net.bpiwowar.xpm.utils.Functional.shouldNotThrow;
  */
 @TypeIdentifier("WAITINGJOB")
 public class WaitingJob extends Job {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getLogger();
 
     static {
         Resource.REGISTRY.add(WaitingJob.class);

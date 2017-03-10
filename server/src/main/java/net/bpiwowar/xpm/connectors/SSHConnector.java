@@ -35,7 +35,8 @@ import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.scheduler.CommandLineTask;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -61,7 +62,7 @@ import static net.bpiwowar.xpm.utils.PathUtils.protect;
 @Exposed
 @TypeIdentifier("SSH")
 public class SSHConnector extends SingleHostConnector {
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
     public static final String SSH_UNIX_SCHEME = UnixSshSftpHybridFileSystemProvider.SCHEME_SSH_SFTP_HYBRID_UNIX;
 
     /**
@@ -394,9 +395,8 @@ public class SSHConnector extends SingleHostConnector {
         if (launcher == null) {
             launcher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         }
-        final Logger logger = Context.get().getMainLogger();
         AbstractProcessBuilder builder = launcher.processBuilder(null);
         builder.command(command);
-        return builder.execute(logger);
+        return builder.execute();
     }
 }

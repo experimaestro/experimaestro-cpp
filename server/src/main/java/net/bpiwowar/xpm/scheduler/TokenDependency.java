@@ -22,7 +22,8 @@ import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.db.DbUtils;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -37,7 +38,7 @@ import static java.lang.String.format;
 @TypeIdentifier("TOKEN")
 @Exposed
 public class TokenDependency extends Dependency {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     // Number of requested tokens
     int tokens;

@@ -37,7 +37,8 @@ import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.Heap;
 import net.bpiwowar.xpm.utils.ThreadCount;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
 import org.apache.commons.dbcp2.PoolableConnection;
 import org.apache.commons.dbcp2.PoolableConnectionFactory;
@@ -82,7 +83,7 @@ final public class Scheduler {
      */
     static final long RESCHEDULING_DELTA_TIME = 250;
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /** Number seconds of latency in checking jobs (check if no news since then) */
     public static final int JOB_CHECKING_LATENCY = 30;
@@ -321,13 +322,13 @@ final public class Scheduler {
                                 job.updateStatus();
 
                             } catch (SQLException e) {
-                                LOGGER.warn(e, "SQL exception while updating job %s", resource);
+                                LOGGER.warn(() -> format( "SQL exception while updating job %s", resource), e);
                             }
                         }
                     } catch (SQLException e) {
-                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                        LOGGER.error("Could not retrieve the list of jobs", e);
                     } catch (CloseException e) {
-                        LOGGER.warn(e, "Error while closing the iterator");
+                        LOGGER.warn("Error while closing the iterator", e);
                     }
 
                     // Loop over resources for which we need to notify (Scheduler stopped before or during the process)
@@ -335,7 +336,7 @@ final public class Scheduler {
                             + " WHERE oldStatus != status", null)) {
                         changed.forEach(r -> addChangedResource(r));
                     } catch (SQLException | CloseException e) {
-                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                        LOGGER.error("Could not retrieve the list of jobs", e);
                     }
                 }
             }.start();
@@ -437,7 +438,7 @@ final public class Scheduler {
                 }
                 process.check(true, Scheduler.JOB_CHECKING_LATENCY);
             } catch (Exception e) {
-                LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
+                LOGGER.error(() -> format("Error while checking job [%s]: %s", process.getJob()), e);
             } finally {
                 closeConnection();
             }
@@ -555,13 +556,13 @@ final public class Scheduler {
         try (Connection connection = getConnection(); Statement st = connection.createStatement()) {
             st.execute("SHUTDOWN");
         } catch (SQLException e) {
-            LOGGER.error(e, "Error while shuting down the database");
+            LOGGER.error("Error while shuting down the database", e);
         }
 
         try {
             dataSource.close();
         } catch (Exception e) {
-            LOGGER.error(e, "Error while closing the data source");
+            LOGGER.error("Error while closing the data source", e);
         }
 
         INSTANCE = null;
@@ -632,7 +633,7 @@ final public class Scheduler {
                     connection.close();
                 }
             } catch (SQLException e) {
-                LOGGER.error(e, "Could not close connection");
+                LOGGER.error("Could not close connection", e);
             } finally {
                 scheduler._connection.remove();
             }
@@ -806,7 +807,8 @@ final public class Scheduler {
                                         // Reset the job to a waiting state
                                         job.setState(ResourceState.READY);
                                     } catch (Throwable t) {
-                                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                        // Sets error
+                                        LOGGER.warn(format("Got a trouble while launching job [%s]", job), t);
                                         job.setState(ResourceState.ERROR);
                                     } finally {
                                         this.setName(name);
@@ -814,13 +816,13 @@ final public class Scheduler {
                                 }
                             } catch (Exception e) {
                                 // FIXME: should do something smarter
-                                LOGGER.error(e, "Caught an exception");
+                                LOGGER.error("Caught an exception", e);
                             }
                         }
                     } catch (CloseException e) {
-                        LOGGER.error(e, "SQL exception while retrieving ready jobs");
+                        LOGGER.error("SQL exception while retrieving ready jobs", e);
                     } catch (SQLException e) {
-                        LOGGER.error(e, "SQL error while retrieving ready jobs");
+                        LOGGER.error("SQL error while retrieving ready jobs", e);
                     }
                 }
             } finally {
@@ -963,7 +965,7 @@ final public class Scheduler {
                                     to.updatedDependency(dep);
                                 } catch (RuntimeException e) {
                                     // FIXME: Should schedule a full update of resource
-                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
+                                    LOGGER.error(() -> format("Got an exception while notifying [%s]", fromResource), e);
                                 }
                             }
                         }
@@ -974,9 +976,9 @@ final public class Scheduler {
                         updateStatus.setLong(2, fromResource.getId());
                         updateStatus.executeUpdate();
                     } catch (CloseException e) {
-                        LOGGER.error(e, "Caught exception while closing iterator");
+                        LOGGER.error("Caught exception while closing iterator", e);
                     } catch (Exception e) {
-                        LOGGER.error(e, "Caught exception in notifier");
+                        LOGGER.error("Caught exception in notifier", e);
                     }
                 }
             } finally {
@@ -1004,12 +1006,12 @@ final public class Scheduler {
                                 Scheduler.this.sendMessage(job, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                             }
                         } catch (Throwable e) {
-                            LOGGER.error(e, "could not check if job %s is running", job);
+                            LOGGER.error("could not check if job %s is running", job);
                         }
                     }
                 }
             } catch (SQLException | CloseException e) {
-                LOGGER.error(e, "Error while checking running jobs");
+                LOGGER.error("Error while checking running jobs", e);
             }
         }
     }
@@ -1030,11 +1032,11 @@ final public class Scheduler {
                     final Resource resource = Resource.getById(rid);
                     resource.setState(ResourceState.RUNNING);
                 } catch (Throwable e) {
-                    LOGGER.error(e, "[cleanup] Could not update resource %d", rid);
+                    LOGGER.error(() -> format("[cleanup] Could not update resource %d", rid), e);
                 }
             }
         } catch (SQLException e) {
-            LOGGER.warn(e, "Could not cleanup");
+            LOGGER.warn("Could not cleanup", e);
         }
 
     }

@@ -37,8 +37,9 @@ import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.TokenResource;
-import net.bpiwowar.xpm.utils.log.Logger;
-import org.apache.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Level;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -60,7 +61,7 @@ public class XPM {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
 
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(
             ImmutableSet.of("stdin", "stdout", "lock", "connector", "launcher"));
@@ -153,13 +154,13 @@ public class XPM {
             @Argument(name = "name") @NotNull String name,
             @Argument(name = "level") @NotNull String level
     ) {
-
-        context().getLogger(name).setLevel(Level.toLevel(level));
+        org.apache.logging.log4j.core.config.Configurator.setLevel(name, Level.toLevel(level));
     }
 
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
     public boolean simulate(boolean simulate) {
+        LOGGER.info("Simulate set to %b", simulate);
         final boolean old = Context.get().simulate();
         Context.get().simulate(simulate);
         return old;
@@ -212,7 +213,7 @@ public class XPM {
                 builder.redirectOutput(Redirect.PIPE);
             }
 
-            return builder.execute(sc.getMainLogger());
+            return builder.execute();
         }
     }
 

@@ -20,7 +20,8 @@ package net.bpiwowar.xpm.server;
 
 import bpiwowar.argparser.utils.Output;
 import org.apache.commons.configuration.Configuration;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -30,7 +31,7 @@ import java.net.UnknownHostException;
  * @date 29/3/13
  */
 public class ServerSettings {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
     /**
      * Server name
      */
@@ -48,15 +49,15 @@ public class ServerSettings {
         try {
             name = configuration.getString("name", InetAddress.getLocalHost().getHostName());
         } catch (UnknownHostException e) {
-            LOGGER.error(e, "Could not get localhost name");
+            LOGGER.error("Could not get localhost name", e);
         }
 
         String styleName = configuration.getString("style", Style.SMOOTHNESS.toString()).toUpperCase();
         try {
             style = Style.valueOf(styleName);
         } catch (IllegalArgumentException e) {
-            LOGGER.error(e, "Could not get parse style %s: it should be among [%s]", styleName,
-                    Output.toString(",", Style.values()));
+            LOGGER.error(() -> String.format("Could not get parse style %s: it should be among [%s]", styleName,
+                    Output.toString(",", Style.values())), e);
         }
 
     }

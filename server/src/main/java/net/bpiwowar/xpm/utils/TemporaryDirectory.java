@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.io.IOException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class TemporaryDirectory implements AutoCloseable {
-    private static final Logger logger = Logger.getLogger();
+    private static final Logger logger = LogManager.getFormatterLogger();
 
     Thread deleteThread = null;
     File directory;

@@ -14,7 +14,8 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.CloseableIterable;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.SQLException;
 import java.util.EnumSet;
@@ -29,6 +30,7 @@ import java.util.stream.Stream;
  */
 @JsonRPCMethodsHolder("experiments")
 public class ExperimentsMethods extends BaseJsonRPCMethods {
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     public ExperimentsMethods(JSONRPCRequest mos) {
         super(mos);
@@ -269,7 +271,6 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
 
         @Override
         public Object call() throws Throwable {
-            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
             int n = 0;
             for (Resource resource : Experiment.resourcesByIdentifier(identifier, states)) {
                 try {
@@ -279,7 +280,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
                         }
                     }
                 } catch (Throwable throwable) {
-                    logger.error("Error while killing job [%s]", resource);
+                    LOGGER.error("Error while killing job [%s]", resource);
                 }
             }
             return n;
@@ -303,13 +304,12 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
 
         @Override
         public Object call() throws Throwable {
-            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
             int nbUpdated = 0;
 
             for (Resource resource : Experiment.resourcesByIdentifier(experimentId, states)) {
 
                 try {
-                    logger.info("Invalidating resource %s", resource);
+                    LOGGER.info("Invalidating resource %s", resource);
 
                     final ResourceState rsrcState = resource.getState();
 
@@ -335,7 +335,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
                         }
                     }
                 } catch (Throwable t) {
-                    logger.error("Could not invalidate job %s: %s", resource, t);
+                    LOGGER.error("Could not invalidate job %s: %s", resource, t);
                 }
             }
 

@@ -30,7 +30,8 @@ import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.utils.gson.ByteArrayAdapter;
 import net.bpiwowar.xpm.utils.gson.ConnectorAdapter;
 import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
@@ -40,7 +41,7 @@ import java.nio.file.Path;
  * Converts a command into a JSON string
  */
 public class GsonConverter {
-    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = LogManager.getFormatterLogger();
 
     /**
      * The builder to use in most cases

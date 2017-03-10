@@ -26,7 +26,8 @@ import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
-import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +47,7 @@ import java.util.Map;
 @TypeIdentifier("local")
 public class LocalhostConnector extends SingleHostConnector {
 
-    static final private Logger LOGGER = Logger.getLogger();
+    static final private Logger LOGGER = LogManager.getFormatterLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir");
 
     public static final String IDENTIFIER = "file://";
