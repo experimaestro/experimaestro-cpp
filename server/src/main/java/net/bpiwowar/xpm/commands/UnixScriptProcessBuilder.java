@@ -139,6 +139,14 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.format("# Experimaestro generated task: %s%n", path);
             writer.println();
 
+            // --- Checks the start lock
+
+            if (startlockPath != null) {
+                writer.format("# Checks that the start lock is set, and removes it%n");
+                writer.format("test -f %s || exit 017%n", mainConnector.resolve(startlockPath));
+                writer.format("rm -f %s%n%n", mainConnector.resolve(startlockPath));
+            }
+
             // Use pipefail for fine grained analysis of errors in commands
             writer.println("set -o pipefail");
             writer.println();
@@ -167,6 +175,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             if (preprocessCommands != null) {
                 writeCommands(env, writer, preprocessCommands);
             }
+
 
             // --- CLEANUP
 
@@ -206,11 +215,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // --- END CLEANUP
 
-            if (startlockPath != null) {
-                writer.format("# Checks that the start lock is set, and removes it%n");
-                writer.format("test -f %s || exit 017%n", mainConnector.resolve(startlockPath));
-                writer.format("rm -f %s", mainConnector.resolve(startlockPath));
-            }
 
             if (!lockFiles.isEmpty()) {
                 writer.format("# Checks that the locks are set%n");

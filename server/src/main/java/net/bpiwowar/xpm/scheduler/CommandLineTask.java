@@ -188,7 +188,9 @@ public class CommandLineTask extends Job {
             // Create a start lock file
             final Path startlockPath = Resource.LOCKSTART_EXTENSION.transform(getLocator());
             builder.startlock(startlockPath);
-            Files.createFile(startlockPath);
+            if (!Files.exists(startlockPath)) {
+                Files.createFile(startlockPath);
+            }
         }
         return builder.start(fake);
     }
