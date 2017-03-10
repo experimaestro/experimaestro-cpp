@@ -640,6 +640,10 @@ namespace xpm {
 
 /**
  * Report progress when running a task
+ *
+ * It is also used to setup a notification thread that
+ * will ping the server at regular interval to signal
+ * that the job is still alive.
  */
 void progress(float percentage);
 

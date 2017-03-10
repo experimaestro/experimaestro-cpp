@@ -547,8 +547,11 @@ abstract public class Job extends Resource {
             if (getState() != ResourceState.RUNNING && end >= 0) {
                 events.addProperty("end", longDateFormat.format(new Date(end)));
             }
-            if (getProcess() != null)
-                events.addProperty("pid", getProcess().getPID());
+            final XPMProcess process = getProcess();
+            if (process != null) {
+                events.addProperty("pid", process.getPID());
+                events.addProperty("last update", longDateFormat.format(process.getLastUpdate()));
+            }
         }
 
         Collection<Dependency> requiredResources = getDependencies();

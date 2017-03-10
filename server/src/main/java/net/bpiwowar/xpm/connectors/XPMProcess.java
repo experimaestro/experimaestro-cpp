@@ -50,6 +50,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -178,7 +179,7 @@ public abstract class XPMProcess {
      */
     public void init(Job job) {
         // TODO: use connector & job dependent times for checking
-        checker = Scheduler.get().schedule(this, 30, TimeUnit.SECONDS);
+        checker = Scheduler.get().schedule(this, Scheduler.JOB_CHECKING_LATENCY, TimeUnit.SECONDS);
     }
 
     @Override
@@ -267,6 +268,7 @@ public abstract class XPMProcess {
 
     /**
      * Check if a job is running but allow some latency
+     *
      * @param latency The latency (time to last check) in seconds
      * @return True if the process is running, false otherwise
      * @throws ConnectorException If something goes wrong while checking
@@ -338,7 +340,7 @@ public abstract class XPMProcess {
      * Asynchronous check the state of the job monitor
      *
      * @param checkFiles Whether files should be checked rather than the process
-     * @param latency The latency in seconds to check the job
+     * @param latency    The latency in seconds to check the job
      * @return true if the process was stopped
      */
     synchronized public boolean check(boolean checkFiles, long latency) throws Exception {
@@ -494,19 +496,25 @@ public abstract class XPMProcess {
     }
 
     public void setProgress(double progress) {
-        if (progress != this.progress) {
-            try {
-                Scheduler.statement(format("UPDATE Processes SET progress=?, last_update=? WHERE resource=?"))
-                        .setDouble(1, progress)
-                        .setTimestamp(2, new Timestamp(System.currentTimeMillis()))
-                        .setLong(3, job.getId())
-                        .execute().close();
-                this.progress = progress;
-            } catch (SQLException e) {
-                throw new XPMRuntimeException(e, "Could not set value in database");
-            }
+        try {
+            final Timestamp value = new Timestamp(System.currentTimeMillis());
+            Scheduler.statement(format("UPDATE Processes SET progress=?, last_update=? WHERE resource=?"))
+                    .setDouble(1, progress)
+                    .setTimestamp(2, value)
+                    .setLong(3, job.getId())
+                    .execute().close();
+            this.last_update = value.getTime();
+            this.progress = progress;
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not set value in database");
         }
 
+
         this.progress = progress;
+    }
+
+
+    public Date getLastUpdate() {
+        return new Date(last_update);
     }
 }

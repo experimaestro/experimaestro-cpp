@@ -84,7 +84,10 @@ final public class Scheduler {
     static final long RESCHEDULING_DELTA_TIME = 250;
 
     final static private Logger LOGGER = Logger.getLogger();
-    public static final int JOB_CHECKING_LATENCY = 60;
+
+    /** Number seconds of latency in checking jobs (check if no news since then) */
+    public static final int JOB_CHECKING_LATENCY = 30;
+
     private static final int MAX_IDLE_CONNECTIONS = 20;
     private static final int MAX_ACTIVE_CONNECTIONS = 20;
 

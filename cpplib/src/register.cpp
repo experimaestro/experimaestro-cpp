@@ -175,6 +175,7 @@ void Register::parse(std::vector<std::string> const &args) {
     }
 
     // Run the task
+    progress(-1);
     task->execute(value);
 
     return;
