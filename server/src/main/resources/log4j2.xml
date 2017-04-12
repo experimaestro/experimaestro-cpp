@@ -1,48 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-# This file is part of experimaestro.
-# Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
-#
-# experimaestro is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# experimaestro is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-status = error
-dest = err
-packages = net.bpiwowar.xpm.server.rpc
-
-rootLogger.level = info
-rootLogger.appenderRef.stdout.ref = STDERR
-
-appender.console.type = Console
-appender.console.name = STDERR
-appender.console.layout.type = PatternLayout
-appender.console.layout.pattern = %highlight{%d %5p [%t] (%c{1}) %m%n}
-
-appender.rpc.type = JsonWebSocket
-appender.rpc.layout.type = PatternLayout
-appender.rpc.layout.pattern = %highlight{%d %5p [%t] (%c{1}) %m%n}
-
-logger.
-#
-#log4j.appender.stderr = net.bpiwowar.xpm.utils.log.Router
-#log4j.appender.stderr.layout = org.apache.logging.log4j.PatternLayout
-#log4j.appender.stderr.layout.ConversionPattern=%d %5p [%t] (%c{1}) %m%n
-
-
-# Disable "HHH000179: Narrowing proxy to class..."
-log4j.logger.org.hibernate.engine.internal.StatefulPersistenceContext=ERROR
--->
 <Configuration status="info" strict="true" packages="net.bpiwowar.xpm.server.rpc">
 
     <Appenders>

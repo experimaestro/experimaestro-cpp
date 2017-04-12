@@ -53,7 +53,6 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     private final BufferedWriter errorStream;
 
     public XPMWebSocketListener(JsonRPCSettings settings) throws IOException, NoSuchMethodException {
-        LOGGER.info("Setting xpm-websocket to 1");
         mos = new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {
