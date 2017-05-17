@@ -103,6 +103,7 @@ public class FileLock extends Lock {
                     wait = -1; // Don't wait anymore
                 }
             }
+
         } catch (IOException | InterruptedException e) {
             throw new LockException(e, "Could not create the lock file");
         }
@@ -112,7 +113,7 @@ public class FileLock extends Lock {
         this(lockFile.toPath(), -1);
     }
 
-    public FileLock(String lockFile) throws LockException {
+    public      FileLock(String lockFile) throws LockException {
         this(new File(lockFile).toPath(), -1);
     }
 
