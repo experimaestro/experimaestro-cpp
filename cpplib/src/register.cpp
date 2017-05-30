@@ -186,23 +186,25 @@ void Register::parse(std::vector<std::string> const &args) {
 }
 void Register::generate() const {
   std::cout << "{";
-  std::cout << R"("types": [)" << std::endl;
+  std::cout << R"("types": {)" << std::endl;
   bool first = true;
   for (auto const &type: this->_types) {
     if (!type.second->predefined()) {
       if (!first) std::cout << ","; else first = false;
-      std::cout << type.second->toJson() << std::endl;
+      std::cout << '\"' <<  type.first.toString() << "\": "
+                << type.second->toJson() << std::endl;
     }
   }
-  std::cout << "], " << std::endl;
+  std::cout << "}, " << std::endl;
 
-  std::cout << R"("tasks": [)" << std::endl;
+  std::cout << R"("tasks": {)" << std::endl;
   first = true;
   for (auto const &type: this->_tasks) {
     if (!first) std::cout << ","; else first = false;
-    std::cout << type.second->toJson() << std::endl;
+    std::cout << '\"' <<  type.first.toString() << "\": "
+        << type.second->toJson() << std::endl;
   }
-  std::cout << "]" << std::endl;
+  std::cout << "}" << std::endl;
 
   std::cout << "}" << std::endl;
 }
@@ -230,10 +232,13 @@ void Register::load(const std::string &value) {
 }
 
 void Register::load(nlohmann::json const &j) {
-  assert(j["types"].is_array());
-  for (auto &e: j["types"]) {
+  auto types = j["types"];
+  assert(types.is_object());
+
+  for (json::iterator it = types.begin(); it != types.end(); ++it) {
+    auto const &e = it.value();
     assert(e.is_object());
-    const TypeName typeName = TypeName(e["type"].get<std::string>());
+    const TypeName typeName = TypeName(it.key());
     auto typeIt = _types.find(typeName);
     Type::Ptr type;
 
@@ -273,46 +278,59 @@ void Register::load(nlohmann::json const &j) {
 
     if (e.count("properties")) {
       auto properties = e["properties"];
-      for (json::iterator it = properties.begin(); it != properties.end(); ++it) {
-        auto object = Object::createFromJson(*this, it.value());
-        type->setProperty(it.key(), object);
+      for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
+        auto object = Object::createFromJson(*this, it_prop.value());
+        type->setProperty(it_prop.key(), object);
       }
     }
 
     // Parse arguments
-    auto arguments = e["arguments"];
-    for (json::iterator it = arguments.begin(); it != arguments.end(); ++it) {
-      LOGGER->debug("   Adding argument {}", it.key());
-      auto a = std::make_shared<Argument>(it.key());
-      const auto value = it.value();
-      const auto valueTypename = value["type"].get<std::string>();
+    auto arguments = e.value("arguments", json::object());
+    for (json::iterator it_args = arguments.begin(); it_args != arguments.end(); ++it_args) {
+      auto a = std::make_shared<Argument>(it_args.key());
+      const auto value = it_args.value();
+
+      std::string valueTypename;
+      if (value.is_string()) {
+        valueTypename = value.get<std::string>();
+      } else {
+        valueTypename = value["type"].get<std::string>();
+        a->help(value.value("help", ""));
+        a->required(value.value("required", true));
+
+        if (value.count("default")) {
+          LOGGER->debug("    -> Found a default value");
+          a->defaultValue(Object::createFromJson(*this, value["default"]));
+        }
+
+        if (value.count("generator")) {
+          LOGGER->debug("    -> Found a generator");
+          a->generator(Generator::createFromJSON(value["generator"]));
+        }
+      }
+
       auto valueType = getType(valueTypename);
       if (!valueType) {
         addType(valueType = std::make_shared<Type>(valueTypename));
         valueType->placeholder(true);
       }
       a->type(valueType);
-      a->help(value["help"]);
-      a->required(value["required"]);
 
-      if (value.count("default")) {
-        LOGGER->debug("    -> Found a default value");
-        a->defaultValue(Object::createFromJson(*this, value["default"]));
-      }
-
-      if (value.count("generator")) {
-        LOGGER->debug("    -> Found a generator");
-        a->generator(Generator::createFromJSON(value["generator"]));
-      }
-
+      LOGGER->debug("   Adding argument {} of type {}", it_args.key(), a->type()->toString());
       type->addArgument(a);
     }
+
     _types[type->typeName()] = type;
   }
 
-  assert(j["tasks"].is_array());
-  for (auto &e: j["tasks"]) {
-    TypeName identifier(e["identifier"].get<std::string>());
+  auto tasks = j["tasks"];
+  assert(tasks.is_object());
+  for (json::iterator it = tasks.begin(); it != tasks.end(); ++it) {
+    auto const &e = it.value();
+    TypeName identifier(it.key());
+    if (!e.count("type")) {
+      throw argument_error("No type for task " + identifier.toString());
+    }
     TypeName type(e["type"].get<std::string>());
     auto typePtr = getType(type);
 

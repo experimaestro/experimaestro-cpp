@@ -643,36 +643,54 @@ std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
 bool Type::predefined() const { return _predefined; }
 
 std::string Type::toJson() const {
-  json response;
+  json response = json::object();
 
   json jsonArguments = json::object();
   for (auto const &entry: _arguments) {
     auto const &arg = *entry.second;
-    json definition = {
-        {"help", arg.help()},
-        {"required", arg.required()},
-        {"type", arg.type()->typeName().toString()},
-    };
+    json definition = json::object();
 
-    if (arg.generator())
+    if (!arg.help().empty()) {
+      definition["help"] = arg.help();
+    }
+
+    // Only output not required when needed
+    if (!arg.required() && !arg.defaultValue()) {
+      definition["required"] = false;
+    }
+
+    if (arg.generator()) {
       definition["generator"] = std::const_pointer_cast<Generator>(arg.generator())->toJson();
+    }
 
-    if (arg.defaultValue())
+    if (arg.defaultValue()) {
       definition["default"] = arg.defaultValue()->toJson();
+    }
 
+    if (definition.empty()) {
+      definition = arg.type()->typeName().toString();
+    } else {
+      definition["type"] = arg.type()->typeName().toString();
+    }
     jsonArguments[entry.first] = definition;
   }
 
-  json jsonProperties = json::object();
-  for (auto const &entry: _properties) {
-    jsonProperties[entry.first] = entry.second->toJson();
+  if (!jsonArguments.empty()) {
+    response["arguments"] = std::move(jsonArguments);
   }
 
+  if (!_properties.empty()) {
+    json jsonProperties = json::object();
+    for (auto const &entry: _properties) {
+      jsonProperties[entry.first] = entry.second->toJson();
+    }
+    response["properties"] = std::move(jsonProperties);
+  }
 
-  response["arguments"] = std::move(jsonArguments);
-  response["properties"] = std::move(jsonProperties);
-  response["type"] = typeName().toString();
-  response["description"] = _description;
+  if (!_description.empty()) {
+    response["description"] = _description;
+  }
+
   if (_parent) {
     response["parent"] = _parent->_type.toString();
   }

@@ -41,6 +41,9 @@ void CommandLine::add(Command command) {
 }
 
 nlohmann::json CommandLine::toJson() const {
+  if (commands.size() == 1) {
+    return commands[0].toJson();
+  }
   auto j = nlohmann::json::array();
   for(auto &command: commands) {
     j.push_back(command.toJson());
@@ -49,10 +52,18 @@ nlohmann::json CommandLine::toJson() const {
 }
 void CommandLine::load(nlohmann::json const &j) {
   assert(j.is_array());
-  for(auto &e: j) {
+
+  if (!j.empty() && !j[0].is_array()) {
+    // Simplified array
     Command c;
-    c.load(e);
+    c.load(j);
     this->commands.push_back(c);
+  } else {
+    for (auto &e: j) {
+      Command c;
+      c.load(e);
+      this->commands.push_back(c);
+    }
   }
 }
 
@@ -98,12 +109,12 @@ void Command::load(nlohmann::json const &j) {
     if (e.is_string()) {
       components.push_back(CommandString(e.get<std::string>()));
     } else {
-      std::string type = e["type"];
+      std::string type = e.value("type", "");
       if (type == "content") {
         components.push_back(CommandContent(e["key"], e["content"]));
       } else if (type == "parameters") {
         components.push_back(CommandParameters());
-      } else if (type == "path") {
+      } else if (type == "path" || (type == "" && e.count("path"))) {
         components.push_back(CommandPath(Path(e["path"].get<std::string>())));
       } else {
         throw std::invalid_argument("Unknown type for command component: " + type);
@@ -225,7 +236,6 @@ struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
   }
   virtual nlohmann::json toJson() const override {
     auto j = nlohmann::json::object();
-    j["type"] = "path";
     j["path"] = path.toString();
     return j;
   }
