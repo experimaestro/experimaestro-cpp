@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.0.0)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 include(UseSWIG)
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
+find_package(YamlCPP REQUIRED)
 
 add_definitions("-Wall")
 enable_testing()
@@ -43,7 +45,7 @@ set(SOURCES
         src/value.cpp)
 
 find_package (Threads)
-set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
 include_directories(

@@ -5,6 +5,7 @@
 #ifndef PROJECT_CONTEXT_H
 #define PROJECT_CONTEXT_H
 
+#include <map>
 #include <xpm/filesystem.hpp>
 
 namespace xpm {
@@ -15,6 +16,7 @@ namespace xpm {
 class Context : public Pimpl<Context> {
   Context(ThisPtr const &);
   static Context CURRENT_CONTEXT;
+  std::map<std::string, std::string> _variables;
  public:
   /// Get the current context
   static Context &current();
@@ -27,6 +29,11 @@ class Context : public Pimpl<Context> {
 
   /// Sets the base path
   void workdir(Path const &path);
+
+  /// Sets a variable
+  void set(std::string const &key, std::string const &value);
+
+  std::string get(std::string const &key)const;
 };
 
 /** Sets the working directory for the current context

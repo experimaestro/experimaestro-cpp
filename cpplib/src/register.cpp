@@ -7,6 +7,7 @@
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/register.hpp>
+#include <yaml-cpp/yaml.h>
 
 #include "private.hpp"
 
@@ -17,6 +18,37 @@ DEFINE_LOGGER("xpm");
 using nlohmann::json;
 
 namespace {
+nlohmann::json toJSON(YAML::Node const &node) {
+  nlohmann::json j;
+  switch (node.Type()) {
+    case YAML::NodeType::Sequence: {
+      j = json::array();
+      for (auto const &element: node) {
+        j.push_back(toJSON(element));
+      }
+    }
+      break;
+
+    case YAML::NodeType::Map: {
+      j = json::object();
+      for (auto const &pair: node) {
+        j[pair.first.as<std::string>()] = toJSON(pair.second);
+      }
+    }
+      break;
+
+    case YAML::NodeType::Scalar: {
+      j = node.Scalar();
+    }
+      break;
+
+    default:
+    std::cerr << "Unhandled type: " << node.Type() << std::endl;
+  }
+
+  return j;
+}
+
 struct DefaultObjectFactory : public ObjectFactory {
   DefaultObjectFactory(const std::shared_ptr<Register> &theRegister) : ObjectFactory(theRegister) {
   }
@@ -170,7 +202,7 @@ void Register::parse(std::vector<std::string> const &args) {
     // Parse further command line options
     size_t ix = 3;
     while (ix < args.size()) {
-      std::string const & arg = args[ix];
+      std::string const &arg = args[ix];
       auto p_equals = arg.find("=");
     }
 
@@ -191,7 +223,7 @@ void Register::generate() const {
   for (auto const &type: this->_types) {
     if (!type.second->predefined()) {
       if (!first) std::cout << ","; else first = false;
-      std::cout << '\"' <<  type.first.toString() << "\": "
+      std::cout << '\"' << type.first.toString() << "\": "
                 << type.second->toJson() << std::endl;
     }
   }
@@ -201,8 +233,8 @@ void Register::generate() const {
   first = true;
   for (auto const &type: this->_tasks) {
     if (!first) std::cout << ","; else first = false;
-    std::cout << '\"' <<  type.first.toString() << "\": "
-        << type.second->toJson() << std::endl;
+    std::cout << '\"' << type.first.toString() << "\": "
+              << type.second->toJson() << std::endl;
   }
   std::cout << "}" << std::endl;
 
@@ -230,6 +262,19 @@ void Register::load(const std::string &value) {
   auto j = json::parse(in);
   load(j);
 }
+
+
+void Register::load(YAML::Node const &node) {
+  load(toJSON(node));
+}
+
+void Register::loadYAML(std::string const &yamlString) {
+  load(YAML::Load(yamlString));
+}
+void Register::loadYAML(Path const &yamlFilepath) {
+  load(YAML::Load(yamlFilepath.getContent()));
+}
+
 
 void Register::load(nlohmann::json const &j) {
   auto types = j["types"];

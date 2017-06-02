@@ -3,10 +3,12 @@
 //
 
 #include <string>
+#include <regex>
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/value.hpp>
+#include <xpm/context.hpp>
 
 #include "private.hpp"
 
@@ -67,15 +69,41 @@ void CommandLine::load(nlohmann::json const &j) {
   }
 }
 
+namespace {
+std::string transform(std::string const &value) {
+  const auto context = Context::current();
+  static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
+  std::ostringstream out;
+  std::sregex_iterator
+      it(value.begin(), value.end(), re),
+      end;
+  size_t lastpos = 0;
+
+  do {
+    std::smatch match = *it;
+    out << value.substr(lastpos, match.position() - lastpos)
+        << context.get(match[1].str());
+    lastpos = match.position() + match.length();
+  } while (++it != end);
+
+  out << value.substr(lastpos);
+
+  std::string tvalue = out.str();
+  LOGGER->info("Transformed {} into {}", value, tvalue);
+  return tvalue;
+
+}
+}
+
 template<>
 struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   std::string value;
   Reference(const std::string &value) : value(value) {}
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
-    return std::make_shared<rpc::CommandString>(value);
+    return std::make_shared<rpc::CommandString>(transform(value));
   }
   virtual nlohmann::json toJson() const override {
-    return value;
+    return transform(value);
   }
 };
 

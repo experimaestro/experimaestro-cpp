@@ -33,6 +33,19 @@ void Context::workdir(Path const&path) {
   _this->basepath = path;
 }
 
+void Context::set(std::string const &key, std::string const &value) {
+  _variables[key] = value;
+}
+
+std::string Context::get(std::string const &key) const {
+  auto it = _variables.find(key);
+  if (it != _variables.end()) {
+    return it->second;
+  }
+
+  return "";
+}
+
 
 // --- Global methods
 

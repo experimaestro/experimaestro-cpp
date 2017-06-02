@@ -7,6 +7,10 @@
 
 #include <xpm/xpm.hpp>
 
+namespace YAML {
+  class Node;
+}
+
 namespace xpm {
 /** Register for types */
 class Register {
@@ -68,8 +72,19 @@ class Register {
   /// Build from a string
   std::shared_ptr<Object> build(std::string const &value);
 
-  /// Load new definitions from json
-  void load(nlohmann::json const &j);
+#ifndef SWIG
+  /// Load new definitions from YAML
+  void load(YAML::Node const &j);
+#endif
+
+  /// Load new definitions from YAML
+  void loadYAML(Path const &j);
+
+  /// Load new definitions from YAML string
+  void loadYAML(std::string const &j);
+
+  /// Load new definitions from file
+  void load(nlohmann::json const &value);
 
   /// Load new definitions from file
   void load(std::string const &value);
