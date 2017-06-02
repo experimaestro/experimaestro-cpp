@@ -149,14 +149,22 @@ class PythonRegister(Register):
 
         self.types = {}
 
-    def addType(self, pythonType, typeName, parentType, description=None):
-        pyType = self.types[pythonType] = Type(typeName, parentType)
-        if description is not None:
-          pyType.description(description)
+    def associateType(self, pythonType, xpmType):
+        self.types[pythonType] = xpmType
         factory = PythonObjectFactory(self, pythonType)
+        # HACK: avoid to be released since shared_ptr are not handled by SWIG yet
         FACTORIES.append(factory)
-        pyType.objectFactory(factory)
-        super().addType(pyType)
+        xpmType.objectFactory(factory)
+
+    def addType(self, pythonType, typeName, parentType, description=None):
+        xpmType = Type(typeName, parentType)
+        if description is not None:
+          xpmType.description(description)
+
+        self.associateType(pythonType, xpmType)
+        super().addType(xpmType)
+
+
 
     def getTask(self, name):
       logger.debug("Getting task %s", name)
@@ -240,20 +248,24 @@ def wrap(self, function, **options):
 
 class RegisterType:
     """Declares an experimaestro type"""
-    def __init__(self, qname, description=None):
+    def __init__(self, qname, description=None, associate=False):
         if type(qname) == TypeName:
             self.qname = qname
         else:
             self.qname = TypeName(qname)
         self.description = description
+        self.associate = associate
 
     def __call__(self, t):
         if not is_new_style(t):
             raise Exception("Error: type %s is an old style Python 2 class" % t)
 
-        # Register type
-        if self.qname is not None and register.getType(self.qname) is not None:
+        # Check if conditions are fullfilled
+        xpmType = Register.getType(register, self.qname) if self.qname is not None else None
+        if xpmType and not self.associate:
             raise Exception("XPM type %s is already declared" % self.qname)
+        if self.associate and not xpmType:
+            raise Exception("XPM type %s is not already declared" % self.qname)
 
         # Add XPM object if needed
         bases = t.__bases__ if issubclass(t, PyObject) else (PyObject,) + t.__bases__
@@ -274,9 +286,16 @@ class RegisterType:
                     break
 
         # Register
-        register.addType(t, self.qname, parentinfo)
+        if self.associate:
+            register.associateType(t, xpmType)
+        else:
+            register.addType(t, self.qname, parentinfo)
 
         return t
+
+class AssociateType(RegisterType):
+    def __init__(self, qname, description=None):
+        super().__init__(qname, description=description, associate=True)
 
 
 class RegisterTask():
