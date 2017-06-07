@@ -33,7 +33,8 @@ class Context : public Pimpl<Context> {
   /// Sets a variable
   void set(std::string const &key, std::string const &value);
 
-  std::string get(std::string const &key)const;
+  std::string get(std::string const &key) const;
+  bool has(std::string const &key) const;
 };
 
 /** Sets the working directory for the current context

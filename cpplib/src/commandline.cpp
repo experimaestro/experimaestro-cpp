@@ -70,8 +70,7 @@ void CommandLine::load(nlohmann::json const &j) {
 }
 
 namespace {
-std::string transform(std::string const &value) {
-  const auto context = Context::current();
+std::string transform(Context &context, std::string const &value) {
   static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
   std::ostringstream out;
   std::sregex_iterator
@@ -100,10 +99,10 @@ struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   std::string value;
   Reference(const std::string &value) : value(value) {}
   virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
-    return std::make_shared<rpc::CommandString>(transform(value));
+    return std::make_shared<rpc::CommandString>(transform(Context::current(), value));
   }
   virtual nlohmann::json toJson() const override {
-    return transform(value);
+    return value;
   }
 };
 
@@ -144,6 +143,8 @@ void Command::load(nlohmann::json const &j) {
         components.push_back(CommandParameters());
       } else if (type == "path" || (type == "" && e.count("path"))) {
         components.push_back(CommandPath(Path(e["path"].get<std::string>())));
+      } else if (type == "pathref" || (type == "" && e.count("pathref"))) {
+        components.push_back(CommandPathReference(CommandPathReference(e["pathref"].get<std::string>())));
       } else {
         throw std::invalid_argument("Unknown type for command component: " + type);
       }
@@ -255,6 +256,43 @@ CommandParameters::~CommandParameters() {
 CommandParameters::CommandParameters() {
 }
 
+
+// --- CommandPathReference
+
+template<>
+struct Reference<CommandPathReference> : public Reference<AbstractCommandComponent> {
+  std::string key;
+  Reference(const std::string &key) : key(key) {}
+  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &commandContext) const override {
+    auto context = Context::current();
+    if (!context.has(key)) {
+      throw std::invalid_argument("Context has no variable named [" + key + "]");
+    }
+
+    LOGGER->debug("Path ref {} is {}", key, context.get(key));
+    return std::make_shared<rpc::CommandPath>(context.get(key));
+  }
+  virtual nlohmann::json toJson() const override {
+    auto j = nlohmann::json::object();
+    j["pathref"] = key;
+    return j;
+  }
+};
+
+CommandPathReference::CommandPathReference(std::string const &key) : PimplChild(key) {
+
+}
+CommandPathReference::~CommandPathReference() {
+}
+
+std::string CommandPathReference::toString() const {
+  return "pathref(" + self().key + ")";
+}
+
+
+
+// --- CommandPath
+
 template<>
 struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
   Path path;
@@ -273,7 +311,6 @@ CommandPath::CommandPath(Path path) : PimplChild(path) {
 
 }
 CommandPath::~CommandPath() {
-
 }
 
 std::string CommandPath::toString() const {

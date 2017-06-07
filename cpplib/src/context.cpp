@@ -45,6 +45,9 @@ std::string Context::get(std::string const &key) const {
 
   return "";
 }
+bool Context::has(std::string const &key) const {
+  return _variables.find(key) != _variables.end();
+}
 
 
 // --- Global methods

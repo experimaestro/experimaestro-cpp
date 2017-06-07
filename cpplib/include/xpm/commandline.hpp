@@ -48,6 +48,15 @@ class XPM_PIMPL_CHILD(CommandPath, AbstractCommandComponent) {
   std::string toString() const;
 };
 
+/** A command argument as a path */
+class XPM_PIMPL_CHILD(CommandPathReference, AbstractCommandComponent) {
+ public:
+  CommandPathReference(std::string const &key);
+  virtual ~CommandPathReference();
+  std::string toString() const;
+};
+
+
 /** A command component where the name is replaced by a string */
 class XPM_PIMPL_CHILD(CommandContent, AbstractCommandComponent) {
  public:
