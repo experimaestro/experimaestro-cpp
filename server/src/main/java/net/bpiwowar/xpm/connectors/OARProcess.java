@@ -65,20 +65,25 @@ public class OARProcess extends XPMProcess {
 
     @Override
     public boolean isRunning() throws ConnectorException {
+        if (pid == null) {
+            return super.isRunning();
+        }
         OARStat oarStat = new OARStat(getConnector(), pid, true);
         return oarStat.isRunning();
     }
 
     @Override
     public void destroy() {
-        try {
-            // First check that we are running
-            final AbstractProcessBuilder builder = getConnector().processBuilder();
-            builder.command("oardel", "--signal", "TERM", pid);
-            builder.detach(false);
-            builder.execute();
-        } catch (Exception e) {
-            throw new WrappedException(e);
+        if (pid != null) {
+            try {
+                // First check that we are running
+                final AbstractProcessBuilder builder = getConnector().processBuilder();
+                builder.command("oardel", "--signal", "TERM", pid);
+                builder.detach(false);
+                builder.execute();
+            } catch (Exception e) {
+                throw new WrappedException(e);
+            }
         }
     }
 

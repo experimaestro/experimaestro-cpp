@@ -716,7 +716,8 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                         }
                     }
                 } catch (Throwable throwable) {
-                    LOGGER.error("Error while killing jbo [%s]", id);
+                    LOGGER.throwing(throwable);
+                    LOGGER.error("Error while killing job [%s]", id);
                 }
             }
             return n;
