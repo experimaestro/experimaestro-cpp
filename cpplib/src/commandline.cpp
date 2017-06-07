@@ -89,7 +89,7 @@ std::string transform(std::string const &value) {
   out << value.substr(lastpos);
 
   std::string tvalue = out.str();
-  LOGGER->info("Transformed {} into {}", value, tvalue);
+  LOGGER->debug("Transformed {} into {}", value, tvalue);
   return tvalue;
 
 }

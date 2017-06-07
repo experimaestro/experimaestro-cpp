@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
+import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.LockException;
@@ -51,6 +52,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -352,10 +355,10 @@ abstract public class Job extends Resource {
             LOGGER.warn("Could not lock job %s or one of its dependencies", this);
             throw e;
         } catch (RuntimeException e) {
-            LOGGER.error(() -> format( "Caught exception for %s", this), e);
+            LOGGER.error(() -> format("Caught exception for %s", this), e);
             throw e;
         } catch (Throwable e) {
-            LOGGER.error(() -> format( "Caught exception for %s", this), e);
+            LOGGER.error(() -> format("Caught exception for %s", this), e);
             throw new RuntimeException(e);
         } finally {
             if (locks != null) {
@@ -567,7 +570,7 @@ abstract public class Job extends Resource {
                 Resource resource = dependency.getFrom();
 
                 JsonObject dep = new JsonObject();
-                dependencies.add(resource.getId().toString(), dep);
+                dependencies.add(resource.getId() == null ? "null (?)" : resource.getId().toString(), dep);
                 dep.addProperty("from-id", resource.getId());
                 dep.addProperty("from", resource.getLocator().toString());
                 dep.addProperty("status", dependency.status.toString());
@@ -687,6 +690,7 @@ abstract public class Job extends Resource {
 
     /**
      * Count the number of unsatisfied dependencies and update state (if needed)
+     *
      * @return True if there was a changed in the stored data
      * @throws SQLException If an exception occurs
      */
@@ -880,14 +884,15 @@ abstract public class Job extends Resource {
      * Submit a new command line job
      */
     @Expose("submit")
-    public Resource submit() throws IOException, SQLException, ExperimaestroCannotOverwrite {
+    public Resource submit()
+            throws IOException, SQLException, ExperimaestroCannotOverwrite {
         Context context = Context.get();
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
 
         // --- Set defaults
-        context.prepare(this);
+        this.prepare(context);
 
         final Resource old = Resource.getByLocator(getLocator());
 
@@ -915,5 +920,18 @@ abstract public class Job extends Resource {
 
         context.postProcess(this);
         return this;
+    }
+
+    /**
+     * Prepares the task with the current task context
+     *
+     * @param context The current context
+     */
+    protected void prepare(Context context) {
+        // -- Adds default locks
+        for (Map.Entry<? extends Resource, DependencyParameters> lock : context.defaultLocks().entrySet()) {
+            Dependency dependency = lock.getKey().createDependency(lock.getValue());
+            this.addDependency(dependency);
+        }
     }
 }

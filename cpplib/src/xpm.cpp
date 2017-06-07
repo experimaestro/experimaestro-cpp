@@ -378,11 +378,13 @@ std::shared_ptr<Task> Object::task() {
   return _task;
 }
 
-void Object::submit(bool send) {
+void Object::submit(bool send,
+                    std::shared_ptr<rpc::Launcher> const &launcher,
+                    std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) {
   if (!_task) {
     throw exception("No underlying task for this object: cannot run");
   }
-  return _task->submit(shared_from_this(), send);
+  return _task->submit(shared_from_this(), send, launcher, launcherParameters);
 }
 
 void Object::configure(bool generate) {

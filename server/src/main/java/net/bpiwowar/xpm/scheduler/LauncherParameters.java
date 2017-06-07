@@ -23,13 +23,12 @@ package net.bpiwowar.xpm.scheduler;
 
 import net.bpiwowar.xpm.manager.Parameters;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.JsonAbstract;
 
 /**
  * Parameters for launchers
  */
 @Exposed
-public class LauncherParameters extends Parameters {
-    public LauncherParameters(Object key) {
-        super(key);
-    }
+@JsonAbstract
+public class LauncherParameters {
 }

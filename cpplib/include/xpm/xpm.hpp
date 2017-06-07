@@ -268,7 +268,9 @@ class Object
   /**
    * Submit the underlying task to experimaestro server
    */
-  void submit(bool send = true);
+  void submit(bool send = true,
+              std::shared_ptr<rpc::Launcher> const &launcher = nullptr,
+              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters = nullptr);
 
   /**
    * Execute the underlying task
@@ -573,7 +575,10 @@ class Task
    * @param object The object corresponding to the task type
    * @param send If false, the job will not be sent to the experimaestro server
    */
-  void submit(std::shared_ptr<Object> const &object, bool send = true) const;
+  void submit(std::shared_ptr<Object> const &object,
+              bool send,
+              std::shared_ptr<rpc::Launcher> const &launcher,
+              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;

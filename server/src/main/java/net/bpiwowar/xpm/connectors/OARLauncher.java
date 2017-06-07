@@ -611,6 +611,6 @@ public class OARLauncher extends Launcher {
 
     @Expose("oarParameters")
     public OARParameters parameters() {
-        return new OARParameters(this);
+        return new OARParameters();
     }
 }

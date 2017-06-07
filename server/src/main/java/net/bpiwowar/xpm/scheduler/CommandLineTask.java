@@ -28,6 +28,7 @@ import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import org.apache.logging.log4j.LogManager;
@@ -199,7 +200,7 @@ public class CommandLineTask extends Job {
         JsonObject info = super.toJSON();
         try {
             loadData();
-        } catch(Throwable e) {
+        } catch (Throwable e) {
             info.addProperty("error", e.toString());
             return info;
         }
@@ -214,6 +215,7 @@ public class CommandLineTask extends Job {
         return info;
     }
 
+    @Expose
     public void setLauncher(Launcher launcher, LauncherParameters parameters) {
         this.launcher = launcher;
         this.parameters = parameters;
@@ -290,5 +292,14 @@ public class CommandLineTask extends Job {
         }
         // Add dependencies
         command.dependencies().forEach(this::addDependency);
+    }
+
+    @Override
+    protected void prepare(Context context) {
+        super.prepare(context);
+
+        if (launcher == null) {
+            launcher = context.getDefaultLauncher();
+        }
     }
 }

@@ -134,12 +134,6 @@ public class Functions {
         return Scheduler.get().getLocalhostConnector();
     }
 
-    @Expose
-    static public Object parameters(String key) {
-        return Context.get().getParameter(key);
-    }
-
-
 
     @Expose
     @Help("Returns the notification URL")

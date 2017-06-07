@@ -26,10 +26,8 @@ import net.bpiwowar.xpm.manager.scripting.Argument;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
-import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.utils.JsonAbstract;
-import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -189,7 +187,7 @@ public abstract class Launcher implements Serializable {
 
     @Expose
     public LauncherParameters parameters() {
-        return new LauncherParameters(this);
+        return new LauncherParameters();
     }
 
 }

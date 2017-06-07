@@ -21,6 +21,7 @@
 
 package net.bpiwowar.xpm.connectors;
 
+import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Property;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
@@ -32,22 +33,20 @@ import static java.lang.String.format;
  */
 @Exposed
 public class OARParameters extends LauncherParameters {
-    static final OARParameters DEFAULT = new OARParameters(null);
+    static final OARParameters DEFAULT = new OARParameters();
 
-    @Property
+    public int hosts = 1;
+
     public int cores = 1;
 
-    @Property
     public int nodes = 1;
 
-    @Property
     public int memory = 0;
 
-    @Property
     public long jobDuration = 30 * 24 * 60 * 60; // 24 days per default
 
-    public OARParameters(OARLauncher launcher) {
-        super(launcher);
+    public OARParameters() {
+
     }
 
     public String oarSpecification() {
@@ -59,6 +58,56 @@ public class OARParameters extends LauncherParameters {
         long minutes = hours % 60;
         hours /= 60;
 
-        return format("nodes=%d/core=%d,walltime=%d:%02d:%02d", nodes, cores, hours, minutes, seconds);
+        return format("nodes=%d/host=%d/core=%d,walltime=%d:%02d:%02d", nodes, hosts, cores, hours, minutes, seconds);
+    }
+
+    @Expose
+    public int getCores() {
+        return cores;
+    }
+
+    @Expose
+    public void setCores(int cores) {
+        this.cores = cores;
+    }
+
+    @Expose
+    public int getNodes() {
+        return nodes;
+    }
+
+    @Expose
+    public void setNodes(int nodes) {
+        this.nodes = nodes;
+    }
+
+    @Expose
+    public int getMemory() {
+        return memory;
+    }
+
+    @Expose
+    public void setMemory(int memory) {
+        this.memory = memory;
+    }
+
+    @Expose
+    public long getJobDuration() {
+        return jobDuration;
+    }
+
+    @Expose
+    public void setJobDuration(long jobDuration) {
+        this.jobDuration = jobDuration;
+    }
+
+    @Expose
+    public int getHosts() {
+        return hosts;
+    }
+
+    @Expose
+    public void setHosts(int hosts) {
+        this.hosts = hosts;
     }
 }

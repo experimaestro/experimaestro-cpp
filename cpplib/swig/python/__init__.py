@@ -83,10 +83,10 @@ class PyObject(Object, metaclass=PyObjectType):
         else:
           super().set(name, value)
 
-    def submit(self, send=None):
+    def submit(self, *, launcher=None, launcherParameters=None, send=None):
       if send is None:
          send = SUBMIT_TASKS
-      super().submit(send)
+      super().submit(send, launcher, launcherParameters)
       return self
 
     def setValue(self, key, sv):
@@ -262,9 +262,9 @@ class RegisterType:
 
         # Check if conditions are fullfilled
         xpmType = Register.getType(register, self.qname) if self.qname is not None else None
-        if xpmType and not self.associate:
+        if xpmType is not None and not self.associate:
             raise Exception("XPM type %s is already declared" % self.qname)
-        if self.associate and not xpmType:
+        if self.associate and xpmType is None:
             raise Exception("XPM type %s is not already declared" % self.qname)
 
         # Add XPM object if needed

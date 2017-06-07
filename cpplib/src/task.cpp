@@ -22,7 +22,11 @@ Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(std::shared_ptr<Object> const &object, bool send) const {
+void Task::submit(std::shared_ptr<Object> const &object,
+                  bool send,
+                  std::shared_ptr<rpc::Launcher> const &launcher,
+                  std::shared_ptr<rpc::LauncherParameters> const &launcherParameters
+  ) const {
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
   if (send) {
@@ -55,6 +59,7 @@ void Task::submit(std::shared_ptr<Object> const &object, bool send) const {
     auto task = std::make_shared<rpc::CommandLineTask>(locator);
     task->taskId(object->task()->identifier().toString());
     task->command(command);
+    task->setLauncher(launcher, launcherParameters);
     task->submit();
   } else {
     LOGGER->warn("Not sending task {}", object->task()->identifier());

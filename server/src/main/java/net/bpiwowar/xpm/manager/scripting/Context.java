@@ -86,11 +86,6 @@ final public class Context implements AutoCloseable {
     private Experiment experiment;
 
     /**
-     * Parameters
-     */
-    MapStack<Object, Object> parameters;
-
-    /**
      * Properties set by the script that will be returned
      */
     Map<String, Object> properties;
@@ -144,7 +139,6 @@ final public class Context implements AutoCloseable {
         defaultLauncher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         threadContext.set(this);
         properties = new HashMap<>();
-        parameters = new MapStack<>();
 
         simulate = false;
         submittedJobs = new HashMap<>();
@@ -174,23 +168,6 @@ final public class Context implements AutoCloseable {
         return scheduler;
     }
 
-    /**
-     * Prepares the task with the current task context
-     *
-     * @param resource The resource to prepare
-     */
-    public void prepare(Resource resource) {
-        // -- Adds default locks
-        for (Map.Entry<? extends Resource, DependencyParameters> lock : defaultLocks.entrySet()) {
-            Dependency dependency = lock.getKey().createDependency(lock.getValue());
-            ((Job) resource).addDependency(dependency);
-        }
-
-        if (defaultLauncher != null) {
-            Launcher launcher = defaultLauncher;
-            resource.setLauncher(launcher, (LauncherParameters) parameters.get(launcher));
-        }
-    }
 
     public Context addNewTaskListener(Consumer<Job> listener) {
         newTaskListeners.add(listener);
@@ -251,15 +228,6 @@ final public class Context implements AutoCloseable {
 
     public void setProperty(String key, Object value) {
         properties.put(key, value);
-    }
-
-
-    public void setParameter(Object key, Object value) {
-        parameters.put(key, value);
-    }
-
-    public Object getParameter(Object key) {
-        return parameters.get(key);
     }
 
 
