@@ -113,6 +113,7 @@ for subp in [p_invalidate, p_experiments_invalidate]:
     subp.add_argument('--restart', dest="restart", action="store_true", default=False, help="Restart instead of setting to ERROR")
 
 p_experiments_invalidate.add_argument('--states', dest="states", default="ERROR", help="States to invalidate").completer = statesCompleter
+p_experiments_invalidate.add_argument('--invalidate-done', action="store_false", default=True, dest="keep_done", help='The experiment ID')
 p_experiments_invalidate.add_argument('experimentId', help='The experiment ID')
 
 p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
