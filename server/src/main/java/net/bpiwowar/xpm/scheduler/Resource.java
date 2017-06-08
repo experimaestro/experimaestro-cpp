@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import jdk.nashorn.internal.runtime.Context;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
@@ -518,8 +519,10 @@ public class Resource implements Identifiable {
                         try {
                             final Path path = NetworkShare.uriToPath(uri);
                             if (Files.isRegularFile(path)) {
+                                LOGGER.info("Cleanup: removing file %s", path);
                                 Files.delete(path);
                             } else if (Files.isDirectory(path)) {
+                                LOGGER.info("Cleanup: removing recursively directory %s", path);
                                 FileSystem.recursiveDelete(path);
                             } else {
                                 LOGGER.error("Could not delete %s while cleaning resource %s: unknown file type", uri, this);

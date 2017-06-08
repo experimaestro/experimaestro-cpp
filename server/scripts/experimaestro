@@ -78,20 +78,6 @@ p_start.add_argument("--timeout", action="store", default=30, type=int, help="Ti
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
-# --- Scripting
-p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
-p_run_python = subparsers.add_parser("run-python", help="Run Python script in server")
-p_run_python.add_argument("--python-path", dest="pythonpath", default="", type=str, help="Python PATH")
-p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
-for p in [p_run_js, p_run_python]:
-    p.add_argument("--env", dest="env", action="append", help="Modifies the environment")
-    p.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
-    p.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
-    p.add_argument("--post", dest="post", help="Execute this javascript after the files")
-    p.add_argument('files', nargs='*', help='')
-
-
-
 job_specification = argparse.ArgumentParser(add_help=False)
 job_specification.add_argument('--states', dest="states", help="States")
 job_specification.add_argument('resources', nargs='*', help="The resources", default=[])
@@ -196,46 +182,63 @@ def mkdir_p(path):
             raise e
 
 class JsonRPCMethod:
-    def __init__(self, url, name, jsonid):
-        self.url = url
+    def __init__(self, client, name):
+        self.client = client
         self.name = name
-        self.jsonid = jsonid
+
+    def __getattr__(self, name):
+        return JsonRPCMethod(self.client, "%s.%s" % (self.name, name))
+
+    def __getitem__(self, name):
+        return self.__getattr__(name)
 
     def __call__(self, args):
-        payload = {
-            "method": self.name,
-            "params": args,
-            "jsonrpc": "2.0",
-            "id": self.jsonid,
-        }
-        headers = {'content-type': 'application/json'}
+        return self.client.call(self.name, args)
 
-        answer = requests.post(self.url, data=json.dumps(payload), headers=headers)
-        try:
-            response = answer.json()
-        except:
-            logging.error("Could not decode answer: %s" % answer.text)
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == str(self.jsonid)
-
-        error = response.get("error", None)
-        if not error is None:
-            raise RuntimeError("Error while calling method %s: [%d] %s" % (self.name, error["code"], error["message"]))
-        return response["result"]
+XPM_LOG_LEVELS = {
+    "ERROR": logging.ERROR,
+    "INFO": logging.INFO,
+    "DEBUG": logging.DEBUG,
+    "CRITICAL": logging.CRITICAL,
+    "WARN": logging.WARN
+}
 
 class JsonRPCClient:
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, websocketclient):
+        self.websocketclient = websocketclient
         self.jsonid = 0
 
     def __getattr__(self, name):
-        self.jsonid += 1
-        return JsonRPCMethod(self.url, name, self.jsonid)
-
+        return JsonRPCMethod(self, name)
 
     def __getitem__(self, name):
+        self.__getattr__(name)
+
+    def call(self, command, params):
+        logging.info("[Executing command] %s", command)
         self.jsonid += 1
-        return JsonRPCMethod(self.url, name, self.jsonid)
+        msg = json.dumps({"id": self.jsonid, "method": command, "params": params})
+        self.websocketclient.send(msg)
+
+        while self.websocketclient is not None:
+            message = self.websocketclient.recv()
+            o = json.loads(message)
+            if type(o) == dict:
+                if "id" in o:
+                    if o.get("error", 0) != 0:
+                        raise RuntimeError("Error while calling method %s: [%d] %s" %
+                                           (self.name, o["error"]["code"], o["error"]["message"]))
+                    return o["result"]
+                else:
+                    result = o["result"]
+                    logging.info("Response: %s", result)
+                    if result.get("type", "") == "log":
+                        logging.log(logging.WARN, result["message"])
+                    elif result["stream"] == "out":
+                        sys.stdout.write(result["value"])
+                    else:
+                        sys.stdout.write(result["value"])
+
 
 
 # --- Check paths
@@ -290,7 +293,7 @@ def start_jar(args, jarargs):
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
         logging.debug("this is a debug message")
-        json_server = conf.getJsonServer()
+        json_server = conf.getServer()
         logging.debug("info after getting json server")
         TIMEOUT = args.timeout # sec
         if TIMEOUT <= 0:
@@ -457,15 +460,11 @@ class Configuration():
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
 
 
-    def getJsonServer(self):
-        url = "%s/json-rpc" % self.client["url"]
-        return JsonRPCClient(url)
-
-    def getWebSocketServer(self):
+    def getServer(self):
         re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
         m = re_url.match(self.client["url"])
         if not m:
-            raise "Client URL is not valid"
+            raise Exception("Client URL is not valid")
 
         scheme = "ws"
         if m.group(1):
@@ -477,7 +476,7 @@ class Configuration():
             header = ["Authorization: Basic %s" % auth]
 
 
-        return websocket.create_connection(url, header=header)
+        return JsonRPCClient(websocket.create_connection(url, header=header))
 
 
 # --- Server
@@ -492,7 +491,7 @@ def ping(json_server):
         return False
 
 def command_start_server(args):
-    json_server = Configuration(args).getJsonServer()
+    json_server = Configuration(args).getServer()
     if ping(json_server):
         logging.info("Server already started")
         return 0
@@ -501,102 +500,12 @@ def command_start_server(args):
 
 
 def command_stop_server(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     server.shutdown({})
 
 
-def command_run_python(args):
-    conf = Configuration(args)
-    client = conf.getWebSocketServer()
-
-    # Get the command line
-    files = []
-
-    if args.pre:
-        files.append(["<pre>", args.pre])
-
-    for filename in args.files:
-        filepath = os.path.abspath(filename)
-        if not conf.remote:
-            files.append([filepath, None])
-        else:
-            files.append([filepath, open(filepath).read()])
-
-    # Get absolute python path
-    pythonpath = ":".join([os.path.abspath(path) for path in args.pythonpath.split(":")])
-    xpmpy = os.path.join(xpminidir, "py")
-    if os.path.exists(xpmpy):
-        pythonpath += ":" + xpmpy
-
-    logging.debug("Pyton PATH is %s", pythonpath)
-    if args.post:
-        files.append(["<post>", args.post])
-
-    env = dict(os.environ)
-    if args.env is not None:
-        for x in args.env:
-            key, value = x.split("=", 1)
-            env.update({key: value})
-
-    logging.debug("Running python scripts %s" % [s[0] for s in files])
-    params = {"files": files, "environment": env, "pythonpath": pythonpath}
-
-    run_server_command(client, "run-python", params)
-
-
-
-def command_run_js(args):
-    conf = Configuration(args)
-    client = conf.getWebSocketServer()
-
-    # Get the command line
-    files = []
-
-    if args.pre:
-        files.append(["<pre>", args.pre])
-
-    for filename in args.files:
-        filepath = os.path.abspath(filename)
-        if not conf.remote:
-            files.append([filepath, None])
-        else:
-            files.append([filepath, open(filepath).read()])
-
-    if args.post:
-        files.append(["<post>", args.post])
-
-    logging.debug("Running JS scripts %s" % [s[0] for s in files])
-
-    params = {"files": files, "environment": dict(os.environ)}
-    if args.debug_port > 0:
-        params["debug"] = args.debug_port
-
-    run_server_command(client, "run-javascript", params)
-
-# Run a command using web sockets
-def run_server_command(client, command, params):
-    msg = json.dumps({"id": 1, "method": command, "params": params})
-    client.send(msg)
-    while client is not None:
-        message = client.recv()
-        o = json.loads(message)
-        if type(o) == dict:
-            if "id" in o:
-                if o.get("error", 0) != 0:
-                    code = o["error"]["code"]
-                    sys.stderr.write("%s\n" % o["error"]["message"])
-                    sys.exit(code)
-                return o["result"]
-            else:
-                result = o["result"]
-                if result["stream"] == "out":
-                    sys.stdout.write(result["value"])
-                else:
-                    sys.stdout.write(result["value"])
-
-
 def command_update(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     print("Updated job(s): %s" % server.updateJobs({
         "resources": args.resources,
         "recursive": args.recursive,
@@ -605,8 +514,9 @@ def command_update(args):
 
 
 def command_ls(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     response = server.listJobs({"resources": args.resources, "states": get_states(args.states), "recursive": args.recursive})
+    print(type(response))
     for l in response:
         if args.color:
             state = l.get("state", "?").upper()
@@ -625,18 +535,18 @@ def command_ls(args):
             sys.stdout.write("\n")
 
 def command_ping(args):
-    r = Configuration(args).getJsonServer().ping({})
+    r = Configuration(args).getServer().ping({})
     if r == "pong":
         sys.exit(0)
     sys.exit(1)
 
 def command_build_information(args):
-    info = Configuration(args).getJsonServer().buildInformation({})
+    info = Configuration(args).getServer().buildInformation({})
     json.dump(info, sys.stdout)
     sys.stdout.write("\n")
 
 def command_list_methods(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     for method in server.system.listMethods():
         if not method.startswith("system"):
             print("# %s" % method)
@@ -646,67 +556,68 @@ def command_list_methods(args):
 
 
 def command_information(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     json.dump(server.getResourceInformation({"id": args.resourceId[0]}), sys.stdout)
     sys.stdout.write("\n")
 
 def Server(function):
-    return lambda args : function(Configuration(args).getJsonServer(), args)
+    return lambda args : function(Configuration(args).getServer(), args)
 
 @Server
 def command_set_token_limit(server, args):
     json.dump(server.setTokenLimit({"tokenId": args.tokenid, "limit": args.limit}), sys.stdout)
 
 def command_invalidate(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
     print(server.invalidate(json_args))
 
 
 def command_experiments_invalidate(args):
-    server = Configuration(args).getWebSocketServer()
+    server = Configuration(args).getServer()
     json_args = { "experimentId": args.experimentId, "restart": args.restart, "recursive": args.recursive,
                   "states": args.states.split(",")}
-    count = run_server_command(server, "experiments.invalidate", json_args)
+    count = server.experiments.invalidate(json_args)
     print("Restarted %d jobs " % count)
 
 
 def command_kill(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     n = server.kill({"jobs": args.jobid})
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_kill(args):
-    server = Configuration(args).getWebSocketServer()
-    n = run_server_command(server, "experiments.kill", {"identifier": args.experimentid, "states": get_states(args.states)})
+    server = Configuration(args).getServer()
+    n = server.experiments.kill({"identifier": args.experimentid, "states": get_states(args.states)})
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_delete(args):
-    client = Configuration(args).getWebSocketServer()
-    count = run_server_command(client, "experiments.delete", {"identifier": args.experimentid})
+    server = Configuration(args).getServer()
+    count = server.experiments.delete({"identifier": args.experimentid})
     print("%d experiments deleted" % count)
 
 def command_generate_files(args):
-    client = Configuration(args).getWebSocketServer()
-    run_server_command(client, "generateFiles", {"jobs": args.jobid})
+    server = Configuration(args).getServer()
+    server.generateFiles({"jobs": args.jobid})
 
 
-def command_clean(args):
-    server = Configuration(args).getJsonServer()
-    json.dump(server["experiments.clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}), sys.stdout)
+def command_experiments_clean(args):
+    server = Configuration(args).getServer()
+    print(server.experiments["clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}))
 
 def command_lock_cleanup(args):
-    server = Configuration(args).getJsonServer()
-    json.dump(server["cleanup-locks"]({"simulate": not args.run}), sys.stdout)
+    server = Configuration(args).getServer()
+    output = server["cleanup-locks"]({"simulate": not args.run})
+    json.dump(output, sys.stdout)
 
 
 def command_process_obsolete(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     json.dump(server["experiments.process-obsolete"]({"command": args.what}), sys.stdout)
 
 
 def command_rm(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     if len(args.jobid) == 0:
         args.jobid = [""]
 
@@ -720,15 +631,15 @@ def command_rm(args):
 
 
 def command_log_level(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     server.setLogLevel({"identifier": args.id[0], "level": args.level[0]})
 
 def command_move_resources(args):
-    client = Configuration(args).getWebSocketServer()
-    run_server_command(client, "changeResourcesPrefix", {"old": args.old, "new": args.new})
+    server = Configuration(args).getServer()
+    server.changeResourcesPrefix({"old": args.old, "new": args.new})
 
 def command_ssh_agent(args):
-    server = Configuration(args).getJsonServer()
+    server = Configuration(args).getServer()
     print(json.dumps(server.sshAgentInformation({})))
 
 # --- Utility functions
