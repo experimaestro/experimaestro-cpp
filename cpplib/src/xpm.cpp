@@ -433,7 +433,7 @@ void Object::validate(bool generate) {
                 "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
           } else {
             if (argument.defaultValue()) {
-              LOGGER->warn("Setting default value for {}...", argument.name());
+              LOGGER->debug("Setting default value for {}...", argument.name());
               auto value = argument.defaultValue()->copy();
               value->set(Flag::DEFAULT, true);
               set(argument.name(), value);
