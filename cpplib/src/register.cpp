@@ -289,6 +289,7 @@ void Register::loadYAML(std::string const &yamlString) {
   load(YAML::Load(yamlString));
 }
 void Register::loadYAML(Path const &yamlFilepath) {
+  LOGGER->info("Loading configuration from YAML {}", yamlFilepath.toString());
   load(YAML::Load(yamlFilepath.getContent()));
 }
 
