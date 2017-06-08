@@ -38,7 +38,23 @@ nlohmann::json toJSON(YAML::Node const &node) {
       break;
 
     case YAML::NodeType::Scalar: {
-      j = node.Scalar();
+      const auto s = node.Scalar();
+      if (node.Tag() == "!") {
+        // A string
+        j = s;
+      } else if (node.Tag() == "?"){
+        // determine which type using json parser
+        try {
+          j = nlohmann::json::parse(s);
+          LOGGER->debug("[yaml -> json] Converted {} in {}", s, j.dump());
+        } catch(std::exception &e) {
+          LOGGER->debug("[yaml -> json] Could not convert {}", s);
+          j = s;
+        }
+      } else {
+        LOGGER->error("[yaml -> json] Unhandled YAML type {}: converting to string", node.Tag());
+        j = nlohmann::json::parse(s);
+      }
     }
       break;
 
@@ -265,7 +281,8 @@ void Register::load(const std::string &value) {
 
 
 void Register::load(YAML::Node const &node) {
-  load(toJSON(node));
+  auto j = toJSON(node);
+  load(j);
 }
 
 void Register::loadYAML(std::string const &yamlString) {
