@@ -11,7 +11,7 @@ ExternalProject_Add(googletest
 
 link_directories("${EXT_INSTALL_DIR}/lib")
 
-add_executable(experimaestro-tests tests.cpp digest.cpp structuredvalues.cpp cppdefinitions.cpp arrays.cpp)
+add_executable(experimaestro-tests tests.cpp digest.cpp structuredvalues.cpp cppdefinitions.cpp)
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
 target_include_directories(experimaestro-tests PUBLIC ${CMAKE_BINARY_DIR}/external/googletest/include)
 add_dependencies(experimaestro-tests googletest)
