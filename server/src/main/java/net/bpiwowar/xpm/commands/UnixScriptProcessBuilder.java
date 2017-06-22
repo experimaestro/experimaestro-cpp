@@ -144,14 +144,14 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             if (!lockFiles.isEmpty()) {
                 writer.format("# Checks that the locks are set%n");
                 for (String lockFile : lockFiles) {
-                    writer.format("test -f %s || exit 017%n", lockFile);
+                    writer.format("test -f %s || (echo Locks not set; exit 017)%n", lockFile);
                 }
             }
 
             // Checks the start lock to avoid two experimaestro launched processes to start
             if (startlockPath != null) {
                 writer.format("# Checks that the start lock is set, and removes it%n");
-                writer.format("test -f %s || exit 017%n", mainConnector.resolve(startlockPath));
+                writer.format("test -f %s || (echo start lock not set; exit 017)%n", mainConnector.resolve(startlockPath));
                 writer.format("rm -f %s%n", mainConnector.resolve(startlockPath));
             }
 
