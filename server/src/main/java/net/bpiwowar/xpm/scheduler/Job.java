@@ -342,7 +342,8 @@ abstract public class Job extends Resource {
                 locks = null;
 
                 // Store the current state
-                LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, jobData.getStartTimestamp(), getProcess());
+                LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this,
+                        jobData.getStartTimestamp(), getProcess().getPID());
                 for (Dependency dep : getDependencies()) {
                     LOGGER.debug("[STARTED JOB] Dependency: %s", dep);
                 }
