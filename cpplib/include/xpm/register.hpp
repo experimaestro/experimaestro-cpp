@@ -72,6 +72,16 @@ class Register {
   /// Build from a string
   std::shared_ptr<Object> build(std::string const &value);
 
+  /// Get types
+  std::unordered_map<TypeName, std::shared_ptr<Type>> &getTypes() { 
+    return _types;
+  };
+
+  std::unordered_map<TypeName, std::shared_ptr<Task>> &getTasks() { 
+    return _tasks;
+  };
+
+
 #ifndef SWIG
   /// Load new definitions from YAML
   void load(YAML::Node const &j);

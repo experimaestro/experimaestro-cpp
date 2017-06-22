@@ -73,7 +73,7 @@ endforeach()
 
 # ---- experimaestro executable
 
-add_executable(experimaestro src/experimaestro.cpp)
+add_executable(experimaestro experimaestro/main.cpp)
 target_link_libraries(experimaestro experimaestro_shared ${LINKED_LIBRARIES})
 set_property(TARGET experimaestro PROPERTY CXX_STANDARD 11)
 
@@ -187,32 +187,33 @@ endif ()
 
 # --- Java support
 
-FIND_PACKAGE(JNI REQUIRED)
+# FIND_PACKAGE(JNI REQUIRED)
 
-set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/src/main/java/net/bpiwowar")
-set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
-set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
+# set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/src/main/java/net/bpiwowar")
+# set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
+# set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
 
-set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-swig_add_module(experimaestro_java java swig/xpm.i)
+# set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+# swig_add_module(experimaestro_java java swig/xpm.i)
 
-set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-swig_add_module(experimaestro_rpc_java java swig/xpm_rpc.i)
+# set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+# swig_add_module(experimaestro_rpc_java java swig/xpm_rpc.i)
 
-foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
-    # set(swigtargetlist ${swigtarget})
-    list(GET swigtargetlist 0 swigtargetname)
-    list(GET swigtargetlist 1 swigpythonname)
-    set_target_properties("${swigtargetname}_java" PROPERTIES
-			MACOSX_RPATH TRUE
-			INSTALL_RPATH "@loader_path"
-			CXX_STANDARD 11
-    )
-    target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
-    swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
-endforeach()
+# foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
+#     # set(swigtargetlist ${swigtarget})
+#     list(GET swigtargetlist 0 swigtargetname)
+#     list(GET swigtargetlist 1 swigpythonname)
+#     set_target_properties("${swigtargetname}_java" PROPERTIES
+# 			MACOSX_RPATH TRUE
+# 			INSTALL_RPATH "@loader_path"
+# 			CXX_STANDARD 11
+#     )
+#     target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
+#     swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
+# endforeach()
 
-add_dependencies(experimaestro_java documentation experimaestro_rpc_java)
+# add_dependencies(experimaestro_java documentation experimaestro_rpc_java)
+
 
 export(PACKAGE experimaestro)
 export(TARGETS experimaestro experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
