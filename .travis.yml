@@ -17,7 +17,7 @@ addons:
       - cmake
       - cmake-data
       - libyaml-cpp-dev
-      - libssh
+      - libssh-dev
 
 
 # Use faster container-based builds
