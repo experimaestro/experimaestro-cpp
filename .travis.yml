@@ -16,6 +16,7 @@ addons:
       - doxygen
       - cmake
       - cmake-data
+      - libyaml-cpp-dev
 
 
 # Use faster container-based builds
