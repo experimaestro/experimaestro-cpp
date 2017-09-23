@@ -107,13 +107,15 @@ dependencies {
 
 import org.ajoberstar.grgit.Grgit
 
-task printHeadHash << {
-    def git = Grgit.open(project.file('..'))
+task printHeadHash {
+    doLast {
+        def git = Grgit.open(project.file('..'))
 
-    println git.head().id
-    println git.head().author
-    println git.head().shortMessage
-    println git.tag.list()
+        println git.head().id
+        println git.head().author
+        println git.head().shortMessage
+        println git.tag.list()
+    }
 }
 
 mainClassName = 'bpiwowar.experiments.Run'
