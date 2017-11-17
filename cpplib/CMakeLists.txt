@@ -42,7 +42,8 @@ set(SOURCES
         src/xpmssh.hpp
         include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp
         src/jsonserialization.hpp
-        src/value.cpp)
+        src/value.cpp
+        src/array.cpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})
@@ -126,7 +127,8 @@ if (true)
 		set(PYTHON_INSTALL_LOCATION ${PYTHON_INSTALL_LOCATION}/experimaestro)
 	endif()
     file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
-	message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and installed in ${PYTHON_INSTALL_LOCATION}")
+    message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and installed in ${PYTHON_INSTALL_LOCATION}."
+        " Use PYTHON_INSTALL_LOCATION configuration to change this setting.")
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 

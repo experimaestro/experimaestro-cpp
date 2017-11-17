@@ -316,19 +316,6 @@ class Object
   std::shared_ptr<Type> _type;
 };
 
-class Array : public Object {
- public:
-  typedef std::vector<std::shared_ptr<Object>> Content;
-  virtual ~Array();
-
-  virtual std::shared_ptr<Object> copy() override;
-  void add(std::shared_ptr<Object> const &element);
-  virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
- private:
-  Content _array;
-};
-
-
 
 // ---
 // --- Type and parser

@@ -3,12 +3,12 @@
 #include <iostream>
 #include <unordered_set>
 #include <fstream>
-
-
+#include <typeinfo>
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
+#include <xpm/array.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -162,6 +162,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         array->add(createFromJson(xpmRegister, *it));
       }
+      LOGGER->debug("Got an array {}", array->type()->toString());
       return array;
     }
 

@@ -491,10 +491,13 @@ def ping(json_server):
         return False
 
 def command_start_server(args):
-    json_server = Configuration(args).getServer()
-    if ping(json_server):
-        logging.info("Server already started")
-        return 0
+    try:
+        json_server = Configuration(args).getServer()
+        if ping(json_server):
+            logging.info("Server already started")
+            return 0
+    except ConnectionRefusedError:
+        pass
 
     start_jar(args, ["server"])
 

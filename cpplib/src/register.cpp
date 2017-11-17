@@ -388,6 +388,7 @@ void Register::load(nlohmann::json const &j) {
 
   auto tasks = j["tasks"];
   assert(tasks.is_object());
+
   for (json::iterator it = tasks.begin(); it != tasks.end(); ++it) {
     auto const &e = it.value();
     TypeName identifier(it.key());
@@ -397,6 +398,9 @@ void Register::load(nlohmann::json const &j) {
     TypeName type(e["type"].get<std::string>());
     auto typePtr = getType(type);
 
+    if (!e.count("command")) {
+      throw argument_error("No command for task " + identifier.toString());
+    }
     CommandLine commandLine;
     commandLine.load(e["command"]);
     auto task = std::make_shared<Task>(identifier, typePtr);

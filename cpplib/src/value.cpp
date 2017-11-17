@@ -43,6 +43,7 @@ std::shared_ptr<Object> Value::cast(Type::Ptr const &type) {
     case ValueType::PATH: return std::make_shared<Value>(this->asPath());
     case ValueType::STRING: return std::make_shared<Value>(this->asString());
     case ValueType::INTEGER: return std::make_shared<Value>(this->asInteger());
+    case ValueType::BOOLEAN: return std::make_shared<Value>(this->asBoolean());
     case ValueType::REAL: return std::make_shared<Value>(this->asReal());
 
     case ValueType::NONE:throw std::runtime_error("none has no type");
@@ -339,22 +340,4 @@ std::shared_ptr<Object> Value::copy() {
   return std::make_shared<Value>(*this);
 }
 
-Array::~Array() {}
-
-std::array<unsigned char, DIGEST_LENGTH> Array::digest() const {
-  Digest d;
-  for (auto x: _array) {
-    auto xDigest = x->digest();
-    d.updateDigest(xDigest);
-  }
-  return d.get();
-}
-
-void Array::add(std::shared_ptr<Object> const &element) {
-  _array.push_back(element);
-}
-
-std::shared_ptr<Object> Array::copy() {
-  return std::make_shared<Array>(*this);
-}
 }

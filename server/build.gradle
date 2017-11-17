@@ -107,7 +107,7 @@ dependencies {
 
 import org.ajoberstar.grgit.Grgit
 
-task printHeadHash << {
+task printHeadHash doLast {
     def git = Grgit.open(project.file('..'))
 
     println git.head().id
@@ -157,5 +157,7 @@ task(server, dependsOn: ['classes', 'compileTypeScript'], type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     args 'server'
 }
+server.group = 'Application'
+server.description = 'Start the experimaestro server'
 
 test.useTestNG()

@@ -6,6 +6,7 @@ import sys
 import inspect
 import os.path as op
 import logging
+import pathlib
 
 logger = logging.getLogger("xpm")
 
@@ -14,14 +15,17 @@ def is_new_style(cls):
     return hasattr(cls, '__class__') \
            and ('__dict__' in dir(cls) or hasattr(cls, '__slots__'))
 
-class JsonEncoder(json.JSONEncoder):
+class JSONEncoder(json.JSONEncoder):
    def default(self, o):
         if type(o) == TypeName:
             return str(o)
+        
+        if isinstance(o, pathlib.PosixPath):
+            return { "$type": "path", "$value": str(o.resolve()) }
 
         return json.JSONEncoder.default(self, o)
 
-JSON_ENCODER = JsonEncoder()
+JSON_ENCODER = JSONEncoder()
 
 # Used as a metaclass for C++ classes that can be extended
 TYPES_DICT = {}
@@ -61,7 +65,8 @@ VALUECONVERTERS = {
     IntegerType.toString(): lambda v: v.asInteger(),
     StringType.toString(): lambda v: v.asString(),
     RealType.toString(): lambda v: v.asReal(),
-    PathType.toString(): lambda v: v.asPath()
+    PathType.toString(): lambda v: v.asPath(),
+    ArrayType.toString(): lambda v: v.asArray()
 }
 
 class PyObject(Object, metaclass=PyObjectType):
@@ -93,6 +98,9 @@ class PyObject(Object, metaclass=PyObjectType):
         """Called by XPM when value has been validated"""
         if key.startswith("$"):
             key = key[1:]
+        if key == "type":
+           logger.warn("'type' attribute ignored")
+           return
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value, sv.type(), type(value), type(self))
         dict.__setattr__(self, key, value)
@@ -225,7 +233,7 @@ def create(t, args, options, submit=False):
 
     for k, v in options.items():
       if type(v) == dict:
-         v = Register.build(register, json.dumps(v))
+         v = Register.build(register, JSON_ENCODER.encode(v))
       logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
       if isinstance(o, PyObject):
          setattr(o, k, v)
