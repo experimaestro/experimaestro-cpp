@@ -68,7 +68,7 @@ parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
 
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
-parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
+parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.json", action="store",
                     help="Experimaestro configuration file")
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
@@ -391,40 +391,6 @@ class Properties:
         c[0] = value
 
 
-def getProperties(filename):
-    """Get a dictionnary from a property file
-   """
-    with open(filename, "rU") as propFile:
-
-        re_comment = re.compile(r"""[#;].*""")
-        re_section = re.compile(r"""^\[(\w+)\]$""")
-        re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
-
-        # Set some default values
-        props = Properties()
-        section = ""
-
-        # Read the properties
-        for propLine in propFile:
-            propDef = propLine.strip()
-            if len(propDef) == 0 or re_comment.match(propDef):
-                continue
-
-            m = re_section.match(propDef)
-            if m is not None:
-                section = m.group(1) + "."
-                continue
-
-            m = re_value.match(propDef)
-            if m is not None:
-                props.set(section + m.group(1), m.group(2))
-                continue
-
-            raise RuntimeError("Could not read line [%s]" % propDef)
-
-        return props
-
-
 class Configuration():
     def __init__(self, args):
         """Get the configuration from command line and configuration file"""
@@ -433,11 +399,12 @@ class Configuration():
         self.configfile = os.path.expanduser(args.config)
 
         # Initialise the server
-        self.config = getProperties(self.configfile)
+        with open(self.configfile, "r") as fp:
+            self.config = json.load(fp)
 
-        clients = self.config.sub("client", None)
+        clients = self.config.get("hosts", None)
         if clients is None:
-            raise RuntimeError("No client section in configuration file")
+            raise RuntimeError("No hosts in configuration file")
 
         if args.server is None:
             if len(clients) > 1:
@@ -453,27 +420,19 @@ class Configuration():
                     raise RuntimeError("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
                                     % (len(clients), ",".join(clients.keys())))
             else:
-                for name, client in clients:
+                for name, client in clients.items():
                     args.server = name
 
-        self.client = clients.sub(args.server)
+        self.client = clients[args.server]
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
 
 
     def getServer(self):
-        re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
-        m = re_url.match(self.client["url"])
-        if not m:
-            raise Exception("Client URL is not valid")
-
         scheme = "ws"
-        if m.group(1):
-            scheme = "wss"
-        url = "%s://%s/web-socket" % (scheme, m.group(4))
+        url = "%s://%s:%d/web-socket" % (scheme, self.client.get("host", "localhost"), self.client.get("port", 8080))
         header = []
-        if m.group(2) and m.group(3):
-            auth = base64.b64encode(bytes("%s:%s" % (m.group(2), m.group(3)), "ascii")).decode("ascii")
-            header = ["Authorization: Basic %s" % auth]
+        auth = base64.b64encode(bytes("%s:%s" % (self.client["username"], self.client["password"]), "ascii")).decode("ascii")
+        header = ["Authorization: Basic %s" % auth]
 
 
         return JsonRPCClient(websocket.create_connection(url, header=header))
@@ -519,7 +478,6 @@ def command_update(args):
 def command_ls(args):
     server = Configuration(args).getServer()
     response = server.listJobs({"resources": args.resources, "states": get_states(args.states), "recursive": args.recursive})
-    print(type(response))
     for l in response:
         if args.color:
             state = l.get("state", "?").upper()
