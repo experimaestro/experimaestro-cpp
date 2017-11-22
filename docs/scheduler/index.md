@@ -65,36 +65,6 @@ layout: default
 # Using experimaestro
 
 
-## Configuration
-
-  The server and clients are configured by a simple property file `settings.ini`, located in the `.experimaestro` (by default) file in the user's home directory.
-
-{% highlight ini %}
-
-[server]
-; Port for the Web server (and the XML-RPC server)
-port = 12345
-; Experimaestro will store its data in this folder
-database = /path/to/a/valid/folder
-
-    USERNAME = PASSWORD, user
-
-[client]
-local.url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
-local.default = true
-
-local.url = http://USERNAME:PASSWORD@localhost:12345
-local.default = true
-
-{% endhighlight %}
-
-## Starting experimaestro
-
-The `experimaestro` script can be used to start or stop the server, add jobs and resources. Type:
-
-    experimaestro --help
-
-to get some help on available commands.
 
 ## XML-RPC
 

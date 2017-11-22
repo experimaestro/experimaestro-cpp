@@ -24,10 +24,12 @@ going down each day.
 
 # Installation
 
+## Requirements
+
 Experimaestro is implemented using several languages and thus, you
 have to install multiple ecosystem with the right version.
 
-## Python 3
+### Python 3
 
 You need a working `python3` interpreter on your system along with `pip3`.
 
@@ -37,23 +39,21 @@ To install required python's modules type:
 pip3 install -r server/scripts/requirements.txt
 ```
 
-## Java (≥ 8)
+### Java (≥ 8)
 
 You need a working *Java* installation (version ≥ 1.8) on your machine. [Gradle](https://gradle.org) is
 used for building but is not a requirement.
 
-[[[*nix
-
+On linux or OS X:
 ```sh
 # From the project's root directory.
 ./gradlew installDist
 ```
-[[[windows
 
+On Windows:
 ```bat
 gradlew.bat installDist
 ```
-]]]
 
 This will build and install all the dependencies into `server/build/install/experimaestro-server`. The command `experimaestro` is located in `server/build/install/experimaestro-server/bin/experimaestro`.
 
@@ -66,7 +66,9 @@ calling maven. For example:
 
 To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
 
-## shell completion
+  The server and clients are configured by a simple property file `settings.ini`, located in the `.experimaestro` (by default) file in the user's home directory.
+
+## Shell completion
 
 To enable shell completion follow instructions in
 [argcomplete](https://pypi.python.org/pypi/argcomplete) documentation.
@@ -85,7 +87,42 @@ Add to `.zshrc`:
 
 * Re-launch your shell: `exec zsh`
 
-# Test your installation
+## Configuration
+
+A configuration file must be stored in `$HOME/.experimaestro/settings.json`
+
+```
+{
+    "server": {
+        "name": "[name of the server]",
+        "port": 12345,
+        "database": "[path to the database]",
+        "passwords": [
+            {
+                "user": "[username]",
+                "password": "[plain text password]",
+                "roles": [ "user" ]
+            }
+        ]
+    },
+
+    "hosts": {
+        "local": {
+            "host": "localhost",
+            "port": 12345,
+            "username": "XXXX",
+            "password": "XXXX"
+        }
+    },
+}
+```
+
+The `server` section contains settings for the experimaestro server, while
+the `hosts` section is used to access easily several experimaestro servers
+by giving them an ID (here `local`). You can several others.
+
+
+## Test your installation
 
 To test your installation is working properly you can try to start a
 server like this:
