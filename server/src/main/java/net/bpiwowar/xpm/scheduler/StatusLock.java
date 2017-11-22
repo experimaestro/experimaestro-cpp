@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.ReadLineIterator;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
@@ -201,7 +200,8 @@ public class StatusLock extends Lock {
 
             try {
                 writers = readers = 0;
-                for (String line : new ReadLineIterator(Files.newInputStream(statusFile))) {
+                Files.newBufferedReader(statusFile).lines().forEach((String line) -> {
+
                     String[] fields = line.split("\\s+");
                     if (fields.length != 2)
                         LOGGER.error(
@@ -217,7 +217,7 @@ public class StatusLock extends Lock {
                             LOGGER.error("Skipping line %s (unkown mode %s)",
                                     fields[1]);
                     }
-                }
+                });
 
                 lastUpdate = lastModified;
             } catch (IOException e) {

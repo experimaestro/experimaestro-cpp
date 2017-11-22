@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import jdk.nashorn.internal.runtime.Context;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;

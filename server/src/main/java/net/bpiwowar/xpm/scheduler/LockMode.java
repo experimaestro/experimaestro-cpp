@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.EnumValue;
+
+import net.bpiwowar.xpm.utils.EnumValue;
 
 /**
  * Locking mode.

@@ -231,9 +231,11 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
 
     public static JsonObject toJson(Experiment e) {
         final JsonObject experiment = new JsonObject();
-        experiment.add("id", new JsonPrimitive(e.getId()));
-        experiment.add("name", new JsonPrimitive(e.getName()));
-        experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
+        if (e != null) {
+            experiment.add("id", new JsonPrimitive(e.getId()));
+            experiment.add("name", new JsonPrimitive(e.getName()));
+            experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
+        }
         return experiment;
     }
 

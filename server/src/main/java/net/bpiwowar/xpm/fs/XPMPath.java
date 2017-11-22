@@ -20,10 +20,10 @@ package net.bpiwowar.xpm.fs;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang.NotImplementedException;
 import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.Output;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,32 +104,32 @@ public class XPMPath implements Path {
 
     @Override
     public Path getName(int index) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getName");
     }
 
     @Override
     public Path subpath(int beginIndex, int endIndex) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("subpath");
     }
 
     @Override
     public boolean startsWith(Path other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("startsWith");
     }
 
     @Override
     public boolean startsWith(String other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("startsWith");
     }
 
     @Override
     public boolean endsWith(Path other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("endsWith");
     }
 
     @Override
     public boolean endsWith(String other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("endsWith");
     }
 
     @Override
@@ -192,12 +192,12 @@ public class XPMPath implements Path {
 
     @Override
     public Path resolveSibling(Path other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("resolveSibling");
     }
 
     @Override
     public Path resolveSibling(String other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("resolveSibling");
     }
 
     @Override
@@ -317,7 +317,7 @@ public class XPMPath implements Path {
 
     @Override
     public File toFile() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("toFile");
     }
 
     @Override
@@ -347,7 +347,7 @@ public class XPMPath implements Path {
 
     @Override
     public int compareTo(Path other) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("compareTo");
     }
 
     public String getHostName() {

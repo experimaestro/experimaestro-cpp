@@ -18,10 +18,10 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
@@ -64,7 +64,7 @@ public class XPMConnector extends SingleHostConnector {
 
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
-        throw new NotImplementedException();
+        throw new NotImplementedException("doGetFileSystem");
     }
 
     @Override
@@ -74,12 +74,12 @@ public class XPMConnector extends SingleHostConnector {
 
     @Override
     public AbstractProcessBuilder processBuilder() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("processBuilder");
     }
 
     @Override
     public Lock createLockFile(Path path, boolean wait) throws LockException {
-        throw new NotImplementedException();
+        throw new NotImplementedException("createLockFile");
     }
 
     @Override
@@ -89,7 +89,7 @@ public class XPMConnector extends SingleHostConnector {
 
     @Override
     protected Path getTemporaryDirectory() throws FileSystemException {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("getTemporaryDirectory");
     }
 
 }

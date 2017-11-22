@@ -29,7 +29,6 @@ import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.log4j.spi.LoggerRepository;
 
 import java.io.Closeable;
 import java.nio.file.Path;

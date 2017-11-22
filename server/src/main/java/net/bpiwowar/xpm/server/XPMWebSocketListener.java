@@ -24,7 +24,7 @@ import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.server.rpc.JSONRPCRequest;
 import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import net.bpiwowar.xpm.server.rpc.JsonRPCSettings;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.CloseableThreadContext;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;

@@ -19,7 +19,7 @@ package net.bpiwowar.xpm.utils.graphs;
  */
 
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableInt;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

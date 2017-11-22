@@ -24,7 +24,7 @@ import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,17 +50,17 @@ public class OARProcess extends XPMProcess {
 
     @Override
     public OutputStream getOutputStream() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getOutputStream");
     }
 
     @Override
     public InputStream getInputStream() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getInputStream");
     }
 
     @Override
     public InputStream getErrorStream() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getErrorStream");
     }
 
     @Override

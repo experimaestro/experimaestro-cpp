@@ -18,8 +18,8 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.Output;
-import org.apache.commons.lang.mutable.MutableLong;
+import net.bpiwowar.xpm.utils.Output;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.logging.log4j.LogManager;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;

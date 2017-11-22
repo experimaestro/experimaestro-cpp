@@ -27,7 +27,7 @@ import junit.framework.Assert;
 import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import net.bpiwowar.xpm.tasks.ServerTask;
+import net.bpiwowar.xpm.tasks.ServerCommand;
 import net.bpiwowar.xpm.utils.XPMEnvironment;
 
 import java.io.File;
@@ -42,13 +42,13 @@ import static java.lang.String.format;
  * Tests the different Json-RPC calls
  */
 public class JsonRPCTest extends XPMEnvironment {
-    private static ServerTask server;
+    private static ServerCommand server;
     private static JSONRPC2Session rpcSession;
 
     @BeforeSuite
     public static void setup() throws Throwable {
         server = prepare();
-        final URL jsonRPCUrl = new URL("http", "localhost", server.getPort(), ServerTask.JSON_RPC_PATH);
+        final URL jsonRPCUrl = new URL("http", "localhost", server.getPort(), ServerCommand.JSON_RPC_PATH);
         rpcSession = new JSONRPC2Session(jsonRPCUrl);
         rpcSession.setConnectionConfigurator(new BasicAuthenticator());
     }
