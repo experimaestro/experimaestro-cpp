@@ -1,3 +1,0 @@
-* Use Java 7 WatchService API when available
-* Instead of running, produces an output of all the scheduled tasks and their dependencies
-* Group scheduled tasks under a hierarchy (command line + programmatic)
