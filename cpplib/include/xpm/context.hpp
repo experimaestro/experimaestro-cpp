@@ -17,6 +17,11 @@ class Context : public Pimpl<Context> {
   Context(ThisPtr const &);
   static Context CURRENT_CONTEXT;
   std::map<std::string, std::string> _variables;
+
+  /// Get an iterator for a key
+#ifndef SWIG
+  decltype(_variables)::const_iterator find(std::string const &key) const;
+#endif
  public:
   /// Get the current context
   static Context &current();
@@ -33,7 +38,13 @@ class Context : public Pimpl<Context> {
   /// Sets a variable
   void set(std::string const &key, std::string const &value);
 
+  /// Sets a variable with a ns
+  void set(std::string const &ns, std::string const &key, std::string const &value);
+
+  /// Gets a variable given a fully qualified name
   std::string get(std::string const &key) const;
+
+  /// Checks if the variable exists
   bool has(std::string const &key) const;
 };
 
