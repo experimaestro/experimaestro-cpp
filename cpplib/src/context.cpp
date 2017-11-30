@@ -46,24 +46,21 @@ void Context::set(std::string const &ns, std::string const &key, std::string con
 
 std::map<std::string,std::string>::const_iterator Context::find(std::string const &key) const {
   size_t last_dot = key.rfind('.');
-  // Position of component
-  size_t name_pos = last_dot == std::string::npos ? 0 : last_dot + 1;
-  std::string name = key.substr(name_pos);
+  std::string name = key.substr(last_dot == std::string::npos ? 0 : last_dot + 1);
 
-  do {
+  for (;last_dot != std::string::npos; last_dot = key.rfind('.', last_dot - 1)) {
     // Get the key
     std::string _key = last_dot == std::string::npos ? 
-      name : key.substr(0, last_dot) + "." + name;
+        name : key.substr(0, last_dot) + "." + name;
 
     auto it = _variables.find(_key);
     if (it != _variables.end()) {
       return it;
     }
+  }
 
-    last_dot = key.rfind('.', last_dot - 1);
-  } while (last_dot != std::string::npos);
-
-  return _variables.end();
+  // Search for name
+  return _variables.find(name);
 }
 
 std::string Context::get(std::string const &key) const {
