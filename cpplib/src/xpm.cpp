@@ -508,6 +508,7 @@ void Object::validate(bool generate) {
 }
 
 void Object::execute() {
+  // TODO: should display the host language class name
   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 

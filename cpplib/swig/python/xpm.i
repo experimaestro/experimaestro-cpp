@@ -6,6 +6,8 @@
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
+%include "collection.i"
+
 // Attributes
 %attribute(xpm::Argument, bool, required, required, required);
 %ignore xpm::Argument::required;
@@ -52,6 +54,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 %typemap(directorin) std::shared_ptr<xpm::Object> const & {
     $input = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));
 }
+
+%extend xpm::Array { %COLLECTION(std::shared_ptr<xpm::Object>) };
 
 %extend xpm::Object {
     /*void __setitem__(std::string const & key, std::shared_ptr<xpm::Object> const &value) {

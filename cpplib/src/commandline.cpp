@@ -7,6 +7,7 @@
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/xpm.hpp>
+#include <xpm/array.hpp>
 #include <xpm/value.hpp>
 #include <xpm/context.hpp>
 
@@ -203,7 +204,15 @@ CommandContent::~CommandContent() {
 
 namespace {
   void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Object> const & object) {
-    if (auto value = dynamic_cast<Value*>(object.get())) {
+    if (auto array = dynamic_cast<Array*>(object.get())) {
+        oss << "{\"" << xpm::KEY_TYPE << "\":\"" << object->type()->typeName().toString() << "\",\""
+            << xpm::KEY_VALUE << "\": [";
+        for(size_t i = 0; i < array->size(); ++i) {
+          if (i > 0) oss << ", ";
+          fill(f, oss, (*array)[i]);
+        }
+        oss << "]}";
+    } else if (auto value = dynamic_cast<Value*>(object.get())) {
       if (value->type() == xpm::PathType) {
         oss << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
             << xpm::KEY_VALUE << "\": \"";
@@ -215,6 +224,7 @@ namespace {
         oss << value->jsonValue();
       }
     } else {
+      std::cerr << " [[[" << object->toJsonString() << " ]]]\n";
       oss << "{";
       bool first = true;
       if (object->type()) {

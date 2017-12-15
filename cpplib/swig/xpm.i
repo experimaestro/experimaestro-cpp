@@ -10,6 +10,7 @@
 
 %{
 #include <xpm/xpm.hpp>
+#include <xpm/array.hpp>
 #include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
@@ -99,6 +100,7 @@
 %include <xpm/context.hpp>
 %include <xpm/xpm.hpp>
 %include <xpm/value.hpp>
+%include <xpm/array.hpp>
 %include <xpm/register.hpp>
 %include <xpm/logging.hpp>
 

@@ -60,13 +60,25 @@ class PyObjectType(_SwigPyType):
          return TYPES_DICT[cls]["create"](*args, **kwds)
       return _SwigPyType.__call__(cls, *args, **kwds)
 
+
+def value2array(array):
+   """Converts """
+   array = Array.cast(array)
+   r = []
+   for i in range(len(array)):
+      sv = array[i]
+      v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+      r.append(v)
+   return r
+
+# Converts a value to Python
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
     IntegerType.toString(): lambda v: v.asInteger(),
     StringType.toString(): lambda v: v.asString(),
     RealType.toString(): lambda v: v.asReal(),
     PathType.toString(): lambda v: v.asPath(),
-    ArrayType.toString(): lambda v: v.asArray()
+    ArrayType.toString(): value2array
 }
 
 class PyObject(Object, metaclass=PyObjectType):
