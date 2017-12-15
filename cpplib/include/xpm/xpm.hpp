@@ -434,7 +434,7 @@ class Type
    * @param _parent The parent type (or null pointer)
    */
   Type(TypeName const &type, std::shared_ptr<Type> _parent = nullptr,
-       bool predefined = false, bool canIgnore = false);
+       bool predefined = false, bool canIgnore = false, bool isArray = false);
 
   /** Type destruction */
   virtual ~Type();
@@ -463,6 +463,9 @@ class Type
 
   /// Return the type
   std::string toString() const;
+
+  /// Is array
+  bool isArray() const;
 
   /// Returns hash code (only based on type name)
   int hash() const;
@@ -522,6 +525,7 @@ class Type
   bool _predefined;
   bool _canIgnore;
   bool _placeholder = false;
+  bool _isArray = false;
 
   std::shared_ptr<ObjectFactory> _factory;
 };

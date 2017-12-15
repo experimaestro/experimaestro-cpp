@@ -81,6 +81,7 @@ Register::Register() : _defaultObjectFactory(std::make_shared<DefaultObjectFacto
   addType(StringType);
   addType(BooleanType);
   addType(PathType);
+  addType(ArrayType);
 }
 Register::~Register() {}
 

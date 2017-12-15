@@ -120,25 +120,32 @@ void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
 
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
-
     // --- Object
     case nlohmann::json::value_t::object: {
       std::shared_ptr<Object> object;
 
-      auto _key = jsonValue.find(KEY_VALUE);
+      // Get the type of the object
       std::shared_ptr<Type> type;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         type = xpmRegister.getType(typeName);
         if (!type) {
-          LOGGER->debug("Could not find type {} in registry", typeName);
+          LOGGER->warn("Could not find type {} in registry", typeName);
         }
       }
 
+      // Look at the value
+      auto _key = jsonValue.find(KEY_VALUE);
       if (_key != jsonValue.end()) {
         // Infer type from value
         object = createFromJson(xpmRegister, *_key);
-        if (type) object = dynamic_cast<Value&>(*object).cast(type);
+        if (type) {
+          if (type->isArray()) {
+            object = std::dynamic_pointer_cast<Array>(object);
+          } else {
+            object = dynamic_cast<Value&>(*object).cast(type);
+          }
+        }
       } else {
         if (type) {
           LOGGER->debug("Creating object of type {} using type->create()", *type);
@@ -150,7 +157,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       }
 
       object->fill(xpmRegister, jsonValue);
-
+      LOGGER->debug("Got an object of type {}", object->type()->toString());
       return object;
     }
 
@@ -162,7 +169,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         array->add(createFromJson(xpmRegister, *it));
       }
-      LOGGER->debug("Got an array {}", array->type()->toString());
+      LOGGER->debug("Got an array of type {}", array->type()->toString());
       return array;
     }
 
@@ -593,7 +600,7 @@ std::shared_ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, V
 std::shared_ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
 std::shared_ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
 std::shared_ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
-std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true);
+std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
 
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
@@ -605,8 +612,8 @@ std::shared_ptr<Object> Type::create(std::shared_ptr<ObjectFactory> const &defau
   return object;
 }
 
-Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore) :
-    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore) {}
+Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
+    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {}
 
 Type::~Type() {}
 
@@ -645,6 +652,8 @@ std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
 
 /// Predefined types
 bool Type::predefined() const { return _predefined; }
+
+bool Type::isArray() const { return _isArray; }
 
 std::string Type::toJson() const {
   json response = json::object();
