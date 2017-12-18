@@ -351,13 +351,17 @@ void Register::load(nlohmann::json const &j) {
     // Parse arguments
     auto arguments = e.value("arguments", json::object());
     for (json::iterator it_args = arguments.begin(); it_args != arguments.end(); ++it_args) {
-      auto a = std::make_shared<Argument>(it_args.key());
+      auto const name = it_args.key();
+      auto a = std::make_shared<Argument>(name);
       const auto value = it_args.value();
 
       std::string valueTypename;
       if (value.is_string()) {
         valueTypename = value.get<std::string>();
       } else {
+        if (!value.count("type")) {
+          throw argument_error("No defined type for argument " + name + " in definition of type " + typeName.toString());      
+        }
         valueTypename = value["type"].get<std::string>();
         a->help(value.value("help", ""));
         a->required(value.value("required", true));
