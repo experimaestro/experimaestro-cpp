@@ -460,3 +460,8 @@ class MergeClass:
             setattr(self.original, method.__name__, method)
 
         return None
+
+
+def typename(object):
+   """Returns the type name of the object"""
+   return object.type().typeName()

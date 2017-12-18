@@ -1,0 +1,293 @@
+body {
+    font-size: 12px;
+}
+
+dt {
+    color: blue;
+}
+
+dd {
+    padding-bottom: .5em;
+}
+
+#header {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+
+
+#header .title {
+    font-size: x-large;
+}
+
+#header .links {
+    margin: 1em;
+}
+
+/* Dialogs are hidden by default */
+.dialog {
+    display: none;
+}
+
+#connection {
+    right: 0;
+    top: 0;
+    position: fixed;
+}
+
+#clipboard dd:hover {
+    color: white;
+    background: black;
+    pointer: pointer;
+}
+
+/* Javascript documentation */
+#jsdocumentation dl {
+    padding-left: 0.5cm;
+}
+
+#jsdocumentation dt {
+    font-size: large;
+}
+
+/* Icons with an action */
+.fa.link {
+    padding: 3pt;
+    cursor: pointer;
+}
+
+.fa.link:hover {
+    background: black;
+    color: red;
+    padding: 3pt;
+    cursor: pointer;
+}
+
+/** Button lists */
+ul.buttons {
+    padding: 0;
+}
+
+.buttons > li {
+    display: inline-block;
+}
+
+#experiments svg {
+    display: none;
+}
+
+/** SVG graph */
+
+.link {
+    stroke: #ccc;
+}
+
+.node text {
+    pointer-events: none;
+    font: 10px sans-serif;
+}
+
+/*
+
+  Display of resources
+
+*/
+
+#experiment-timestamp {
+    display: inline-block;
+    color: #555;
+}
+
+.resources {
+    padding: 1ex;
+}
+
+#resources {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+
+#resources .resource-id {
+    padding: 3px;
+    margin-left: 0em;
+    margin-right: 0.5em;
+    background: #777;
+    color: white;
+    font-weight: bold;
+    border-radius: 3px;
+}
+
+#resources li.with-progressbar::before {
+    display: none;
+}
+
+#resources li::before {
+    display: inline-block;
+    font-variant-caps: all-small-caps;
+    /*padding: 2pt;*/
+    font-size: 1.7ex;
+    width: 60px;
+    white-space: nowrap;
+    font-stretch: condensed;
+    margin-right: 0.5ex;
+    height: 2em;
+    vertical-align: middle;
+    text-align: center;
+    border-radius: 4px;
+    border: 1px solid #aaa;
+
+}
+
+.progressbar {
+    width: 60px;
+    height: 2em;
+    position: relative;
+    display: inline-block;
+    background: white;
+    margin-right: 0.5ex;
+    vertical-align: middle;
+    background: lightgreen;
+}
+
+.progressbar .ui-progressbar-value {
+    background: green;
+}
+
+.progressbar .progress-label {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    color: white;
+    vertical-align: middle;
+    text-align: center;
+    font-variant-caps: all-small-caps;
+    font-size: 1.7ex;
+    white-space: nowrap;
+    font-stretch: condensed;
+}
+
+
+#resources li {
+    padding-bottom: 1mm;
+    display: none;
+}
+
+#resources li.notintask { display: none !important; }
+#resources.checkbox-state-waiting li.state-waiting {  display: block; }
+#resources.checkbox-state-ready li.state-ready {  display: block; }
+#resources.checkbox-state-running li.state-running {  display: block; }
+#resources.checkbox-state-on_hold li.state-on_hold {  display: block; }
+#resources.checkbox-state-error li.state-error {  display: block; }
+#resources.checkbox-state-done li.state-done {  display: block; }
+
+#resources li div.resource-link {
+    display: inline-block;
+}
+
+#resources li.state-waiting::before {
+    content: "waiting";
+    background: orange;
+    color: white;
+}
+
+#resources li.state-ready::before {
+    content: "ready";
+    background: yellow;
+    color: black;
+}
+
+#resources li.state-on_hold::before {
+    content: "on hold";
+    background: orangered;
+    color: white;
+}
+
+#resources li.state-running::before {
+    content: "running";
+    background: lightgreen;
+    color: white;
+}
+
+#resources li.state-done::before {
+    content: "done";
+    background: darkgreen;
+    color: white;
+}
+
+#resources li.state-error::before {
+    content: "error";
+    background: red;
+    color: white;
+}
+
+
+
+/* Restart */
+
+#resources .resource-actions > div.actions {
+    position: absolute;
+    background: white;
+    display: none;
+    transition: 5s ease-out;
+}
+
+#resources .resource-actions:hover > div.actions {
+    display: inline-block;
+    padding: 2px;
+    border: 1px solid black;
+    transition: 1s ease-out;
+}
+
+#resources .resource-actions i.fa {
+    display: none;
+    padding: 2px;
+}
+
+#resources .resource-actions i.fa {
+    display:  inline;
+}
+
+#resources .resource-actions i.fa[name="restart"] {
+    display: none;
+}
+
+#resources .resource-actions i.fa[name^="fileview"] {
+    display: none;
+}
+
+#resources .resource-actions i.fa[name="kill"] {
+    display: none;
+}
+
+
+#resources li.state-running .resource-actions i.fa[name="kill"] {
+    display: inline;
+}
+#resources li.state-on_hold .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+#resources li.state-error .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+#resources li.state-done .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+
+#resources li.state-running i.fa[name^="fileview"],
+#resources li.state-done i.fa[name^="fileview"],
+#resources li.state-error i.fa[name^="fileview"] {
+    display: inline;
+}
+
+/* Delete */
+
+#resources li.state-done .resource-actions:hover i.fa[name="delete"] {
+    display: none;
+}
+
