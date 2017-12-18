@@ -130,6 +130,9 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         type = xpmRegister.getType(typeName);
         if (!type) {
+          auto undefinedType = std::make_shared<Type>(typeName);
+          undefinedType->placeholder(true);
+          xpmRegister.addType(undefinedType);
           LOGGER->warn("Could not find type {} in registry", typeName);
         }
       }
