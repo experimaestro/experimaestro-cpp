@@ -18,7 +18,7 @@ std::array<unsigned char, DIGEST_LENGTH> Array::digest() const {
   return d.get();
 }
 
-void Array::add(std::shared_ptr<Object> const &element) {
+void Array::push_back(std::shared_ptr<Object> const &element) {
   _array.push_back(element);
 }
 

@@ -81,6 +81,26 @@ VALUECONVERTERS = {
     ArrayType.toString(): value2array
 }
 
+def objectfromvalue(value):
+   """Transforms a Python value into an object"""
+
+   # Simple case: it is already a PyObject
+   if isinstance(value, Object):
+      return value
+
+   # A list
+   if isinstance(value, list):
+      newvalue = Array()
+      for v in value:
+         print(f"Adding element [{v}]")
+         newvalue.append(objectfromvalue(v))
+
+      return newvalue
+
+   # For anything else, we try to convert it
+   return Value(value)
+
+
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects in python interface"""
     def __init__(self):
@@ -95,6 +115,8 @@ class PyObject(Object, metaclass=PyObjectType):
 
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
+
+        value = objectfromvalue(value)
         if Task.isRunning():
           dict.__setattr__(self, name, value)
         else:
@@ -438,6 +460,8 @@ tasks = Definitions(register.getTask)
 
 class MergeClass:
     """Merge class annotation
+
+    Useful to decouple definition and declaration in Python
 
     class A:
         def x(self): return "x"

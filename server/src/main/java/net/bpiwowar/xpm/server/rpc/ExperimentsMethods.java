@@ -296,7 +296,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
         String experimentId;
 
         @RPCArgument
-        EnumSet<ResourceState> states = ResourceState.RUNNABLE_STATES;
+        EnumSet<ResourceState> states = null;
 
         @RPCArgument(name = "recursive", required = false, help = "Whether we should invalidate dependent results when the job was done")
         boolean recursive = true;

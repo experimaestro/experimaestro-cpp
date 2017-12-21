@@ -170,7 +170,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
     case nlohmann::json::value_t::array: {
       auto array = std::make_shared<Array>();
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        array->add(createFromJson(xpmRegister, *it));
+        array->push_back(createFromJson(xpmRegister, *it));
       }
       LOGGER->debug("Got an array of type {}", array->type()->toString());
       return array;

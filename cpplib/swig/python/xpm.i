@@ -6,6 +6,9 @@
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
+// Pythonic renames
+%rename(append) *::push_back;
+
 %include "collection.i"
 
 // Attributes
@@ -27,32 +30,66 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 /*%ignore xpm::Argument::type;*/
 
+/** 
+ * Returns the wrapped python object rather than the director object.
+ * This is useful since an XPM object might be subclassed
+*/
 
-// Returns the wrapped python object rather than the director object
 %{
-    namespace xpm { namespace python {
-        PyObject * getRealObject(std::shared_ptr<xpm::Object> const &object, swig_type_info *swigtype) {
-            if (object) {
-                if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
-                    Py_INCREF(d->swig_get_self());
-                    return d->swig_get_self();
-                }
+      // FIXME: REMOVE
+   #include <cxxabi.h>
+   template<typename T>
+    std::string demangle(T * t) {
+      int status;
+    char * demangled = abi::__cxa_demangle(typeid(*t).name(),0,0,&status);
+    std::string r = demangled;
+    free(demangled);
+    return r;
+}
 
-                std::shared_ptr<  xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>(object);
-                return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), swigtype, SWIG_POINTER_OWN);
+
+   namespace xpm { namespace python {
+
+      PyObject * getRealObject(std::shared_ptr<xpm::Object> const &object) {
+         if (object) {
+            // This is a Director object
+            if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
+               Py_INCREF(d->swig_get_self());
+               return d->swig_get_self();
             }
-            return SWIG_Py_Void();
-        }
-    }}
+   
+            // Check for internal types
+            swig_type_info *typeinfo;
+
+            if (std::shared_ptr<  xpm::Array > p = std::dynamic_pointer_cast<xpm::Array>(object)) {
+               std::shared_ptr<  xpm::Array > * smartresult = new std::shared_ptr<xpm::Array>(p);
+               return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Array_t, SWIG_POINTER_OWN);
+            }
+            
+            if (std::shared_ptr<  xpm::Value > p = std::dynamic_pointer_cast<xpm::Value>(object)) {
+               std::shared_ptr<  xpm::Value > * smartresult = new std::shared_ptr<xpm::Value>(p);
+               return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Value_t, SWIG_POINTER_OWN);
+            }
+
+            std::shared_ptr< xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>(object);
+            return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Object_t, SWIG_POINTER_OWN);
+         }
+
+
+         // Returns None
+         return SWIG_Py_Void();
+      }
+      
+   }} // Ends xpm::python
 %}
 
 %typemap(out) std::shared_ptr<xpm::Object> {
     // OUT-OBJECT
-    $result = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));
+    $result = xpm::python::getRealObject($1);
 }
 
 %typemap(directorin) std::shared_ptr<xpm::Object> const & {
-    $input = xpm::python::getRealObject($1, $descriptor(std::shared_ptr<xpm::Object>*));
+    $input = xpm::python::getRealObject($1);
 }
 
 %extend xpm::Array { %COLLECTION(std::shared_ptr<xpm::Object>) };
@@ -69,7 +106,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     }*/
 
     PyObject * __getattro__(PyObject *name) {
-        auto _self = xpm::python::getRealObject($self->shared_from_this(), $descriptor(std::shared_ptr<xpm::Object>*));
+        auto _self = xpm::python::getRealObject($self->shared_from_this());
 
         PyObject *object = PyObject_GenericGetAttr(_self, name);
         if (object) {
@@ -87,10 +124,10 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 
       if ($self->hasKey(key)) {
           PyErr_Clear();
-         return xpm::python::getRealObject($self->get(key), $descriptor(std::shared_ptr<xpm::Object>*));
+         return xpm::python::getRealObject($self->get(key));
       }
 
-      std::cerr << "Could not find attribute\n";
+      std::cerr << "Could not find attribute " << key << "\n";
       PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
       return nullptr;
     }
