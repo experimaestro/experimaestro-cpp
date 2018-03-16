@@ -6,7 +6,6 @@ layout: default
 # Main concepts
 
 
-
   The job scheduler goal is to run interdependent jobs (i.e. one job might need one or several outputs from other jobs)
 
   - *Resources*: Any object is a resource, whether it is data, a job, or a server. Resources are located on different hosts

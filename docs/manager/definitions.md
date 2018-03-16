@@ -1,4 +1,4 @@
-# Introduction
+# Definitions
 
 Definitions files are in YAML or JSON, and describe the schema of types and tasks.
 In this document, the examples are in YAML, since the syntax is lighter.
@@ -7,10 +7,10 @@ A definition file is divided in two sections, `types` and `tasks`, which
 are two dictionaries mapping a type or a task id to its definition. The definition
 is described in
 
-```yaml
+```YAML
 types:
     type1:
-        ...
+        - a: b
     type2:
         ...
 
@@ -21,7 +21,7 @@ tasks:
         ...
 ```
 
-# Types
+## Types
 
 A type is defined by a dictionary, whose keys can be:
 
