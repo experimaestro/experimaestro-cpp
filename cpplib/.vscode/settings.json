@@ -51,7 +51,9 @@
         "functional": "cpp",
         "limits": "cpp",
         "ratio": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "atomic": "cpp",
+        "locale": "cpp"
     },
     "files.exclude": {
         "**/.git": true,

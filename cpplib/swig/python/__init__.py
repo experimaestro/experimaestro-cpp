@@ -71,6 +71,17 @@ def value2array(array):
       r.append(v)
    return r
 
+
+class TypeProxy: pass
+
+class choices(TypeProxy):
+   def __init__(self, *choices):
+      pass
+   
+   @property
+   def type(self):
+      return cvar.StringType
+
 # Converts a value to Python
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
@@ -231,6 +242,9 @@ class PythonRegister(Register):
         if key in self.builtins:
             return self.builtins[key]
 
+        if isinstance(key, TypeProxy):
+           return key.type
+
         if isinstance(key, Type) or isinstance(key, TypeWrapper):
             return key
 
@@ -280,6 +294,9 @@ def create(t, args, options, submit=False):
     if submit:
         logger.debug("Submitting task to experimaestro")
         o.submit()
+    else:
+        o.validate(False)
+
     return o
 
 def wrap(self, function, **options):
@@ -385,6 +402,7 @@ class RegisterTask():
 
 
 class AbstractArgument:
+    """Abstract class for all arguments (standard, path, etc.)"""
     def __init__(self, name, _type, help=""):
         self.argument = Argument(name)
         self.argument.help = help if help is not None else ""

@@ -503,6 +503,9 @@ class Type
   void setProperty(std::string const &name, Object::Ptr const &value);
   Object::Ptr getProperty(std::string const &name);
 
+  /// Checks whether another type can be assigned as this type
+  bool accepts(Type::Ptr const &other) const;
+
  private:
   const TypeName _type;
   /**

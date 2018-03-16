@@ -29,14 +29,25 @@ using nlohmann::json;
 
 namespace xpm {
 
-// Type and task should be included
+/// Type of the object
 const std::string KEY_TYPE = "$type";
+
+/// Task that generated it
 const std::string KEY_TASK = "$task";
 
+/// Path to the main resource
 const std::string KEY_PATH = "$path";
+
+/// Value
 const std::string KEY_VALUE = "$value";
+
+/// Fields that should be ignored (beside $...)
 const std::string KEY_IGNORE = "$ignore";
+
+/// Default value
 const std::string KEY_DEFAULT = "$default";
+
+/// Resource identifier
 const std::string KEY_RESOURCE = "$resource";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
@@ -430,16 +441,20 @@ void Object::validate(bool generate) {
 
   // (1) Validate the object arguments
   if (!get(Flag::VALIDATED)) {
+
+    // Loop over the whole hierarchy
     for (auto type = _type; type; type = type->parentType()) {
       LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
+
+      // Loop over all the arguments
       for (auto entry: type->arguments()) {
         auto &argument = *entry.second;
         LOGGER->debug("Looking at argument {}", argument.name());
 
         if (_content.count(argument.name()) == 0) {
           LOGGER->debug("No value provided...");
-          // No value provided
-          if (argument.required() && (!generate || !argument.generator())) {
+          // No value provided, and no generator
+          if (argument.required() && !(generate && argument.generator())) {
             throw argument_error(
                 "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
           } else {
@@ -460,6 +475,14 @@ void Object::validate(bool generate) {
             LOGGER->debug("Value is default");
             value->set(Flag::DEFAULT, true);
           } else {
+            // Check the type
+
+            if (!entry.second->type()->accepts(value->type())) {
+              throw argument_error(
+                  "Argument " + argument.name() + " type is  " + value->type()->toString() 
+                  + ", but requested type was " + entry.second->type()->toString());
+            }
+
             // If the value has a type, handles this
             if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
               // Create an object of the key type
@@ -726,6 +749,19 @@ Object::Ptr Type::getProperty(std::string const &name) {
   if (it == _properties.end()) return nullptr;
   return it->second;
 }
+
+
+bool Type::accepts(Type::Ptr const &other) const {
+  
+  // Go up
+  for(auto current = other; current; current = current->_parent) {
+    if (current->_type == _type) return true;
+  }
+
+  return false;
+
+}
+
 
 // ---- Generators
 
