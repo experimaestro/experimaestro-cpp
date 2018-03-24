@@ -1,6 +1,6 @@
 package net.bpiwowar.xpm.manager.scripting;
 
-import org.apache.commons.lang.ClassUtils;
+import org.apache.commons.lang3.ClassUtils;
 import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 
 import java.lang.reflect.Array;

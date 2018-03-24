@@ -316,19 +316,6 @@ class Object
   std::shared_ptr<Type> _type;
 };
 
-class Array : public Object {
- public:
-  typedef std::vector<std::shared_ptr<Object>> Content;
-  virtual ~Array();
-
-  virtual std::shared_ptr<Object> copy() override;
-  void add(std::shared_ptr<Object> const &element);
-  virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
- private:
-  Content _array;
-};
-
-
 
 // ---
 // --- Type and parser
@@ -447,7 +434,7 @@ class Type
    * @param _parent The parent type (or null pointer)
    */
   Type(TypeName const &type, std::shared_ptr<Type> _parent = nullptr,
-       bool predefined = false, bool canIgnore = false);
+       bool predefined = false, bool canIgnore = false, bool isArray = false);
 
   /** Type destruction */
   virtual ~Type();
@@ -476,6 +463,9 @@ class Type
 
   /// Return the type
   std::string toString() const;
+
+  /// Is array
+  bool isArray() const;
 
   /// Returns hash code (only based on type name)
   int hash() const;
@@ -513,6 +503,9 @@ class Type
   void setProperty(std::string const &name, Object::Ptr const &value);
   Object::Ptr getProperty(std::string const &name);
 
+  /// Checks whether another type can be assigned as this type
+  bool accepts(Type::Ptr const &other) const;
+
  private:
   const TypeName _type;
   /**
@@ -535,6 +528,7 @@ class Type
   bool _predefined;
   bool _canIgnore;
   bool _placeholder = false;
+  bool _isArray = false;
 
   std::shared_ptr<ObjectFactory> _factory;
 };

@@ -415,7 +415,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
 
     @RPCMethod
     public String hostname() {
-        return settings.serverSettings.getName();
+        return settings.serverSettings.name;
     }
 
     /**

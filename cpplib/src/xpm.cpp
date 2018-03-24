@@ -3,12 +3,12 @@
 #include <iostream>
 #include <unordered_set>
 #include <fstream>
-
-
+#include <typeinfo>
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
+#include <xpm/array.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -29,14 +29,25 @@ using nlohmann::json;
 
 namespace xpm {
 
-// Type and task should be included
+/// Type of the object
 const std::string KEY_TYPE = "$type";
+
+/// Task that generated it
 const std::string KEY_TASK = "$task";
 
+/// Path to the main resource
 const std::string KEY_PATH = "$path";
+
+/// Value
 const std::string KEY_VALUE = "$value";
+
+/// Fields that should be ignored (beside $...)
 const std::string KEY_IGNORE = "$ignore";
+
+/// Default value
 const std::string KEY_DEFAULT = "$default";
+
+/// Resource identifier
 const std::string KEY_RESOURCE = "$resource";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
@@ -120,25 +131,35 @@ void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
 
 std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
-
     // --- Object
     case nlohmann::json::value_t::object: {
       std::shared_ptr<Object> object;
 
-      auto _key = jsonValue.find(KEY_VALUE);
+      // Get the type of the object
       std::shared_ptr<Type> type;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         type = xpmRegister.getType(typeName);
         if (!type) {
-          LOGGER->debug("Could not find type {} in registry", typeName);
+          auto undefinedType = std::make_shared<Type>(typeName);
+          undefinedType->placeholder(true);
+          xpmRegister.addType(undefinedType);
+          LOGGER->warn("Could not find type {} in registry", typeName);
         }
       }
 
+      // Look at the value
+      auto _key = jsonValue.find(KEY_VALUE);
       if (_key != jsonValue.end()) {
         // Infer type from value
         object = createFromJson(xpmRegister, *_key);
-        if (type) object = dynamic_cast<Value&>(*object).cast(type);
+        if (type) {
+          if (type->isArray()) {
+            object = std::dynamic_pointer_cast<Array>(object);
+          } else {
+            object = dynamic_cast<Value&>(*object).cast(type);
+          }
+        }
       } else {
         if (type) {
           LOGGER->debug("Creating object of type {} using type->create()", *type);
@@ -150,7 +171,7 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
       }
 
       object->fill(xpmRegister, jsonValue);
-
+      LOGGER->debug("Got an object of type {}", object->type()->toString());
       return object;
     }
 
@@ -160,8 +181,9 @@ std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::
     case nlohmann::json::value_t::array: {
       auto array = std::make_shared<Array>();
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        array->add(createFromJson(xpmRegister, *it));
+        array->push_back(createFromJson(xpmRegister, *it));
       }
+      LOGGER->debug("Got an array of type {}", array->type()->toString());
       return array;
     }
 
@@ -419,16 +441,20 @@ void Object::validate(bool generate) {
 
   // (1) Validate the object arguments
   if (!get(Flag::VALIDATED)) {
+
+    // Loop over the whole hierarchy
     for (auto type = _type; type; type = type->parentType()) {
       LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
+
+      // Loop over all the arguments
       for (auto entry: type->arguments()) {
         auto &argument = *entry.second;
         LOGGER->debug("Looking at argument {}", argument.name());
 
         if (_content.count(argument.name()) == 0) {
           LOGGER->debug("No value provided...");
-          // No value provided
-          if (argument.required() && (!generate || !argument.generator())) {
+          // No value provided, and no generator
+          if (argument.required() && !(generate && argument.generator())) {
             throw argument_error(
                 "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
           } else {
@@ -449,6 +475,14 @@ void Object::validate(bool generate) {
             LOGGER->debug("Value is default");
             value->set(Flag::DEFAULT, true);
           } else {
+            // Check the type
+
+            if (!entry.second->type()->accepts(value->type())) {
+              throw argument_error(
+                  "Argument " + argument.name() + " type is  " + value->type()->toString() 
+                  + ", but requested type was " + entry.second->type()->toString());
+            }
+
             // If the value has a type, handles this
             if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
               // Create an object of the key type
@@ -507,6 +541,7 @@ void Object::validate(bool generate) {
 }
 
 void Object::execute() {
+  // TODO: should display the host language class name
   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 
@@ -591,7 +626,7 @@ std::shared_ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, V
 std::shared_ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
 std::shared_ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
 std::shared_ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
-std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true);
+std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
 
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
@@ -603,8 +638,8 @@ std::shared_ptr<Object> Type::create(std::shared_ptr<ObjectFactory> const &defau
   return object;
 }
 
-Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore) :
-    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore) {}
+Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
+    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {}
 
 Type::~Type() {}
 
@@ -643,6 +678,8 @@ std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
 
 /// Predefined types
 bool Type::predefined() const { return _predefined; }
+
+bool Type::isArray() const { return _isArray; }
 
 std::string Type::toJson() const {
   json response = json::object();
@@ -712,6 +749,19 @@ Object::Ptr Type::getProperty(std::string const &name) {
   if (it == _properties.end()) return nullptr;
   return it->second;
 }
+
+
+bool Type::accepts(Type::Ptr const &other) const {
+  
+  // Go up
+  for(auto current = other; current; current = current->_parent) {
+    if (current->_type == _type) return true;
+  }
+
+  return false;
+
+}
+
 
 // ---- Generators
 

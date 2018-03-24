@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.StringEscapeUtils;
+import net.bpiwowar.xpm.tasks.ServerCommand;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -31,9 +32,9 @@ import java.net.URLEncoder;
 public abstract class XPMServlet extends HttpServlet {
     protected static final String ENCODING = "UTF-8";
     private static final long serialVersionUID = 1L;
-    private final ServerSettings serverSettings;
+    private final ServerCommand.ServerSettings serverSettings;
 
-    public XPMServlet(ServerSettings serverSettings) {
+    public XPMServlet(ServerCommand.ServerSettings serverSettings) {
         this.serverSettings = serverSettings;
     }
 
@@ -46,7 +47,7 @@ public abstract class XPMServlet extends HttpServlet {
     }
 
     public static String escapeHtml(String text) {
-        return StringEscapeUtils.escapeHtml(text);
+        return StringEscapeUtils.escapeHtml4(text);
     }
 
 
@@ -68,7 +69,7 @@ public abstract class XPMServlet extends HttpServlet {
         out.format("<html><head><title>XPM@%s - %s</title>", escapeHtml(serverSettings.name), escapeHtml(title));
 
         out.format("<link type=\"text/css\" href=\"/css/%s/jquery-ui-1.10.2.custom.min.css\" rel=\"stylesheet\"></link>%n",
-                serverSettings.style.toString().toLowerCase()
+                "blitzer" //                serverSettings.style.toString().toLowerCase()
         );
 
         out.format("<link rel=\"stylesheet\" href=\"/fa/css/font-awesome.min.css\">\n");

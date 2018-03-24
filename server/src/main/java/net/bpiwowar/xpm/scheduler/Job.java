@@ -38,7 +38,6 @@ import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.log4j.Level;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

@@ -18,7 +18,7 @@ package net.bpiwowar.xpm.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
 
 import java.io.IOException;
@@ -62,7 +62,7 @@ public class XPMFileSystem extends FileSystem {
 
     @Override
     public Iterable<Path> getRootDirectories() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getRootDirectories");
     }
 
     /**
@@ -72,12 +72,12 @@ public class XPMFileSystem extends FileSystem {
     @Override
     public Iterable<FileStore> getFileStores() {
         // Should return the list of network shares
-        throw new NotImplementedException();
+        throw new NotImplementedException("getFileStores");
     }
 
     @Override
     public Set<String> supportedFileAttributeViews() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("supportedFileAttributeViews");
     }
 
     @Override
@@ -97,17 +97,17 @@ public class XPMFileSystem extends FileSystem {
 
     @Override
     public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getPathMatcher");
     }
 
     @Override
     public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getUserPrincipalLookupService");
     }
 
     @Override
     public WatchService newWatchService() throws IOException {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getUserPrincipalLookupService");
     }
 
     /**

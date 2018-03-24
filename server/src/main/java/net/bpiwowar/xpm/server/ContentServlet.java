@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.tasks.ServerCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,7 +40,7 @@ public class ContentServlet extends XPMServlet {
     final static private Logger LOGGER = LogManager.getFormatterLogger();
     private static final long serialVersionUID = 1L;
 
-    public ContentServlet(ServerSettings serverSettings) {
+    public ContentServlet(ServerCommand.ServerSettings serverSettings) {
         super(serverSettings);
     }
 

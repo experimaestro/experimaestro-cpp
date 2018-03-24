@@ -3,7 +3,19 @@ title: Introduction
 layout: default
 ---
 
-# Presentation
+# Introduction
+
+Tired of bash, python, ... scripts to manage your experiments? Experimaestro manager
+gives you a systematic way to write and run experiments where parameters varies.
+The goals of the experimaestro manager are to:
+
+* Decompose experiments into a set of tasks
+* Standardize the way to run experiments for easier reproduction of experimental results in computing science
+* Build a documentation for each task
+* Uses the scheduler to run jobs on various computational resources
+* Provide multiple ways to write task descriptions. Currently, JavaScript and Python are supported
+* Manage data produced by the tasks
+* Associate tags to ran tasks
 
 Experimaestro is an experiment manager, and is composed of
 
@@ -22,83 +34,12 @@ Experimaestro is in a **beta** state - which means that you might experience som
 while using it; but as I use it on a daily basis, there number and importance is
 going down each day.
 
-# Installation
 
-Experimaestro is implemented using several languages and thus, you
-have to install multiple ecosystem with the right version.
+!!! info "Main concepts"
+    The main concepts of experimaestro are
 
-## Python 3
-
-You need a working `python3` interpreter on your system along with `pip3`.
-
-To install required python's modules type:
-
-```sh
-pip3 install -r server/scripts/requirements.txt
-```
-
-## Java (≥ 8)
-
-You need a working *Java* installation (version ≥ 1.8) on your machine. [Gradle](https://gradle.org) is
-used for building but is not a requirement.
-
-[[[*nix
-
-```sh
-# From the project's root directory.
-./gradlew installDist
-```
-[[[windows
-
-```bat
-gradlew.bat installDist
-```
-]]]
-
-This will build and install all the dependencies into `server/build/install/experimaestro-server`. The command `experimaestro` is located in `server/build/install/experimaestro-server/bin/experimaestro`.
-
-Note that on a Linux box if you are not root and the alternative link
-is not set to the proper version (you can inspect that using
-`update-alternatives --display java`), you won't have the permission
-to update the link manually using `update-alternatives --config java`.
-The work around is to set the environment variable `JAVA_HOME` when
-calling maven. For example:
-
-To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
-
-## shell completion
-
-To enable shell completion follow instructions in
-[argcomplete](https://pypi.python.org/pypi/argcomplete) documentation.
-
-### ZSH
-
-Add to `.zshrc`:
-
-```sh
-  # Register python completion
-  if type register-python-argcomplete &> /dev/null
-  then
-    eval "$(register-python-argcomplete 'experimaestro')"
-  fi
-```
-
-* Re-launch your shell: `exec zsh`
-
-# Test your installation
-
-To test your installation is working properly you can try to start a
-server like this:
-
-
-```sh
-experimaestro --verbose --debug start-server
-```
-
-You should get something like:
-
-```
-INFO:root:Starting with gradle
-INFO:root:Waiting for server to start (PID=37851)...
-INFO:root:Server started...
-```
+    * All messages between tasks are **JSON** objects. This is described in [this document](manager/json.md).
+    * Types and tasks are the unit on which experiments are built, and correspond roughly to either the execution of a long process, or to a configuration. Tasks can be composed in various ways to allow a compact representation of
+        experimental plans.  Tasks are described further [this document](manager/definitions.md)
+    * Computational resources, named `connectors`, define a set of computers - how can a file be stored, how can a
+        command line be executed. More information can be found in this [document](scheduler/connectors.md).

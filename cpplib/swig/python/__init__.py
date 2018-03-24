@@ -6,6 +6,7 @@ import sys
 import inspect
 import os.path as op
 import logging
+import pathlib
 
 logger = logging.getLogger("xpm")
 
@@ -14,14 +15,17 @@ def is_new_style(cls):
     return hasattr(cls, '__class__') \
            and ('__dict__' in dir(cls) or hasattr(cls, '__slots__'))
 
-class JsonEncoder(json.JSONEncoder):
+class JSONEncoder(json.JSONEncoder):
    def default(self, o):
         if type(o) == TypeName:
             return str(o)
+        
+        if isinstance(o, pathlib.PosixPath):
+            return { "$type": "path", "$value": str(o.resolve()) }
 
         return json.JSONEncoder.default(self, o)
 
-JSON_ENCODER = JsonEncoder()
+JSON_ENCODER = JSONEncoder()
 
 # Used as a metaclass for C++ classes that can be extended
 TYPES_DICT = {}
@@ -56,13 +60,57 @@ class PyObjectType(_SwigPyType):
          return TYPES_DICT[cls]["create"](*args, **kwds)
       return _SwigPyType.__call__(cls, *args, **kwds)
 
+
+def value2array(array):
+   """Converts """
+   array = Array.cast(array)
+   r = []
+   for i in range(len(array)):
+      sv = array[i]
+      v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+      r.append(v)
+   return r
+
+
+class TypeProxy: pass
+
+class choices(TypeProxy):
+   def __init__(self, *choices):
+      pass
+   
+   @property
+   def type(self):
+      return cvar.StringType
+
+# Converts a value to Python
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.asBoolean(),
     IntegerType.toString(): lambda v: v.asInteger(),
     StringType.toString(): lambda v: v.asString(),
     RealType.toString(): lambda v: v.asReal(),
-    PathType.toString(): lambda v: v.asPath()
+    PathType.toString(): lambda v: v.asPath(),
+    ArrayType.toString(): value2array
 }
+
+def objectfromvalue(value):
+   """Transforms a Python value into an object"""
+
+   # Simple case: it is already a PyObject
+   if isinstance(value, Object):
+      return value
+
+   # A list
+   if isinstance(value, list):
+      newvalue = Array()
+      for v in value:
+         print(f"Adding element [{v}]")
+         newvalue.append(objectfromvalue(v))
+
+      return newvalue
+
+   # For anything else, we try to convert it
+   return Value(value)
+
 
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects in python interface"""
@@ -78,6 +126,8 @@ class PyObject(Object, metaclass=PyObjectType):
 
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
+
+        value = objectfromvalue(value)
         if Task.isRunning():
           dict.__setattr__(self, name, value)
         else:
@@ -93,6 +143,9 @@ class PyObject(Object, metaclass=PyObjectType):
         """Called by XPM when value has been validated"""
         if key.startswith("$"):
             key = key[1:]
+        if key == "type":
+           logger.warn("'type' attribute ignored")
+           return
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value, sv.type(), type(value), type(self))
         dict.__setattr__(self, key, value)
@@ -189,6 +242,9 @@ class PythonRegister(Register):
         if key in self.builtins:
             return self.builtins[key]
 
+        if isinstance(key, TypeProxy):
+           return key.type
+
         if isinstance(key, Type) or isinstance(key, TypeWrapper):
             return key
 
@@ -225,7 +281,7 @@ def create(t, args, options, submit=False):
 
     for k, v in options.items():
       if type(v) == dict:
-         v = Register.build(register, json.dumps(v))
+         v = Register.build(register, JSON_ENCODER.encode(v))
       logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
       if isinstance(o, PyObject):
          setattr(o, k, v)
@@ -238,6 +294,9 @@ def create(t, args, options, submit=False):
     if submit:
         logger.debug("Submitting task to experimaestro")
         o.submit()
+    else:
+        o.validate(False)
+
     return o
 
 def wrap(self, function, **options):
@@ -343,6 +402,7 @@ class RegisterTask():
 
 
 class AbstractArgument:
+    """Abstract class for all arguments (standard, path, etc.)"""
     def __init__(self, name, _type, help=""):
         self.argument = Argument(name)
         self.argument.help = help if help is not None else ""
@@ -419,6 +479,8 @@ tasks = Definitions(register.getTask)
 class MergeClass:
     """Merge class annotation
 
+    Useful to decouple definition and declaration in Python
+
     class A:
         def x(self): return "x"
 
@@ -440,3 +502,8 @@ class MergeClass:
             setattr(self.original, method.__name__, method)
 
         return None
+
+
+def typename(object):
+   """Returns the type name of the object"""
+   return object.type().typeName()

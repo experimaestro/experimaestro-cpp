@@ -4,21 +4,38 @@ pages:
 - Home: 'index.md'
 - Scheduler:
     - Home: scheduler/index.md
+    - Installing: 'installing.md'
     - "Connectors & Launchers": scheduler/connectors.md
     - Notification: scheduler/notification.md
 - Manager:
-    - Introduction: manager/index.md
-    - JSON: manager/json.md
-    - Tasks:
-        - Intro: manager/tasks.md
-        - Java tasks: manager/javatask.md
-        - Python tasks: manager/pythontask.md
-theme: readthedocs
+    - Intro: manager/intro.md
+    - Definitions: manager/definitions.md
+    - Output: manager/json.md
+    - Java: manager/java.md
+    - Python: manager/python.md
+
+theme: 
+    name: material
+    feature:
+        tabs: true
+    palette:
+        primary: 'indigo'
+        accent: 'indigo'
+    font:
+        text: 'Roboto'
+        code: 'Roboto Mono'
+
+markdown_extensions:
+  - codehilite
+  - admonition
+  - pymdownx.superfences
+
 extra_javascript:
     - jquery-ui.min.js
     - xpm.js
+
 extra_css:
     - jquery-ui.min.css
     - xpm.css
-markdown_extensions:
-    - xpm
+
+repo_url: 'https://github.com/bpiwowar/experimaestro'

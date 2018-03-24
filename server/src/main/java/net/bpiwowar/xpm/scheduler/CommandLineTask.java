@@ -31,6 +31,7 @@ import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Context;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.Output;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -122,7 +123,7 @@ public class CommandLineTask extends Job {
      * Get a full command line from an array of arguments
      */
     public static String getCommandLine(List<String> args) {
-        return bpiwowar.argparser.utils.Output.toString(" ", args, t -> protect(t, SHELL_SPECIAL));
+        return Output.toString(" ", args, t -> protect(t, SHELL_SPECIAL));
     }
 
 

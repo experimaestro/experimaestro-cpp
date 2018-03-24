@@ -231,9 +231,11 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
 
     public static JsonObject toJson(Experiment e) {
         final JsonObject experiment = new JsonObject();
-        experiment.add("id", new JsonPrimitive(e.getId()));
-        experiment.add("name", new JsonPrimitive(e.getName()));
-        experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
+        if (e != null) {
+            experiment.add("id", new JsonPrimitive(e.getId()));
+            experiment.add("name", new JsonPrimitive(e.getName()));
+            experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
+        }
         return experiment;
     }
 
@@ -294,7 +296,7 @@ public class ExperimentsMethods extends BaseJsonRPCMethods {
         String experimentId;
 
         @RPCArgument
-        EnumSet<ResourceState> states = ResourceState.RUNNABLE_STATES;
+        EnumSet<ResourceState> states = null;
 
         @RPCArgument(name = "recursive", required = false, help = "Whether we should invalidate dependent results when the job was done")
         boolean recursive = true;

@@ -18,7 +18,7 @@ package net.bpiwowar.xpm.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.connectors.NetworkShareAccess;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
@@ -152,7 +152,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public FileStore getFileStore(Path path) throws IOException {
-        throw new NotImplementedException();
+        throw new NotImplementedException("getFileStore");
     }
 
     @Override

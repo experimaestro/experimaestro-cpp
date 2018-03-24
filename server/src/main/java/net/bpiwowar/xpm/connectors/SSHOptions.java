@@ -26,7 +26,7 @@ import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.pastdev.jsch.SessionFactory;
 import net.bpiwowar.xpm.manager.scripting.Argument;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -153,7 +153,7 @@ public class SSHOptions extends ConnectorOptions {
 
 //        // Use root file system
         if (compression != null) {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Handling compression");
         }
 
         if (proxy != null) {

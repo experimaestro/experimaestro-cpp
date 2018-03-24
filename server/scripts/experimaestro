@@ -15,12 +15,12 @@ import base64
 import websocket
 import json
 import argcomplete
-from argcomplete.completers import ChoicesCompleter
 import socket
 import requests
 import signal
 import errno
-
+import click
+from functools import update_wrapper
 
 # --- Set some variables
 
@@ -32,29 +32,18 @@ xpminidir = os.path.join(os.path.expanduser("~/.experimaestro"))
 
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
+STATES = ["DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"]
+
+def pass_cfg(f):
+    """Pass configuration information"""
+    @click.pass_context
+    def new_func(ctx, *args, **kwargs):
+        return ctx.invoke(f, ctx.obj, *args, **kwargs)
+    return update_wrapper(new_func, f)
 
 
-# --- Create the argument parser
 
-class StatesCompleter(object):
-    def __init__(self):
-        self.choices = {"DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"}
-
-    def __call__(self, prefix, **kwargs):
-        ix = prefix.rfind(",")
-        if ix != -1:
-            search = prefix[ix+1:]
-            prefix = prefix[:ix+1]
-        else:
-            search = prefix
-            prefix = ""
-
-        return (prefix + c for c in self.choices if c.startswith(search))
-
-statesCompleter = StatesCompleter()
-
-
-# create the top-level parser
+## --- TO REMOVE
 
 parser = argparse.ArgumentParser(description='experimaestro script.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers(help='Command', dest='command')
@@ -68,13 +57,9 @@ parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
 
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
-parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
+parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.json", action="store",
                     help="Experimaestro configuration file")
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
-
-p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
-p_start.add_argument("--gradle", dest="gradle", action="store_true", help="Force starts using gradle")
-p_start.add_argument("--timeout", action="store", default=30, type=int, help="Timeout (in second) to ping server")
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
@@ -85,9 +70,6 @@ job_specification.add_argument('--recursive', dest="recursive", action="store_tr
 
 subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
 
-p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification])
-p_ls.add_argument("--color", action="store_true", default=False, help="Whether to color the output")
-
 subparsers.add_parser("list-methods", help="List Json RPC methods")
 subparsers.add_parser("ssh-agent", help="List Json RPC methods")
 
@@ -97,19 +79,15 @@ p_experiments_invalidate = xp_subparsers.add_parser("invalidate", help="Invalida
 for subp in [p_invalidate, p_experiments_invalidate]:
     subp.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
     subp.add_argument('--restart', dest="restart", action="store_true", default=False, help="Restart instead of setting to ERROR")
+    subp.add_argument('--invalidate-done', action="store_false", default=True, dest="keep_done", help='The experiment ID')
 
-p_experiments_invalidate.add_argument('--states', dest="states", default="ERROR", help="States to invalidate").completer = statesCompleter
-p_experiments_invalidate.add_argument('--invalidate-done', action="store_false", default=True, dest="keep_done", help='The experiment ID')
+p_experiments_invalidate.add_argument('--states', dest="states", default="ERROR,RUNNING", help="States to invalidate")
 p_experiments_invalidate.add_argument('experimentId', help='The experiment ID')
 
 p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
-
-
-p_cleanup = subparsers.add_parser("process-obsolete", help="Process obsolete resources")
-p_cleanup.add_argument("--command", dest="what", default="list", choices=["list", "delete", "kill"], help="Command to apply")
 
 p_lock_cleanup = subparsers.add_parser("lock-cleanup", help="Cleanup dandling locks")
 p_lock_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
@@ -128,13 +106,8 @@ p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
 
 
 p_xp_kill = xp_subparsers.add_parser("kill", help="Kill jobs from an experiment")
-p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States").completer = statesCompleter
+p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States")
 p_xp_kill.add_argument('experimentid', help="The experiment ID")
-
-p_cleanup = xp_subparsers.add_parser("clean", help="Cleanup obsolete experiments")
-p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
-p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
-
 
 p_xp_delete = xp_subparsers.add_parser("delete", help="Delete an experiment")
 p_xp_delete.add_argument('experimentid', help="The experiment ID")
@@ -150,7 +123,6 @@ p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
 p_log_level.add_argument('id', nargs=1, help='The logger ID')
 p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
 
-subparsers.add_parser("ping", help="Ping the server")
 
 p_tokenlimit = subparsers.add_parser("set-token-limit", help="Set the token limit")
 p_tokenlimit.add_argument('tokenid', help="The token resource ID (internal or external)")
@@ -161,11 +133,6 @@ subparsers.add_parser("build-information", help="Returns experimaestro build inf
 p_move_resources = subparsers.add_parser("move-resources", help="Change path prefix")
 p_move_resources.add_argument("old", type=str)
 p_move_resources.add_argument("new", type=str)
-
-
-# Parse arguments
-argcomplete.autocomplete(parser)
-args = parser.parse_args()
 
 
 # --- Utiliy classes and methods
@@ -212,7 +179,7 @@ class JsonRPCClient:
         return JsonRPCMethod(self, name)
 
     def __getitem__(self, name):
-        self.__getattr__(name)
+        return self.__getattr__(name)
 
     def call(self, command, params):
         logging.info("[Executing command] %s", command)
@@ -242,6 +209,7 @@ class JsonRPCClient:
 
 
 # --- Check paths
+
 def binpaths():
     """Returns the different paths where the JAR file can be located"""
     yield os.path.join(xpmdir, "bin", "experimaestro-server")
@@ -391,92 +359,70 @@ class Properties:
         c[0] = value
 
 
-def getProperties(filename):
-    """Get a dictionnary from a property file
-   """
-    with open(filename, "rU") as propFile:
-
-        re_comment = re.compile(r"""[#;].*""")
-        re_section = re.compile(r"""^\[(\w+)\]$""")
-        re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
-
-        # Set some default values
-        props = Properties()
-        section = ""
-
-        # Read the properties
-        for propLine in propFile:
-            propDef = propLine.strip()
-            if len(propDef) == 0 or re_comment.match(propDef):
-                continue
-
-            m = re_section.match(propDef)
-            if m is not None:
-                section = m.group(1) + "."
-                continue
-
-            m = re_value.match(propDef)
-            if m is not None:
-                props.set(section + m.group(1), m.group(2))
-                continue
-
-            raise RuntimeError("Could not read line [%s]" % propDef)
-
-        return props
-
-
 class Configuration():
-    def __init__(self, args):
+    def __init__(self, config, server):
         """Get the configuration from command line and configuration file"""
 
         # Get the configuration
-        self.configfile = os.path.expanduser(args.config)
+        self.configfile = os.path.expanduser(config)
 
         # Initialise the server
-        self.config = getProperties(self.configfile)
+        with open(self.configfile, "r") as fp:
+            self.config = json.load(fp)
 
-        clients = self.config.sub("client", None)
+        clients = self.config.get("hosts", None)
         if clients is None:
-            raise RuntimeError("No client section in configuration file")
+            raise RuntimeError("No hosts in configuration file")
 
-        if args.server is None:
+        if server is None:
             if len(clients) > 1:
-                args.server = None
+                server = None
                 for name, client in clients:
                     if client.get("default", False) == "true":
-                        if args.server is None:
-                            args.server = name
+                        if server is None:
+                            server = name
                             logging.debug("Default server is %s" % name)
                         else:
                             raise RuntimeError("More than one client defined as default in configuration file")
-                if args.server is None:
+                if server is None:
                     raise RuntimeError("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
                                     % (len(clients), ",".join(clients.keys())))
             else:
-                for name, client in clients:
-                    args.server = name
+                for name, client in clients.items():
+                    server = name
 
-        self.client = clients.sub(args.server)
+        self.client = clients[server]
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
 
 
     def getServer(self):
-        re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
-        m = re_url.match(self.client["url"])
-        if not m:
-            raise Exception("Client URL is not valid")
-
         scheme = "ws"
-        if m.group(1):
-            scheme = "wss"
-        url = "%s://%s/web-socket" % (scheme, m.group(4))
+        url = "%s://%s:%d/web-socket" % (scheme, self.client.get("host", "localhost"), self.client.get("port", 8080))
         header = []
-        if m.group(2) and m.group(3):
-            auth = base64.b64encode(bytes("%s:%s" % (m.group(2), m.group(3)), "ascii")).decode("ascii")
-            header = ["Authorization: Basic %s" % auth]
+        auth = base64.b64encode(bytes("%s:%s" % (self.client["username"], self.client["password"]), "ascii")).decode("ascii")
+        header = ["Authorization: Basic %s" % auth]
 
 
         return JsonRPCClient(websocket.create_connection(url, header=header))
+
+
+# --- Main
+
+@click.group()
+@click.pass_context
+@click.option('--debug', is_flag=True, help="Debug script")
+@click.option('--verbose', is_flag=True, help="Debug script")
+@click.option("--log", help="Log level",
+                    type=click.Choice(["debug", "info", "warn"]), default="info")
+@click.option('--server', help="The experimaestro server to use")
+@click.option('--config', help="Sets experimaestro file", default="~/.experimaestro/settings.json")
+def main(ctx, debug, verbose, log, server, config):
+    numeric_level = getattr(logging, log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % log)
+    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+    ctx.obj = Configuration(config, server)
+
 
 
 # --- Server
@@ -490,22 +436,73 @@ def ping(json_server):
     except socket.error as e:
         return False
 
-def command_start_server(args):
-    json_server = Configuration(args).getServer()
-    if ping(json_server):
-        logging.info("Server already started")
-        return 0
+
+@main.group(help="Manage server")
+def server():
+    pass
+
+@server.command(help="Start the experimaestro server")
+@click.option("--gradle", is_flag=True, help="Force starts using gradle")
+@click.option("--timeout", default=30, type=click.IntRange(1,3600), help="Timeout (in second) to ping server")
+@pass_cfg
+def start(cfg, gradle, timeout):
+    try:
+        json_server = cfg.getServer()
+        if ping(json_server):
+            logging.info("Server already started")
+            return 0
+    except ConnectionRefusedError:
+        pass
 
     start_jar(args, ["server"])
 
-
-def command_stop_server(args):
-    server = Configuration(args).getServer()
+@server.command()
+@pass_cfg
+def stop(cfg):
+    server = cfg.getServer()
     server.shutdown({})
 
 
-def command_update(args):
-    server = Configuration(args).getServer()
+@server.command()
+@pass_cfg
+def ping(cfg):
+    r = cfg.getServer().ping({})
+    if r == "pong":
+        sys.exit(0)
+    sys.exit(1)
+
+# ---- Experiments
+
+
+@main.group(help="Manage experiments")
+def experiments(): pass
+
+@experiments.command()
+@click.option("--command", default="list", type=click.Choice(["list", "delete", "kill"]), help="Command to apply to obsolete tasks")
+@pass_cfg
+def process_obsolete(cfg, command):
+    server = cfg.getServer()
+    json.dump(server["experiments.process-obsolete"]({"command": command}), sys.stdout)
+
+@experiments.command(help="Cleanup old experiments")
+@click.option("--run", is_flag=True)
+@click.option("--remove-resources", is_flag=True)
+@pass_cfg
+def clean(cfg, run, remove_resources):
+    server = cfg.getServer()
+    print(server.experiments["clean-experiments"]({"simulate": not run, "remove-resources": remove_resources}))
+
+
+
+# ---- Tasks
+
+@main.group()
+def tasks(): pass
+
+@tasks.command("rm", help="Remove tasks")
+@pass_cfg
+def rm(cfg):
+    server = cfg.getServer()
     print("Updated job(s): %s" % server.updateJobs({
         "resources": args.resources,
         "recursive": args.recursive,
@@ -513,12 +510,27 @@ def command_update(args):
     }))
 
 
-def command_ls(args):
-    server = Configuration(args).getServer()
-    response = server.listJobs({"resources": args.resources, "states": get_states(args.states), "recursive": args.recursive})
-    print(type(response))
+@tasks.command(help="Update the status of tasks")
+@pass_cfg
+def update(cfg):
+    server = cfg.getServer()
+    print("Updated job(s): %s" % server.updateJobs({
+        "resources": args.resources,
+        "recursive": args.recursive,
+        "states": get_states(args.states)
+    }))
+
+
+@tasks.command(help="List ressources")
+@click.option("--color", is_flag=True, help="Whether to color the output")
+@click.option("--recursive", is_flag=True, help="Recursive")
+@click.option('--states', help="Restrict to states", type=click.Choice(STATES))
+@pass_cfg
+def ls(cfg, color, recursive, states):
+    server = cfg.getServer()
+    response = server.listJobs({"resources": [], "states": get_states(states), "recursive": recursive})
     for l in response:
-        if args.color:
+        if color:
             state = l.get("state", "?").upper()
             if state == 'ERROR':
                 print(cformat("#RED;%s" % l))
@@ -534,19 +546,13 @@ def command_ls(args):
             json.dump(l, sys.stdout)
             sys.stdout.write("\n")
 
-def command_ping(args):
-    r = Configuration(args).getServer().ping({})
-    if r == "pong":
-        sys.exit(0)
-    sys.exit(1)
-
 def command_build_information(args):
-    info = Configuration(args).getServer().buildInformation({})
+    info = cfg.getServer().buildInformation({})
     json.dump(info, sys.stdout)
     sys.stdout.write("\n")
 
 def command_list_methods(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     for method in server.system.listMethods():
         if not method.startswith("system"):
             print("# %s" % method)
@@ -556,25 +562,26 @@ def command_list_methods(args):
 
 
 def command_information(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     json.dump(server.getResourceInformation({"id": args.resourceId[0]}), sys.stdout)
     sys.stdout.write("\n")
 
 def Server(function):
-    return lambda args : function(Configuration(args).getServer(), args)
+    return lambda args : function(cfg.getServer(), args)
 
 @Server
 def command_set_token_limit(server, args):
     json.dump(server.setTokenLimit({"tokenId": args.tokenid, "limit": args.limit}), sys.stdout)
 
 def command_invalidate(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
+    print(args)
     json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
     print(server.invalidate(json_args))
 
 
 def command_experiments_invalidate(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     json_args = { "experimentId": args.experimentId, "restart": args.restart, "recursive": args.recursive,
                   "states": args.states.split(",")}
     count = server.experiments.invalidate(json_args)
@@ -582,42 +589,32 @@ def command_experiments_invalidate(args):
 
 
 def command_kill(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     n = server.kill({"jobs": args.jobid})
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_kill(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     n = server.experiments.kill({"identifier": args.experimentid, "states": get_states(args.states)})
     logging.info("Killed %d jobs" % n)
 
 def command_experiments_delete(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     count = server.experiments.delete({"identifier": args.experimentid})
     print("%d experiments deleted" % count)
 
 def command_generate_files(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     server.generateFiles({"jobs": args.jobid})
 
 
-def command_experiments_clean(args):
-    server = Configuration(args).getServer()
-    print(server.experiments["clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}))
-
 def command_lock_cleanup(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     output = server["cleanup-locks"]({"simulate": not args.run})
     json.dump(output, sys.stdout)
 
-
-def command_process_obsolete(args):
-    server = Configuration(args).getServer()
-    json.dump(server["experiments.process-obsolete"]({"command": args.what}), sys.stdout)
-
-
 def command_rm(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     if len(args.jobid) == 0:
         args.jobid = [""]
 
@@ -631,15 +628,15 @@ def command_rm(args):
 
 
 def command_log_level(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     server.setLogLevel({"identifier": args.id[0], "level": args.level[0]})
 
 def command_move_resources(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     server.changeResourcesPrefix({"old": args.old, "new": args.new})
 
 def command_ssh_agent(args):
-    server = Configuration(args).getServer()
+    server = cfg.getServer()
     print(json.dumps(server.sshAgentInformation({})))
 
 # --- Utility functions
@@ -656,23 +653,6 @@ def get_states(states):
 # --- Run command
 
 
-numeric_level = getattr(logging, args.loglevel.upper(), None)
-if not isinstance(numeric_level, int):
-    raise ValueError('Invalid log level: %s' % args.loglevel)
-logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
+if __name__ == '__main__':
+   main(obj=None)
 
-if args.command is None:
-    parser.print_help()
-    sys.exit(0)
-
-try:
-    fname = "command_%s" % (args.command.replace("-", "_"))
-    subcommand = getattr(args, "subcommand", None)
-    if subcommand is not None:
-        fname = "%s_%s" % (fname, subcommand.replace("-", "_"))
-    locals()[fname](args)
-except Exception as e:
-    print(e)
-    if args.debug:
-        print(traceback.format_exc())
-    sys.exit(1)

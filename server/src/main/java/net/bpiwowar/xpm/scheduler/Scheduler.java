@@ -20,55 +20,30 @@ package net.bpiwowar.xpm.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import net.bpiwowar.xpm.connectors.Connector;
-import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.connectors.NetworkShare;
-import net.bpiwowar.xpm.connectors.NetworkShareAccess;
-import net.bpiwowar.xpm.connectors.SingleHostConnector;
-import net.bpiwowar.xpm.connectors.XPMConnector;
-import net.bpiwowar.xpm.connectors.XPMProcess;
+import net.bpiwowar.xpm.connectors.*;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import net.bpiwowar.xpm.utils.CloseableIterable;
-import net.bpiwowar.xpm.utils.CloseableIterator;
-import net.bpiwowar.xpm.utils.Heap;
-import net.bpiwowar.xpm.utils.ThreadCount;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.bpiwowar.xpm.utils.*;
 import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
 import org.apache.commons.dbcp2.PoolableConnection;
 import org.apache.commons.dbcp2.PoolableConnectionFactory;
 import org.apache.commons.dbcp2.PoolingDataSource;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.io.*;
+import java.sql.*;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Timer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static java.lang.String.format;
 
@@ -104,7 +79,7 @@ final public class Scheduler {
     /**
      * Whether we should look at the list of ready jobs or not
      */
-    final MutableBoolean readyJobSemaphore = new MutableBoolean(false);
+    final Holder<Boolean> readyJobSemaphore = new Holder<>(false);
 
     /**
      * Scheduler
@@ -344,7 +319,7 @@ final public class Scheduler {
 
             // Start the thread that start the jobs
             LOGGER.info("Starting the job runner thread");
-            readyJobSemaphore.setValue(true);
+            readyJobSemaphore.set(true);
             runner = new JobRunner("JobRunner");
             runner.start();
             runningThreadsCounter.add();
@@ -369,9 +344,9 @@ final public class Scheduler {
     // ----
 
     public static void notifyRunners() {
-        final MutableBoolean semaphore = get().readyJobSemaphore;
+        final Holder<Boolean> semaphore = get().readyJobSemaphore;
         synchronized (semaphore) {
-            semaphore.setValue(true);
+            semaphore.set(true);
             semaphore.notify();
         }
     }
@@ -742,7 +717,7 @@ final public class Scheduler {
                     // ... and wait if we were not lucky (or there were no tasks)
                     synchronized (readyJobSemaphore) {
 
-                        while (!readyJobSemaphore.booleanValue()) {
+                        while (!readyJobSemaphore.get()) {
                             try {
                                 LOGGER.debug("Going to sleep [%s]...", name);
                                 readyJobSemaphore.wait();
@@ -754,7 +729,7 @@ final public class Scheduler {
                         }
 
                         // Set it to false
-                        readyJobSemaphore.setValue(false);
+                        readyJobSemaphore.set(false);
                     }
 
                     LOGGER.debug("Searching for ready jobs");

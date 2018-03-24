@@ -18,15 +18,16 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.configuration.HierarchicalINIConfiguration;
-import org.apache.commons.lang.RandomStringUtils;
-import net.bpiwowar.xpm.tasks.ServerTask;
+import com.google.common.collect.Lists;
+import org.apache.commons.lang3.RandomStringUtils;
+import net.bpiwowar.xpm.tasks.ServerCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.file.Paths;
 
 import static java.lang.String.format;
 
@@ -40,7 +41,7 @@ public class XPMEnvironment {
 
     static final private Integer token = 0;
 
-    private static ServerTask server;
+    private static ServerCommand server;
 
     public static String testUser = "test";
 
@@ -93,7 +94,7 @@ public class XPMEnvironment {
         return directory;
     }
 
-    public static ServerTask prepare() throws Throwable {
+    public static ServerCommand prepare() throws Throwable {
         synchronized (token) {
             if (server == null) {
                 LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
@@ -103,24 +104,21 @@ public class XPMEnvironment {
                 final File dbFile = new File(mainDirectory, "db");
                 dbFile.mkdir();
 
-                server = new ServerTask();
+                server = new ServerCommand();
 
 
-                HierarchicalINIConfiguration serverConfiguration = new HierarchicalINIConfiguration();
-                serverConfiguration.setProperty("server.database", dbFile.getAbsolutePath());
-                serverConfiguration.setProperty("server.name", "test");
-                serverConfiguration.setProperty("server.port", findFreeLocalPort());
-                testPassword = RandomStringUtils.randomAlphanumeric(10);
-                serverConfiguration.setDelimiterParsingDisabled(true);
-                serverConfiguration.setProperty("passwords." + testUser, format("%s, user", testPassword));
-
-                // Just to avoid reading the default configuration file
-                serverConfiguration.setFile(mainDirectory);
+                ServerCommand.ServerSettings serverConfiguration = new ServerCommand.ServerSettings();
+                serverConfiguration.database = Paths.get(dbFile.getAbsolutePath());
+                serverConfiguration.name = "test";
+                serverConfiguration.port = findFreeLocalPort();
+                ServerCommand.PasswordSettings password1 = new ServerCommand.PasswordSettings();
+                password1.user = testUser;
+                password1.password =  testPassword;
 
                 server.setConfiguration(serverConfiguration);
 
                 server.wait(false); // No need to wait
-                server.execute();
+                server.run();
 
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     LOGGER.info("Stopping server");

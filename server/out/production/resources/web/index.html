@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  ~ This file is part of experimaestro.
+  ~ Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
+  ~
+  ~ experimaestro is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ experimaestro is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<html>
+<head>
+    <title>XPM</title>
+    <meta charset="UTF-8">
+
+    <link rel="icon" type="image/png" href="favicon.ico" />
+
+    <link type="text/css" href="/css/smoothness/jquery-ui-1.10.2.custom.min.css" rel="stylesheet">
+    <link type="text/css" href="/js/jstree/themes/default/style.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/fa/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" charset="utf-8" media="all" href="/css/style.css">
+    <link rel="stylesheet" type="text/css" charset="utf-8" media="all" href="/js/jquery.tagit.css">
+
+    <!-- UI -->
+    <script type="text/javascript" src="/js/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript" src="/js/jquery-ui-1.10.2.custom.min.js"></script>
+    <script type="text/javascript" src="/js/tag-it.min.js"></script>
+
+
+    <script type="text/javascript" src="/js/jquery.jsonrpcclient.js"></script>
+    <script type="text/javascript" src="/js/jstree/jstree.min.js"></script>
+    <script type="text/javascript" src="/js/d3.min.js"></script>
+
+    <!--<script type="text/javascript" src="/js/jquery.ba-hashchange.min.js"></script>-->
+    <script type="text/javascript" src='/js/noty/jquery.noty.js'></script>
+    <script type="text/javascript" src='/js/noty/layouts/top.js'></script>
+    <script type="text/javascript" src='/js/noty/themes/default.js'></script>
+
+    <script type="text/javascript" src="/js/xpm.js"></script>
+</head>
+<body>
+
+<div id="header">
+    <div class='title'>Experimaestro</div>
+</div>
+
+
+<img id='connection' src='/images/disconnect.png' alt='[c]'>
+
+<div class='dialog' id="delete-confirm" title="Delete this job?">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be
+        permanently deleted and cannot be recovered. Are you sure?</p>
+</div>
+
+<div class='dialog' id="restart-confirm" title="Restart this job?">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This completed job will be
+        restarted</p>
+</div>
+
+<div class='dialog' id="kill-confirm" title="Kill this job?">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This running job will be killed</p>
+</div>
+
+<div id='tab-main' class='tab'>
+    <ul>
+        <li><a href='#resources-pane'>Resources</a></li>
+        <li><a href='/tasks'>Task</a></li>
+        <li><a href='#xpm-help'>Help</a></li>
+        <li><a href='#xpm-info'>XPM info</a></li>
+    </ul>
+
+    <div id='experiments'>
+        <svg></svg>
+    </div>
+
+    <div id="resources-pane">
+        <select id='experiment-chooser' name="experiment"></select>
+        <div id="experiment-timestamp"></div>
+
+        <ul id="state-chooser" class="buttons">
+            <li><input type="checkbox" id="checkbox-state-waiting" checked><label for="checkbox-state-waiting">waiting (<span
+                    id="state-waiting-count" class="state-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-ready" checked><label for="checkbox-state-ready">ready (<span
+                    id="state-ready-count" class="state-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-running" checked><label for="checkbox-state-running">running (<span
+                    id="state-running-count" class="state-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-on_hold" checked><label for="checkbox-state-on_hold">hold
+                (<span id="state-on_hold-count" class="state-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-error" checked><label for="checkbox-state-error">error (<span
+                    id="state-error-count" class="state-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-done" checked><label for="checkbox-state-done">done (<span
+                    id="state-done-count" class="state-count">0</span>)</label></li>
+        </ul>
+
+        <input id="task-chooser" type="text">
+
+        <ul id="resources">
+
+        </ul>
+    </div>
+    <div id='resource-detail'><h2 id="resource-detail-title"></h2>
+        <div id="resource-detail-path"></div>
+        <div id="resource-detail-content"></div>
+    </div>
+    <div id='xpm-info'></div>
+    <div id='xpm-help'>
+        <select id='help-class-chooser'></select>
+    </div>
+    <div id='clipboard' class="dialog"><dl id="clipboard-content"></dl></div>
+</div>
+</body>
+</html>

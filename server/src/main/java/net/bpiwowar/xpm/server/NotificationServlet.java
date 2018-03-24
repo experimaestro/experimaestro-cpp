@@ -24,6 +24,7 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.ResourceMessage;
+import net.bpiwowar.xpm.tasks.ServerCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,7 +49,7 @@ public class NotificationServlet extends XPMServlet {
 
     final Scheduler scheduler;
 
-    public NotificationServlet(ServerSettings serverSettings, Scheduler scheduler) {
+    public NotificationServlet(ServerCommand.ServerSettings serverSettings, Scheduler scheduler) {
         super(serverSettings);
         this.scheduler = scheduler;
     }

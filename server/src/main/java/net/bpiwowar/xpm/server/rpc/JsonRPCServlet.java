@@ -21,7 +21,7 @@ package net.bpiwowar.xpm.server.rpc;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.scheduler.Scheduler;
-import net.bpiwowar.xpm.server.ServerSettings;
+import net.bpiwowar.xpm.tasks.ServerCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.server.Server;
@@ -46,7 +46,7 @@ public class JsonRPCServlet extends HttpServlet {
     final static private Logger LOGGER = LogManager.getFormatterLogger();
     private final JsonRPCSettings settings;
 
-    public JsonRPCServlet(Server server, ServerSettings serverSettings, Scheduler scheduler) {
+    public JsonRPCServlet(Server server, ServerCommand.ServerSettings serverSettings, Scheduler scheduler) {
         this.settings = new JsonRPCSettings(scheduler, server, serverSettings);
     }
 

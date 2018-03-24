@@ -247,6 +247,7 @@ class XPM {
         var tasks_chooser = $("#task-chooser");
 
         var experiment = select.find("option:selected").text();
+        if (!experiment) return;
 
         // Remove resources and counts
         $("#resources").children().remove();

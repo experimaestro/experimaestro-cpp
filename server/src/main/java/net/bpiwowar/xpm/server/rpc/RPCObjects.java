@@ -16,7 +16,6 @@ import net.bpiwowar.xpm.utils.graphs.Node;
 import net.bpiwowar.xpm.utils.graphs.Sort;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.log4j.Hierarchy;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -25,7 +24,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 
-import static com.sun.javafx.binding.StringFormatter.format;
+import static java.lang.String.format;
 
 /**
  * Expose @Exposed objects to remote calls
@@ -63,7 +62,7 @@ public class RPCObjects implements AutoCloseable {
 
         public Object wrap(Object object) {
             if (!wrappedClass.isInstance(object))
-                 throw new IllegalArgumentException(String.format("Cannot wrap %s into %s", object.getClass(), wrappedClass.getClass()));
+                 throw new IllegalArgumentException(format("Cannot wrap %s into %s", object.getClass(), wrappedClass.getClass()));
             if (constructor != null) {
                 try {
                     return constructor.newInstance(object);
@@ -168,7 +167,7 @@ public class RPCObjects implements AutoCloseable {
         // Try to wrap
         final ClassDescription cd = findDefinition(object.getClass());
         if (cd == null) {
-            throw new IllegalArgumentException(String.format("Could not find wrapper for class %s", object.getClass()));
+            throw new IllegalArgumentException(format("Could not find wrapper for class %s", object.getClass()));
         }
         return cd.wrap(object);
     }

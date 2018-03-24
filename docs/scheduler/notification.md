@@ -11,6 +11,17 @@ With `wget`
 test "$XPM_NOTIFICATION_URL" && wget --quiet -O /dev/null "$XPM_NOTIFICATION_URL/progress/$progress"
 ```
 
+# Python
+
+In Python, the simplest is to use the experimaestro library
+
+```
+from experimaestro import progress
+
+# Report progress of 10%
+progress(.1)
+```
+
 # Lua
 
 ```lua
