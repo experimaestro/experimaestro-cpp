@@ -157,7 +157,7 @@ processResources {
     }
 }
 
-task(server, dependsOn: ['classes'], type: JavaExec) {
+task(server, dependsOn: ['classes', 'compileTypeScript'], type: JavaExec) {
     main = 'net.bpiwowar.xpm.App'
     classpath = sourceSets.main.runtimeClasspath
     args 'server'

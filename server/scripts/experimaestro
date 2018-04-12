@@ -404,9 +404,8 @@ def start(conf, debug, gradle, timeout):
         logging.info("Waiting for server to start (PID=%s)...", pid)
         logging.debug("this is a debug message")
         logging.debug("info after getting json server")
-        TIMEOUT = args.timeout # sec
-        if TIMEOUT <= 0:
-            raise ValueError("invalid timeout value: {}".format(TIMEOUT))
+        if timeout <= 0:
+            raise ValueError("invalid timeout value: {}".format(timeout))
         started_at = time.time()
         nattempt = 0
         last_error = None
@@ -416,6 +415,8 @@ def start(conf, debug, gradle, timeout):
                 logging.debug("%d attempt to ping server...", nattempt)
                 json_server = conf.getServer()
                 rc = json_server.ping()
+            except ConnectionRefusedError as e:
+                last_error = e
             except requests.exceptions.ConnectionError as e:
                 logging.debug("Ping failed: %s" % type(e.args[0]))
                 # if e.args[0].args[1].errno != errno.ECONNREFUSED:
@@ -425,9 +426,9 @@ def start(conf, debug, gradle, timeout):
                 if rc:
                     logging.info("Server started...")
                     break
-            if time.time() - started_at >= TIMEOUT: # sec
+            if time.time() - started_at >= timeout: # sec
                 logging.fatal("Timeout after %ds pinging the server",
-                            TIMEOUT)
+                            timeout)
                 if last_error is not None:
                     logging.fatal("Last error was: %s", last_error)
                 logging.debug("Send SIGTERM to process group %d", pid)
