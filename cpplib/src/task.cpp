@@ -95,7 +95,9 @@ void Task::execute(std::shared_ptr<Object> const &object) const {
   object->configure(false);
   try {
     _running = true;
+    object->_pre_execute();
     object->execute();
+    object->_post_execute();
     _running = false;
   } catch(std::exception &e) {
     _running = false;

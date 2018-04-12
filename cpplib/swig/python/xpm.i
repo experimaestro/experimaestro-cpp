@@ -127,7 +127,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
          return xpm::python::getRealObject($self->get(key));
       }
 
-      std::cerr << "Could not find attribute " << key << "\n";
+      // std::cerr << "Could not find attribute " << key << "\n";
       PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
       return nullptr;
     }

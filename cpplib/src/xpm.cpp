@@ -545,6 +545,39 @@ void Object::execute() {
   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 
+void Object::pre_execute() {}
+void Object::post_execute() {}
+
+void Object::_pre_execute() {
+  // Loop over all the type hierarchy
+  for (auto type = _type; type; type = type->parentType()) {
+    // Loop over all the arguments
+    for (auto entry: type->arguments()) {
+      auto value = _content.find(entry.second->name());
+      if (value != _content.end()) {
+        value->second->_pre_execute();
+      }
+    }
+  }
+
+  this->pre_execute();
+}
+
+void Object::_post_execute() {
+  // Loop over all the type hierarchy
+  for (auto type = _type; type; type = type->parentType()) {
+    // Loop over all the arguments
+    for (auto entry: type->arguments()) {
+      auto value = _content.find(entry.second->name());
+      if (value != _content.end()) {
+        value->second->_post_execute();
+      }
+    }
+  }
+  this->post_execute();
+}
+
+
 Path Object::outputPath() const {
   auto resource = static_cast<Object>(*this).get(KEY_RESOURCE);
   if (!resource) {

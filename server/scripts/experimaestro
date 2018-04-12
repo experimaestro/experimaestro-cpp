@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# PYTHON_ARGCOMPLETE_OK
 
 import os
 import os.path
@@ -215,102 +214,6 @@ def binpaths():
     yield os.path.join(xpmdir, "bin", "experimaestro-server")
 
 
-def start_jar(args, jarargs):
-    import daemonlib
-    import time
-
-    conf = Configuration(args)
-    os.environ["EXPERIMAESTRO_CONFIG_FILE"] = conf.configfile
-
-    workdir = conf.config.sub("server")["database"]
-    mkdir_p(workdir)
-
-    # Check what if we start using gradle
-    gradlewFile = os.path.join(os.path.dirname(xpmdir), "gradlew.bat" if os.name == "nt" else "gradlew")
-    if not os.path.exists(gradlewFile):
-        gradlewFile = None
-
-    if args.gradle or gradlewFile is not None:
-        logging.info("Starting with gradle")
-        command = [gradlewFile, "--project-dir", os.path.dirname(gradlewFile), "server"]
-
-    else:
-        binpath = None
-        for f in binpaths():
-            print("Trying %s" % f)
-            if os.path.isfile(f):
-                binpath = f
-                break
-
-        if binpath is None:
-            raise RuntimeError("Could not find experimaestro bin directory")
-        command = [binpath, "server"]
-
-    def start_server(logger):
-        logger.info("Starting experimaestro server...")
-        logger.debug("start command: {!r}".format(command))
-        with open(os.path.join(workdir, "server.out"), "w") as stdout, \
-             open(os.path.join(workdir, "server.err"), "w") as stderr:
-            return subprocess.call(command,
-                                   stdout=stdout,
-                                   stderr=stderr,
-                                   # FIXME(Nicolas Despres): Same remarks
-                                   #  than for daemonlib.daemonize().
-                                   close_fds=True)
-
-    def wait_server(pid):
-        logging.info("Waiting for server to start (PID=%s)...", pid)
-        logging.debug("this is a debug message")
-        json_server = conf.getServer()
-        logging.debug("info after getting json server")
-        TIMEOUT = args.timeout # sec
-        if TIMEOUT <= 0:
-            raise ValueError("invalid timeout value: {}".format(TIMEOUT))
-        started_at = time.time()
-        nattempt = 0
-        last_error = None
-        while True:
-            try:
-                nattempt += 1
-                logging.debug("%d attempt to ping server...", nattempt)
-                rc = raw_ping(json_server)
-            except requests.exceptions.ConnectionError as e:
-                logging.debug("Ping failed: %s" % type(e.args[0]))
-                # if e.args[0].args[1].errno != errno.ECONNREFUSED:
-                #     logging.error("Ping failed: %s", e)
-                last_error = e
-            else:
-                if rc:
-                    logging.info("Server started...")
-                    break
-            if time.time() - started_at >= TIMEOUT: # sec
-                logging.fatal("Timeout after %ds pinging the server",
-                              TIMEOUT)
-                if last_error is not None:
-                    logging.fatal("Last error was: %s", last_error)
-                logging.debug("Send SIGTERM to process group %d", pid)
-                os.kill(-pid, signal.SIGTERM)
-                break
-            time.sleep(1)
-        return 0
-
-    daemonlib.daemonize(start_server, wait_server,
-        daemon_cwd=workdir,
-        pid_file=os.path.join(workdir, "server.pid"),
-        log_level=logging.DEBUG if args.debug else logging.INFO,
-        # FIXME(Nicolas Despres): Turn close_fds to True:
-        #   In theory a gentle daemon closed all its opened fds before to start
-        #   (i.e. the copy of fds inherited from its parent). However, in
-        #   our case this leads to un-deterministic error such as the client
-        #   (i.e. run-js) complaining about the socket being already closed.
-        #   We can see in the daemon log that the daemon processs
-        #   (i.e. our child) closes some fds which are probably some socket
-        #   opened by the JsonServer or the like. It would require further
-        #   debugging to diagnostic that. In theory, closing in a child
-        #   process a socket created in the parent is not a problem, but in
-        #   our case things seems to work better when we do not close them.
-        close_fds=True)
-
 class Properties:
     def __init__(self, map=[None, {}]):
         self.map = map
@@ -442,19 +345,113 @@ def server():
     pass
 
 @server.command(help="Start the experimaestro server")
+@click.option("--debug", is_flag=True, help="Debug server")
 @click.option("--gradle", is_flag=True, help="Force starts using gradle")
 @click.option("--timeout", default=30, type=click.IntRange(1,3600), help="Timeout (in second) to ping server")
 @pass_cfg
-def start(cfg, gradle, timeout):
+def start(conf, debug, gradle, timeout):
     try:
-        json_server = cfg.getServer()
+        json_server = conf.getServer()
         if ping(json_server):
             logging.info("Server already started")
             return 0
     except ConnectionRefusedError:
         pass
+        
 
-    start_jar(args, ["server"])
+    import daemonlib
+    import time
+
+    os.environ["EXPERIMAESTRO_CONFIG_FILE"] = conf.configfile
+
+    workdir = conf.config["server"]["database"]
+    mkdir_p(workdir)
+
+    # Check what if we start using gradle
+    gradlewFile = os.path.join(os.path.dirname(xpmdir), "gradlew.bat" if os.name == "nt" else "gradlew")
+    if not os.path.exists(gradlewFile):
+        gradlewFile = None
+
+    if gradle or gradlewFile is not None:
+        logging.info("Starting with gradle")
+        command = [gradlewFile, "--project-dir", os.path.dirname(gradlewFile), "server"]
+
+    else:
+        binpath = None
+        for f in binpaths():
+            print("Trying %s" % f)
+            if os.path.isfile(f):
+                binpath = f
+                break
+
+        if binpath is None:
+            raise RuntimeError("Could not find experimaestro bin directory")
+        command = [binpath, "server"]
+
+    def start_server(logger):
+        logger.info("Starting experimaestro server...")
+        logger.debug("start command: {!r}".format(command))
+        with open(os.path.join(workdir, "server.out"), "w") as stdout, \
+            open(os.path.join(workdir, "server.err"), "w") as stderr:
+            return subprocess.call(command,
+                                stdout=stdout,
+                                stderr=stderr,
+                                # FIXME(Nicolas Despres): Same remarks
+                                #  than for daemonlib.daemonize().
+                                close_fds=True)
+
+    def wait_server(pid):
+        logging.info("Waiting for server to start (PID=%s)...", pid)
+        logging.debug("this is a debug message")
+        logging.debug("info after getting json server")
+        TIMEOUT = args.timeout # sec
+        if TIMEOUT <= 0:
+            raise ValueError("invalid timeout value: {}".format(TIMEOUT))
+        started_at = time.time()
+        nattempt = 0
+        last_error = None
+        while True:
+            try:
+                nattempt += 1
+                logging.debug("%d attempt to ping server...", nattempt)
+                json_server = conf.getServer()
+                rc = json_server.ping()
+            except requests.exceptions.ConnectionError as e:
+                logging.debug("Ping failed: %s" % type(e.args[0]))
+                # if e.args[0].args[1].errno != errno.ECONNREFUSED:
+                #     logging.error("Ping failed: %s", e)
+                last_error = e
+            else:
+                if rc:
+                    logging.info("Server started...")
+                    break
+            if time.time() - started_at >= TIMEOUT: # sec
+                logging.fatal("Timeout after %ds pinging the server",
+                            TIMEOUT)
+                if last_error is not None:
+                    logging.fatal("Last error was: %s", last_error)
+                logging.debug("Send SIGTERM to process group %d", pid)
+                os.kill(-pid, signal.SIGTERM)
+                break
+            time.sleep(1)
+        return 0
+
+    daemonlib.daemonize(start_server, wait_server,
+        daemon_cwd=workdir,
+        pid_file=os.path.join(workdir, "server.pid"),
+        log_level=logging.DEBUG if debug else logging.INFO,
+        # FIXME(Nicolas Despres): Turn close_fds to True:
+        #   In theory a gentle daemon closed all its opened fds before to start
+        #   (i.e. the copy of fds inherited from its parent). However, in
+        #   our case this leads to un-deterministic error such as the client
+        #   (i.e. run-js) complaining about the socket being already closed.
+        #   We can see in the daemon log that the daemon processs
+        #   (i.e. our child) closes some fds which are probably some socket
+        #   opened by the JsonServer or the like. It would require further
+        #   debugging to diagnostic that. In theory, closing in a child
+        #   process a socket created in the parent is not a problem, but in
+        #   our case things seems to work better when we do not close them.
+        close_fds=True)
 
 @server.command()
 @pass_cfg

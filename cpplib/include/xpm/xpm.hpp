@@ -273,9 +273,23 @@ class Object
               std::shared_ptr<rpc::LauncherParameters> const &launcherParameters = nullptr);
 
   /**
+   * Pre-execute hook
+   * 
+   * This method is called just before execution
+  */
+  virtual void pre_execute();
+
+  /**
    * Execute the underlying task
   */
   virtual void execute();
+
+  /**
+   * Post-execute hook
+   * 
+   * This method is called just after execution
+*/
+  virtual void post_execute();
 
   /**
    * Copy the value
@@ -310,7 +324,14 @@ class Object
   /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
   std::map<std::string, std::shared_ptr<Object>> _content;
 
+  /// Call pre_execute for all the object hierarchy
+  void _post_execute();
+
+  /// Call post-execute for all the object hierarchy
+  void _pre_execute();
+
   friend struct Helper;
+  friend class Task;
  protected:
   /// Type of the object
   std::shared_ptr<Type> _type;

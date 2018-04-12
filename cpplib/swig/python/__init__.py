@@ -10,24 +10,28 @@ import pathlib
 
 logger = logging.getLogger("xpm")
 
+
 def is_new_style(cls):
     """Returns true if the class is new style"""
     return hasattr(cls, '__class__') \
            and ('__dict__' in dir(cls) or hasattr(cls, '__slots__'))
 
+
 class JSONEncoder(json.JSONEncoder):
-   def default(self, o):
+    def default(self, o):
         if type(o) == TypeName:
             return str(o)
-        
+
         if isinstance(o, pathlib.PosixPath):
-            return { "$type": "path", "$value": str(o.resolve()) }
+            return {"$type": "path", "$value": str(o.resolve())}
 
         return json.JSONEncoder.default(self, o)
+
 
 JSON_ENCODER = JSONEncoder()
 
 # Used as a metaclass for C++ classes that can be extended
+# It stores the new attributes
 TYPES_DICT = {}
 
 # Flag for simulating
@@ -35,52 +39,61 @@ SUBMIT_TASKS = True
 
 # Only way to get through _SwigPyType
 _SwigPyType = type(Object)
+
+
 class PyObjectType(_SwigPyType):
-   """
+    """
    Meta class for all objects in python interface
 
    It handles the creation of objects, and the definition of new attributes
    (blocked by SWIG)
    """
-   def __init__(self, name, bases, dct):
-      _SwigPyType.__init__(self, name, bases, dct)
-      TYPES_DICT[self] = {}
-   def __del__(self):
-      del TYPES_DICT[self]
-   def __setattr__(self, name, value):
-      TYPES_DICT[self][name] = value
-   def __getattribute__(self, name):
-      logging.debug("Searching for %s in %s", name, self)
-      if name in TYPES_DICT[self]:
-         return TYPES_DICT[self][name]
-      return _SwigPyType.__getattribute__(self, name)
 
-   def __call__(cls, *args, **kwds):
-      if "create" in TYPES_DICT[cls]:
-         return TYPES_DICT[cls]["create"](*args, **kwds)
-      return _SwigPyType.__call__(cls, *args, **kwds)
+    def __init__(self, name, bases, dct):
+        _SwigPyType.__init__(self, name, bases, dct)
+        TYPES_DICT[self] = {}
+
+    def __del__(self):
+        del TYPES_DICT[self]
+
+    def __setattr__(self, name, value):
+        TYPES_DICT[self][name] = value
+
+    def __getattribute__(self, name):
+      #   logger.debug("Searching for %s in %s", name, self)
+        if name in TYPES_DICT[self]:
+            return TYPES_DICT[self][name]
+        return _SwigPyType.__getattribute__(self, name)
+
+    def __call__(cls, *args, **kwds):
+        if "create" in TYPES_DICT[cls]:
+            return TYPES_DICT[cls]["create"](*args, **kwds)
+        return _SwigPyType.__call__(cls, *args, **kwds)
 
 
 def value2array(array):
-   """Converts """
-   array = Array.cast(array)
-   r = []
-   for i in range(len(array)):
-      sv = array[i]
-      v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
-      r.append(v)
-   return r
+    """Converts """
+    array = Array.cast(array)
+    r = []
+    for i in range(len(array)):
+        sv = array[i]
+        v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+        r.append(v)
+    return r
 
 
-class TypeProxy: pass
+class TypeProxy:
+    pass
+
 
 class choices(TypeProxy):
-   def __init__(self, *choices):
-      pass
-   
-   @property
-   def type(self):
-      return cvar.StringType
+    def __init__(self, *choices):
+        pass
+
+    @property
+    def type(self):
+        return cvar.StringType
+
 
 # Converts a value to Python
 VALUECONVERTERS = {
@@ -92,81 +105,101 @@ VALUECONVERTERS = {
     ArrayType.toString(): value2array
 }
 
+
 def objectfromvalue(value):
-   """Transforms a Python value into an object"""
+    """Transforms a Python value into an object"""
 
-   # Simple case: it is already a PyObject
-   if isinstance(value, Object):
-      return value
+    # Simple case: it is already a PyObject
+    if isinstance(value, Object):
+        return value
 
-   # A list
-   if isinstance(value, list):
-      newvalue = Array()
-      for v in value:
-         print(f"Adding element [{v}]")
-         newvalue.append(objectfromvalue(v))
+    # A list
+    if isinstance(value, list):
+        newvalue = Array()
+        for v in value:
+            print(f"Adding element [{v}]")
+            newvalue.append(objectfromvalue(v))
 
-      return newvalue
+        return newvalue
 
-   # For anything else, we try to convert it
-   return Value(value)
+    # For anything else, we try to convert it
+    return Value(value)
 
 
 class PyObject(Object, metaclass=PyObjectType):
     """Base type for all objects in python interface"""
+
     def __init__(self):
         Object.__init__(self)
 
     def __getattribute__(self, name):
-       d = TYPES_DICT.get(type(self), None)
-       if d is not None and name in d:
-         from types import MethodType
-         return MethodType(d[name], self)
-       return super().__getattribute__(name)
+        d = TYPES_DICT.get(type(self), None)
+        if d is not None and name in d:
+            from types import MethodType
+            return MethodType(d[name], self)
+        return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
         logger.debug("Setting %s to %s [%s]", name, value, type(value))
 
-        value = objectfromvalue(value)
         if Task.isRunning():
-          dict.__setattr__(self, name, value)
+            # Run mode: just set the attribute
+            dict.__setattr__(self, name, value)
         else:
-          super().set(name, value)
+            # Configuration mode
+            value = objectfromvalue(value)
+            super().set(name, value)
 
     def submit(self, *, launcher=None, launcherParameters=None, send=None):
-      if send is None:
-         send = SUBMIT_TASKS
-      super().submit(send, launcher, launcherParameters)
-      return self
+        if send is None:
+            send = SUBMIT_TASKS
+        super().submit(send, launcher, launcherParameters)
+        return self
+
+    def pre_execute(self):
+        logger.debug("Pre-execute %s", type(self))
+        super().pre_execute()
+
+    def post_execute(self):
+        logger.debug("Post-execute %s", type(self.learner))
+        super().post_execute()
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
+        # Remove the "$" prefix
         if key.startswith("$"):
             key = key[1:]
+        # Ignore key type
         if key == "type":
-           logger.warn("'type' attribute ignored")
-           return
+            logger.warn("'type' attribute ignored")
+            return
         value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
-        logger.debug("Really setting %s to %s [%s => %s] on %s", key, value, sv.type(), type(value), type(self))
+        logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
+                     sv.type(), type(value), type(self))
         dict.__setattr__(self, key, value)
+
 
 # FIXME: Hack to deal with smart pointers objects released by SWIG
 FACTORIES = []
 OBJECTS = []
 
+
 class PythonObjectFactory(ObjectFactory):
     """An experimaestro type in Python"""
+
     def __init__(self, register, pythonType):
-      ObjectFactory.__init__(self, register)
-      self.pythonType = pythonType
+        ObjectFactory.__init__(self, register)
+        self.pythonType = pythonType
 
     def _create(self):
-      logger.debug("Created new object of type [%s]", self.pythonType.__mro__)
-      # Create and call the PyObject init
-      newObject = self.pythonType.__new__(self.pythonType)
-      PyObject.__init__(newObject)
-      OBJECTS.append(newObject)
-      return newObject
+        logger.debug("Created new object of type [%s]",
+                     self.pythonType.__mro__)
+        # Create and initialize the object
+        newObject = self.pythonType.__new__(self.pythonType)
+        PyObject.__init__(newObject)
+        OBJECTS.append(newObject)
+        return newObject
+
 
 class TypeWrapper():
     def __init__(self, xpmtype):
@@ -182,7 +215,6 @@ class TypeWrapper():
         return TypeWrapper(xpmtype)
 
 
-
 class PythonRegister(Register):
     def __init__(self):
         # Initialize the base class
@@ -190,7 +222,6 @@ class PythonRegister(Register):
         # FIXME: when smart pointers are handled...
         self.factory = PythonObjectFactory(self, PyObject)
         self.objectFactory(self.factory)
-
         """Mapping for some built-in types"""
         self.builtins = {
             int: cvar.IntegerType,
@@ -212,23 +243,21 @@ class PythonRegister(Register):
     def addType(self, pythonType, typeName, parentType, description=None):
         xpmType = Type(typeName, parentType)
         if description is not None:
-          xpmType.description(description)
+            xpmType.description(description)
 
         self.associateType(pythonType, xpmType)
         super().addType(xpmType)
 
-
-
     def getTask(self, name):
-      logger.debug("Getting task %s", name)
-      task = super().getTask(name)
-      if task is None:
-        raise KeyError("Task %s does not exist" % name)
-      task.__task__ = task
-      task.create = wrap(task, create)
-      task.submit_ = wrap(task, create, submit=True)
-      task.__call__ = wrap(task, create)
-      return task
+        logger.debug("Getting task %s", name)
+        task = super().getTask(name)
+        if task is None:
+            raise KeyError("Task %s does not exist" % name)
+        task.__task__ = task
+        task.create = wrap(task, create)
+        task.submit_ = wrap(task, create, submit=True)
+        task.__call__ = wrap(task, create)
+        return task
 
     def getType(self, key):
         """Returns the Type object corresponding to the given type
@@ -237,13 +266,13 @@ class PythonRegister(Register):
             return AnyType
 
         if isinstance(key, Task):
-          return key.type()
+            return key.type()
 
         if key in self.builtins:
             return self.builtins[key]
 
         if isinstance(key, TypeProxy):
-           return key.type
+            return key.type
 
         if isinstance(key, Type) or isinstance(key, TypeWrapper):
             return key
@@ -256,18 +285,18 @@ class PythonRegister(Register):
 
         return TypeWrapper.wrap(super().getType(key))
 
-
     def parse(self, arguments=None):
         if arguments is None:
             arguments = sys.argv[1:]
         return super().parse(StringList(arguments))
 
-
     def createObject(self, params):
         return Value(params)
         return super().build(_params)
 
+
 register = PythonRegister()
+
 
 def create(t, args, options, submit=False):
     logger.debug("Creating %s [%s, %s]", t, args, options)
@@ -280,13 +309,13 @@ def create(t, args, options, submit=False):
         o.task(t.__task__)
 
     for k, v in options.items():
-      if type(v) == dict:
-         v = Register.build(register, JSON_ENCODER.encode(v))
-      logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
-      if isinstance(o, PyObject):
-         setattr(o, k, v)
-      else:
-         PyObject.set(o, k, v)
+        if type(v) == dict:
+            v = Register.build(register, JSON_ENCODER.encode(v))
+        logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
+        if isinstance(o, PyObject):
+            setattr(o, k, v)
+        else:
+            PyObject.set(o, k, v)
 
     if hasattr(t, "__task__"):
         o.task(t.__task__)
@@ -295,18 +324,21 @@ def create(t, args, options, submit=False):
         logger.debug("Submitting task to experimaestro")
         o.submit()
     else:
-        o.validate(False)
+        o.validate(True)
 
     return o
+
 
 def wrap(self, function, **options):
     def _wrapped(*args, **opts):
         return function(self, args, opts, **options)
+
     return _wrapped
 
 
 class RegisterType:
     """Declares an experimaestro type"""
+
     def __init__(self, qname, description=None, associate=False):
         if type(qname) == TypeName:
             self.qname = qname
@@ -317,17 +349,20 @@ class RegisterType:
 
     def __call__(self, t):
         if not is_new_style(t):
-            raise Exception("Error: type %s is an old style Python 2 class" % t)
+            raise Exception(
+                "Error: type %s is an old style Python 2 class" % t)
 
         # Check if conditions are fullfilled
-        xpmType = Register.getType(register, self.qname) if self.qname is not None else None
+        xpmType = Register.getType(
+            register, self.qname) if self.qname is not None else None
         if xpmType is not None and not self.associate:
             raise Exception("XPM type %s is already declared" % self.qname)
         if self.associate and xpmType is None:
             raise Exception("XPM type %s is not already declared" % self.qname)
 
         # Add XPM object if needed
-        bases = t.__bases__ if issubclass(t, PyObject) else (PyObject,) + t.__bases__
+        bases = t.__bases__ if issubclass(
+            t, PyObject) else (PyObject, ) + t.__bases__
 
         # Re-create a new type
         t = type(t.__name__, bases, dict(t.__dict__))
@@ -352,6 +387,7 @@ class RegisterType:
 
         return t
 
+
 class AssociateType(RegisterType):
     def __init__(self, qname, description=None):
         super().__init__(qname, description=description, associate=True)
@@ -359,6 +395,7 @@ class AssociateType(RegisterType):
 
 class RegisterTask():
     """Register a task"""
+
     def __init__(self, scriptpath=None, pythonpath=None):
         self.pythonpath = sys.executable if pythonpath is None else pythonpath
         self.scriptpath = scriptpath
@@ -370,17 +407,20 @@ class RegisterTask():
         if self.scriptpath is None:
             self.scriptpath = inspect.getfile(t)
         else:
-            self.scriptpath = op.join(op.dirname(inspect.getfile(t)), self.scriptpath)
+            self.scriptpath = op.join(
+                op.dirname(inspect.getfile(t)), self.scriptpath)
 
         self.scriptpath = op.abspath(self.scriptpath)
 
-        logger.debug("Task %s command: %s %s", t, self.pythonpath, self.scriptpath)
+        logger.debug("Task %s command: %s %s", t, self.pythonpath,
+                     self.scriptpath)
         for mro in t.__mro__:
             pyType = register.getType(mro)
             if pyType is not None:
                 break
         if pyType is None:
-            raise Exception("Class %s has no associated experimaestro type" %t)
+            raise Exception(
+                "Class %s has no associated experimaestro type" % t)
         task = Task(pyType)
         t.__task__ = task
         task.objectFactory(pyType.objectFactory())
@@ -400,13 +440,14 @@ class RegisterTask():
         return t
 
 
-
 class AbstractArgument:
     """Abstract class for all arguments (standard, path, etc.)"""
+
     def __init__(self, name, _type, help=""):
         self.argument = Argument(name)
         self.argument.help = help if help is not None else ""
-        self.argument.type(_type.xpmtype if type(_type) == TypeWrapper else _type)
+        self.argument.type(
+            _type.xpmtype if type(_type) == TypeWrapper else _type)
 
     def __call__(self, t):
         xpminfo = register.getType(t)
@@ -416,22 +457,28 @@ class AbstractArgument:
         xpminfo.addArgument(self.argument)
         return t
 
+
 class TypeArgument(AbstractArgument):
-    def __init__(self, name, type=None, default=None, required=None, help=None):
+    def __init__(self, name, type=None, default=None, required=None,
+                 help=None):
         xpmtype = register.getType(type)
-        logging.debug("Registering type argument %s [%s -> %s]", name, type, xpmtype)
+        logger.debug("Registering type argument %s [%s -> %s]", name, type,
+                      xpmtype)
         AbstractArgument.__init__(self, name, xpmtype, help=help)
         if default is not None and required is not None and required:
             raise Exception("Argument is required but default value is given")
-        self.argument.required = (default is None) if required is None else required
+        self.argument.required = (default is
+                                  None) if required is None else required
         if default is not None:
             self.argument.defaultValue(Value(default))
+
 
 class PathArgument(AbstractArgument):
     def __init__(self, name, path, help=""):
         AbstractArgument.__init__(self, name, PathType, help=help)
         generator = PathGenerator(path)
         self.argument.generator(generator)
+
 
 def tojson(t=None):
     if t is None:
@@ -443,19 +490,20 @@ def tojson(t=None):
 
 
 class TypeProperty:
-  def __init__(self, name, value):
-    self.name = name
-    self.value = value
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
 
-  def __call__(self, type):
-    xpmType = register.getType(type)
-    object = register.createObject(self.value)
-    xpmType.setProperty(self.name, object)
-    return type
+    def __call__(self, type):
+        xpmType = register.getType(type)
+        object = register.createObject(self.value)
+        xpmType.setProperty(self.name, object)
+        return type
 
 
 class Definitions:
     """Allow easy access to XPM tasks"""
+
     def __init__(self, retriever, path=None):
         self.__retriever = retriever
         self.__path = path
@@ -473,8 +521,10 @@ class Definitions:
             raise AttributeError("Task/Type %s not found" % self.__path)
         return definition.__call__(*args, **options)
 
+
 types = Definitions(register.getType)
 tasks = Definitions(register.getTask)
+
 
 class MergeClass:
     """Merge class annotation
@@ -493,17 +543,26 @@ class MergeClass:
     a.x() # prints x
     a.y() # prints y
     """
+
     def __init__(self, original):
         self.original = original
 
-
     def __call__(self, _class):
-        for _, method in inspect.getmembers(_class, predicate=inspect.isfunction):
+        for _, method in inspect.getmembers(
+                _class, predicate=inspect.isfunction):
             setattr(self.original, method.__name__, method)
 
         return None
 
 
 def typename(object):
-   """Returns the type name of the object"""
-   return object.type().typeName()
+    """Returns the type name of the object"""
+    return object.type().typeName()
+
+
+# --- Export some useful functions
+
+from experimaestro.rpc import Functions
+
+for name in ["set_experiment"]:
+    locals()[name] = getattr(Functions, name)
