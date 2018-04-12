@@ -9,7 +9,7 @@
 
 namespace xpm {
 namespace {
-std::shared_ptr<spdlog::sinks::ansicolor_sink> sink;
+std::shared_ptr<spdlog::sinks::ansicolor_stderr_sink_mt> sink;
 std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> loggers;
 
 void initLogging() {
@@ -20,8 +20,8 @@ void initLogging() {
     spdlog::set_pattern("[%x %H:%M:%S/%n] %v");
     spdlog::set_async_mode(8192);
 
-    auto errsink = spdlog::sinks::stderr_sink_mt::instance();
-    sink = std::make_shared<spdlog::sinks::ansicolor_sink>(errsink);
+    // auto errsink = spdlog::sinks::stderr_sink_mt::instance();
+    sink = std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>();
     sink->set_level(spdlog::level::debug);
 
     // Sets some log levels
