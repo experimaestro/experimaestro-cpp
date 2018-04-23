@@ -173,9 +173,14 @@ class PyObject(Object, metaclass=PyObjectType):
         if key == "type":
             logger.warn("'type' attribute ignored")
             return
-        value = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+        if sv is None:
+            value = None
+            svtype = None
+        else:
+            svtype = sv.type()
+            value = VALUECONVERTERS.get(svtype.toString(), lambda v: v)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
-                     sv.type(), type(value), type(self))
+                     svtype, type(value), type(self))
         dict.__setattr__(self, key, value)
 
 

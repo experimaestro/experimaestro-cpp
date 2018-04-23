@@ -463,6 +463,9 @@ void Object::validate(bool generate) {
               auto value = argument.defaultValue()->copy();
               value->set(Flag::DEFAULT, true);
               set(argument.name(), value);
+            } else if (!argument.required()) {
+              // Set value null
+              setValue(argument.name(), nullptr);
             }
           }
         } else {
