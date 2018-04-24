@@ -348,7 +348,17 @@ bool Object::isDefault() const {
   return get(Flag::DEFAULT);
 }
 
+bool Object::ignore() const {
+  return get(Flag::IGNORE);
+}
+
 bool Object::canIgnore() {
+  // If the ignore flag is set
+  if (ignore()) {
+    return true;
+  }
+
+  // If the type is ignorable
   if (type()->canIgnore()) {
     return true;
   }
@@ -414,18 +424,18 @@ void Object::configure(bool generate) {
   seal();
 }
 
-void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies) {
+void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
 
-  if (hasKey(KEY_RESOURCE)) {
+  if (!skipThis && hasKey(KEY_RESOURCE)) {
     std::string rid = get(KEY_RESOURCE)->asString();
     LOGGER->info("Found dependency {}", rid);
     dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(rid));
   } else {
     for (auto &entry: _content) {
-      entry.second->findDependencies(dependencies);
+      entry.second->findDependencies(dependencies, false);
     }
   }
 }
@@ -441,7 +451,6 @@ void Object::validate(bool generate) {
 
   // (1) Validate the object arguments
   if (!get(Flag::VALIDATED)) {
-
     // Loop over the whole hierarchy
     for (auto type = _type; type; type = type->parentType()) {
       LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
@@ -462,6 +471,7 @@ void Object::validate(bool generate) {
               LOGGER->debug("Setting default value for {}...", argument.name());
               auto value = argument.defaultValue()->copy();
               value->set(Flag::DEFAULT, true);
+              value->set(Flag::IGNORE, argument.ignore()); // TODO: Should pre-compute ignorability rather than in "canIgnore"
               set(argument.name(), value);
             } else if (!argument.required()) {
               // Set value null
@@ -625,6 +635,15 @@ Argument &Argument::required(bool required) {
   _required = required;
   return *this;
 }
+
+bool Argument::ignore() const { return _ignore; }
+
+Argument &Argument::ignore(bool ignore) {
+  _ignore = ignore;
+  return *this;
+}
+
+
 const std::string &Argument::help() const {
   return _help;
 }

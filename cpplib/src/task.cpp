@@ -30,7 +30,7 @@ void Task::submit(std::shared_ptr<Object> const &object,
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
   if (send) {
-    object->findDependencies(dependencies);
+    object->findDependencies(dependencies, true);
   }
 
   // Validate and seal the task object

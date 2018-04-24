@@ -135,7 +135,7 @@ class Object
  public:
   typedef uint8_t Flags;
   enum class Flag : Flags {
-    SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8
+    SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8, IGNORE = 16
   };
 
   typedef std::shared_ptr<Object> Ptr;
@@ -194,6 +194,9 @@ class Object
   /// Returns whether this object is sealed
   bool isSealed() const;
 
+  /// Ignore the object when computing 
+  bool ignore() const;
+
   /// Returns JSON string
   std::string toJsonString();
 
@@ -242,8 +245,9 @@ class Object
   /**
    * Find dependencies
    * @param dependencies A dependency vector to fill
+   * @param skipThis True if skipping this object
    */
-  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies);
+  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, bool skipThis);
 
   /**
    * Validate values
@@ -384,6 +388,9 @@ class Argument {
   Argument &required(bool required);
   bool required() const;
 
+  Argument &ignore(bool required);
+  bool ignore() const;
+
   Argument &defaultValue(std::shared_ptr<Object> const &defaultValue);
   std::shared_ptr<Object> defaultValue() const;
 
@@ -409,6 +416,9 @@ class Argument {
 
   /// Required
   bool _required;
+
+  /// Ignore
+  bool _ignore;
 
   /// Default value
   std::shared_ptr<Object> _defaultValue;

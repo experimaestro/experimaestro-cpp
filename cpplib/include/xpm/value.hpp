@@ -58,7 +58,7 @@ class Value : public Object {
   long getInteger() const;
   Path getPath() const;
 
-  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies) override;
+  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, bool skipThis) override;
 
   std::string const &getString();
   virtual nlohmann::json toJson() override;

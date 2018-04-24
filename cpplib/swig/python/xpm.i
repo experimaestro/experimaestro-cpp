@@ -15,6 +15,10 @@
 %attribute(xpm::Argument, bool, required, required, required);
 %ignore xpm::Argument::required;
 
+// Attributes
+%attribute(xpm::Argument, bool, ignore, ignore, ignore);
+%ignore xpm::Argument::ignore;
+
 /*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, Object, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
 */

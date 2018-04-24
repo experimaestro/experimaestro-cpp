@@ -20,9 +20,7 @@ package net.bpiwowar.xpm.server.rpc;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import net.bpiwowar.xpm.connectors.NetworkShareAccess;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.CloseException;
@@ -199,7 +197,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 while (t.getCause() != null) {
                     t = t.getCause();
                 }
-                LOGGER.info(() -> format("Error while handling JSON request [%s]", e.toString()), e);
+                LOGGER.info(() -> format("Error while handling JSON request [%s]", t.toString()), t);
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
                 LOGGER.error("Could not send the return code", e2);
@@ -279,6 +277,18 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     public int setLogLevel(@RPCArgument(name = "identifier") String identifier, @RPCArgument(name = "level") String level) {
         org.apache.logging.log4j.core.config.Configurator.setLevel(identifier, org.apache.logging.log4j.Level.toLevel(level));
         return 0;
+    }
+
+    @RPCMethod(help = "List methods")
+    public ArrayList<String> methods() {
+        ArrayList<String> array = new ArrayList<>();
+        for (Map.Entry<String, RPCCaller> entry : methods.entries()) {
+            array.add(entry.getKey());
+        }
+
+        array.sort(String::compareTo);
+
+        return array;
     }
 
     /**

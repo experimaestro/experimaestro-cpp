@@ -40,6 +40,7 @@ def pass_cfg(f):
         return ctx.invoke(f, ctx.obj, *args, **kwargs)
     return update_wrapper(new_func, f)
 
+XPM_LOGGER = logging.getLogger("server")
 
 
 ## --- TO REMOVE
@@ -136,6 +137,14 @@ p_move_resources.add_argument("new", type=str)
 
 # --- Utiliy classes and methods
 
+
+def get_states(states):
+    if states is not None:
+        states = args.states.split(",")
+    else:
+        states = []
+    return states
+
 def mkdir_p(path):
     """Similar to ``mkdir -p path``.
     """
@@ -158,7 +167,7 @@ class JsonRPCMethod:
     def __getitem__(self, name):
         return self.__getattr__(name)
 
-    def __call__(self, args):
+    def __call__(self, args={}):
         return self.client.call(self.name, args)
 
 XPM_LOG_LEVELS = {
@@ -194,12 +203,15 @@ class JsonRPCClient:
                     if o.get("error", 0) != 0:
                         raise RuntimeError("Error while calling method %s: [%d] %s" %
                                            (self.name, o["error"]["code"], o["error"]["message"]))
-                    return o["result"]
+                    if "result" in o:
+                        return o["result"]
+
+                    return None
                 else:
                     result = o["result"]
-                    logging.info("Response: %s", result)
+                    logging.debug("Response: %s", result)
                     if result.get("type", "") == "log":
-                        logging.log(logging.WARN, result["message"])
+                        XPM_LOGGER.log(XPM_LOG_LEVELS.get(result.get("level"), logging.INFO), result["message"])
                     elif result["stream"] == "out":
                         sys.stdout.write(result["value"])
                     else:
@@ -324,6 +336,7 @@ def main(ctx, debug, verbose, log, server, config):
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % log)
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+    logging.debug("Debug mode")
     ctx.obj = Configuration(config, server)
 
 
@@ -498,25 +511,61 @@ def clean(cfg, run, remove_resources):
 def tasks(): pass
 
 @tasks.command("rm", help="Remove tasks")
+@click.option("--recursive", is_flag=True, help="Recursive")
+@click.option("--regex", is_flag=True, help="Use this flag if the given jobid is a regular expression")
+@click.option("--states", help="Only update resource in a specific state")
+@click.argument("jobid", nargs=1, required=False)
 @pass_cfg
-def rm(cfg):
+def tasks_rm(cfg, recursive, regex, states, jobid):
     server = cfg.getServer()
-    print("Updated job(s): %s" % server.updateJobs({
-        "resources": args.resources,
-        "recursive": args.recursive,
-        "states": get_states(args.states)
+    print("Updated job(s): %s" % server.remove({
+        "id": jobid,
+        "regexp": regex,
+        "recursive": recursive,
+        "states": get_states(states)
     }))
 
 
-@tasks.command(help="Update the status of tasks")
+@tasks.command("update", help="Update the status of tasks")
+@click.option("--recursive", is_flag=True, help="Recursive")
+@click.option("--states", help="Only update resource in a specific state")
+@click.argument("resources", nargs=-1)
 @pass_cfg
-def update(cfg):
+def tasks_update(cfg, recursive, states, resources):
     server = cfg.getServer()
     print("Updated job(s): %s" % server.updateJobs({
-        "resources": args.resources,
-        "recursive": args.recursive,
-        "states": get_states(args.states)
+        "resources": resources,
+        "recursive": recursive,
+        "states": get_states(states)
     }))
+
+
+@tasks.command(help="Generate files for a given job")
+@click.argument("jobid", nargs=-1)
+@pass_cfg
+def generate(cfg, jobid):
+    server = cfg.getServer()
+    server.generateFiles({"jobs": jobid})
+
+@tasks.command("info")
+@click.argument("jobid")
+@pass_cfg
+def tasks_information(cfg, jobid):
+    server = cfg.getServer()
+    json.dump(server.getResourceInformation({"id": jobid}), sys.stdout)
+    sys.stdout.write("\n")
+
+
+def command_invalidate(args):
+    server = cfg.getServer()
+    print(args)
+    json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
+    print(server.invalidate(json_args))
+
+def command_kill(args):
+    server = cfg.getServer()
+    n = server.kill({"jobs": args.jobid})
+    logging.info("Killed %d jobs" % n)
 
 
 @tasks.command(help="List ressources")
@@ -549,20 +598,17 @@ def command_build_information(args):
     json.dump(info, sys.stdout)
     sys.stdout.write("\n")
 
-def command_list_methods(args):
+@main.command()
+@pass_cfg
+def methods(cfg):
     server = cfg.getServer()
-    for method in server.system.listMethods():
+    for method in server.methods():
         if not method.startswith("system"):
             print("# %s" % method)
-            print(server.system.methodSignature(method))
-            print(server.system.methodHelp(method))
+            # print(server.system.methodSignature({"method": method}))
+            # print(server.system.methodHelp({"method": method}))
             print
 
-
-def command_information(args):
-    server = cfg.getServer()
-    json.dump(server.getResourceInformation({"id": args.resourceId[0]}), sys.stdout)
-    sys.stdout.write("\n")
 
 def Server(function):
     return lambda args : function(cfg.getServer(), args)
@@ -570,13 +616,6 @@ def Server(function):
 @Server
 def command_set_token_limit(server, args):
     json.dump(server.setTokenLimit({"tokenId": args.tokenid, "limit": args.limit}), sys.stdout)
-
-def command_invalidate(args):
-    server = cfg.getServer()
-    print(args)
-    json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
-    print(server.invalidate(json_args))
-
 
 def command_experiments_invalidate(args):
     server = cfg.getServer()
@@ -586,10 +625,6 @@ def command_experiments_invalidate(args):
     print("Restarted %d jobs " % count)
 
 
-def command_kill(args):
-    server = cfg.getServer()
-    n = server.kill({"jobs": args.jobid})
-    logging.info("Killed %d jobs" % n)
 
 def command_experiments_kill(args):
     server = cfg.getServer()
@@ -601,9 +636,6 @@ def command_experiments_delete(args):
     count = server.experiments.delete({"identifier": args.experimentid})
     print("%d experiments deleted" % count)
 
-def command_generate_files(args):
-    server = cfg.getServer()
-    server.generateFiles({"jobs": args.jobid})
 
 
 def command_lock_cleanup(args):
@@ -636,16 +668,6 @@ def command_move_resources(args):
 def command_ssh_agent(args):
     server = cfg.getServer()
     print(json.dumps(server.sshAgentInformation({})))
-
-# --- Utility functions
-
-
-def get_states(states):
-    if states is not None:
-        states = args.states.split(",")
-    else:
-        states = []
-    return states
 
 
 # --- Run command

@@ -334,7 +334,7 @@ std::string const &Value::getString() {
   return _value.string;
 }
 
-void Value::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies) {}
+void Value::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &, bool) {}
 
 std::shared_ptr<Object> Value::copy() {
   return std::make_shared<Value>(*this);

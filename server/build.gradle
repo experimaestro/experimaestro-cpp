@@ -55,6 +55,7 @@ String nodeExecutable() {
 
 
 compileTypeScript {
+    println "Compiling TS into ${generatedResources}"
     compilerExecutable "${nodeExecutable()} node_modules/typescript/lib/tsc.js"
     dependsOn "npmInstall"
     outFile = file("${generatedResources}/web/js/xpm.js")
