@@ -40,6 +40,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 */
 
 %{
+    #include <xpm/common.hpp>
+
       // FIXME: REMOVE
    #include <cxxabi.h>
    template<typename T>
