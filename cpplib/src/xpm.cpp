@@ -8,7 +8,6 @@
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
-#include <xpm/array.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -47,8 +46,6 @@ const std::string KEY_IGNORE = "$ignore";
 /// Default value
 const std::string KEY_DEFAULT = "$default";
 
-/// Resource identifier
-const std::string KEY_RESOURCE = "$resource";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
 
@@ -58,9 +55,7 @@ const TypeName INTEGER_TYPE("integer");
 const TypeName REAL_TYPE("real");
 const TypeName ARRAY_TYPE("array");
 const TypeName ANY_TYPE("any");
-
 const TypeName PATH_TYPE("path");
-const TypeName RESOURCE_TYPE("resource");
 
 static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE, RESOURCE_TYPE};
 
@@ -101,133 +96,67 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-Object::Object() : _flags(0), _type(AnyType) {
+Configuration::Configuration() : _flags(0), _type(AnyType) {
 }
 
-Object::Object(std::map<std::string, std::shared_ptr<Object>> &map)
+Configuration::Configuration(std::map<std::string, std::shared_ptr<Configuration>> &map)
     : _flags(0), _content(map) {
 }
 
-Object::Object(Object const &other) : _flags(other._flags), _content(other._content) {
+Configuration::Configuration(Configuration const &other) : _flags(other._flags), _content(other._content) {
 }
 
-void Object::fill(Register &xpmRegister, nlohmann::json const &jsonValue) {
-  for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-    if (it.key() == KEY_VALUE) {
-      // already handled
-    } else if (it.key() == KEY_TYPE) {
-      _type = xpmRegister.getType(TypeName((std::string const &) it.value()));
-    } else if (it.key() == KEY_DEFAULT) {
-      if (!it.value().is_boolean())
-         throw std::runtime_error("Default flag is not boolean in object");
-      set(Flag::DEFAULT, it.value());
-    } else if (it.key() == KEY_TASK) {
-      _task = xpmRegister.getTask(it.value(), true);
-    } else {
-      set(it.key(), createFromJson(xpmRegister, it.value()));
-    }
-  }
-}
 
-std::shared_ptr<Object> Object::createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue) {
+
+Configuration::Configuration(Register &xpmRegister, nlohmann::json const &jsonValue) {
   switch (jsonValue.type()) {
+
     // --- Object
     case nlohmann::json::value_t::object: {
-      std::shared_ptr<Object> object;
-
-      // Get the type of the object
+      // (1) Get the type of the object
       std::shared_ptr<Type> type;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
-        type = xpmRegister.getType(typeName);
-        if (!type) {
-          auto undefinedType = std::make_shared<Type>(typeName);
-          undefinedType->placeholder(true);
-          xpmRegister.addType(undefinedType);
-          LOGGER->warn("Could not find type {} in registry", typeName);
+        _type = xpmRegister.getType(typeName);
+        if (!_type) {
+          _type = std::make_shared<Type>(typeName);
+          _type->placeholder(true);
+          xpmRegister.addType(_type);
+          LOGGER->warn("Could not find type {} in registry: using undefined type", typeName);
         }
       }
-
-      // Look at the value
-      auto _key = jsonValue.find(KEY_VALUE);
-      if (_key != jsonValue.end()) {
-        // Infer type from value
-        object = createFromJson(xpmRegister, *_key);
-        if (type) {
-          if (type->isArray()) {
-            object = std::dynamic_pointer_cast<Array>(object);
-          } else {
-            object = dynamic_cast<Value&>(*object).cast(type);
-          }
-        }
-      } else {
-        if (type) {
-          LOGGER->debug("Creating object of type {} using type->create()", *type);
-          object = type->create(xpmRegister.objectFactory());
-        } else {
-          LOGGER->debug("Creating object of unknown type default object factory");
-          object = xpmRegister.objectFactory()->create();
-        }
-      }
-
-      object->fill(xpmRegister, jsonValue);
-      LOGGER->debug("Got an object of type {}", object->type()->toString());
-      return object;
-    }
-
-
-    // --- Array
-
-    case nlohmann::json::value_t::array: {
-      auto array = std::make_shared<Array>();
+      
+      // (2) Fill from JSON
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        array->push_back(createFromJson(xpmRegister, *it));
+        if (it.key() == KEY_VALUE) {
+            // Infer type from value
+            _value = Value(xpmRegister, it.value());
+            if (_type) _value = _value.cast(_type);
+        } else if (it.key() == KEY_TYPE) {
+          // ignore
+        } else if (it.key() == KEY_DEFAULT) {
+          if (!it.value().is_boolean())
+            throw std::runtime_error("Default flag is not a boolean value in JSON");
+          set(Flag::DEFAULT, it.value());
+        } else if (it.key() == KEY_TASK) {
+          _task = xpmRegister.getTask(it.value(), true);
+        } else {
+          set(it.key(), std::make_shared<Configuration>(xpmRegister, it.value()));
+        }
       }
-      LOGGER->debug("Got an array of type {}", array->type()->toString());
-      return array;
+
+      LOGGER->debug("Got an object of type {}", _type->toString());
+      break;
     }
 
-    // --- Simple type
-
-    case nlohmann::json::value_t::null:
-    case nlohmann::json::value_t::discarded:return std::make_shared<Value>();
-
-    case nlohmann::json::value_t::string:return std::make_shared<Value>((std::string const &) jsonValue);
-
-    case nlohmann::json::value_t::boolean:return std::make_shared<Value>((bool) jsonValue);
-
-    case nlohmann::json::value_t::number_integer:
-    case nlohmann::json::value_t::number_unsigned:return std::make_shared<Value>((long) jsonValue);
-
-    case nlohmann::json::value_t::number_float:{
-      // Try first as integer
-      if (std::trunc((double)jsonValue) == (double)jsonValue) {
-        return std::make_shared<Value>((long) jsonValue);
-      }
-
-      return std::make_shared<Value>((double) jsonValue);
+    default: {
+      _value = Value(xpmRegister, jsonValue);
     }
   }
 }
 
-std::string Object::asString() {
-  throw cast_error("Cannot convert to string");
-}
-bool Object::asBoolean() {
-  throw cast_error("Cannot convert to boolean");
-}
-long Object::asInteger() {
-  throw cast_error("Cannot convert to integer");
-}
-double Object::asReal() {
-  throw cast_error("Cannot convert to real");
-}
-Path Object::asPath() const {
-  throw cast_error("Cannot convert to path");
-}
-
 // Convert to JSON
-json Object::toJson() {
+json Configuration::toJson() {
   // No content
   if (_content.empty() && !_task && (!_type || dynamic_cast<Value *>(this)) && !get(Flag::DEFAULT)) {
     return nullptr;
@@ -252,20 +181,20 @@ json Object::toJson() {
   return o;
 }
 
-std::shared_ptr<Object> Object::copy() {
-  return std::make_shared<Object>(*this);
+std::shared_ptr<Configuration> Configuration::copy() {
+  return std::make_shared<Configuration>(*this);
 }
 
-std::string Object::toJsonString() {
+std::string Configuration::toJsonString() {
   return toJson().dump();
 }
 
-void Object::setValue(std::shared_ptr<Object> const &value) {
+void Configuration::setValue(std::shared_ptr<Configuration> const &value) {
   NOT_IMPLEMENTED();
 }
 
 /// Internal digest function
-std::array<unsigned char, DIGEST_LENGTH> Object::digest() const {
+std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
   Digest d;
 
   d.updateDigest("task");
@@ -298,16 +227,16 @@ std::array<unsigned char, DIGEST_LENGTH> Object::digest() const {
   return d.get();
 };
 
-std::shared_ptr<Type> Object::type() {
+std::shared_ptr<Type> Configuration::type() {
   if (_type) return _type;
   return AnyType;
 }
 
-bool Object::hasKey(std::string const &key) const {
+bool Configuration::hasKey(std::string const &key) const {
   return _content.find(key) != _content.end();
 }
 
-std::shared_ptr<Object> Object::set(const std::string &key, std::shared_ptr<Object> const &value) {
+std::shared_ptr<Configuration> Configuration::set(const std::string &key, std::shared_ptr<Configuration> const &value) {
   if (get(Flag::SEALED)) {
     throw sealed_error();
   }
@@ -324,13 +253,13 @@ std::shared_ptr<Object> Object::set(const std::string &key, std::shared_ptr<Obje
   return it == _content.end() ? nullptr : it->second;
 }
 
-std::shared_ptr<Object> Object::get(const std::string &key) {
+std::shared_ptr<Configuration> Configuration::get(const std::string &key) {
   auto value = _content.find(key);
   if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
 }
 
-void Object::seal() {
+void Configuration::seal() {
   if (get(Flag::SEALED)) return;
 
   for (auto &item: _content) {
@@ -340,19 +269,19 @@ void Object::seal() {
   set(Flag::SEALED, true);
 }
 
-bool Object::isSealed() const {
+bool Configuration::isSealed() const {
   return get(Flag::SEALED);
 }
 
-bool Object::isDefault() const {
+bool Configuration::isDefault() const {
   return get(Flag::DEFAULT);
 }
 
-bool Object::ignore() const {
+bool Configuration::ignore() const {
   return get(Flag::IGNORE);
 }
 
-bool Object::canIgnore() {
+bool Configuration::canIgnore() {
   // If the ignore flag is set
   if (ignore()) {
     return true;
@@ -366,7 +295,7 @@ bool Object::canIgnore() {
   // Is the ignore flag set?
   auto it = _content.find(KEY_IGNORE);
   if (it != _content.end()) {
-    return it->second->asBoolean();
+    return it->second->_value.asBoolean();
   }
 
   // Is the value a default value?
@@ -376,7 +305,7 @@ bool Object::canIgnore() {
   return false;
 }
 
-std::string Object::uniqueIdentifier() const {
+std::string Configuration::uniqueIdentifier() const {
   // Compute the digest
   auto array = digest();
 
@@ -393,24 +322,24 @@ std::string Object::uniqueIdentifier() const {
   return s;
 }
 
-std::map<std::string, std::shared_ptr<Object>> const &Object::content() {
+std::map<std::string, std::shared_ptr<Configuration>> const &Configuration::content() {
   return _content;
 }
 
 /** Get type */
-void Object::type(std::shared_ptr<Type> const &type) {
+void Configuration::type(std::shared_ptr<Type> const &type) {
   _type = type;
 }
 
-void Object::task(std::shared_ptr<Task> const &task) {
+void Configuration::task(std::shared_ptr<Task> const &task) {
   _task = task;
 }
 
-std::shared_ptr<Task> Object::task() {
+std::shared_ptr<Task> Configuration::task() {
   return _task;
 }
 
-void Object::submit(bool send,
+void Configuration::submit(bool send,
                     std::shared_ptr<rpc::Launcher> const &launcher,
                     std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) {
   if (!_task) {
@@ -419,20 +348,21 @@ void Object::submit(bool send,
   return _task->submit(shared_from_this(), send, launcher, launcherParameters);
 }
 
-void Object::configure(bool generate) {
-  validate(generate);
+void Configuration::configure() {
+  GeneratorContext context;
+  generate(context);
+  validate();
   seal();
 }
 
-void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
+void Configuration::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
 
-  if (!skipThis && hasKey(KEY_RESOURCE)) {
-    std::string rid = get(KEY_RESOURCE)->asString();
-    LOGGER->info("Found dependency {}", rid);
-    dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(rid));
+  if (!_resource.empty()) {
+    LOGGER->info("Found dependency {}", _resource);
+    dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(_resource));
   } else {
     for (auto &entry: _content) {
       entry.second->findDependencies(dependencies, false);
@@ -440,97 +370,28 @@ void Object::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dep
   }
 }
 
-bool Object::equals(Object const &other) const {
+bool Configuration::equals(Configuration const &other) const {
+  // TODO: implement
   NOT_IMPLEMENTED();
 }
 
-void Object::validate(bool generate) {
-  LOGGER->debug("Validating (generate={})", generate);
-
-  if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
-
-  // (1) Validate the object arguments
-  if (!get(Flag::VALIDATED)) {
-    // Loop over the whole hierarchy
-    for (auto type = _type; type; type = type->parentType()) {
-      LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
-
-      // Loop over all the arguments
-      for (auto entry: type->arguments()) {
-        auto &argument = *entry.second;
-        LOGGER->debug("Looking at argument {}", argument.name());
-
-        if (_content.count(argument.name()) == 0) {
-          LOGGER->debug("No value provided...");
-          // No value provided, and no generator
-          if (argument.required() && !(generate && argument.generator())) {
-            throw argument_error(
-                "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-          } else {
-            if (argument.defaultValue()) {
-              LOGGER->debug("Setting default value for {}...", argument.name());
-              auto value = argument.defaultValue()->copy();
-              value->set(Flag::DEFAULT, true);
-              value->set(Flag::IGNORE, argument.ignore()); // TODO: Should pre-compute ignorability rather than in "canIgnore"
-              set(argument.name(), value);
-            } else if (!argument.required()) {
-              // Set value null
-              setValue(argument.name(), nullptr);
-            }
-          }
-        } else {
-          // Sets the value
-          auto value = get(argument.name());
-          LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
-
-          // If the value is default, add a flag
-          if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-            LOGGER->debug("Value is default");
-            value->set(Flag::DEFAULT, true);
-          } else {
-            // Check the type
-
-            if (!entry.second->type()->accepts(value->type())) {
-              throw argument_error(
-                  "Argument " + argument.name() + " type is  " + value->type()->toString() 
-                  + ", but requested type was " + entry.second->type()->toString());
-            }
-
-            // If the value has a type, handles this
-            if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
-              // Create an object of the key type
-              auto v = value->get(KEY_TYPE);
-              auto valueType = value->type();
-              if (valueType) {
-                auto object = valueType->create(nullptr);
-                object->setValue(value);
-                LOGGER->debug("Looking at {}", entry.first);
-                object->validate(generate);
-              }
-            }
-          }
-
-          LOGGER->debug("Validating {}...", argument.name());
-          value->validate(generate);
-          LOGGER->debug("Setting {}...", argument.name());
-          setValue(argument.name(), value);
-        }
-      }
+void Configuration::generate(GeneratorContext & context) {
+  if (auto A = context.enter(this)) {
+    // Check if we can modify this object
+    if (isSealed()) {
+      throw new exception("Cannot generate values within a sealed object");
     }
-    set(Flag::VALIDATED, true);
-  } else {
-    LOGGER->debug("Object already validated");
-  }
 
+    // Already generated
+    if (get(Flag::GENERATED)) return;
 
-  // (2) Generate values
-  if (generate) {
+    // (2) Generate values
     if (get(Flag::GENERATED)) {
       LOGGER->debug("Object already generated");
     } else {
       // (3) Add resource
       if (_task) {
-        auto identifier = _task->getPathGenerator()->generate(*this)->asString();
+        auto identifier = _task->getPathGenerator()->generate(context)->asString();
         LOGGER->info("Setting resource to {}", identifier);
         set(KEY_RESOURCE, identifier);
       }
@@ -542,7 +403,7 @@ void Object::validate(bool generate) {
           auto generator = argument.generator();
 
           if (!hasKey(argument.name()) && generator) {
-            auto generated = generator->generate(*this);
+            auto generated = generator->generate(context);
             LOGGER->debug("Generating value for {}", argument.name());
             set(argument.name(), generated);
           }
@@ -553,15 +414,91 @@ void Object::validate(bool generate) {
   }
 }
 
-void Object::execute() {
+void Configuration::
+
+void Configuration::validate() {
+  if (get(Flag::VALIDATED)) return;
+
+  if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
+
+  // Loop over the whole hierarchy
+  for (auto type = _type; type; type = type->parentType()) {
+    LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
+
+    // Loop over all the arguments
+    for (auto entry: type->arguments()) {
+      auto &argument = *entry.second;
+      LOGGER->debug("Looking at argument {}", argument.name());
+
+      if (_content.count(argument.name()) == 0) {
+        LOGGER->debug("No value provided...");
+        // No value provided, and no generator
+        if (argument.required() && !(generate && argument.generator())) {
+          throw argument_error(
+              "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
+        } else {
+          if (argument.defaultValue()) {
+            LOGGER->debug("Setting default value for {}...", argument.name());
+            auto value = argument.defaultValue()->copy();
+            value->set(Flag::DEFAULT, true);
+            value->set(Flag::IGNORE, argument.ignore());
+            set(argument.name(), value);
+          } else if (!argument.required()) {
+            // Set value null
+            setValue(argument.name(), nullptr);
+          }
+        }
+      } else {
+        // Sets the value
+        auto value = get(argument.name());
+        LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
+
+        // If the value is default, add a flag
+        if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+          LOGGER->debug("Value is default");
+          value->set(Flag::DEFAULT, true);
+        } else {
+          // Check the type
+
+          if (!entry.second->type()->accepts(value->type())) {
+            throw argument_error(
+                "Argument " + argument.name() + " type is  " + value->type()->toString() 
+                + ", but requested type was " + entry.second->type()->toString());
+          }
+
+          // If the value has a type, handles this
+          if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
+            // Create an object of the key type
+            auto v = value->get(KEY_TYPE);
+            auto valueType = value->type();
+            if (valueType) {
+              auto object = valueType->create(nullptr);
+              LOGGER->debug("Looking at {}", entry.first);
+              object->setValue(value);
+              object->validate();
+            }
+          }
+        }
+
+        LOGGER->debug("Validating {}...", argument.name());
+        value->validate();
+        LOGGER->debug("Setting {}...", argument.name());
+        setValue(argument.name(), value);
+      }
+    }
+  }
+  set(Flag::VALIDATED, true);
+}
+
+void Configuration::execute() {
   // TODO: should display the host language class name
   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 }
 
-void Object::pre_execute() {}
-void Object::post_execute() {}
+void Configuration::pre_execute() {}
+void Configuration::post_execute() {}
 
-void Object::_pre_execute() {
+void Configuration::_pre_execute() {
   // Loop over all the type hierarchy
   for (auto type = _type; type; type = type->parentType()) {
     // Loop over all the arguments
@@ -576,7 +513,7 @@ void Object::_pre_execute() {
   this->pre_execute();
 }
 
-void Object::_post_execute() {
+void Configuration::_post_execute() {
   // Loop over all the type hierarchy
   for (auto type = _type; type; type = type->parentType()) {
     // Loop over all the arguments
@@ -590,23 +527,14 @@ void Object::_post_execute() {
   this->post_execute();
 }
 
-
-Path Object::outputPath() const {
-  auto resource = static_cast<Object>(*this).get(KEY_RESOURCE);
-  if (!resource) {
-    throw std::invalid_argument("No resource associated to this object");
-  }
-  return Path(resource->asString() + ".out");
-}
-
-void Object::set(Object::Flag flag, bool value) {
+void Configuration::set(Configuration::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;
   else _flags &= ~((Flags)flag);
 
   assert(get(flag) == value);
 }
 
-bool Object::get(Object::Flag flag) const {
+bool Configuration::get(Configuration::Flag flag) const {
   return (Flags)flag & _flags;
 }
 
@@ -652,12 +580,12 @@ Argument &Argument::help(const std::string &help) {
   return *this;
 }
 
-Argument &Argument::defaultValue(std::shared_ptr<Object> const &defaultValue) {
+Argument &Argument::defaultValue(std::shared_ptr<Configuration> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
 }
-std::shared_ptr<Object> Argument::defaultValue() const { return _defaultValue; }
+std::shared_ptr<Configuration> Argument::defaultValue() const { return _defaultValue; }
 
 std::shared_ptr<Generator> Argument::generator() { return _generator; }
 std::shared_ptr<Generator> const &Argument::generator() const { return _generator; }
@@ -673,7 +601,6 @@ Argument &Argument::type(std::shared_ptr<Type> const &type) {
 }
 
 
-
 // ---- Type
 
 std::shared_ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
@@ -686,9 +613,9 @@ std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, tr
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
 /** Creates an object with a given type */
-std::shared_ptr<Object> Type::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
+std::shared_ptr<Configuration> Type::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
   LOGGER->debug("Creating object from type {} with {}", _type, _factory ? "a factory" : "default factory");
-  const std::shared_ptr<Object> object = _factory ? _factory->create() : defaultFactory->create();
+  const std::shared_ptr<Configuration> object = _factory ? _factory->create() : defaultFactory->create();
   object->type(shared_from_this());
   return object;
 }
@@ -795,11 +722,11 @@ int Type::hash() const {
 }
 
 
-void Type::setProperty(std::string const &name, Object::Ptr const &value) {
+void Type::setProperty(std::string const &name, Configuration::Ptr const &value) {
   _properties[name] = value;
 }
 
-Object::Ptr Type::getProperty(std::string const &name) {
+Configuration::Ptr Type::getProperty(std::string const &name) {
   auto it = _properties.find(name);
   if (it == _properties.end()) return nullptr;
   return it->second;
@@ -819,6 +746,10 @@ bool Type::accepts(Type::Ptr const &other) const {
 
 
 // ---- Generators
+
+GeneratorLock::GeneratorLock(GeneratorContext * context, Configuration *configuration) : context(context) {
+  context->stack.push_back(configuration);
+}
 
 const std::string PathGenerator::TYPE = "path";
 
@@ -841,11 +772,11 @@ nlohmann::json PathGenerator::toJson() const {
   };
 }
 
-std::shared_ptr<Object> PathGenerator::generate(Object &object) {
+std::shared_ptr<Configuration> PathGenerator::generate(GeneratorContext const &context) {
   Path p = Context::current().workdir();
-  auto uuid = object.uniqueIdentifier();
+  auto uuid = context.stack[0]->uniqueIdentifier();
 
-  if (std::shared_ptr<Task> task = object.task()) {
+  if (std::shared_ptr<Task> task = context.stack[0]->task()) {
     p = Path(p, {task->identifier().toString()});
   }
 
@@ -863,7 +794,7 @@ PathGenerator::PathGenerator(std::string const &name) : _name(name) {
 
 // ---- REGISTER
 
-std::shared_ptr<Object> ObjectFactory::create() {
+std::shared_ptr<Configuration> ObjectFactory::create() {
   auto object = _create();
   object->_register = _register;
   return object;

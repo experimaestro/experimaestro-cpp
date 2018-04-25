@@ -197,7 +197,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 while (t.getCause() != null) {
                     t = t.getCause();
                 }
-                LOGGER.info(() -> format("Error while handling JSON request [%s]", t.toString()), t);
+                LOGGER.info(format("Error while handling JSON request [%s]", t.toString()), t);
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
                 LOGGER.error("Could not send the return code", e2);

@@ -110,56 +110,58 @@ std::shared_ptr<Type> Register::getType(TypeName const &typeName) {
 }
 
 // Find a type given a type name
-std::shared_ptr<Type> Register::getType(std::shared_ptr<Object> const &object) {
+std::shared_ptr<Type> Register::getType(std::shared_ptr<Configuration> const &object) {
   return object->type();
 }
 
-std::shared_ptr<Object> Register::build(std::shared_ptr<Object> const &value) {
-  std::shared_ptr<Type> objectType = value->type();
-  LOGGER->debug("Building object with type {}", *objectType);
+std::shared_ptr<Configuration> Register::build(std::shared_ptr<Configuration> const &value) {
+  // FIXME: discard?
+  NOT_IMPLEMENTED();
+  // std::shared_ptr<Type> objectType = value->type();
+  // LOGGER->debug("Building object with type {}", *objectType);
 
-  // Create the object
-  std::cerr << "Creating object..." << std::endl;
-  auto object = objectType ? objectType->create(_defaultObjectFactory) : _defaultObjectFactory->create();
+  // // Create the object
+  // std::cerr << "Creating object..." << std::endl;
+  // auto object = objectType ? objectType->create(_defaultObjectFactory) : _defaultObjectFactory->create();
 
-  std::cerr << "Created object... " << object.get() << std::endl;
-  object->setValue(value);
+  // std::cerr << "Created object... " << object.get() << std::endl;
+  // object->setValue(value);
 
-  if (!object) {
-    throw std::runtime_error("Object of type " + objectType->toString() + " was not created");
-  }
+  // if (!object) {
+  //   throw std::runtime_error("Object of type " + objectType->toString() + " was not created");
+  // }
 
-  // Loop over all the type hierarchy
-  for (auto type = objectType; type; type = type->_parent) {
+  // // Loop over all the type hierarchy
+  // for (auto type = objectType; type; type = type->_parent) {
 
-    // Loop over the arguments
-    for (auto entry: type->arguments()) {
-      auto key = entry.first;
+  //   // Loop over the arguments
+  //   for (auto entry: type->arguments()) {
+  //     auto key = entry.first;
 
-      // Check required argument
-      auto const hasKey = value->hasKey(key);
-      if (!hasKey && entry.second->required()) {
-        throw argument_error("Argument " + key + " was required but not provided");
-      }
+  //     // Check required argument
+  //     auto const hasKey = value->hasKey(key);
+  //     if (!hasKey && entry.second->required()) {
+  //       throw argument_error("Argument " + key + " was required but not provided");
+  //     }
 
-      // Build subtype
-      if (hasKey) {
-        std::cerr << "Building " << key << std::endl;
-        auto subvalue = build(value->get(key));
+  //     // Build subtype
+  //     if (hasKey) {
+  //       std::cerr << "Building " << key << std::endl;
+  //       auto subvalue = build(value->get(key));
 
-        // Set argument
-        std::cerr << "Setting " << key << std::endl;
-        object->set(key, subvalue);
-      } else {
-        auto defaultValue = entry.second->defaultValue();
-        if (defaultValue) {
-          object->set(key, defaultValue->copy());
-        }
-      }
-    }
-  }
+  //       // Set argument
+  //       std::cerr << "Setting " << key << std::endl;
+  //       object->set(key, subvalue);
+  //     } else {
+  //       auto defaultValue = entry.second->defaultValue();
+  //       if (defaultValue) {
+  //         object->set(key, defaultValue->copy());
+  //       }
+  //     }
+  //   }
+  // }
 
-  return object;
+  // return object;
 }
 
 void Register::parse(std::vector<std::string> const &args) {
@@ -213,26 +215,30 @@ void Register::parse(std::vector<std::string> const &args) {
       LOGGER->error("Error while parsing " + args[2]);
       throw;
     }
-    auto value = task->create(_defaultObjectFactory);
-    value->fill(*this, j);
+
+    auto configuration = std::make_shared<Configuration>(*this, j);
+
+    // TODO: check if needed
+    // auto value = task->create(_defaultObjectFactory);
+    // value->fill(*this, j);
 
     // Parse further command line options
-    size_t ix = 3;
-    while (ix < args.size()) {
-      std::string const &arg = args[ix];
-      auto p_equals = arg.find("=");
-    }
+    // size_t ix = 3;
+    // while (ix < args.size()) {
+    //   std::string const &arg = args[ix];
+    //   auto p_equals = arg.find("=");
+    // }
 
     // Run the task
     progress(-1);
-    task->execute(value);
-
+    runTask(task, configuration);
     return;
-
   }
 
   throw argument_error("Unexpected command: " + args[0]);
 }
+
+
 void Register::generate() const {
   std::cout << "{";
   std::cout << R"("types": {)" << std::endl;
@@ -258,8 +264,8 @@ void Register::generate() const {
   std::cout << "}" << std::endl;
 }
 
-std::shared_ptr<Object> Register::build(std::string const &value) {
-  return Object::createFromJson(*this, json::parse(value));
+std::shared_ptr<Configuration> Register::build(std::string const &value) {
+  return std::make_shared<Configuration>(*this, json::parse(value));
 }
 
 void Register::parse(int argc, const char **argv) {
@@ -343,7 +349,7 @@ void Register::load(nlohmann::json const &j) {
     if (e.count("properties")) {
       auto properties = e["properties"];
       for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
-        auto object = Object::createFromJson(*this, it_prop.value());
+        auto object = std::make_shared<Configuration>(*this, it_prop.value());
         type->setProperty(it_prop.key(), object);
       }
     }
@@ -368,7 +374,7 @@ void Register::load(nlohmann::json const &j) {
 
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
-          a->defaultValue(Object::createFromJson(*this, value["default"]));
+          a->defaultValue(std::make_shared<Configuration>(*this, value["default"]));
         }
 
         if (value.count("generator")) {
@@ -410,7 +416,8 @@ void Register::load(nlohmann::json const &j) {
     commandLine.load(e["command"]);
     auto task = std::make_shared<Task>(identifier, typePtr);
     task->commandline(commandLine);
-    task->objectFactory(_defaultObjectFactory);
+    // TODO: cleanup
+    // task->objectFactory(_defaultObjectFactory);
     addTask(task);
   }
 }

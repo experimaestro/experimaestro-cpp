@@ -42,8 +42,7 @@ set(SOURCES
         src/xpmssh.hpp
         include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp
         src/jsonserialization.hpp
-        src/value.cpp
-        src/array.cpp)
+        src/value.cpp)
 
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})

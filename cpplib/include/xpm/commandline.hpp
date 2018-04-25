@@ -15,10 +15,10 @@
 namespace xpm {
 
 
-class Object;
+class Configuration;
 
 struct CommandContext {
-  std::shared_ptr<Object> parameters;
+  std::shared_ptr<Configuration> parameters;
 };
 
 /// Base class for all command arguments

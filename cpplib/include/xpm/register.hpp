@@ -64,13 +64,13 @@ class Register {
   std::shared_ptr<Type> getType(TypeName const &typeName);
 
   /// Find a type given a t ype name
-  std::shared_ptr<Type> getType(std::shared_ptr<Object> const &object);
+  std::shared_ptr<Type> getType(std::shared_ptr<Configuration> const &object);
 
   /// Build
-  std::shared_ptr<Object> build(std::shared_ptr<Object> const &value);
+  std::shared_ptr<Configuration> build(std::shared_ptr<Configuration> const &value);
 
   /// Build from a string
-  std::shared_ptr<Object> build(std::string const &value);
+  std::shared_ptr<Configuration> build(std::string const &value);
 
   /// Get types
   std::unordered_map<TypeName, std::shared_ptr<Type>> &getTypes() { 
@@ -81,6 +81,8 @@ class Register {
     return _tasks;
   };
 
+  /// Run task
+  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Configuration> const & configuration) = 0;
 
 #ifndef SWIG
   /// Load new definitions from YAML

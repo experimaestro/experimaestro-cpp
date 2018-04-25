@@ -482,6 +482,10 @@ class TypeArgument(AbstractArgument):
 
 class PathArgument(AbstractArgument):
     def __init__(self, name, path, help=""):
+        """
+        :param name: The name of argument (in python)
+        :param path: The relative path
+        """
         AbstractArgument.__init__(self, name, PathType, help=help)
         generator = PathGenerator(path)
         self.argument.generator(generator)

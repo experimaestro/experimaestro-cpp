@@ -22,7 +22,7 @@ Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(std::shared_ptr<Object> const &object,
+void Task::submit(std::shared_ptr<Configuration> const &configuration,
                   bool send,
                   std::shared_ptr<rpc::Launcher> const &launcher,
                   std::shared_ptr<rpc::LauncherParameters> const &launcherParameters
@@ -30,24 +30,18 @@ void Task::submit(std::shared_ptr<Object> const &object,
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
   if (send) {
-    object->findDependencies(dependencies, true);
+    configuration->findDependencies(dependencies, true);
   }
 
-  // Validate and seal the task object
-  object->validate(true);
-  object->seal();
+  // Validate and seal the task configuration
+  configuration->configure();
 
   // Prepare the command line
-  CommandContext context = { object };
+  CommandContext context = { configuration };
 
   if (send) {
     // Get generated directory as locator
-    auto path = getPathGenerator()->generate(*object)->asString();
-    auto resource = object->get(KEY_RESOURCE)->asString();
-    if (path != resource) {
-      throw std::runtime_error("Resource [" + resource + "] and resource path [" + path + "] do not match");
-    }
-    auto locator = rpc::Path::toPath(path);
+    auto locator = rpc::Path::toPath(configuration->resource());
     auto command = _commandLine.rpc(context);
 
     // Add dependencies
@@ -57,12 +51,12 @@ void Task::submit(std::shared_ptr<Object> const &object,
       command->add_dependency(dependency);
     }
     auto task = std::make_shared<rpc::CommandLineTask>(locator);
-    task->taskId(object->task()->identifier().toString());
+    task->taskId(configuration->task()->identifier().toString());
     task->command(command);
     task->setLauncher(launcher, launcherParameters);
     task->submit();
   } else {
-    LOGGER->warn("Not sending task {}", object->task()->identifier());
+    LOGGER->warn("Not sending task {}", configuration->task()->identifier());
   }
 }
 
@@ -74,36 +68,19 @@ TypeName const &Task::identifier() const {
   return _identifier;
 }
 
-void Task::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _factory = factory;
-}
-
-std::shared_ptr<Object> Task::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
-  Object::Ptr object;
-  if (!_factory) {
-    object = _type->create(defaultFactory);
-  } else {
-    object = _factory->create();
-  }
-  object->type(_type);
-  object->task(this->shared_from_this());
-  LOGGER->debug("Setting task to {}", _identifier);
-  return object;
-}
-
-void Task::execute(std::shared_ptr<Object> const &object) const {
-  object->configure(false);
-  try {
-    _running = true;
-    object->_pre_execute();
-    object->execute();
-    object->_post_execute();
-    _running = false;
-  } catch(std::exception &e) {
-    _running = false;
-    throw;
-  }
-}
+// TODO: cleanup
+// void Task::execute(std::shared_ptr<Configuration> const &object) const {
+//   try {
+//     _running = true;
+//     object->_pre_execute();
+//     object->execute();
+//     object->_post_execute();
+//     _running = false;
+//   } catch(std::exception &e) {
+//     _running = false;
+//     throw;
+//   }
+// }
 
 nlohmann::json Task::toJson() {
   auto j = json::object();

@@ -23,13 +23,6 @@ TEST(Digest, Different) {
   EXPECT_NE(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 
-TEST(Digest, IgnoredKey) {
-  Register r;
-  auto v0 = r.build(R"({"$path": 1, "a": 1})");
-  auto v1 = r.build(R"({ "a": 1 })");
-  EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
-}
-
 TEST(Digest, subkeys) {
   Register r;
   auto v0 = r.build(R"({ "a": 1})");

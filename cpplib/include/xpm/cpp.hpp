@@ -20,24 +20,24 @@ template<typename T>  struct type_of {};
 
 template<typename T>
 struct ArgumentHolder {
-  virtual void setValue(T &self, xpm::Object::Ptr const &value) = 0;
+  virtual void setValue(T &self, xpm::Configuration::Ptr const &value) = 0;
 };
 
-inline void assignValue(xpm::Object::Ptr const &value, std::string &s) {
-  s = value->asString();
-}
-inline void assignValue(xpm::Object::Ptr const &value, int &x) {
-  x = value->asInteger();
-}
-inline void assignValue(xpm::Object::Ptr const &value, long &x) {
-  x = value->asInteger();
-}
-inline void assignValue(xpm::Object::Ptr const &value, Path &s) {
-  s = Path(value->asString());
-}
+// inline void assignValue(xpm::Configuration::Ptr const &value, std::string &s) {
+//   s = value->asString();
+// }
+// inline void assignValue(xpm::Configuration::Ptr const &value, int &x) {
+//   x = value->asInteger();
+// }
+// inline void assignValue(xpm::Configuration::Ptr const &value, long &x) {
+//   x = value->asInteger();
+// }
+// inline void assignValue(xpm::Configuration::Ptr const &value, Path &s) {
+//   s = Path(value->asString());
+// }
 
 template<typename T>
-inline void assignValue(xpm::Object::Ptr const &value, std::shared_ptr<T> &p) {
+inline void assignValue(xpm::Configuration::Ptr const &value, std::shared_ptr<T> &p) {
   p = std::dynamic_pointer_cast<T>(value);
   if (!p && value) {
     throw xpm::argument_error(std::string("Expected ") + type_of<std::shared_ptr<T>>::value()->toString()
@@ -52,7 +52,7 @@ struct TypedArgumentHolder : public ArgumentHolder<T> {
 
   TypedArgumentHolder(Value T::* valuePtr) : valuePtr(valuePtr) {}
 
-  virtual void setValue(T &self, xpm::Object::Ptr const &value) override {
+  virtual void setValue(T &self, xpm::Configuration::Ptr const &value) override {
     xpm::assignValue(value, (&self)->*valuePtr);
   }
 };
@@ -99,7 +99,7 @@ XPM_SIMPLETYPE_OF(long, IntegerType);
 XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
-XPM_SIMPLETYPE_OF(std::shared_ptr<Object>, AnyType);
+XPM_SIMPLETYPE_OF(std::shared_ptr<Configuration>, AnyType);
 XPM_SIMPLETYPE_OF(Path, PathType);
 
 
@@ -143,7 +143,7 @@ struct CppTypeBuilder {
   }
 
   CppTypeBuilder &defaultJson(nlohmann::json const &j) {
-    _argument->defaultValue(Object::createFromJson(*_register, j));
+    _argument->defaultValue(std::make_shared<Configuration>(*_register, j));
     return *this;
   }
   operator std::shared_ptr<CppType<T>>() {
@@ -156,7 +156,7 @@ class CppObject : public Parent {
  public:
   static std::shared_ptr<CppType<T>> XPM_TYPE;
 
-  void setValue(std::string const &name, std::shared_ptr<Object> const &value) override {
+  void setValue(std::string const &name, std::shared_ptr<Configuration> const &value) override {
     auto it = XPM_TYPE->_arguments.find(name);
     if (it != XPM_TYPE->_arguments.end()) {
       T &t = dynamic_cast<T&>(*this);

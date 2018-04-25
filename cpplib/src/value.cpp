@@ -12,6 +12,7 @@ using nlohmann::json;
 
 namespace xpm {
 
+typedef Value::Array ValueArray;
 
 bool Value::equals(Value const &b) const {
   if (scalarType() != b._scalarType) return false;
@@ -31,33 +32,33 @@ bool Value::equals(Value const &b) const {
   throw std::out_of_range("Scalar type is not known (comparing)");
 }
 
-std::shared_ptr<Object> Value::cast(Type::Ptr const &type) {
-  if (!type || type == this->type()) return this->shared_from_this();
-
+Value Value::cast(Type::Ptr const &type) {
   auto *simpleType = dynamic_cast<SimpleType*>(type.get());
   if (!simpleType) {
     throw std::runtime_error("Cannot value cast to " + type->toString());
   }
 
   switch (simpleType->valueType()) {
-    case ValueType::PATH: return std::make_shared<Value>(this->asPath());
-    case ValueType::STRING: return std::make_shared<Value>(this->asString());
-    case ValueType::INTEGER: return std::make_shared<Value>(this->asInteger());
-    case ValueType::BOOLEAN: return std::make_shared<Value>(this->asBoolean());
-    case ValueType::REAL: return std::make_shared<Value>(this->asReal());
+    case ValueType::PATH: return Value(this->asPath());
+    case ValueType::STRING: return Value(this->asString());
+    case ValueType::INTEGER: return Value(this->asInteger());
+    case ValueType::BOOLEAN: return Value(this->asBoolean());
+    case ValueType::REAL: return Value(this->asReal());
+    case ValueType::ARRAY: return Value(this->asArray());
 
     case ValueType::NONE:throw std::runtime_error("none has no type");
   }
 
-  throw std::out_of_range("Scalar type is not known (comparing)");
-
+  throw std::out_of_range("Scalar type is not known (casting)");
 }
 
 
 
 Value::~Value() {
   switch (_scalarType) {
-    case ValueType::STRING:_value.string.~stdstring();
+    case ValueType::STRING: _value.string.~stdstring();
+      break;
+    case ValueType::ARRAY: _value.array.~ValueArray();
       break;
     default:
       // Do nothing for other values
@@ -77,57 +78,144 @@ Value::Union::Union() {
 Value::Value() : _scalarType(ValueType::NONE) {
 }
 
-Value::Value(double value) : Object(), _scalarType(ValueType::REAL) {
+Value::Value(Array const & array) {
+  
+}
+
+Value::Value(Array && array) {
+
+}
+
+Value::Value(double value) : _scalarType(ValueType::REAL) {
   _value.real = value;
-  _type = RealType;
 }
 
 Value::Value(long value) : _scalarType(ValueType::INTEGER) {
   _value.integer = value;
-  _type = IntegerType;
 }
 
 Value::Value(int value) : _scalarType(ValueType::INTEGER) {
   _value.integer = value;
-  _type = IntegerType;
 }
 
 Value::Value(bool value) : _scalarType(ValueType::BOOLEAN) {
   _value.boolean = value;
-  _type = BooleanType;
 }
 
 Value::Value(std::string const &value) : _scalarType(ValueType::STRING) {
   // placement new
   new(&_value.string) std::string(value);
-  _type = StringType;
 }
 
 Value::Value(Path const &path) {
   new(&_value.string) std::string(path.toString());
   _scalarType = ValueType::PATH;
-  _type = PathType;
 }
 
-Value::Value(Value const &other) : Object(other), _scalarType(other._scalarType) {
-  _type = other._type;
+Value::Value(Value const &other) : _scalarType(other._scalarType) {
   switch (_scalarType) {
     case ValueType::NONE:break;
 
-    case ValueType::REAL:_value.real = other._value.real;
+    case ValueType::REAL:
+    _value.real = other._value.real;
       break;
 
-    case ValueType::INTEGER:_value.integer = other._value.integer;
+    case ValueType::INTEGER:
+      _value.integer = other._value.integer;
       break;
 
-    case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
+    case ValueType::BOOLEAN:
+      _value.boolean = other._value.boolean;
       break;
 
     case ValueType::PATH:
-    case ValueType::STRING:new(&_value.string) std::string(other._value.string);
+    case ValueType::STRING:
+      new(&_value.string) std::string(other._value.string);
+      break;
+
+    case ValueType::ARRAY:
+
       break;
     default:throw std::out_of_range("Scalar type is not known (copying)");
   }
+}
+
+
+Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
+  switch(jsonValue) {
+    case nlohmann::json::value_t::null:
+    case nlohmann::json::value_t::discarded:
+      _scalarType = ValueType::NONE;
+      break;
+
+
+    case nlohmann::json::value_t::array: {
+      new(&_value.array) ValueArray();
+      for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
+        _value.array.push_back(std::make_shared<Configuration>(xpmRegister, *it));
+      }      
+      _scalarType = ValueType::ARRAY;
+      break;
+    }
+
+    case nlohmann::json::value_t::string:
+      new(&_value.string) std::string();
+      _value.string = jsonValue;
+      _scalarType = ValueType::STRING;
+      break;
+
+    case nlohmann::json::value_t::boolean:
+      _value.boolean = jsonValue;
+      _scalarType = ValueType::BOOLEAN;
+      break;
+
+    case nlohmann::json::value_t::number_integer:
+    case nlohmann::json::value_t::number_unsigned:
+      _value.integer = jsonValue;
+      _scalarType = ValueType::INTEGER;
+      break;
+
+    case nlohmann::json::value_t::number_float:{
+      // Try first as integer
+      if (std::trunc((double)jsonValue) == (double)jsonValue) {
+        _value.integer = jsonValue;
+        _scalarType = ValueType::INTEGER;
+      } else {
+        _value.real = jsonValue;
+        _scalarType = ValueType::REAL;
+      }
+      break;
+    }
+
+    defaut:
+      throw new exception("unhanlded JSON type for a Value");
+  }
+}
+
+std::shared_ptr<Type> Value::type() const {
+  switch (_scalarType) {
+    case ValueType::NONE:
+      return nullptr;
+
+    case ValueType::REAL:
+      return RealType;
+
+    case ValueType::INTEGER:
+      return IntegerType;
+
+    case ValueType::BOOLEAN:
+      return BooleanType;
+
+    case ValueType::PATH:
+      return PathType;
+
+    case ValueType::STRING:
+      return StringType;
+
+    case ValueType::ARRAY:
+      return ArrayType;
+  }
+
 }
 
 
@@ -135,7 +223,6 @@ Value &Value::operator=(Value const &other) {
   this->~Value();
 
   _scalarType = other._scalarType;
-  _type = other._type;
   switch (_scalarType) {
     case ValueType::NONE:break;
     case ValueType::REAL:_value.real = other._value.real;
@@ -150,14 +237,6 @@ Value &Value::operator=(Value const &other) {
   }
 
   return *this;
-}
-
-
-bool Value::equals(Object const &other) const {
-  if (Value const *otherValue = dynamic_cast<Value const *>(&other)) {
-    return equals(dynamic_cast<Value const &>(*otherValue));
-  }
-  return false;
 }
 
 long Value::asInteger() {
@@ -253,7 +332,7 @@ std::string Value::asString() {
 
 }
 
-json Value::jsonValue() const {
+json Value::toJson() const {
   switch (scalarType()) {
     case ValueType::STRING:return json(_value.string);
 
@@ -265,18 +344,18 @@ json Value::jsonValue() const {
 
     case ValueType::PATH: return json {{KEY_VALUE, _value.string}, {KEY_TYPE, PATH_TYPE.toString()}};
 
+    case ValueType::ARRAY: {
+      nlohmann::json array = {};
+      for(auto const &v: _value.array) {
+          array.push_back(v->toJson());
+      }
+      return array;
+    }
+
+
     case ValueType::NONE:throw std::runtime_error("none has no type");
   }
   throw std::out_of_range("Scalar type is not known (converting to json)");
-}
-
-json Value::toJson() {
-  json j = Object::toJson();
-  if (j.is_null())
-    return jsonValue();
-
-  j[KEY_VALUE] = jsonValue();
-  return j;
 }
 
 std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
@@ -286,16 +365,30 @@ std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
 
   // Hash value
   switch (_scalarType) {
-    case ValueType::NONE:break;
-    case ValueType::BOOLEAN:d.updateDigest(_value.boolean);
+    case ValueType::NONE:
       break;
-    case ValueType::INTEGER:d.updateDigest(_value.integer);
+
+    case ValueType::BOOLEAN:
+      d.updateDigest(_value.boolean);
       break;
-    case ValueType::REAL:d.updateDigest(_value.real);
+
+    case ValueType::INTEGER:
+      d.updateDigest(_value.integer);
       break;
+    case ValueType::REAL:
+      d.updateDigest(_value.real);
+      break;
+
     case ValueType::PATH:
-    case ValueType::STRING:d.updateDigest(_value.string);
+    case ValueType::STRING:
+      d.updateDigest(_value.string);
       break;
+
+    case ValueType::ARRAY:
+      d.updateDigest(_value.array.size());
+      for(auto const & element : _value.array) {
+        d.updateDigest(element);
+      }
   }
 
   return d.get();
@@ -334,10 +427,19 @@ std::string const &Value::getString() {
   return _value.string;
 }
 
-void Value::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &, bool) {}
+void Value::push_back(std::shared_ptr<Configuration> const &element) {
+  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot push an element");
+  _value.array.push_back(element);
+}
 
-std::shared_ptr<Object> Value::copy() {
-  return std::make_shared<Value>(*this);
+size_t Value::size() const {
+  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get the size");
+  return _value.array.size();
+}
+
+std::shared_ptr<Configuration> &Value::operator[](const size_t index) {
+  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get an element");
+  return _value.array[index];
 }
 
 }

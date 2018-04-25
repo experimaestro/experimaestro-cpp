@@ -7,7 +7,6 @@
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/xpm.hpp>
-#include <xpm/array.hpp>
 #include <xpm/value.hpp>
 #include <xpm/context.hpp>
 
@@ -203,35 +202,45 @@ CommandContent::~CommandContent() {
 
 
 namespace {
-  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Object> const & object) {
-    if (auto array = dynamic_cast<Array*>(object.get())) {
-        oss << "{\"" << xpm::KEY_TYPE << "\":\"" << object->type()->typeName().toString() << "\",\""
-            << xpm::KEY_VALUE << "\": [";
-        for(size_t i = 0; i < array->size(); ++i) {
-          if (i > 0) oss << ", ";
-          fill(f, oss, (*array)[i]);
+  /// Generates the JSON that will be used to configure the task
+  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Configuration> const & conf) {
+    if (conf->value().defined()) {
+      // The object has one value, just use this and discards the rest
+      switch(conf->value().scalarType()) {
+        case ValueType::ARRAY: {
+          auto & array = conf->value();
+          oss << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->typeName().toString() << "\",\""
+              << xpm::KEY_VALUE << "\": [";
+          for(size_t i = 0; i < array.size(); ++i) {
+            if (i > 0) oss << ", ";
+            fill(f, oss, array[i]);
+          }
+          oss << "]}";
+          break;
         }
-        oss << "]}";
-    } else if (auto value = dynamic_cast<Value*>(object.get())) {
-      if (value->type() == xpm::PathType) {
-        oss << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
-            << xpm::KEY_VALUE << "\": \"";
-        f.add(oss.str());
-        oss.str("");
-        f.add(rpc::Path::toPath(value->asPath().toString()));
-        oss << "\"}";
-      } else {
-        oss << value->jsonValue();
+
+        case ValueType::PATH:
+          oss << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
+              << xpm::KEY_VALUE << "\": \"";
+          f.add(oss.str());
+          oss.str("");
+          f.add(rpc::Path::toPath(conf->value().asPath().toString()));
+          oss << "\"}";
+          break;
+
+        default:
+         oss << conf->value().toJson();
+         break;
       }
     } else {
-      std::cerr << " [[[" << object->toJsonString() << " ]]]\n";
+      // No value defined
       oss << "{";
       bool first = true;
-      if (object->type()) {
-        oss << "\"" << KEY_TYPE << "\": \"" << object->type()->typeName() << "\"";
+      if (conf->type()) {
+        oss << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
         first = false;
       }
-      for(auto &entry: object->content()) {
+      for(auto &entry: conf->content()) {
         if (first) first = false;
         else oss << ',';
         oss << "\"" << entry.first << "\":";

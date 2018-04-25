@@ -14,8 +14,10 @@
 #define DEFINE_LOGGER(name) namespace { auto LOGGER = ::xpm::logger(name); }
 
 namespace xpm {
+
 std::shared_ptr<spdlog::logger> logger(std::string const &name);
 
+class Configuration;
 class TypeName;
 class Type;
 
@@ -45,6 +47,9 @@ struct Digest {
       throw std::runtime_error("Error while computing SHA-1");
     }
   }
+
+
+  inline void updateDigest(std::shared_ptr<Configuration> const &value);
 
   inline std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
     std::array<unsigned char, SHA_DIGEST_LENGTH> md;

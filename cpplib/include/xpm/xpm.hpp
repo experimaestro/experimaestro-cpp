@@ -8,9 +8,25 @@
 #include <vector>
 #include <unordered_map>
 
+namespace xpm {
+  // SHA-1 digest lenght
+  static const int DIGEST_LENGTH = 20;
+  
+  // Forward declarations
+  class Configuration;
+  class AbstractObjectHolder;
+  class Type;
+  class Task;
+  class Register;
+  struct Helper;
+  class GeneratorContext;
+
+}
+
 #include <xpm/json.hpp>
 #include <xpm/utils.hpp>
 #include <xpm/commandline.hpp>
+#include <xpm/value.hpp>
 
 namespace xpm {
 
@@ -22,17 +38,7 @@ namespace xpm {
 #define SWIG_IMMUTABLE
 #endif
 
-// SHA-1 digest lenght
-static const int DIGEST_LENGTH = 20;
 
-// Forward declarations
-class Object;
-class AbstractObjectHolder;
-class Type;
-class Task;
-class Register;
-struct Helper;
-class Value;
 
 SWIG_IMMUTABLE;
 extern std::shared_ptr<Type> IntegerType;
@@ -116,20 +122,49 @@ namespace xpm {
 // --- Structured values
 // ---
 
-enum class ValueType : int8_t {
-  NONE, INTEGER, REAL, STRING, PATH, BOOLEAN
+/**
+ * "Native" object associated with a configuration  
+ */
+class Object {
+public:
+  Configuration & configuration();
+  
+  /** Sets a value in the native object */
+  virtual void setValue(std::string const &name, Configuration & value) {};
+
+private:
+  void setConfiguration(std::shared_ptr<Configuration> const & configuration) { _configuration = configuration; }
+  std::shared_ptr<Configuration> _configuration;
+};
+
+/**
+ * Object factory
+ */
+class ObjectFactory {
+  /// The register
+  std::shared_ptr<Register> _register;
+
+ public:
+  ObjectFactory(std::shared_ptr<Register> const &theRegister);
+  virtual ~ObjectFactory() {}
+  
+  virtual std::shared_ptr<Object> create();
+  virtual std::shared_ptr<Object> _create() const = 0;
 };
 
 
 /**
- * Object
- *
- * This is an associative dictionnary, where some entries
- * have a special meaning. It can be associated to a value.
+ * Experimaestro configuration structure.
+ * 
+ * A configuration can have:
+ * 
+ * - subconfigurations accessible through a dictionary
+ * - a value (optional)
+ * - an object
  */
-class Object
+class Configuration
 #ifndef SWIG
-    : public std::enable_shared_from_this<Object>
+    : public std::enable_shared_from_this<Configuration>
 #endif
 {
  public:
@@ -138,55 +173,28 @@ class Object
     SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8, IGNORE = 16
   };
 
-  typedef std::shared_ptr<Object> Ptr;
+  typedef std::shared_ptr<Configuration> Ptr;
 
   /// Default constructor
-  Object();
+  Configuration();
+
+  /// Constructor from JSON
+  Configuration(Register &xpmRegister, nlohmann::json const &jsonValue);
 
   /// Constructor from a map
-  Object(std::map<std::string, std::shared_ptr<Object>> &map);
-
-  /// Construct from a JSON object
-  static std::shared_ptr<Object> createFromJson(Register &xpmRegister, nlohmann::json const &jsonValue);
+  Configuration(std::map<std::string, std::shared_ptr<Configuration>> &map);
 
   /// Returns true if objects are equal
-  virtual bool equals(Object const &other) const;
-
-  /// Returns the string
-  virtual std::string asString();
-
-  /// Returns the string
-  virtual bool asBoolean();
-
-  /// Returns an integer
-  virtual long asInteger();
-
-  /// Returns an integer
-  virtual double asReal();
-
-  /// Returns a path
-  virtual Path asPath() const;
+  virtual bool equals(Configuration const &other) const;
 
   /// Checks whether a key exists
   bool hasKey(std::string const &key) const;
 
-  /** Get the standard output path
-   *
-   * @return The path corresponding to the standard output stream
-   * @throws std::invalid_argument if the object is not a resource
-   */
-  Path outputPath() const;
+  /// Get access to one value
+  std::shared_ptr<Configuration> set(const std::string &key, std::shared_ptr<Configuration> const &);
 
   /// Get access to one value
-  std::shared_ptr<Object> set(const std::string &key, std::shared_ptr<Object> const &);
-
-  template<typename _Value>
-  inline void set(std::string const &key, _Value const &value) {
-      set(key, std::static_pointer_cast<Object>(std::make_shared<Value>(value)));
-  }
-
-  /// Get access to one value
-  std::shared_ptr<Object> get(const std::string &key);
+  std::shared_ptr<Configuration> get(const std::string &key);
 
   /// Seal the object
   void seal();
@@ -228,13 +236,13 @@ class Object
   /**
    * Retrieve content
    */
-  std::map<std::string, std::shared_ptr<Object>> const &content();
+  std::map<std::string, std::shared_ptr<Configuration>> const &content();
 
   /** Sets the structured value (globally) */
-  void setValue(std::shared_ptr<Object> const &value);
+  void setValue(std::shared_ptr<Configuration> const &value);
 
   /** Sets a value  */
-  virtual void setValue(std::string const &name, std::shared_ptr<Object> const &value) {};
+  virtual void setValue(std::string const &name, std::shared_ptr<Configuration> const &value) {};
 
   /** Sets the task */
   void task(std::shared_ptr<Task> const &task);
@@ -252,7 +260,12 @@ class Object
   /**
    * Validate values
    */
-  void validate(bool generate);
+  void validate();
+
+  /**
+   * Generate values (default values, and generators)
+   */
+  void generate(GeneratorContext & context);
 
   /** Get type */
   std::shared_ptr<Type> type();
@@ -260,14 +273,14 @@ class Object
   /** Get type */
   void type(std::shared_ptr<Type> const &type);
 
-  /** Configure the object
+  /** Configure the object (used when submitting a job)
    * <ol>
    * <li>Sets the value</li>
    * <li>Validate and generate values</li>
    * <li>Seal the object</li>
    * </ol>
    */
-  void configure(bool generate = true);
+  void configure();
 
   /**
    * Submit the underlying task to experimaestro server
@@ -296,37 +309,57 @@ class Object
   virtual void post_execute();
 
   /**
-   * Copy the value
+   * Copy the configuration
    */
-  virtual std::shared_ptr<Object> copy();
+  virtual std::shared_ptr<Configuration> copy();
 
+  /**
+   * Compute the a digest for this configuration
+   */
   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const;
 
-  Object(Object &&other) = default;
+  Configuration(Configuration &&other) = default;
 
-  Object(Object const &other);
+  Configuration(Configuration const &other);
 
   /// Fill from JSON
   void fill(Register &xpmRegister, const nlohmann::json &jsonValue);
 
+  /// Get value
+  Value & value() { return _value; }
+
+  /// Get resource
+  inline std::string const & resource() const { return _resource; }
+
+
  private:
   /// Set flag
   void set(Flag flag, bool value);
+
+  /// Get flag
   bool get(Flag flag) const;
+
+  /**
+   * Resource identifier.
+   * 
+   * This field is set when the corresponding task is submitted
+   */
+  std::string _resource;
 
   /// Associated task, if any
   std::shared_ptr<Task> _task;
 
-  /// The register
-  std::shared_ptr<Register> _register;
+  /// The associated value
+  Value _value;
 
-  friend class ObjectFactory;
+  /// The associated object
+  std::shared_ptr<Object> _object;
 
   /// Whether this value is sealed or not
   Flags _flags;
 
-  /// Sub-values (map is used for sorted keys, ensuring a consistent unique identifier)
-  std::map<std::string, std::shared_ptr<Object>> _content;
+  /// Sub-values (map is used for sorted keys, necessary to compute a stable unique identifier)
+  std::map<std::string, std::shared_ptr<Configuration>> _content;
 
   /// Call pre_execute for all the object hierarchy
   void _post_execute();
@@ -334,6 +367,7 @@ class Object
   /// Call post-execute for all the object hierarchy
   void _pre_execute();
 
+  friend class ObjectFactory;
   friend struct Helper;
   friend class Task;
  protected:
@@ -346,12 +380,26 @@ class Object
 // --- Type and parser
 // ---
 
+struct GeneratorLock {
+  GeneratorLock(GeneratorContext * context, Configuration * configuration);
+  inline operator bool() { return true; }
+  GeneratorContext * context;
+};
+
+class GeneratorContext {
+public:
+  std::vector<Configuration *> stack;
+  inline GeneratorLock enter(Configuration * configuration) {
+    return GeneratorLock(this, configuration);
+  }
+};
+
 /**
  * Generator for values
  */
 class Generator {
  public:
-  virtual std::shared_ptr<Object> generate(Object &object) = 0;
+  virtual std::shared_ptr<Configuration> generate(GeneratorContext const &context) = 0;
   virtual ~Generator() {}
 
   static std::shared_ptr<Generator> createFromJSON(nlohmann::json const &);
@@ -369,7 +417,7 @@ class PathGenerator : public Generator {
   PathGenerator(const char *s) : PathGenerator(std::string(s)) {}
   PathGenerator(std::string const & = "");
   PathGenerator(nlohmann::json const &);
-  virtual std::shared_ptr<Object> generate(Object &object);
+  virtual std::shared_ptr<Configuration> generate(GeneratorContext const &context);
   virtual nlohmann::json toJson() const;
 };
 
@@ -391,8 +439,8 @@ class Argument {
   Argument &ignore(bool required);
   bool ignore() const;
 
-  Argument &defaultValue(std::shared_ptr<Object> const &defaultValue);
-  std::shared_ptr<Object> defaultValue() const;
+  Argument &defaultValue(std::shared_ptr<Configuration> const &defaultValue);
+  std::shared_ptr<Configuration> defaultValue() const;
 
   std::shared_ptr<Generator> generator();
   std::shared_ptr<Generator> const &generator() const;
@@ -403,6 +451,7 @@ class Argument {
 
   const std::string &help() const;
   Argument &help(const std::string &help);
+
 
  private:
   /// The argument name
@@ -421,25 +470,12 @@ class Argument {
   bool _ignore;
 
   /// Default value
-  std::shared_ptr<Object> _defaultValue;
+  std::shared_ptr<Configuration> _defaultValue;
 
   /// A generator
   std::shared_ptr<Generator> _generator;
 };
 
-/**
- * Object factory
- */
-class ObjectFactory {
-  /// The register
-  std::shared_ptr<Register> _register;
-
- public:
-  ObjectFactory(std::shared_ptr<Register> const &theRegister);
-  virtual ~ObjectFactory() {}
-  virtual std::shared_ptr<Object> create();
-  virtual std::shared_ptr<Object> _create() const = 0;
-};
 
 /**
  * Object type definition
@@ -511,7 +547,7 @@ class Type
   std::shared_ptr<ObjectFactory> const &objectFactory();
 
   /** Creates an object with a given type */
-  std::shared_ptr<Object> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
+  std::shared_ptr<Configuration> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
 
   /** Can ignore */
   inline bool canIgnore() { return _canIgnore; }
@@ -531,8 +567,8 @@ class Type
   void description(std::string const &description) { _description = description; }
 
   /** Set a property */
-  void setProperty(std::string const &name, Object::Ptr const &value);
-  Object::Ptr getProperty(std::string const &name);
+  void setProperty(std::string const &name, Configuration::Ptr const &value);
+  Configuration::Ptr getProperty(std::string const &name);
 
   /// Checks whether another type can be assigned as this type
   bool accepts(Type::Ptr const &other) const;
@@ -553,7 +589,7 @@ class Type
    * Properties of this type.
    * They are useful to characterize a type when building experiments
    */
-  std::unordered_map<std::string, std::shared_ptr<Object>> _properties;
+  std::unordered_map<std::string, std::shared_ptr<Configuration>> _properties;
 
   std::string _description;
   bool _predefined;
@@ -573,7 +609,7 @@ class SimpleType : public Type {
 };
 
 /**
- * A task can be executed
+ * A task can be executed and has an associated type
  */
 class Task
 #ifndef SWIG
@@ -583,24 +619,23 @@ class Task
  public:
   /**
    * Defines a new task with a specific identifier
-   * @param identifier The task identifier
-   * @param type The output type
-   * @return
+   * @param taskIdentifier The task identifier
+   * @param outputType The output type
    */
-  Task(TypeName const &typeName, std::shared_ptr<Type> const &type);
+  Task(TypeName const &taskIdentifier, std::shared_ptr<Type> const &outputType);
 
   /**
    * Initialize a task with the same identifier as the type
-   * @param type The output type, whose typename is used as the task identifier
+   * @param outputType The output type, whose typename is used as the task identifier
    */
-  Task(std::shared_ptr<Type> const &type);
+  Task(std::shared_ptr<Type> const &outputType);
 
   /**
    * Configure the object
    * @param object The object corresponding to the task type
    * @param send If false, the job will not be sent to the experimaestro server
    */
-  void submit(std::shared_ptr<Object> const &object,
+  void submit(std::shared_ptr<Configuration> const &object,
               bool send,
               std::shared_ptr<rpc::Launcher> const &launcher,
               std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
@@ -618,13 +653,7 @@ class Task
   TypeName const &identifier() const;
 
   /** Executes */
-  void execute(std::shared_ptr<Object> const &value) const;
-
-  /// Sets the object factory
-  void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
-
-  /** Creates an object with a given type */
-  std::shared_ptr<Object> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
+  void execute(std::shared_ptr<Configuration> const &value) const;
 
   /** Convert to JSON */
   nlohmann::json toJson();
