@@ -65,17 +65,9 @@ nlohmann::json toJSON(YAML::Node const &node) {
   return j;
 }
 
-struct DefaultObjectFactory : public ObjectFactory {
-  DefaultObjectFactory(const std::shared_ptr<Register> &theRegister) : ObjectFactory(theRegister) {
-  }
-
-  std::shared_ptr<Object> _create() const override {
-    return std::make_shared<Object>();
-  }
-};
 }
 
-Register::Register() : _defaultObjectFactory(std::make_shared<DefaultObjectFactory>(nullptr)) {
+Register::Register() {
   addType(IntegerType);
   addType(RealType);
   addType(StringType);
@@ -322,7 +314,6 @@ void Register::load(nlohmann::json const &j) {
       type->placeholder(false);
     } else {
       _types[typeName] = type = std::make_shared<Type>(typeName);
-      type->objectFactory(_defaultObjectFactory);
     }
 
     if (e.count("description")) {
@@ -416,8 +407,6 @@ void Register::load(nlohmann::json const &j) {
     commandLine.load(e["command"]);
     auto task = std::make_shared<Task>(identifier, typePtr);
     task->commandline(commandLine);
-    // TODO: cleanup
-    // task->objectFactory(_defaultObjectFactory);
     addTask(task);
   }
 }
@@ -428,13 +417,5 @@ void Register::load(Path const &path) {
   load(j);
 }
 
-void Register::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _defaultObjectFactory = factory;
-
-}
-
-std::shared_ptr<ObjectFactory> Register::objectFactory() {
-  return _defaultObjectFactory;
-}
 
 }

@@ -8,6 +8,7 @@
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
+#include <xpm/task.hpp>
 #include <xpm/context.hpp>
 #include <xpm/rpc/client.hpp>
 #include "private.hpp"
@@ -57,7 +58,7 @@ const TypeName ARRAY_TYPE("array");
 const TypeName ANY_TYPE("any");
 const TypeName PATH_TYPE("path");
 
-static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE, RESOURCE_TYPE};
+static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
 
 sealed_error::sealed_error() : exception("Object is sealed: cannot modify") {}
 argument_error::argument_error(const std::string &message) : exception(message) {}
@@ -95,6 +96,11 @@ std::string TypeName::localName() const {
 // ---
 // --- Structured value
 // ---
+
+Configuration::Configuration(Value const &v) {
+  _value = v;
+  _type = v.type();
+} 
 
 Configuration::Configuration() : _flags(0), _type(AnyType) {
 }
@@ -193,18 +199,17 @@ void Configuration::setValue(std::shared_ptr<Configuration> const &value) {
   NOT_IMPLEMENTED();
 }
 
-/// Internal digest function
-std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
-  Digest d;
+void Digest::updateDigest(Configuration const & c) {
+  updateDigest(c._type->typeName().toString());
 
-  d.updateDigest("task");
-  if (_task) {
-    d.updateDigest(_task->identifier().toString());
+  updateDigest("task");
+  if (c._task) {
+    updateDigest(c._task->identifier().toString());
   } else {
-    d.updateDigest(0);
+    updateDigest(0);
   }
 
-  for (auto &item: _content) {
+  for (auto &item: c._content) {
     auto const &key = item.first;
 
     if (key[0] == '$' && key != KEY_TYPE && key != KEY_TASK) {
@@ -218,14 +223,22 @@ std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
     }
 
     // Update digest with key
-    d.updateDigest(key);
+    updateDigest(key);
 
     // Update digest with *value digest* (this allows digest caching)
-    d.updateDigest(item.second->digest());
+    updateDigest(item.second->digest());
   }
+}
 
+/// Internal digest function
+std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
+  Digest d;
+  d.updateDigest(*this);
   return d.get();
 };
+
+
+
 
 std::shared_ptr<Type> Configuration::type() {
   if (_type) return _type;
@@ -391,9 +404,8 @@ void Configuration::generate(GeneratorContext & context) {
     } else {
       // (3) Add resource
       if (_task) {
-        auto identifier = _task->getPathGenerator()->generate(context)->asString();
-        LOGGER->info("Setting resource to {}", identifier);
-        set(KEY_RESOURCE, identifier);
+        _resource = _task->getPathGenerator()->generate(context)->value().asString();
+        LOGGER->info("Setting resource to {}", _resource);
       }
 
       LOGGER->debug("Generating values...");
@@ -414,8 +426,6 @@ void Configuration::generate(GeneratorContext & context) {
   }
 }
 
-void Configuration::
-
 void Configuration::validate() {
   if (get(Flag::VALIDATED)) return;
 
@@ -433,7 +443,7 @@ void Configuration::validate() {
       if (_content.count(argument.name()) == 0) {
         LOGGER->debug("No value provided...");
         // No value provided, and no generator
-        if (argument.required() && !(generate && argument.generator())) {
+        if (argument.required()) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         } else {
@@ -459,25 +469,24 @@ void Configuration::validate() {
           value->set(Flag::DEFAULT, true);
         } else {
           // Check the type
-
           if (!entry.second->type()->accepts(value->type())) {
             throw argument_error(
                 "Argument " + argument.name() + " type is  " + value->type()->toString() 
                 + ", but requested type was " + entry.second->type()->toString());
           }
 
-          // If the value has a type, handles this
-          if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
-            // Create an object of the key type
-            auto v = value->get(KEY_TYPE);
-            auto valueType = value->type();
-            if (valueType) {
-              auto object = valueType->create(nullptr);
-              LOGGER->debug("Looking at {}", entry.first);
-              object->setValue(value);
-              object->validate();
-            }
-          }
+          // // If the value has a type, handles this
+          // if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
+          //   // Create an object of the key type
+          //   auto v = value->get(KEY_TYPE);
+          //   auto valueType = value->type();
+          //   if (valueType) {
+          //     auto object = valueType->create(nullptr);
+          //     LOGGER->debug("Looking at {}", entry.first);
+          //     object->setValue(value);
+          //     object->validate();
+          //   }
+          // }
         }
 
         LOGGER->debug("Validating {}...", argument.name());
@@ -490,42 +499,42 @@ void Configuration::validate() {
   set(Flag::VALIDATED, true);
 }
 
-void Configuration::execute() {
-  // TODO: should display the host language class name
-  throw exception("No execute method provided in " + std::string(typeid(*this).name()));
-}
+// void Configuration::execute() {
+//   // TODO: should display the host language class name
+//   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
+// }
 
-void Configuration::pre_execute() {}
-void Configuration::post_execute() {}
+// void Configuration::pre_execute() {}
+// void Configuration::post_execute() {}
 
-void Configuration::_pre_execute() {
-  // Loop over all the type hierarchy
-  for (auto type = _type; type; type = type->parentType()) {
-    // Loop over all the arguments
-    for (auto entry: type->arguments()) {
-      auto value = _content.find(entry.second->name());
-      if (value != _content.end()) {
-        value->second->_pre_execute();
-      }
-    }
-  }
+// void Configuration::_pre_execute() {
+//   // Loop over all the type hierarchy
+//   for (auto type = _type; type; type = type->parentType()) {
+//     // Loop over all the arguments
+//     for (auto entry: type->arguments()) {
+//       auto value = _content.find(entry.second->name());
+//       if (value != _content.end()) {
+//         value->second->_pre_execute();
+//       }
+//     }
+//   }
 
-  this->pre_execute();
-}
+//   this->pre_execute();
+// }
 
-void Configuration::_post_execute() {
-  // Loop over all the type hierarchy
-  for (auto type = _type; type; type = type->parentType()) {
-    // Loop over all the arguments
-    for (auto entry: type->arguments()) {
-      auto value = _content.find(entry.second->name());
-      if (value != _content.end()) {
-        value->second->_post_execute();
-      }
-    }
-  }
-  this->post_execute();
-}
+// void Configuration::_post_execute() {
+//   // Loop over all the type hierarchy
+//   for (auto type = _type; type; type = type->parentType()) {
+//     // Loop over all the arguments
+//     for (auto entry: type->arguments()) {
+//       auto value = _content.find(entry.second->name());
+//       if (value != _content.end()) {
+//         value->second->_post_execute();
+//       }
+//     }
+//   }
+//   this->post_execute();
+// }
 
 void Configuration::set(Configuration::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;
@@ -612,26 +621,12 @@ std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, tr
 
 std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
-/** Creates an object with a given type */
-std::shared_ptr<Configuration> Type::create(std::shared_ptr<ObjectFactory> const &defaultFactory) {
-  LOGGER->debug("Creating object from type {} with {}", _type, _factory ? "a factory" : "default factory");
-  const std::shared_ptr<Configuration> object = _factory ? _factory->create() : defaultFactory->create();
-  object->type(shared_from_this());
-  return object;
-}
 
 Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
     _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {}
 
 Type::~Type() {}
 
-void Type::objectFactory(std::shared_ptr<ObjectFactory> const &factory) {
-  _factory = factory;
-}
-
-std::shared_ptr<ObjectFactory> const &Type::objectFactory() {
-  return _factory;
-}
 
 void Type::addArgument(std::shared_ptr<Argument> const &argument) {
   _arguments[argument->name()] = argument;
@@ -785,22 +780,11 @@ std::shared_ptr<Configuration> PathGenerator::generate(GeneratorContext const &c
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return std::make_shared<Value>(p);
+  return std::make_shared<Configuration>(Value(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {
 
 }
 
-// ---- REGISTER
-
-std::shared_ptr<Configuration> ObjectFactory::create() {
-  auto object = _create();
-  object->_register = _register;
-  return object;
-}
-
-ObjectFactory::ObjectFactory(std::shared_ptr<Register> const &theRegister) : _register(theRegister) {
-
-}
 } // xpm namespace

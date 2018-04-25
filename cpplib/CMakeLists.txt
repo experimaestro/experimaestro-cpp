@@ -16,6 +16,8 @@ set(PUBLIC_HEADERS
         include/xpm/json.hpp
         include/xpm/xpm.hpp
         include/xpm/context.hpp
+        include/xpm/value.hpp
+        include/xpm/task.hpp
         include/xpm/filesystem.hpp
         include/xpm/commandline.hpp
         include/xpm/logging.hpp)

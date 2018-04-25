@@ -6,6 +6,7 @@
 #define EXPERIMAESTRO_REGISTER_HPP
 
 #include <xpm/xpm.hpp>
+#include <xpm/task.hpp>
 
 namespace YAML {
   class Node;
@@ -19,9 +20,6 @@ class Register {
 
   /// Maps typenames to tasks
   std::unordered_map<TypeName, std::shared_ptr<Task>> _tasks;
-
-  /// Default object factory
-  std::shared_ptr<ObjectFactory> _defaultObjectFactory;
 
  public:
   // Constructs a new register
@@ -69,7 +67,7 @@ class Register {
   /// Build
   std::shared_ptr<Configuration> build(std::shared_ptr<Configuration> const &value);
 
-  /// Build from a string
+  /// Build from a JSON string
   std::shared_ptr<Configuration> build(std::string const &value);
 
   /// Get types
@@ -82,7 +80,7 @@ class Register {
   };
 
   /// Run task
-  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Configuration> const & configuration) = 0;
+  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Configuration> const & configuration) {}
 
 #ifndef SWIG
   /// Load new definitions from YAML
@@ -106,10 +104,6 @@ class Register {
 
   /// Outputs the JSON defition file
   void generate() const;
-
-  /// Default object factory
-  void objectFactory(std::shared_ptr<ObjectFactory> const &);
-  std::shared_ptr<ObjectFactory> objectFactory();
 };
 }
 

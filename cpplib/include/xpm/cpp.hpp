@@ -57,26 +57,16 @@ struct TypedArgumentHolder : public ArgumentHolder<T> {
   }
 };
 
-template<typename T>
-struct DefaultObjectFactory : public ObjectFactory {
-  DefaultObjectFactory(const std::shared_ptr<Register> &theRegister) : ObjectFactory(theRegister) {
-  }
-
-  std::shared_ptr<Object> _create() const override {
-    return std::make_shared<T>();
-  }
-};
 
 template<typename T>
 struct CppType  {
-  static_assert(std::is_base_of<Object, T>::value,  "Type should be a subtype of CppObject");
+  static_assert(std::is_base_of<Configuration, T>::value,  "Type should be a subtype of CppObject");
   std::shared_ptr<Type> type;
   std::unordered_map<std::string, std::unique_ptr<ArgumentHolder<T>>> _arguments;
 
   static std::shared_ptr<CppType<T>> SELF;
 
   CppType(std::string const &name) : type(std::make_shared<Type>(TypeName(name))) {
-    type->objectFactory(std::make_shared<DefaultObjectFactory<T>>(currentRegister()));
   }
 };
 template<typename T> std::shared_ptr<CppType<T>>
@@ -113,7 +103,7 @@ struct CppTypeBuilder {
     currentRegister()->addType(type->type);
     CppType<T>::SELF = type;
 
-    if (!std::is_same<xpm::Object, Parent>::value) {
+    if (!std::is_same<xpm::Configuration, Parent>::value) {
       type->type->parentType(type_of<std::shared_ptr<Parent>>::value());
     }
   }
@@ -151,7 +141,7 @@ struct CppTypeBuilder {
   }
 };
 
-template<typename T, typename Parent = xpm::Object>
+template<typename T, typename Parent = xpm::Configuration>
 class CppObject : public Parent {
  public:
   static std::shared_ptr<CppType<T>> XPM_TYPE;
@@ -175,7 +165,6 @@ struct TaskBuilder {
   static_assert(std::is_base_of<_Type, _Task>::value,  "Task should be a subclass of type");
   TaskBuilder(std::string const &tname) {
     auto task = std::make_shared<Task>(TypeName(tname), CppType<_Type>::SELF->type);
-    task->objectFactory(std::make_shared<DefaultObjectFactory<_Task>>(currentRegister()));
 
     CommandLine commandLine;
     Command command;

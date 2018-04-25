@@ -25,6 +25,16 @@ bool Value::equals(Value const &b) const {
     case ValueType::REAL:return _value.real == b._value.real;
 
     case ValueType::BOOLEAN:return _value.boolean == b._value.boolean;
+    
+    case ValueType::ARRAY: {
+      if (_value.array.size() != b._value.array.size()) 
+        return false;
+      for(size_t i = 0; i < _value.array.size(); ++i) {
+        if (!_value.array[i]->equals(*b._value.array[i]))
+          return false;
+      }
+      return true;
+    }
 
     case ValueType::NONE:throw std::runtime_error("none has no type");
   }
@@ -187,7 +197,7 @@ Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
       break;
     }
 
-    defaut:
+    default:
       throw new exception("unhanlded JSON type for a Value");
   }
 }
@@ -225,12 +235,20 @@ Value &Value::operator=(Value const &other) {
   _scalarType = other._scalarType;
   switch (_scalarType) {
     case ValueType::NONE:break;
+    
     case ValueType::REAL:_value.real = other._value.real;
       break;
+
     case ValueType::INTEGER:_value.integer = other._value.integer;
       break;
+
     case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
       break;
+
+    case ValueType::ARRAY:
+        new(&_value.array) Value::Array(other._value.array);
+        break;
+
     case ValueType::PATH:
     case ValueType::STRING:new(&_value.string) std::string(other._value.string);
       break;
@@ -269,6 +287,12 @@ double Value::asReal() {
     case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
     case ValueType::PATH:
     case ValueType::STRING: return !_value.string.empty();
+    case ValueType::ARRAY: 
+      if (_value.array.size() != 1)
+        throw std::out_of_range("Cannot convert arrays which are not singleton");
+      else
+        return _value.array[0]->value().asReal();
+
   }
   throw std::out_of_range("Scalar type is not known (converting to real)");
 }
@@ -280,6 +304,11 @@ Path Value::asPath() const {
     case ValueType::INTEGER:
     case ValueType::BOOLEAN:
       throw cast_error("Cannot convert value into path");
+    case ValueType::ARRAY:
+      if (_value.array.size() != 1)
+        throw std::out_of_range("Cannot convert arrays which are not singleton");
+      else
+        return _value.array[0]->value().asPath();
     case ValueType::PATH:
     case ValueType::STRING: return Path(_value.string);
       break;
@@ -302,14 +331,33 @@ bool Value::asBoolean() {
     case ValueType::BOOLEAN: return _value.boolean;
       break;
 
+    case ValueType::ARRAY:
+      return !_value.array.empty();
+
     case ValueType::PATH:
     case ValueType::STRING: return !_value.string.empty();
       break;
 
     default:throw std::out_of_range("Scalar type is not known (converting to boolean)");
   }
-
 }
+
+Value::Array Value::asArray() const {
+  switch (_scalarType) {
+    case ValueType::NONE:
+      return Value::Array();
+
+    case ValueType::ARRAY: 
+      return _value.array;
+
+    default: {
+      Value::Array array;
+      array.push_back(std::make_shared<Configuration>(*this));
+      return array;
+    }
+  }
+}
+
 
 std::string Value::asString() {
   switch (_scalarType) {
@@ -323,6 +371,12 @@ std::string Value::asString() {
 
     case ValueType::BOOLEAN: return std::to_string(_value.boolean);
       break;
+
+    case ValueType::ARRAY:
+      if (_value.array.size() != 1)
+        throw std::out_of_range("Cannot convert arrays which are not singleton");
+      else
+        return _value.array[0]->value().asString();
 
     case ValueType::PATH:
     case ValueType::STRING: return _value.string;
@@ -387,7 +441,7 @@ std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
     case ValueType::ARRAY:
       d.updateDigest(_value.array.size());
       for(auto const & element : _value.array) {
-        d.updateDigest(element);
+        d.updateDigest(*element);
       }
   }
 

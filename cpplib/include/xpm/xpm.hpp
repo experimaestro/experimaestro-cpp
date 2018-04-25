@@ -19,6 +19,7 @@ namespace xpm {
   class Task;
   class Register;
   struct Helper;
+  struct Digest;
   class GeneratorContext;
 
 }
@@ -56,7 +57,6 @@ extern const std::string KEY_PATH;
 extern const std::string KEY_VALUE;
 extern const std::string KEY_IGNORE;
 extern const std::string KEY_DEFAULT;
-extern const std::string KEY_RESOURCE;
 SWIG_MUTABLE;
 
 
@@ -100,7 +100,6 @@ extern const TypeName REAL_TYPE;
 extern const TypeName ARRAY_TYPE;
 extern const TypeName ANY_TYPE;
 extern const TypeName PATH_TYPE;
-extern const TypeName RESOURCE_TYPE;
 SWIG_MUTABLE;
 
 }
@@ -125,32 +124,17 @@ namespace xpm {
 /**
  * "Native" object associated with a configuration  
  */
-class Object {
-public:
-  Configuration & configuration();
+// class Object {
+// public:
+//   Configuration & configuration();
   
-  /** Sets a value in the native object */
-  virtual void setValue(std::string const &name, Configuration & value) {};
+//   /** Sets a value in the native object */
+//   virtual void setValue(std::string const &name, Configuration & value) {};
 
-private:
-  void setConfiguration(std::shared_ptr<Configuration> const & configuration) { _configuration = configuration; }
-  std::shared_ptr<Configuration> _configuration;
-};
-
-/**
- * Object factory
- */
-class ObjectFactory {
-  /// The register
-  std::shared_ptr<Register> _register;
-
- public:
-  ObjectFactory(std::shared_ptr<Register> const &theRegister);
-  virtual ~ObjectFactory() {}
-  
-  virtual std::shared_ptr<Object> create();
-  virtual std::shared_ptr<Object> _create() const = 0;
-};
+// private:
+//   void setConfiguration(std::shared_ptr<Configuration> const & configuration) { _configuration = configuration; }
+//   std::shared_ptr<Configuration> _configuration;
+// };
 
 
 /**
@@ -178,11 +162,22 @@ class Configuration
   /// Default constructor
   Configuration();
 
+#ifndef SWIG
   /// Constructor from JSON
   Configuration(Register &xpmRegister, nlohmann::json const &jsonValue);
+#endif
 
   /// Constructor from a map
   Configuration(std::map<std::string, std::shared_ptr<Configuration>> &map);
+
+  /// Constructs from value
+  Configuration(Value const & v);
+
+  /// Move constructor
+  Configuration(Configuration &&other) = default;
+
+  /// Construct from other (shallow copy)
+  Configuration(Configuration const &other);
 
   /// Returns true if objects are equal
   virtual bool equals(Configuration const &other) const;
@@ -288,26 +283,6 @@ class Configuration
   void submit(bool send = true,
               std::shared_ptr<rpc::Launcher> const &launcher = nullptr,
               std::shared_ptr<rpc::LauncherParameters> const &launcherParameters = nullptr);
-
-  /**
-   * Pre-execute hook
-   * 
-   * This method is called just before execution
-  */
-  virtual void pre_execute();
-
-  /**
-   * Execute the underlying task
-  */
-  virtual void execute();
-
-  /**
-   * Post-execute hook
-   * 
-   * This method is called just after execution
-*/
-  virtual void post_execute();
-
   /**
    * Copy the configuration
    */
@@ -317,13 +292,6 @@ class Configuration
    * Compute the a digest for this configuration
    */
   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const;
-
-  Configuration(Configuration &&other) = default;
-
-  Configuration(Configuration const &other);
-
-  /// Fill from JSON
-  void fill(Register &xpmRegister, const nlohmann::json &jsonValue);
 
   /// Get value
   Value & value() { return _value; }
@@ -352,24 +320,17 @@ class Configuration
   /// The associated value
   Value _value;
 
-  /// The associated object
-  std::shared_ptr<Object> _object;
-
   /// Whether this value is sealed or not
   Flags _flags;
 
   /// Sub-values (map is used for sorted keys, necessary to compute a stable unique identifier)
   std::map<std::string, std::shared_ptr<Configuration>> _content;
 
-  /// Call pre_execute for all the object hierarchy
-  void _post_execute();
-
-  /// Call post-execute for all the object hierarchy
-  void _pre_execute();
 
   friend class ObjectFactory;
   friend struct Helper;
   friend class Task;
+  friend struct Digest;
  protected:
   /// Type of the object
   std::shared_ptr<Type> _type;
@@ -540,15 +501,6 @@ class Type
   /// Predefined types
   bool predefined() const;
 
-  /// Sets the object factory
-  void objectFactory(std::shared_ptr<ObjectFactory> const &factory);
-
-  /// Gets the object factory
-  std::shared_ptr<ObjectFactory> const &objectFactory();
-
-  /** Creates an object with a given type */
-  std::shared_ptr<Configuration> create(std::shared_ptr<ObjectFactory> const &defaultFactory);
-
   /** Can ignore */
   inline bool canIgnore() { return _canIgnore; }
 
@@ -596,8 +548,6 @@ class Type
   bool _canIgnore;
   bool _placeholder = false;
   bool _isArray = false;
-
-  std::shared_ptr<ObjectFactory> _factory;
 };
 
 class SimpleType : public Type {
@@ -606,78 +556,6 @@ class SimpleType : public Type {
   SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false)
       : Type(tname, nullptr, true, canIgnore), _valueType(valueType) {}
   inline ValueType valueType() { return _valueType; }
-};
-
-/**
- * A task can be executed and has an associated type
- */
-class Task
-#ifndef SWIG
-    : public std::enable_shared_from_this<Task>
-#endif
-{
- public:
-  /**
-   * Defines a new task with a specific identifier
-   * @param taskIdentifier The task identifier
-   * @param outputType The output type
-   */
-  Task(TypeName const &taskIdentifier, std::shared_ptr<Type> const &outputType);
-
-  /**
-   * Initialize a task with the same identifier as the type
-   * @param outputType The output type, whose typename is used as the task identifier
-   */
-  Task(std::shared_ptr<Type> const &outputType);
-
-  /**
-   * Configure the object
-   * @param object The object corresponding to the task type
-   * @param send If false, the job will not be sent to the experimaestro server
-   */
-  void submit(std::shared_ptr<Configuration> const &object,
-              bool send,
-              std::shared_ptr<rpc::Launcher> const &launcher,
-              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
-
-  /** Returns the type of this task */
-  TypeName typeName() const;
-
-  /** Returns the type of this task */
-  Type::Ptr type();
-
-  /** Sets the command line for the task */
-  void commandline(CommandLine command);
-
-  /** Gets the task identifier */
-  TypeName const &identifier() const;
-
-  /** Executes */
-  void execute(std::shared_ptr<Configuration> const &value) const;
-
-  /** Convert to JSON */
-  nlohmann::json toJson();
-
-  /** Get path generator for resource location */
-  std::shared_ptr<PathGenerator> getPathGenerator() const;
-
-  /** Gets the running status */
-  static bool isRunning() { return _running; }
- private:
-  /// Task identifier
-  TypeName _identifier;
-
-  /// The type for this task
-  std::shared_ptr<Type> _type;
-
-  /// The object factory
-  std::shared_ptr<ObjectFactory> _factory;
-
-  /// Command line
-  CommandLine _commandLine;
-
-  /// True if a task is running
-  static bool _running;
 };
 
 } // namespace xpm

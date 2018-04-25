@@ -1,15 +1,19 @@
 // Python slots
 // See https://docs.python.org/3/c-api/typeobj.html
+
+%include "collection.i"
+
+
+// Pythonic renames and mappings
+
 %feature("python:slot", "tp_str",functype = "reprfunc") *::toString;
 %feature("python:slot", "tp_repr", functype = "reprfunc") *::toString;
 %feature("python:slot", "tp_call", functype = "ternarycallfunc") *::call;
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
-// Pythonic renames
 %rename(append) *::push_back;
 
-%include "collection.i"
 
 // Attributes
 %attribute(xpm::Argument, bool, required, required, required);
@@ -34,10 +38,21 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 /*%ignore xpm::Argument::type;*/
 
+%extend xpm::Value { %COLLECTION(std::shared_ptr<xpm::Configuration>) };
+
+
+
+
+
+// TODO: GARBAGE SECTION....
+
+#ifndef SWIG
+
 /** 
  * Returns the wrapped python object rather than the director object.
  * This is useful since an XPM object might be subclassed
 */
+
 
 %{
     #include <xpm/common.hpp>
@@ -89,6 +104,9 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
    }} // Ends xpm::python
 %}
 
+
+
+
 %typemap(out) std::shared_ptr<xpm::Object> {
     // OUT-OBJECT
     $result = xpm::python::getRealObject($1);
@@ -98,7 +116,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     $input = xpm::python::getRealObject($1);
 }
 
-%extend xpm::Array { %COLLECTION(std::shared_ptr<xpm::Object>) };
+
+
 
 %extend xpm::Object {
     /*void __setitem__(std::string const & key, std::shared_ptr<xpm::Object> const &value) {
@@ -168,3 +187,5 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         return SWIG_Py_Void();
     }
 }
+
+#endif

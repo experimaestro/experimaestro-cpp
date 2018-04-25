@@ -49,7 +49,7 @@ struct Digest {
   }
 
 
-  inline void updateDigest(std::shared_ptr<Configuration> const &value);
+  void updateDigest(Configuration const &value);
 
   inline std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
     std::array<unsigned char, SHA_DIGEST_LENGTH> md;

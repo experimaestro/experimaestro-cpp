@@ -11,7 +11,7 @@ namespace xpm {
 
 class Type;
 class Configuration;
-
+class Register;
 
 enum class ValueType : int8_t {
   NONE, INTEGER, REAL, STRING, PATH, BOOLEAN, ARRAY
@@ -40,13 +40,15 @@ class Value {
   Value(Array const & array);
   Value(Array && array);
 
+#ifndef SWIG
   Value(Register & xpmRegister, nlohmann::json const &jsonValue);
+#endif
 
   Value(Value const &other);
   Value &operator=(Value const &other);
 
   virtual ~Value();
-  virtual std::shared_ptr<Configuration> copy();
+  // virtual std::shared_ptr<Configuration> copy();
 
   ValueType const scalarType() const;
   std::shared_ptr<Type> type() const;

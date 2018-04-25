@@ -10,13 +10,13 @@
 
 %{
 #include <xpm/xpm.hpp>
-#include <xpm/array.hpp>
+#include <xpm/common.hpp>
 #include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
+#include <xpm/value.hpp>
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
-#include <xpm/value.hpp>
 #undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
@@ -67,11 +67,9 @@
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::SimpleType)
 %shared_ptr(xpm::Task)
-%shared_ptr(xpm::Object)
+%shared_ptr(xpm::Configuration)
 %shared_ptr(xpm::Argument)
-%shared_ptr(xpm::ObjectFactory)
-%shared_ptr(xpm::Value)
-%shared_ptr(xpm::Array)
+// %shared_ptr(xpm::Value)
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
@@ -84,33 +82,18 @@
 %include "java/xpm.i"
 #endif
 
-
 // Object and object factory have virtual methods
-%feature("director") xpm::ObjectFactory;
-%feature("director") xpm::Object;
-%feature("nodirector") xpm::Object::toJson;
-%feature("nodirector") xpm::Object::equals;
-%feature("nodirector") xpm::Object::digest;
-
-%template(String2Object) std::map<std::string, std::shared_ptr<xpm::Object>>;
+%feature("director") xpm::Register;
 
 // Include file
 %include <xpm/filesystem.hpp>
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
-%include <xpm/xpm.hpp>
 %include <xpm/value.hpp>
-%include <xpm/array.hpp>
+%include <xpm/xpm.hpp>
+%include <xpm/task.hpp>
 %include <xpm/register.hpp>
 %include <xpm/logging.hpp>
-
-
-%template(set) xpm::Object::set<std::string>;
-%template(set) xpm::Object::set<long>;
-%template(set) xpm::Object::set<double>;
-%template(set) xpm::Object::set<bool>;
-%template(set) xpm::Object::set<xpm::Path>;
-
 
 // Template instanciation
 %template(StringList) std::vector<std::string>;

@@ -3,7 +3,7 @@
 //
 
 #include <xpm/common.hpp>
-#include <xpm/xpm.hpp>
+#include <xpm/task.hpp>
 #include "private.hpp"
 
 DEFINE_LOGGER("xpm")
