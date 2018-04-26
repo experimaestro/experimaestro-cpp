@@ -21,6 +21,8 @@
 
 package net.bpiwowar.xpm.utils;
 
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -86,7 +88,11 @@ public class PathUtils {
         if (uri.getScheme() == null && basepath != null) {
             return basepath.resolve(path);
         }
-        return Paths.get(uri);
+        try {
+            return Paths.get(uri);
+        } catch(RuntimeException e) {
+            throw new XPMRuntimeException("Could not convert URI " + uri + " to a path: " + e.getLocalizedMessage());
+        }
     }
 
     public static String quotedProtect(String email) {

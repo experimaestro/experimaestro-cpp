@@ -35,20 +35,10 @@ const std::string KEY_TYPE = "$type";
 /// Task that generated it
 const std::string KEY_TASK = "$task";
 
-/// Path to the main resource
-const std::string KEY_PATH = "$path";
-
 /// Value
 const std::string KEY_VALUE = "$value";
 
-/// Fields that should be ignored (beside $...)
-const std::string KEY_IGNORE = "$ignore";
-
-/// Default value
-const std::string KEY_DEFAULT = "$default";
-
-
-static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_DEFAULT};
+static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE};
 
 const TypeName STRING_TYPE("string");
 const TypeName BOOLEAN_TYPE("boolean");
@@ -57,6 +47,7 @@ const TypeName REAL_TYPE("real");
 const TypeName ARRAY_TYPE("array");
 const TypeName ANY_TYPE("any");
 const TypeName PATH_TYPE("path");
+const std::shared_ptr<Object> NULL_OBJECT;
 
 static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
 
@@ -97,24 +88,27 @@ std::string TypeName::localName() const {
 // --- Structured value
 // ---
 
-Configuration::Configuration(Value const &v) {
+Object::~Object() {}
+
+StructuredValue::StructuredValue(Value const &v) : _flags(0) {
   _value = v;
   _type = v.type();
 } 
 
-Configuration::Configuration() : _flags(0), _type(AnyType) {
+StructuredValue::StructuredValue() : _flags(0), _type(AnyType) {
 }
 
-Configuration::Configuration(std::map<std::string, std::shared_ptr<Configuration>> &map)
+StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
     : _flags(0), _content(map) {
 }
 
-Configuration::Configuration(Configuration const &other) : _flags(other._flags), _content(other._content) {
+StructuredValue::StructuredValue(StructuredValue const &other) : _flags(other._flags), _content(other._content) {
 }
 
 
 
-Configuration::Configuration(Register &xpmRegister, nlohmann::json const &jsonValue) {
+StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue) 
+  : _flags(0) {
   switch (jsonValue.type()) {
 
     // --- Object
@@ -128,7 +122,7 @@ Configuration::Configuration(Register &xpmRegister, nlohmann::json const &jsonVa
           _type = std::make_shared<Type>(typeName);
           _type->placeholder(true);
           xpmRegister.addType(_type);
-          LOGGER->warn("Could not find type {} in registry: using undefined type", typeName);
+          LOGGER->warn("Could not find type '{}' in registry: using undefined type", typeName);
         }
       }
       
@@ -140,14 +134,10 @@ Configuration::Configuration(Register &xpmRegister, nlohmann::json const &jsonVa
             if (_type) _value = _value.cast(_type);
         } else if (it.key() == KEY_TYPE) {
           // ignore
-        } else if (it.key() == KEY_DEFAULT) {
-          if (!it.value().is_boolean())
-            throw std::runtime_error("Default flag is not a boolean value in JSON");
-          set(Flag::DEFAULT, it.value());
         } else if (it.key() == KEY_TASK) {
           _task = xpmRegister.getTask(it.value(), true);
         } else {
-          set(it.key(), std::make_shared<Configuration>(xpmRegister, it.value()));
+          set(it.key(), std::make_shared<StructuredValue>(xpmRegister, it.value()));
         }
       }
 
@@ -162,9 +152,9 @@ Configuration::Configuration(Register &xpmRegister, nlohmann::json const &jsonVa
 }
 
 // Convert to JSON
-json Configuration::toJson() {
+json StructuredValue::toJson() {
   // No content
-  if (_content.empty() && !_task && (!_type || dynamic_cast<Value *>(this)) && !get(Flag::DEFAULT)) {
+  if (_content.empty() && !_task && !type() && !get(Flag::DEFAULT)) {
     return nullptr;
   }
 
@@ -174,8 +164,6 @@ json Configuration::toJson() {
     o[entry.first] = entry.second->toJson();
   }
 
-  if (get(Flag::DEFAULT))
-    o[KEY_DEFAULT] = true;
   if (_type) {
     o[KEY_TYPE] = _type->typeName().toString();
   }
@@ -184,38 +172,33 @@ json Configuration::toJson() {
     o[KEY_TASK] = _task->identifier().toString();
   }
 
+  if (_value.defined()) {
+    o[KEY_VALUE] = _value.toJson();
+  }
+
   return o;
 }
 
-std::shared_ptr<Configuration> Configuration::copy() {
-  return std::make_shared<Configuration>(*this);
+std::shared_ptr<StructuredValue> StructuredValue::copy() {
+  return std::make_shared<StructuredValue>(*this);
 }
 
-std::string Configuration::toJsonString() {
+std::string StructuredValue::toJsonString() {
   return toJson().dump();
 }
 
-void Configuration::setValue(std::shared_ptr<Configuration> const &value) {
-  NOT_IMPLEMENTED();
-}
-
-void Digest::updateDigest(Configuration const & c) {
-  updateDigest(c._type->typeName().toString());
+void Digest::updateDigest(StructuredValue const & sv) {
+  updateDigest(sv.type()->typeName().toString());
 
   updateDigest("task");
-  if (c._task) {
-    updateDigest(c._task->identifier().toString());
+  if (sv._task) {
+    updateDigest(sv._task->identifier().toString());
   } else {
     updateDigest(0);
   }
 
-  for (auto &item: c._content) {
+  for (auto &item: sv._content) {
     auto const &key = item.first;
-
-    if (key[0] == '$' && key != KEY_TYPE && key != KEY_TASK) {
-      // Skip all keys begining by "$s" but $type and $task
-      continue;
-    }
 
     if (item.second->canIgnore()) {
       // Remove keys that can be ignored (e.g. paths)
@@ -231,7 +214,7 @@ void Digest::updateDigest(Configuration const & c) {
 }
 
 /// Internal digest function
-std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
+std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
   Digest d;
   d.updateDigest(*this);
   return d.get();
@@ -240,16 +223,17 @@ std::array<unsigned char, DIGEST_LENGTH> Configuration::digest() const {
 
 
 
-std::shared_ptr<Type> Configuration::type() {
+std::shared_ptr<Type> StructuredValue::type() const {
   if (_type) return _type;
+  if (_value.defined()) return _value.type();
   return AnyType;
 }
 
-bool Configuration::hasKey(std::string const &key) const {
+bool StructuredValue::hasKey(std::string const &key) const {
   return _content.find(key) != _content.end();
 }
 
-std::shared_ptr<Configuration> Configuration::set(const std::string &key, std::shared_ptr<Configuration> const &value) {
+std::shared_ptr<StructuredValue> StructuredValue::set(const std::string &key, std::shared_ptr<StructuredValue> const &value) {
   if (get(Flag::SEALED)) {
     throw sealed_error();
   }
@@ -266,13 +250,13 @@ std::shared_ptr<Configuration> Configuration::set(const std::string &key, std::s
   return it == _content.end() ? nullptr : it->second;
 }
 
-std::shared_ptr<Configuration> Configuration::get(const std::string &key) {
+std::shared_ptr<StructuredValue> StructuredValue::get(const std::string &key) {
   auto value = _content.find(key);
   if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
 }
 
-void Configuration::seal() {
+void StructuredValue::seal() {
   if (get(Flag::SEALED)) return;
 
   for (auto &item: _content) {
@@ -282,19 +266,19 @@ void Configuration::seal() {
   set(Flag::SEALED, true);
 }
 
-bool Configuration::isSealed() const {
+bool StructuredValue::isSealed() const {
   return get(Flag::SEALED);
 }
 
-bool Configuration::isDefault() const {
+bool StructuredValue::isDefault() const {
   return get(Flag::DEFAULT);
 }
 
-bool Configuration::ignore() const {
+bool StructuredValue::ignore() const {
   return get(Flag::IGNORE);
 }
 
-bool Configuration::canIgnore() {
+bool StructuredValue::canIgnore() {
   // If the ignore flag is set
   if (ignore()) {
     return true;
@@ -305,12 +289,6 @@ bool Configuration::canIgnore() {
     return true;
   }
 
-  // Is the ignore flag set?
-  auto it = _content.find(KEY_IGNORE);
-  if (it != _content.end()) {
-    return it->second->_value.asBoolean();
-  }
-
   // Is the value a default value?
   if (isDefault())
     return true;
@@ -318,7 +296,7 @@ bool Configuration::canIgnore() {
   return false;
 }
 
-std::string Configuration::uniqueIdentifier() const {
+std::string StructuredValue::uniqueIdentifier() const {
   // Compute the digest
   auto array = digest();
 
@@ -335,40 +313,58 @@ std::string Configuration::uniqueIdentifier() const {
   return s;
 }
 
-std::map<std::string, std::shared_ptr<Configuration>> const &Configuration::content() {
+std::map<std::string, std::shared_ptr<StructuredValue>> const &StructuredValue::content() {
   return _content;
 }
 
 /** Get type */
-void Configuration::type(std::shared_ptr<Type> const &type) {
+void StructuredValue::type(std::shared_ptr<Type> const &type) {
   _type = type;
 }
 
-void Configuration::task(std::shared_ptr<Task> const &task) {
+void StructuredValue::object(std::shared_ptr<Object> const &object) {
+  _object = object;
+}
+
+std::shared_ptr<Object> StructuredValue::object() {
+  return _object;
+}
+
+void StructuredValue::task(std::shared_ptr<Task> const &task) {
   _task = task;
 }
 
-std::shared_ptr<Task> Configuration::task() {
+std::shared_ptr<Task> StructuredValue::task() {
   return _task;
 }
 
-void Configuration::submit(bool send,
-                    std::shared_ptr<rpc::Launcher> const &launcher,
-                    std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) {
-  if (!_task) {
-    throw exception("No underlying task for this object: cannot run");
-  }
-  return _task->submit(shared_from_this(), send, launcher, launcherParameters);
-}
-
-void Configuration::configure() {
+void StructuredValue::configure() {
   GeneratorContext context;
   generate(context);
   validate();
   seal();
 }
 
-void Configuration::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
+void StructuredValue::createObjects(xpm::Register &xpmRegister) {
+  // Don't create an object for values
+  if (_value.defined()) return;
+
+  // Create for descendants
+  for(auto &kv: _content) {
+    kv.second->createObjects(xpmRegister);
+  }
+
+  // Create for ourselves
+  _object = xpmRegister.createObject(shared_from_this());
+  if (_object) {
+     for(auto &kv: _content) {
+       setValue(kv.first, kv.second);
+     }
+  }
+}
+
+
+void StructuredValue::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
@@ -383,16 +379,22 @@ void Configuration::findDependencies(std::vector<std::shared_ptr<rpc::Dependency
   }
 }
 
-bool Configuration::equals(Configuration const &other) const {
-  // TODO: implement
+bool StructuredValue::equals(StructuredValue const &other) const {
+  if (_value.defined()) {
+    return _value.equals(other._value);
+  }
+
+  if (other._value.defined()) return false;
+
+  // TODO: implement for deeper structures
   NOT_IMPLEMENTED();
 }
 
-void Configuration::generate(GeneratorContext & context) {
+void StructuredValue::generate(GeneratorContext & context) {
   if (auto A = context.enter(this)) {
     // Check if we can modify this object
     if (isSealed()) {
-      throw new exception("Cannot generate values within a sealed object");
+      throw exception("Cannot generate values within a sealed object");
     }
 
     // Already generated
@@ -426,7 +428,7 @@ void Configuration::generate(GeneratorContext & context) {
   }
 }
 
-void Configuration::validate() {
+void StructuredValue::validate() {
   if (get(Flag::VALIDATED)) return;
 
   if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
@@ -499,15 +501,21 @@ void Configuration::validate() {
   set(Flag::VALIDATED, true);
 }
 
-// void Configuration::execute() {
+void StructuredValue::setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value) {
+  if (_object) {
+    _object->setValue(name, value);
+  }
+}
+
+// void StructuredValue::execute() {
 //   // TODO: should display the host language class name
 //   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
 // }
 
-// void Configuration::pre_execute() {}
-// void Configuration::post_execute() {}
+// void StructuredValue::pre_execute() {}
+// void StructuredValue::post_execute() {}
 
-// void Configuration::_pre_execute() {
+// void StructuredValue::_pre_execute() {
 //   // Loop over all the type hierarchy
 //   for (auto type = _type; type; type = type->parentType()) {
 //     // Loop over all the arguments
@@ -522,7 +530,7 @@ void Configuration::validate() {
 //   this->pre_execute();
 // }
 
-// void Configuration::_post_execute() {
+// void StructuredValue::_post_execute() {
 //   // Loop over all the type hierarchy
 //   for (auto type = _type; type; type = type->parentType()) {
 //     // Loop over all the arguments
@@ -536,14 +544,14 @@ void Configuration::validate() {
 //   this->post_execute();
 // }
 
-void Configuration::set(Configuration::Flag flag, bool value) {
+void StructuredValue::set(StructuredValue::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;
   else _flags &= ~((Flags)flag);
 
   assert(get(flag) == value);
 }
 
-bool Configuration::get(Configuration::Flag flag) const {
+bool StructuredValue::get(StructuredValue::Flag flag) const {
   return (Flags)flag & _flags;
 }
 
@@ -589,12 +597,12 @@ Argument &Argument::help(const std::string &help) {
   return *this;
 }
 
-Argument &Argument::defaultValue(std::shared_ptr<Configuration> const &defaultValue) {
+Argument &Argument::defaultValue(std::shared_ptr<StructuredValue> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
 }
-std::shared_ptr<Configuration> Argument::defaultValue() const { return _defaultValue; }
+std::shared_ptr<StructuredValue> Argument::defaultValue() const { return _defaultValue; }
 
 std::shared_ptr<Generator> Argument::generator() { return _generator; }
 std::shared_ptr<Generator> const &Argument::generator() const { return _generator; }
@@ -717,11 +725,11 @@ int Type::hash() const {
 }
 
 
-void Type::setProperty(std::string const &name, Configuration::Ptr const &value) {
+void Type::setProperty(std::string const &name, StructuredValue::Ptr const &value) {
   _properties[name] = value;
 }
 
-Configuration::Ptr Type::getProperty(std::string const &name) {
+StructuredValue::Ptr Type::getProperty(std::string const &name) {
   auto it = _properties.find(name);
   if (it == _properties.end()) return nullptr;
   return it->second;
@@ -742,8 +750,14 @@ bool Type::accepts(Type::Ptr const &other) const {
 
 // ---- Generators
 
-GeneratorLock::GeneratorLock(GeneratorContext * context, Configuration *configuration) : context(context) {
-  context->stack.push_back(configuration);
+GeneratorContext::GeneratorContext(std::shared_ptr<StructuredValue> const &sv) {
+  stack.push_back(sv.get());
+}
+GeneratorContext::GeneratorContext() {
+}
+
+GeneratorLock::GeneratorLock(GeneratorContext * context, StructuredValue *sv) : context(context) {
+  context->stack.push_back(sv);
 }
 
 const std::string PathGenerator::TYPE = "path";
@@ -767,7 +781,7 @@ nlohmann::json PathGenerator::toJson() const {
   };
 }
 
-std::shared_ptr<Configuration> PathGenerator::generate(GeneratorContext const &context) {
+std::shared_ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
   Path p = Context::current().workdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
@@ -780,7 +794,7 @@ std::shared_ptr<Configuration> PathGenerator::generate(GeneratorContext const &c
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return std::make_shared<Configuration>(Value(p));
+  return std::make_shared<StructuredValue>(Value(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

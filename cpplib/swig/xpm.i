@@ -67,9 +67,8 @@
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::SimpleType)
 %shared_ptr(xpm::Task)
-%shared_ptr(xpm::Configuration)
+%shared_ptr(xpm::StructuredValue)
 %shared_ptr(xpm::Argument)
-// %shared_ptr(xpm::Value)
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
@@ -84,6 +83,7 @@
 
 // Object and object factory have virtual methods
 %feature("director") xpm::Register;
+%feature("director") xpm::Object;
 
 // Include file
 %include <xpm/filesystem.hpp>

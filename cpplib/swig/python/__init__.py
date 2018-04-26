@@ -45,33 +45,33 @@ class choices(TypeProxy):
 
 
 
-# def value2array(array):
-#     """Converts """
-#     array = Array.cast(array)
-#     r = []
-#     for i in range(len(array)):
-#         sv = array[i]
-#         v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
-#         r.append(v)
-#     return r
+def value2array(array):
+    """Converts an XPM array to a Python array"""
+    array = Array.cast(array)
+    r = []
+    for i in range(len(array)):
+        sv = array[i]
+        v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+        r.append(v)
+    return r
 
 
-# # Converts a value to Python
-# VALUECONVERTERS = {
-#     BooleanType.toString(): lambda v: v.asBoolean(),
-#     IntegerType.toString(): lambda v: v.asInteger(),
-#     StringType.toString(): lambda v: v.asString(),
-#     RealType.toString(): lambda v: v.asReal(),
-#     PathType.toString(): lambda v: v.asPath(),
-#     ArrayType.toString(): value2array
-# }
+# Converts a value to Python
+VALUECONVERTERS = {
+    BooleanType.toString(): lambda v: v.value().asBoolean(),
+    IntegerType.toString(): lambda v: v.value().asInteger(),
+    StringType.toString(): lambda v: v.value().asString(),
+    RealType.toString(): lambda v: v.value().asReal(),
+    PathType.toString(): lambda v: v.value().asPath(),
+    ArrayType.toString(): value2array
+}
 
 
-def value2configuration(value):
-    """Transforms a Python value into an object"""
+def structuredValue(value):
+    """Transforms a Python value into a structured value"""
 
     # Simple case: it is already a configuration
-    if isinstance(value, Configuration):
+    if isinstance(value, StructuredValue):
         return value
 
     # It is a PyObject: get the associated configuration
@@ -86,20 +86,43 @@ def value2configuration(value):
     if isinstance(value, list):
         newvalue = Array()
         for v in value:
-            newvalue.append(value2configuration(v))
+            newvalue.append(structuredValue(v))
 
         return newvalue
 
     # For anything else, we try to convert it to a value
-    return Configuration(Value(value))
+    return StructuredValue(Value(value))
 
-class XPMInformation:
+class XPMObject(Object):
     """Holds XPM information for a PyObject"""
-    def __init__(self):
-        self.configuration = Configuration()
+    def __init__(self, pyobject):
+        super().__init__()
+        self.pyobject = pyobject
+        self.configuration = StructuredValue()
+        self.configuration.object(self)
+        self.configuration.type(self.pyobject.__class__.__xpmtype__)
 
     def set(self, k, v):
-        self.configuration.set(k, value2configuration(v))
+        logging.info("Called set: %s, %s", k, v)
+        self.configuration.set(k, structuredValue(v))
+    
+    def setValue(self, key, sv):
+        """Called by XPM when value has been validated"""
+        if key == "$type":
+            logger.warn("'type' attribute ignored")
+            return
+        if sv is None:
+            value = None
+            svtype = None
+        else:
+            svtype = sv.type()
+            value = VALUECONVERTERS.get(svtype.toString(), lambda v: v)(sv)
+        logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
+                     svtype, type(value), type(self))
+        setattr(self.pyobject, key, value)
+    
+    def run(self):
+        self.pyobject.execute()
 
 class PyObject:
     """Base type for all objects in python interface"""
@@ -108,18 +131,24 @@ class PyObject:
         assert self.__class__.__xpmtype__, "No XPM type associated with this XPM object"
 
         # Add configuration
-        self.__xpm__ = XPMInformation()
+        self.__xpm__ = XPMObject(self)
 
         # Initialize with arguments
         for k, v in kwargs.items():
             self.__xpm__.set(k, v)
-            setattr(self, k, v) # TODO: Converts to python if it can be
 
-    def submit(self):
+    def submit(self, *, launcher=None, launcherParameters=None, send=None):
         """Submit this task"""
         logging.info("Submitting")
-        print(self.__class__.__xpmtype__)
-        self.__xpm__.configuration.configure()
+        if send is None:
+            send = SUBMIT_TASKS
+        self.__class__.__xpmtask__.submit(self.__xpm__.configuration, 
+            send, launcher, launcherParameters)
+        return self
+
+
+    # def __setattr__(self, k, v):
+    #     super().__setattr__(k, v)
 
 #     def __getattribute__(self, name):
 #         d = TYPES_DICT.get(type(self), None)
@@ -145,68 +174,14 @@ class PyObject:
 #         super().submit(send, launcher, launcherParameters)
 #         return self
 
-#     def pre_execute(self):
-#         logger.debug("Pre-execute %s", type(self))
-#         super().pre_execute()
+    def pre_execute(self):
+        pass
 
-#     def post_execute(self):
-#         logger.debug("Post-execute %s", type(self.learner))
-#         super().post_execute()
+    def post_execute(self):
+        pass
 
-#     def setValue(self, key, sv):
-#         """Called by XPM when value has been validated"""
-#         # Remove the "$" prefix
-#         if key.startswith("$"):
-#             key = key[1:]
-#         # Ignore key type
-#         if key == "type":
-#             logger.warn("'type' attribute ignored")
-#             return
-#         if sv is None:
-#             value = None
-#             svtype = None
-#         else:
-#             svtype = sv.type()
-#             value = VALUECONVERTERS.get(svtype.toString(), lambda v: v)(sv)
-#         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
-#                      svtype, type(value), type(self))
-#         dict.__setattr__(self, key, value)
+PyObject.__xpmtype__ = AnyType
 
-
-# # FIXME: Hack to deal with smart pointers objects released by SWIG
-# FACTORIES = []
-# OBJECTS = []
-
-
-# class PythonObjectFactory(ObjectFactory):
-#     """An experimaestro type in Python"""
-
-#     def __init__(self, register, pythonType):
-#         ObjectFactory.__init__(self, register)
-#         self.pythonType = pythonType
-
-#     def _create(self):
-#         logger.debug("Created new object of type [%s]",
-#                      self.pythonType.__mro__)
-#         # Create and initialize the object
-#         newObject = self.pythonType.__new__(self.pythonType)
-#         PyObject.__init__(newObject)
-#         OBJECTS.append(newObject)
-#         return newObject
-
-
-# class TypeWrapper():
-#     def __init__(self, xpmtype):
-#         self.xpmtype = xpmtype
-
-#     def __call__(self, *args, **options):
-#         return create(self.xpmtype, args, options)
-
-#     @staticmethod
-#     def wrap(xpmtype):
-#         if xpmtype is None:
-#             return None
-#         return TypeWrapper(xpmtype)
 
 
 class PythonRegister(Register):
@@ -222,9 +197,12 @@ class PythonRegister(Register):
             Path: PathType
         }
 
+        self.registered = {}
+
 
     def associateType(self, pythonType, xpmType):
         pythonType.__xpmtype__ = xpmType
+        self.registered[xpmType] = pythonType
 
     def addType(self, pythonType, typeName, parentType, description=None):
         xpmType = Type(typeName, parentType)
@@ -234,97 +212,36 @@ class PythonRegister(Register):
         self.associateType(pythonType, xpmType)
         super().addType(xpmType)
 
-    # def getTask(self, name):
-    #     logger.debug("Getting task %s", name)
-    #     task = super().getTask(name)
-    #     if task is None:
-    #         raise KeyError("Task %s does not exist" % name)
-    #     task.__task__ = task
-    #     task.create = wrap(task, create)
-    #     task.submit_ = wrap(task, create, submit=True)
-    #     task.__call__ = wrap(task, create)
-    #     return task
-
     def getType(self, key):
         """Returns the Type object corresponding to the given type or None if not found
         """
         if key is None:
             return AnyType
 
-    #     if isinstance(key, Task):
-    #         return key.type()
-
         if key in self.builtins:
             return self.builtins[key]
 
-    #     if isinstance(key, TypeProxy):
-    #         return key.type
-
-    #     if isinstance(key, Type) or isinstance(key, TypeWrapper):
-    #         return key
-
-    #     if isinstance(key, TypeName):
-    #         return TypeWrapper.wrap(super().getType(key))
-
-    #     if inspect.isclass(key) and issubclass(key, PyObject):
-    #         return self.types.get(key, None)
-
-    #     return TypeWrapper.wrap(super().getType(key))
         if isinstance(key, type):
             return getattr(key, "__xpmtype__", None)
         if isinstance(key, PyObject):
             return key.__class__.__xpmtype__
         return None
 
-    # def parse(self, arguments=None):
-    #     if arguments is None:
-    #         arguments = sys.argv[1:]
-    #     return super().parse(StringList(arguments))
+    def parse(self, arguments=None):
+        if arguments is None:
+            arguments = sys.argv[1:]
+        return super().parse(StringList(arguments))
 
-    # def createObject(self, params):
-    #     return Value(params)
-    #     return super().build(_params)
+    def runTask(self, task, sv):
+        logger.info("Running %s", task)
+        sv.object().run()
 
+    def createObject(self, sv):
+        type = self.registered.get(sv.type(), PyObject)
+        logger.info("Creating object for %s [%s]", sv, type)
+        return type().__xpm__
 
 register = PythonRegister()
-
-
-# def create(t, args, options, submit=False):
-#     logger.debug("Creating %s [%s, %s]", t, args, options)
-#     xpmType = register.getType(t)
-
-#     # Create the type and set the arguments
-#     o = xpmType.create(register.objectFactory())
-#     logger.debug("Created object [%s] of type [%s]" % (o, type(o).__mro__))
-#     if hasattr(t, "__task__"):
-#         o.task(t.__task__)
-
-#     for k, v in options.items():
-#         if type(v) == dict:
-#             v = Register.build(register, JSON_ENCODER.encode(v))
-#         logger.debug("Setting attribute [%s] to %s (type %s)", k, v, type(v))
-#         if isinstance(o, PyObject):
-#             setattr(o, k, v)
-#         else:
-#             PyObject.set(o, k, v)
-
-#     if hasattr(t, "__task__"):
-#         o.task(t.__task__)
-
-#     if submit:
-#         logger.debug("Submitting task to experimaestro")
-#         o.submit()
-#     else:
-#         o.validate(True)
-
-#     return o
-
-
-# def wrap(self, function, **options):
-#     def _wrapped(*args, **opts):
-#         return function(self, args, opts, **options)
-
-#     return _wrapped
 
 
 class RegisterType:
@@ -404,7 +321,7 @@ class RegisterTask():
             raise Exception(
                 "Class %s has no associated experimaestro type" % t)
         task = Task(pyType)
-        t.__task__ = task
+        t.__xpmtask__ = task
         register.addTask(task)
 
         command = Command()
@@ -451,7 +368,7 @@ class TypeArgument(AbstractArgument):
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:
-            self.argument.defaultValue(Configuration(Value(default)))
+            self.argument.defaultValue(StructuredValue(Value(default)))
 
 
 class PathArgument(AbstractArgument):

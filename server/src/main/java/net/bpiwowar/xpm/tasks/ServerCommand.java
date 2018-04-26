@@ -155,6 +155,14 @@ public class ServerCommand implements Runnable {
 
             // TCP-IP socket
             ServerConnector connector = new ServerConnector(webServer);
+
+            // Listen to localhost
+            connector.setPort(port);
+            connector.setHost("localhost");
+            webServer.addConnector(connector);
+
+            // Listen to general interface
+            connector = new ServerConnector(webServer);
             connector.setPort(port);
             webServer.addConnector(connector);
 

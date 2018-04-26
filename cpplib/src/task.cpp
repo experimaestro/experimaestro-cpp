@@ -22,7 +22,7 @@ Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(std::shared_ptr<Configuration> const &configuration,
+void Task::submit(std::shared_ptr<StructuredValue> const &sv,
                   bool send,
                   std::shared_ptr<rpc::Launcher> const &launcher,
                   std::shared_ptr<rpc::LauncherParameters> const &launcherParameters
@@ -30,18 +30,27 @@ void Task::submit(std::shared_ptr<Configuration> const &configuration,
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
   if (send) {
-    configuration->findDependencies(dependencies, true);
+    sv->findDependencies(dependencies, true);
   }
 
-  // Validate and seal the task configuration
-  configuration->configure();
+  // Set locator
+  auto svlocator = getPathGenerator()->generate(sv);
+  sv->resource(svlocator->value().asString());
+
+  // Validate and seal the task sv
+  LOGGER->info("Configuring task");
+  sv->configure();
+  LOGGER->info("Validating task");
+  sv->validate();
 
   // Prepare the command line
-  CommandContext context = { configuration };
+  CommandContext context = { sv };
 
   if (send) {
+    LOGGER->info("Sending task");
+
     // Get generated directory as locator
-    auto locator = rpc::Path::toPath(configuration->resource());
+    auto locator = rpc::Path::toPath(sv->resource());
     auto command = _commandLine.rpc(context);
 
     // Add dependencies
@@ -51,12 +60,12 @@ void Task::submit(std::shared_ptr<Configuration> const &configuration,
       command->add_dependency(dependency);
     }
     auto task = std::make_shared<rpc::CommandLineTask>(locator);
-    task->taskId(configuration->task()->identifier().toString());
+    task->taskId(identifier().toString());
     task->command(command);
     task->setLauncher(launcher, launcherParameters);
     task->submit();
   } else {
-    LOGGER->warn("Not sending task {}", configuration->task()->identifier());
+    LOGGER->warn("Not sending task {}", identifier());
   }
 }
 
@@ -68,19 +77,10 @@ TypeName const &Task::identifier() const {
   return _identifier;
 }
 
-// TODO: cleanup
-// void Task::execute(std::shared_ptr<Configuration> const &object) const {
-//   try {
-//     _running = true;
-//     object->_pre_execute();
-//     object->execute();
-//     object->_post_execute();
-//     _running = false;
-//   } catch(std::exception &e) {
-//     _running = false;
-//     throw;
-//   }
-// }
+std::string Task::toString() const {
+  return "Task '" + identifier().toString() + "' (output '" + typeName().toString() + "')";
+}
+
 
 nlohmann::json Task::toJson() {
   auto j = json::object();

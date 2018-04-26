@@ -203,7 +203,7 @@ CommandContent::~CommandContent() {
 
 namespace {
   /// Generates the JSON that will be used to configure the task
-  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<Configuration> const & conf) {
+  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<StructuredValue> const & conf) {
     if (conf->value().defined()) {
       // The object has one value, just use this and discards the rest
       switch(conf->value().scalarType()) {

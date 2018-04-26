@@ -129,7 +129,8 @@ if (true)
 	endif()
     file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
     message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and installed in ${PYTHON_INSTALL_LOCATION}."
-        " Use PYTHON_INSTALL_LOCATION configuration to change this setting.")
+        " Use PYTHON_INSTALL_LOCATION configuration to change this setting."
+        " Note: install prefix was ${CMAKE_INSTALL_PREFIX}")
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 

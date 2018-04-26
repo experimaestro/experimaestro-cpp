@@ -38,36 +38,13 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 /*%ignore xpm::Argument::type;*/
 
-%extend xpm::Value { %COLLECTION(std::shared_ptr<xpm::Configuration>) };
+%extend xpm::Value { %COLLECTION(std::shared_ptr<xpm::StructuredValue>) };
 
-
-
-
-
-// TODO: GARBAGE SECTION....
-
-#ifndef SWIG
-
+%{
 /** 
  * Returns the wrapped python object rather than the director object.
  * This is useful since an XPM object might be subclassed
 */
-
-
-%{
-    #include <xpm/common.hpp>
-
-      // FIXME: REMOVE
-   #include <cxxabi.h>
-   template<typename T>
-    std::string demangle(T * t) {
-      int status;
-    char * demangled = abi::__cxa_demangle(typeid(*t).name(),0,0,&status);
-    std::string r = demangled;
-    free(demangled);
-    return r;
-}
-
 
    namespace xpm { namespace python {
 
@@ -77,19 +54,6 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
             if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
                Py_INCREF(d->swig_get_self());
                return d->swig_get_self();
-            }
-   
-            // Check for internal types
-            swig_type_info *typeinfo;
-
-            if (std::shared_ptr<  xpm::Array > p = std::dynamic_pointer_cast<xpm::Array>(object)) {
-               std::shared_ptr<  xpm::Array > * smartresult = new std::shared_ptr<xpm::Array>(p);
-               return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Array_t, SWIG_POINTER_OWN);
-            }
-            
-            if (std::shared_ptr<  xpm::Value > p = std::dynamic_pointer_cast<xpm::Value>(object)) {
-               std::shared_ptr<  xpm::Value > * smartresult = new std::shared_ptr<xpm::Value>(p);
-               return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Value_t, SWIG_POINTER_OWN);
             }
 
             std::shared_ptr< xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>(object);
@@ -108,9 +72,32 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 
 
 %typemap(out) std::shared_ptr<xpm::Object> {
-    // OUT-OBJECT
+    // Retrieving Python object (and not the director)
     $result = xpm::python::getRealObject($1);
 }
+
+
+
+// TODO: GARBAGE SECTION....
+
+#ifndef SWIG
+
+
+
+%{
+    #include <xpm/common.hpp>
+
+      // FIXME: REMOVE
+   #include <cxxabi.h>
+   template<typename T>
+    std::string demangle(T * t) {
+      int status;
+    char * demangled = abi::__cxa_demangle(typeid(*t).name(),0,0,&status);
+    std::string r = demangled;
+    free(demangled);
+    return r;
+}
+
 
 %typemap(directorin) std::shared_ptr<xpm::Object> const & {
     $input = xpm::python::getRealObject($1);
@@ -187,5 +174,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         return SWIG_Py_Void();
     }
 }
+
+%}
 
 #endif

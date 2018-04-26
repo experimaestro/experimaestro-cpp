@@ -62,13 +62,13 @@ class Register {
   std::shared_ptr<Type> getType(TypeName const &typeName);
 
   /// Find a type given a t ype name
-  std::shared_ptr<Type> getType(std::shared_ptr<Configuration> const &object);
+  std::shared_ptr<Type> getType(std::shared_ptr<StructuredValue> const &object);
 
   /// Build
-  std::shared_ptr<Configuration> build(std::shared_ptr<Configuration> const &value);
+  std::shared_ptr<StructuredValue> build(std::shared_ptr<StructuredValue> const &value);
 
   /// Build from a JSON string
-  std::shared_ptr<Configuration> build(std::string const &value);
+  std::shared_ptr<StructuredValue> build(std::string const &value);
 
   /// Get types
   std::unordered_map<TypeName, std::shared_ptr<Type>> &getTypes() { 
@@ -80,7 +80,10 @@ class Register {
   };
 
   /// Run task
-  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Configuration> const & configuration) {}
+  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv);
+
+  /// Create object
+  virtual std::shared_ptr<Object> createObject(std::shared_ptr<StructuredValue> const & sv);
 
 #ifndef SWIG
   /// Load new definitions from YAML

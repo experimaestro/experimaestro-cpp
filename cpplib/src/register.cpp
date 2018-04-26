@@ -74,6 +74,7 @@ Register::Register() {
   addType(BooleanType);
   addType(PathType);
   addType(ArrayType);
+  addType(AnyType);
 }
 Register::~Register() {}
 
@@ -102,11 +103,11 @@ std::shared_ptr<Type> Register::getType(TypeName const &typeName) {
 }
 
 // Find a type given a type name
-std::shared_ptr<Type> Register::getType(std::shared_ptr<Configuration> const &object) {
+std::shared_ptr<Type> Register::getType(std::shared_ptr<StructuredValue> const &object) {
   return object->type();
 }
 
-std::shared_ptr<Configuration> Register::build(std::shared_ptr<Configuration> const &value) {
+std::shared_ptr<StructuredValue> Register::build(std::shared_ptr<StructuredValue> const &value) {
   // FIXME: discard?
   NOT_IMPLEMENTED();
   // std::shared_ptr<Type> objectType = value->type();
@@ -208,7 +209,7 @@ void Register::parse(std::vector<std::string> const &args) {
       throw;
     }
 
-    auto configuration = std::make_shared<Configuration>(*this, j);
+    auto sv = std::make_shared<StructuredValue>(*this, j);
 
     // TODO: check if needed
     // auto value = task->create(_defaultObjectFactory);
@@ -223,13 +224,22 @@ void Register::parse(std::vector<std::string> const &args) {
 
     // Run the task
     progress(-1);
-    runTask(task, configuration);
+    sv->createObjects(*this);
+    runTask(task, sv);
     return;
   }
 
   throw argument_error("Unexpected command: " + args[0]);
 }
 
+void Register::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) {
+
+}
+
+  /// Create object
+std::shared_ptr<Object> Register::createObject(std::shared_ptr<StructuredValue> const & sv) {
+  return nullptr;
+}
 
 void Register::generate() const {
   std::cout << "{";
@@ -256,8 +266,8 @@ void Register::generate() const {
   std::cout << "}" << std::endl;
 }
 
-std::shared_ptr<Configuration> Register::build(std::string const &value) {
-  return std::make_shared<Configuration>(*this, json::parse(value));
+std::shared_ptr<StructuredValue> Register::build(std::string const &value) {
+  return std::make_shared<StructuredValue>(*this, json::parse(value));
 }
 
 void Register::parse(int argc, const char **argv) {
@@ -340,7 +350,7 @@ void Register::load(nlohmann::json const &j) {
     if (e.count("properties")) {
       auto properties = e["properties"];
       for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
-        auto object = std::make_shared<Configuration>(*this, it_prop.value());
+        auto object = std::make_shared<StructuredValue>(*this, it_prop.value());
         type->setProperty(it_prop.key(), object);
       }
     }
@@ -365,7 +375,7 @@ void Register::load(nlohmann::json const &j) {
 
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
-          a->defaultValue(std::make_shared<Configuration>(*this, value["default"]));
+          a->defaultValue(std::make_shared<StructuredValue>(*this, value["default"]));
         }
 
         if (value.count("generator")) {

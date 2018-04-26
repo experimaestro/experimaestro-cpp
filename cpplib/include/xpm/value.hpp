@@ -10,7 +10,7 @@
 namespace xpm {
 
 class Type;
-class Configuration;
+class StructuredValue;
 class Register;
 
 enum class ValueType : int8_t {
@@ -23,7 +23,7 @@ enum class ValueType : int8_t {
  */
 class Value {
  public:
-  typedef std::vector<std::shared_ptr<Configuration>> Array;
+  typedef std::vector<std::shared_ptr<StructuredValue>> Array;
   typedef std::shared_ptr<Value> Ptr;
 
   Value();
@@ -48,7 +48,7 @@ class Value {
   Value &operator=(Value const &other);
 
   virtual ~Value();
-  // virtual std::shared_ptr<Configuration> copy();
+  // virtual std::shared_ptr<StructuredValue> copy();
 
   ValueType const scalarType() const;
   std::shared_ptr<Type> type() const;
@@ -102,13 +102,13 @@ class Value {
   // Array methods (throw an exception if the value is not an array)
 
   /// Add a new object to the array
-  void push_back(std::shared_ptr<Configuration> const &element);
+  void push_back(std::shared_ptr<StructuredValue> const &element);
 
   /// Returns the size of the array
   size_t size() const;
 
   /// Access to the new array
-  std::shared_ptr<Configuration> &operator[](const size_t index);
+  std::shared_ptr<StructuredValue> &operator[](const size_t index);
 
  protected:
   friend struct Helper;
@@ -146,12 +146,12 @@ inline bool operator==(Value const &a, Value const &b) {
 
 // class Array : public Object {
 //  public:
-//   typedef std::vector<std::shared_ptr<Configuration>> Content;
+//   typedef std::vector<std::shared_ptr<StructuredValue>> Content;
 //   virtual ~Array();
 //   Array();
 
 //   /// Shallow copy of the array
-//   virtual std::shared_ptr<Configuration> copy() override;
+//   virtual std::shared_ptr<StructuredValue> copy() override;
   
 //   /// Computes the hash for the object
 //   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
@@ -161,7 +161,7 @@ inline bool operator==(Value const &a, Value const &b) {
 
 
 //   /// Cast an object to Array type
-//   static std::shared_ptr<Array> cast(std::shared_ptr<Configuration> const &);
+//   static std::shared_ptr<Array> cast(std::shared_ptr<StructuredValue> const &);
 //  private:
 //   Content _array;
 // };

@@ -13,9 +13,10 @@ namespace xpm {
   static const int DIGEST_LENGTH = 20;
   
   // Forward declarations
-  class Configuration;
+  class StructuredValue;
   class AbstractObjectHolder;
   class Type;
+  class Object;
   class Task;
   class Register;
   struct Helper;
@@ -49,14 +50,11 @@ extern std::shared_ptr<Type> BooleanType;
 extern std::shared_ptr<Type> ArrayType;
 extern std::shared_ptr<Type> AnyType;
 extern std::shared_ptr<Type> PathType;
+extern const std::shared_ptr<Object> NULL_OBJECT;
 
 extern const std::string KEY_TYPE;
 extern const std::string KEY_TASK;
-
-extern const std::string KEY_PATH;
 extern const std::string KEY_VALUE;
-extern const std::string KEY_IGNORE;
-extern const std::string KEY_DEFAULT;
 SWIG_MUTABLE;
 
 
@@ -124,17 +122,14 @@ namespace xpm {
 /**
  * "Native" object associated with a configuration  
  */
-// class Object {
-// public:
-//   Configuration & configuration();
-  
-//   /** Sets a value in the native object */
-//   virtual void setValue(std::string const &name, Configuration & value) {};
+class Object {
+public:
+  /** Since this is a pure virtual object */
+  virtual ~Object();
 
-// private:
-//   void setConfiguration(std::shared_ptr<Configuration> const & configuration) { _configuration = configuration; }
-//   std::shared_ptr<Configuration> _configuration;
-// };
+  /** Sets a value in the native object */
+  virtual void setValue(std::string const &name, std::shared_ptr<StructuredValue> const & value) = 0;
+};
 
 
 /**
@@ -146,9 +141,9 @@ namespace xpm {
  * - a value (optional)
  * - an object
  */
-class Configuration
+class StructuredValue
 #ifndef SWIG
-    : public std::enable_shared_from_this<Configuration>
+    : public std::enable_shared_from_this<StructuredValue>
 #endif
 {
  public:
@@ -157,39 +152,39 @@ class Configuration
     SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8, IGNORE = 16
   };
 
-  typedef std::shared_ptr<Configuration> Ptr;
+  typedef std::shared_ptr<StructuredValue> Ptr;
 
   /// Default constructor
-  Configuration();
+  StructuredValue();
 
 #ifndef SWIG
   /// Constructor from JSON
-  Configuration(Register &xpmRegister, nlohmann::json const &jsonValue);
+  StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue);
 #endif
 
   /// Constructor from a map
-  Configuration(std::map<std::string, std::shared_ptr<Configuration>> &map);
+  StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map);
 
   /// Constructs from value
-  Configuration(Value const & v);
+  StructuredValue(Value const & v);
 
   /// Move constructor
-  Configuration(Configuration &&other) = default;
+  StructuredValue(StructuredValue &&other) = default;
 
   /// Construct from other (shallow copy)
-  Configuration(Configuration const &other);
+  StructuredValue(StructuredValue const &other);
 
   /// Returns true if objects are equal
-  virtual bool equals(Configuration const &other) const;
+  bool equals(StructuredValue const &other) const;
 
   /// Checks whether a key exists
   bool hasKey(std::string const &key) const;
 
   /// Get access to one value
-  std::shared_ptr<Configuration> set(const std::string &key, std::shared_ptr<Configuration> const &);
+  std::shared_ptr<StructuredValue> set(const std::string &key, std::shared_ptr<StructuredValue> const &);
 
   /// Get access to one value
-  std::shared_ptr<Configuration> get(const std::string &key);
+  std::shared_ptr<StructuredValue> get(const std::string &key);
 
   /// Seal the object
   void seal();
@@ -221,7 +216,7 @@ class Configuration
    * Converts to JSON
    * @return
    */
-  virtual nlohmann::json toJson();
+  nlohmann::json toJson();
 
   /**
    *  Whether this element can be ignored for digest computation
@@ -231,16 +226,19 @@ class Configuration
   /**
    * Retrieve content
    */
-  std::map<std::string, std::shared_ptr<Configuration>> const &content();
-
-  /** Sets the structured value (globally) */
-  void setValue(std::shared_ptr<Configuration> const &value);
+  std::map<std::string, std::shared_ptr<StructuredValue>> const &content();
 
   /** Sets a value  */
-  virtual void setValue(std::string const &name, std::shared_ptr<Configuration> const &value) {};
+  void setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value);
 
   /** Sets the task */
   void task(std::shared_ptr<Task> const &task);
+
+  /** Sets the object */
+  void object(std::shared_ptr<Object> const &object);
+
+  /** Sets the object */
+  std::shared_ptr<Object> object();
 
   /** Sets the task */
   std::shared_ptr<Task> task();
@@ -250,7 +248,7 @@ class Configuration
    * @param dependencies A dependency vector to fill
    * @param skipThis True if skipping this object
    */
-  virtual void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, bool skipThis);
+  void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, bool skipThis);
 
   /**
    * Validate values
@@ -263,7 +261,7 @@ class Configuration
   void generate(GeneratorContext & context);
 
   /** Get type */
-  std::shared_ptr<Type> type();
+  std::shared_ptr<Type> type() const;
 
   /** Get type */
   void type(std::shared_ptr<Type> const &type);
@@ -278,20 +276,14 @@ class Configuration
   void configure();
 
   /**
-   * Submit the underlying task to experimaestro server
-   */
-  void submit(bool send = true,
-              std::shared_ptr<rpc::Launcher> const &launcher = nullptr,
-              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters = nullptr);
-  /**
    * Copy the configuration
    */
-  virtual std::shared_ptr<Configuration> copy();
+  std::shared_ptr<StructuredValue> copy();
 
   /**
    * Compute the a digest for this configuration
    */
-  virtual std::array<unsigned char, DIGEST_LENGTH> digest() const;
+  std::array<unsigned char, DIGEST_LENGTH> digest() const;
 
   /// Get value
   Value & value() { return _value; }
@@ -299,8 +291,13 @@ class Configuration
   /// Get resource
   inline std::string const & resource() const { return _resource; }
 
+  /// Set resource
+  inline void resource(std::string const & _resource) { this->_resource = _resource; }
 
  private:
+  /// Create objects
+  void createObjects(xpm::Register &xpmRegister);
+
   /// Set flag
   void set(Flag flag, bool value);
 
@@ -314,6 +311,9 @@ class Configuration
    */
   std::string _resource;
 
+  /// Associated object, if any
+  std::shared_ptr<Object> _object;
+
   /// Associated task, if any
   std::shared_ptr<Task> _task;
 
@@ -324,13 +324,14 @@ class Configuration
   Flags _flags;
 
   /// Sub-values (map is used for sorted keys, necessary to compute a stable unique identifier)
-  std::map<std::string, std::shared_ptr<Configuration>> _content;
+  std::map<std::string, std::shared_ptr<StructuredValue>> _content;
 
 
   friend class ObjectFactory;
   friend struct Helper;
   friend class Task;
   friend struct Digest;
+  friend class Register;
  protected:
   /// Type of the object
   std::shared_ptr<Type> _type;
@@ -342,15 +343,17 @@ class Configuration
 // ---
 
 struct GeneratorLock {
-  GeneratorLock(GeneratorContext * context, Configuration * configuration);
+  GeneratorLock(GeneratorContext * context, StructuredValue * configuration);
   inline operator bool() { return true; }
   GeneratorContext * context;
 };
 
 class GeneratorContext {
 public:
-  std::vector<Configuration *> stack;
-  inline GeneratorLock enter(Configuration * configuration) {
+  std::vector<StructuredValue *> stack;
+  GeneratorContext();
+  GeneratorContext(std::shared_ptr<StructuredValue> const &sv);
+  inline GeneratorLock enter(StructuredValue * configuration) {
     return GeneratorLock(this, configuration);
   }
 };
@@ -360,7 +363,7 @@ public:
  */
 class Generator {
  public:
-  virtual std::shared_ptr<Configuration> generate(GeneratorContext const &context) = 0;
+  virtual std::shared_ptr<StructuredValue> generate(GeneratorContext const &context) = 0;
   virtual ~Generator() {}
 
   static std::shared_ptr<Generator> createFromJSON(nlohmann::json const &);
@@ -378,7 +381,7 @@ class PathGenerator : public Generator {
   PathGenerator(const char *s) : PathGenerator(std::string(s)) {}
   PathGenerator(std::string const & = "");
   PathGenerator(nlohmann::json const &);
-  virtual std::shared_ptr<Configuration> generate(GeneratorContext const &context);
+  virtual std::shared_ptr<StructuredValue> generate(GeneratorContext const &context);
   virtual nlohmann::json toJson() const;
 };
 
@@ -400,8 +403,8 @@ class Argument {
   Argument &ignore(bool required);
   bool ignore() const;
 
-  Argument &defaultValue(std::shared_ptr<Configuration> const &defaultValue);
-  std::shared_ptr<Configuration> defaultValue() const;
+  Argument &defaultValue(std::shared_ptr<StructuredValue> const &defaultValue);
+  std::shared_ptr<StructuredValue> defaultValue() const;
 
   std::shared_ptr<Generator> generator();
   std::shared_ptr<Generator> const &generator() const;
@@ -431,7 +434,7 @@ class Argument {
   bool _ignore;
 
   /// Default value
-  std::shared_ptr<Configuration> _defaultValue;
+  std::shared_ptr<StructuredValue> _defaultValue;
 
   /// A generator
   std::shared_ptr<Generator> _generator;
@@ -519,8 +522,8 @@ class Type
   void description(std::string const &description) { _description = description; }
 
   /** Set a property */
-  void setProperty(std::string const &name, Configuration::Ptr const &value);
-  Configuration::Ptr getProperty(std::string const &name);
+  void setProperty(std::string const &name, StructuredValue::Ptr const &value);
+  StructuredValue::Ptr getProperty(std::string const &name);
 
   /// Checks whether another type can be assigned as this type
   bool accepts(Type::Ptr const &other) const;
@@ -541,7 +544,7 @@ class Type
    * Properties of this type.
    * They are useful to characterize a type when building experiments
    */
-  std::unordered_map<std::string, std::shared_ptr<Configuration>> _properties;
+  std::unordered_map<std::string, std::shared_ptr<StructuredValue>> _properties;
 
   std::string _description;
   bool _predefined;

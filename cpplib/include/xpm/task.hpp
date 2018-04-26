@@ -32,7 +32,7 @@ class Task
    * @param object The object corresponding to the task type
    * @param send If false, the job will not be sent to the experimaestro server
    */
-  void submit(std::shared_ptr<Configuration> const &object,
+  void submit(std::shared_ptr<StructuredValue> const &object,
               bool send,
               std::shared_ptr<rpc::Launcher> const &launcher,
               std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
@@ -43,6 +43,9 @@ class Task
   /** Returns the type of this task */
   Type::Ptr type();
 
+  /** String representation */
+  std::string toString() const;
+  
   /** Sets the command line for the task */
   void commandline(CommandLine command);
 
