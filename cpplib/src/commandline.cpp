@@ -233,19 +233,30 @@ namespace {
          break;
       }
     } else {
-      // No value defined
+      // No simple value: output the structure
+
       oss << "{";
       bool first = true;
       if (conf->type()) {
         oss << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
         first = false;
       }
-      for(auto &entry: conf->content()) {
-        if (first) first = false;
-        else oss << ',';
-        oss << "\"" << entry.first << "\":";
-        fill(f, oss, entry.second);
+
+      for (auto type = conf->type(); type; type = type->parentType()) {
+        for (auto entry: type->arguments()) {
+          Argument &argument = *entry.second;
+          if (first) first = false;
+          else oss << ',';
+          oss << "\"" << entry.first << "\":";
+          
+          if (conf->hasKey(argument.name())) {
+            fill(f, oss, conf->get(argument.name()));
+          } else {
+            oss << "null";
+          }
+        }
       }
+
       oss << "}";
     }
   }

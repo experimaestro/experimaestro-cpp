@@ -54,7 +54,6 @@
 %include "attribute.i"
 
 
-
 // Documentation
 %include "documentation.i"
 
@@ -73,6 +72,10 @@
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
 
+// Object and object factory have virtual methods that have to be overridden
+%feature("director") xpm::Register;
+%feature("director") xpm::Object;
+
 #ifdef SWIGPYTHON
 %include "python/xpm.i"
 #endif
@@ -81,9 +84,6 @@
 %include "java/xpm.i"
 #endif
 
-// Object and object factory have virtual methods
-%feature("director") xpm::Register;
-%feature("director") xpm::Object;
 
 // Include file
 %include <xpm/filesystem.hpp>

@@ -108,17 +108,18 @@ class XPMObject(Object):
     
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
-        if key == "$type":
-            logger.warn("'type' attribute ignored")
-            return
+        svobject = sv.object()
         if sv is None:
             value = None
             svtype = None
+        elif svobject is not None:
+            svtype = sv.type()
+            value = svobject.pyobject
         else:
             svtype = sv.type()
             value = VALUECONVERTERS.get(svtype.toString(), lambda v: v)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
-                     svtype, type(value), type(self))
+                     svtype, type(value), type(self.pyobject))
         setattr(self.pyobject, key, value)
     
     def run(self):
@@ -137,7 +138,7 @@ class PyObject:
         for k, v in kwargs.items():
             self.__xpm__.set(k, v)
 
-    def submit(self, *, launcher=None, launcherParameters=None, send=None):
+    def _submit(self, *, launcher=None, launcherParameters=None, send=None):
         """Submit this task"""
         logging.info("Submitting")
         if send is None:
@@ -146,39 +147,10 @@ class PyObject:
             send, launcher, launcherParameters)
         return self
 
-
-    # def __setattr__(self, k, v):
-    #     super().__setattr__(k, v)
-
-#     def __getattribute__(self, name):
-#         d = TYPES_DICT.get(type(self), None)
-#         if d is not None and name in d:
-#             from types import MethodType
-#             return MethodType(d[name], self)
-#         return super().__getattribute__(name)
-
-#     def __setattr__(self, name, value):
-#         logger.debug("Setting %s to %s [%s]", name, value, type(value))
-
-#         if Task.isRunning():
-#             # Run mode: just set the attribute
-#             dict.__setattr__(self, name, value)
-#         else:
-#             # Configuration mode
-#             value = objectfromvalue(value)
-#             super().set(name, value)
-
-#     def submit(self, *, launcher=None, launcherParameters=None, send=None):
-#         if send is None:
-#             send = SUBMIT_TASKS
-#         super().submit(send, launcher, launcherParameters)
-#         return self
-
-    def pre_execute(self):
+    def _prepare(self):
+        """Prepare object after creation"""
         pass
 
-    def post_execute(self):
-        pass
 
 PyObject.__xpmtype__ = AnyType
 
@@ -202,7 +174,7 @@ class PythonRegister(Register):
 
     def associateType(self, pythonType, xpmType):
         pythonType.__xpmtype__ = xpmType
-        self.registered[xpmType] = pythonType
+        self.registered[xpmType.typeName()] = pythonType
 
     def addType(self, pythonType, typeName, parentType, description=None):
         xpmType = Type(typeName, parentType)
@@ -237,9 +209,11 @@ class PythonRegister(Register):
         sv.object().run()
 
     def createObject(self, sv):
-        type = self.registered.get(sv.type(), PyObject)
+        type = self.registered.get(sv.type().typeName(), None)
         logger.info("Creating object for %s [%s]", sv, type)
-        return type().__xpm__
+        pyobject = type()
+        pyobject._prepare()
+        return pyobject.__xpm__
 
 register = PythonRegister()
 
@@ -382,84 +356,43 @@ class PathArgument(AbstractArgument):
         self.argument.generator(generator)
 
 
-# def tojson(t=None):
-#     if t is None:
-#         types = []
-#         for k, t in register.types.items():
-#             types.append(json.loads(t.toJson()))
-#         return types
-#     return register.types[t].toJson()
+def tojson(t=None):
+    if t is None:
+        types = []
+        for k, t in register.types.items():
+            types.append(json.loads(t.toJson()))
+        return types
+    return register.types[t].toJson()
 
 
-# class TypeProperty:
-#     def __init__(self, name, value):
-#         self.name = name
-#         self.value = value
+class Definitions:
+    """Allow easy access to XPM tasks"""
 
-#     def __call__(self, type):
-#         xpmType = register.getType(type)
-#         object = register.createObject(self.value)
-#         xpmType.setProperty(self.name, object)
-#         return type
+    def __init__(self, retriever, path=None):
+        self.__retriever = retriever
+        self.__path = path
 
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            return object.__getattr__(self, name)
+        if self.__path is None:
+            return Definitions(self.__retriever, name)
+        return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
 
-# class Definitions:
-#     """Allow easy access to XPM tasks"""
-
-#     def __init__(self, retriever, path=None):
-#         self.__retriever = retriever
-#         self.__path = path
-
-#     def __getattr__(self, name):
-#         if name.startswith("__"):
-#             return object.__getattr__(self, name)
-#         if self.__path is None:
-#             return Definitions(self.__retriever, name)
-#         return Definitions(self.__retriever, "%s.%s" % (self.__path, name))
-
-#     def __call__(self, *args, **options):
-#         definition = self.__retriever(self.__path)
-#         if definition is None:
-#             raise AttributeError("Task/Type %s not found" % self.__path)
-#         return definition.__call__(*args, **options)
+    def __call__(self, *args, **options):
+        definition = self.__retriever(self.__path)
+        if definition is None:
+            raise AttributeError("Task/Type %s not found" % self.__path)
+        return definition.__call__(*args, **options)
 
 
-# types = Definitions(register.getType)
-# tasks = Definitions(register.getTask)
+types = Definitions(register.getType)
+tasks = Definitions(register.getTask)
 
 
-# class MergeClass:
-#     """Merge class annotation
-
-#     Useful to decouple definition and declaration in Python
-
-#     class A:
-#         def x(self): return "x"
-
-#     a = A()
-
-#     @MergeClass(A)
-#     class A:
-#         def y(self): return "y"
-
-#     a.x() # prints x
-#     a.y() # prints y
-#     """
-
-#     def __init__(self, original):
-#         self.original = original
-
-#     def __call__(self, _class):
-#         for _, method in inspect.getmembers(
-#                 _class, predicate=inspect.isfunction):
-#             setattr(self.original, method.__name__, method)
-
-#         return None
-
-
-# def typename(object):
-#     """Returns the type name of the object"""
-#     return object.type().typeName()
+def typename(object):
+    """Returns the type name of the object"""
+    return object.type().typeName()
 
 
 # # --- Export some useful functions

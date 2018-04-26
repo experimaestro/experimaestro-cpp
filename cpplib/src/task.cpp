@@ -27,6 +27,10 @@ void Task::submit(std::shared_ptr<StructuredValue> const &sv,
                   std::shared_ptr<rpc::Launcher> const &launcher,
                   std::shared_ptr<rpc::LauncherParameters> const &launcherParameters
   ) const {
+  
+  // Set task
+  sv->task(const_cast<Task*>(this)->shared_from_this());
+
   // Find dependencies
   std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
   if (send) {

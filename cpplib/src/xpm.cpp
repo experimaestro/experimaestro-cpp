@@ -102,7 +102,7 @@ StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<Structure
     : _flags(0), _content(map) {
 }
 
-StructuredValue::StructuredValue(StructuredValue const &other) : _flags(other._flags), _content(other._content) {
+StructuredValue::StructuredValue(StructuredValue const &other) : _value(other._value),  _flags(other._flags), _content(other._content) {
 }
 
 
@@ -416,12 +416,28 @@ void StructuredValue::generate(GeneratorContext & context) {
           Argument &argument = *entry.second;
           auto generator = argument.generator();
 
-          if (!hasKey(argument.name()) && generator) {
+          if (!hasKey(argument.name())) {
+            if (generator) {
             auto generated = generator->generate(context);
             LOGGER->debug("Generating value for {}", argument.name());
             set(argument.name(), generated);
+            } else if (argument.defaultValue()) {
+              LOGGER->debug("Setting default value for {}...", argument.name());
+              auto value = argument.defaultValue()->copy();
+              value->set(Flag::DEFAULT, true);
+              value->set(Flag::IGNORE, argument.ignore());
+              set(argument.name(), value);
+            } else if (!argument.required()) {
+              // Set value null
+              auto value = std::make_shared<StructuredValue>(Value::NONE);
+              value->set(Flag::DEFAULT, true);
+              setValue(argument.name(), nullptr);
           }
+          } else {
+            // Generate sub-structures
+            _content[argument.name()]->generate(context);
         }
+      }
       }
       set(Flag::GENERATED, true);
     }
@@ -448,18 +464,7 @@ void StructuredValue::validate() {
         if (argument.required()) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-        } else {
-          if (argument.defaultValue()) {
-            LOGGER->debug("Setting default value for {}...", argument.name());
-            auto value = argument.defaultValue()->copy();
-            value->set(Flag::DEFAULT, true);
-            value->set(Flag::IGNORE, argument.ignore());
-            set(argument.name(), value);
-          } else if (!argument.required()) {
-            // Set value null
-            setValue(argument.name(), nullptr);
           }
-        }
       } else {
         // Sets the value
         auto value = get(argument.name());
@@ -470,31 +475,16 @@ void StructuredValue::validate() {
           LOGGER->debug("Value is default");
           value->set(Flag::DEFAULT, true);
         } else {
-          // Check the type
+          // Check if the declared type corresponds to the value type
           if (!entry.second->type()->accepts(value->type())) {
             throw argument_error(
                 "Argument " + argument.name() + " type is  " + value->type()->toString() 
                 + ", but requested type was " + entry.second->type()->toString());
           }
-
-          // // If the value has a type, handles this
-          // if (value->hasKey(KEY_TYPE) && !std::dynamic_pointer_cast<Value>(value)) {
-          //   // Create an object of the key type
-          //   auto v = value->get(KEY_TYPE);
-          //   auto valueType = value->type();
-          //   if (valueType) {
-          //     auto object = valueType->create(nullptr);
-          //     LOGGER->debug("Looking at {}", entry.first);
-          //     object->setValue(value);
-          //     object->validate();
-          //   }
-          // }
         }
 
         LOGGER->debug("Validating {}...", argument.name());
         value->validate();
-        LOGGER->debug("Setting {}...", argument.name());
-        setValue(argument.name(), value);
       }
     }
   }
@@ -506,43 +496,6 @@ void StructuredValue::setValue(std::string const &name, std::shared_ptr<Structur
     _object->setValue(name, value);
   }
 }
-
-// void StructuredValue::execute() {
-//   // TODO: should display the host language class name
-//   throw exception("No execute method provided in " + std::string(typeid(*this).name()));
-// }
-
-// void StructuredValue::pre_execute() {}
-// void StructuredValue::post_execute() {}
-
-// void StructuredValue::_pre_execute() {
-//   // Loop over all the type hierarchy
-//   for (auto type = _type; type; type = type->parentType()) {
-//     // Loop over all the arguments
-//     for (auto entry: type->arguments()) {
-//       auto value = _content.find(entry.second->name());
-//       if (value != _content.end()) {
-//         value->second->_pre_execute();
-//       }
-//     }
-//   }
-
-//   this->pre_execute();
-// }
-
-// void StructuredValue::_post_execute() {
-//   // Loop over all the type hierarchy
-//   for (auto type = _type; type; type = type->parentType()) {
-//     // Loop over all the arguments
-//     for (auto entry: type->arguments()) {
-//       auto value = _content.find(entry.second->name());
-//       if (value != _content.end()) {
-//         value->second->_post_execute();
-//       }
-//     }
-//   }
-//   this->post_execute();
-// }
 
 void StructuredValue::set(StructuredValue::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;

@@ -14,7 +14,18 @@ class StructuredValue;
 class Register;
 
 enum class ValueType : int8_t {
-  NONE, INTEGER, REAL, STRING, PATH, BOOLEAN, ARRAY
+  /* Value not set */
+  UNSET, 
+
+  /* Set to None */
+  NONE, 
+
+  INTEGER, 
+  REAL, 
+  STRING, 
+  PATH, 
+  BOOLEAN, 
+  ARRAY
 };
 
 
@@ -110,10 +121,16 @@ class Value {
   /// Access to the new array
   std::shared_ptr<StructuredValue> &operator[](const size_t index);
 
+  /// A constant
+  static const Value NONE;
+  
  protected:
   friend struct Helper;
 
-  private:
+private:
+    /// Initialize with a given type (internal use only)
+    Value(ValueType vt);
+
     union Union {
     long integer;
     double real;

@@ -14,6 +14,8 @@ namespace xpm {
 
 typedef Value::Array ValueArray;
 
+const Value Value::NONE(ValueType::NONE);
+
 bool Value::equals(Value const &b) const {
   if (scalarType() != b._scalarType) return false;
   switch (_scalarType) {
@@ -36,7 +38,11 @@ bool Value::equals(Value const &b) const {
       return true;
     }
 
-    case ValueType::NONE:throw std::runtime_error("none has no type");
+    case ValueType::NONE:
+      return true;
+
+    case ValueType::UNSET:
+      throw std::runtime_error("equals: unset has no type");
   }
 
   throw std::out_of_range("Scalar type is not known (comparing)");
@@ -55,8 +61,8 @@ Value Value::cast(Type::Ptr const &type) {
     case ValueType::BOOLEAN: return Value(this->asBoolean());
     case ValueType::REAL: return Value(this->asReal());
     case ValueType::ARRAY: return Value(this->asArray());
-
-    case ValueType::NONE:throw std::runtime_error("none has no type");
+    case ValueType::NONE: return *this; // no change
+    case ValueType::UNSET:throw std::runtime_error("cast: unset has no type");
   }
 
   throw std::out_of_range("Scalar type is not known (casting)");
@@ -66,15 +72,17 @@ Value Value::cast(Type::Ptr const &type) {
 
 Value::~Value() {
   switch (_scalarType) {
-    case ValueType::STRING: _value.string.~stdstring();
+    case ValueType::STRING: 
+      _value.string.~stdstring();
       break;
-    case ValueType::ARRAY: _value.array.~ValueArray();
+    case ValueType::ARRAY: 
+      _value.array.~ValueArray();
       break;
     default:
       // Do nothing for other values
       break;
   }
-  _scalarType = ValueType::NONE;
+  _scalarType = ValueType::UNSET;
 }
 
 Value::Union::~Union() {
@@ -85,7 +93,7 @@ Value::Union::Union() {
   // Does nothing: handled by Scalar
 }
 
-Value::Value() : _scalarType(ValueType::NONE) {
+Value::Value() : _scalarType(ValueType::UNSET) {
 }
 
 Value::Value(Array const & array) {
@@ -94,6 +102,9 @@ Value::Value(Array const & array) {
 
 Value::Value(Array && array) {
 
+}
+
+Value::Value(ValueType scalarType) : _scalarType(scalarType) {
 }
 
 Value::Value(double value) : _scalarType(ValueType::REAL) {
@@ -198,14 +209,15 @@ Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
     }
 
     default:
-      throw new exception("unhanlded JSON type for a Value");
+      throw exception("unhanlded JSON type for a Value");
   }
 }
 
 std::shared_ptr<Type> Value::type() const {
   switch (_scalarType) {
     case ValueType::NONE:
-      return nullptr;
+    case ValueType::UNSET:
+      return AnyType;
 
     case ValueType::REAL:
       return RealType;
@@ -226,6 +238,7 @@ std::shared_ptr<Type> Value::type() const {
       return ArrayType;
   }
 
+      throw exception("unhanlded type for a Value");
 }
 
 
@@ -234,7 +247,9 @@ Value &Value::operator=(Value const &other) {
 
   _scalarType = other._scalarType;
   switch (_scalarType) {
-    case ValueType::NONE:break;
+    case ValueType::NONE:
+    case ValueType::UNSET:
+      break;
     
     case ValueType::REAL:_value.real = other._value.real;
       break;
@@ -259,7 +274,9 @@ Value &Value::operator=(Value const &other) {
 
 long Value::asInteger() {
   switch (_scalarType) {
-    case ValueType::NONE:return false;
+    case ValueType::NONE: 
+    case ValueType::UNSET: 
+      throw cast_error("cannot convert none/unset " + std::to_string(_value.real) + " to integer");
 
     case ValueType::REAL:
       if (_value.real == (int)_value.real) {
@@ -280,7 +297,9 @@ long Value::asInteger() {
 }
 double Value::asReal() {
   switch (_scalarType) {
-    case ValueType::NONE:return false;
+    case ValueType::NONE:
+    case ValueType::UNSET: 
+      throw cast_error("cannot convert none/unset " + std::to_string(_value.real) + " to real");
 
     case ValueType::REAL: return _value.real;
     case ValueType::INTEGER:return _value.integer;
@@ -303,6 +322,7 @@ Path Value::asPath() const {
     case ValueType::REAL:
     case ValueType::INTEGER:
     case ValueType::BOOLEAN:
+    case ValueType::UNSET:
       throw cast_error("Cannot convert value into path");
     case ValueType::ARRAY:
       if (_value.array.size() != 1)
@@ -361,7 +381,9 @@ Value::Array Value::asArray() const {
 
 std::string Value::asString() {
   switch (_scalarType) {
-    case ValueType::NONE:return "";
+    case ValueType::UNSET:
+    case ValueType::NONE:
+      throw cast_error("Cannot convert none/unset to string");
 
     case ValueType::REAL: return std::to_string(_value.real);
       break;
@@ -388,6 +410,8 @@ std::string Value::asString() {
 
 json Value::toJson() const {
   switch (scalarType()) {
+    case ValueType::NONE: return nullptr;
+
     case ValueType::STRING:return json(_value.string);
 
     case ValueType::INTEGER:return json(_value.integer);
@@ -406,8 +430,7 @@ json Value::toJson() const {
       return array;
     }
 
-
-    case ValueType::NONE:throw std::runtime_error("none has no type");
+    case ValueType::UNSET:throw std::runtime_error("to json: unset has no type");
   }
   throw std::out_of_range("Scalar type is not known (converting to json)");
 }
@@ -419,7 +442,9 @@ std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
 
   // Hash value
   switch (_scalarType) {
+    case ValueType::UNSET:
     case ValueType::NONE:
+      // No value content for these types
       break;
 
     case ValueType::BOOLEAN:
@@ -449,7 +474,7 @@ std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
 }
 
 bool Value::defined() const {
-  return _scalarType != ValueType::NONE;
+  return _scalarType != ValueType::UNSET;
 }
 
 ValueType const Value::scalarType() const {

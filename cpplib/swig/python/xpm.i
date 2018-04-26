@@ -68,13 +68,21 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
    }} // Ends xpm::python
 %}
 
-
-
-
+// Get the real object for a shared_ptr of an object
 %typemap(out) std::shared_ptr<xpm::Object> {
     // Retrieving Python object (and not the director)
     $result = xpm::python::getRealObject($1);
 }
+
+// Handles properly a nullptr
+%typemap(directorin) std::shared_ptr< xpm::StructuredValue > const & {
+    if (!$1) {
+        $input = SWIG_Py_Void();
+    } else {
+        $input = SWIG_NewPointerObj(%as_voidptr(&$1), $descriptor, %newpointer_flags);
+    }
+}
+
 
 
 
@@ -97,13 +105,6 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     free(demangled);
     return r;
 }
-
-
-%typemap(directorin) std::shared_ptr<xpm::Object> const & {
-    $input = xpm::python::getRealObject($1);
-}
-
-
 
 
 %extend xpm::Object {
