@@ -1,6 +1,5 @@
-from .experimaestro import *
+# Import Python modules
 
-# import copy
 import json
 import sys
 import inspect
@@ -8,8 +7,14 @@ import os.path as op
 import logging
 import pathlib
 from pathlib import Path as PPath
+from experimaestro.rpc import Functions
+
+# Import C++ library
+from .experimaestro import *
 
 logger = logging.getLogger("xpm")
+
+# --- Utilities and constants
 
 class JSONEncoder(json.JSONEncoder):
     """A JSON encoder for Python objects"""
@@ -30,19 +35,7 @@ JSON_ENCODER = JSONEncoder()
 SUBMIT_TASKS = True
 
 
-
-class TypeProxy:
-    pass
-
-class choices(TypeProxy):
-    """Choices"""
-    def __init__(self, *choices):
-        pass
-
-    @property
-    def type(self):
-        return cvar.StringType
-
+# --- From C++ types to Python
 
 
 def value2array(array):
@@ -56,7 +49,7 @@ def value2array(array):
     return r
 
 
-# Converts a value to Python
+"""Dictionary of converteres"""
 VALUECONVERTERS = {
     BooleanType.toString(): lambda v: v.value().asBoolean(),
     IntegerType.toString(): lambda v: v.value().asInteger(),
@@ -66,6 +59,7 @@ VALUECONVERTERS = {
     ArrayType.toString(): value2array
 }
 
+# --- From Python to C++ types
 
 def structuredValue(value):
     """Transforms a Python value into a structured value"""
@@ -98,6 +92,10 @@ def checknullsv(sv):
     if sv.value().scalarType() == ValueType_NONE:
         return None
     return sv
+
+
+
+# --- XPM Objects
 
 class XPMObject(Object):
     """Holds XPM information for a PyObject"""
@@ -157,12 +155,13 @@ class PyObject:
         """Prepare object after creation"""
         pass
 
-
+# Defines a class property
 PyObject.__xpmtype__ = AnyType
 
 
 
 class PythonRegister(Register):
+    """The register contains a reference"""
     def __init__(self):
         # Initialize the base class
         Register.__init__(self)
@@ -224,6 +223,8 @@ class PythonRegister(Register):
 register = PythonRegister()
 
 
+# --- Annotations to define tasks and types
+
 class RegisterType:
     """Annotations for experimaestro types"""
     def __init__(self, qname, description=None, associate=False):
@@ -268,12 +269,24 @@ class RegisterType:
 
 
 class AssociateType(RegisterType):
+    """Annotation to associate one class with an XPM type"""
     def __init__(self, qname, description=None):
         super().__init__(qname, description=description, associate=True)
 
 
 class RegisterTask():
-    """Register a task"""
+    """Register a task
+    
+    This annotation must be used after the class has been associated
+    with an XPM type, i.e.
+
+    ```
+    @RegisterTask(...)
+    @RegisterType(...)
+    class ...:
+        ...
+    ```
+    """
 
     def __init__(self, scriptpath=None, pythonpath=None):
         self.pythonpath = sys.executable if pythonpath is None else pythonpath
@@ -335,6 +348,7 @@ class AbstractArgument:
 
 
 class TypeArgument(AbstractArgument):
+    """Defines an argument for an experimaestro type"""
     def __init__(self, name, type=None, default=None, required=None,
                  help=None, ignore=False):
         xpmtype = register.getType(type)
@@ -352,6 +366,8 @@ class TypeArgument(AbstractArgument):
 
 
 class PathArgument(AbstractArgument):
+    """Defines a an argument that will be a relative path (automatically
+    set by experimaestro)"""
     def __init__(self, name, path, help=""):
         """
         :param name: The name of argument (in python)
@@ -362,17 +378,10 @@ class PathArgument(AbstractArgument):
         self.argument.generator(generator)
 
 
-def tojson(t=None):
-    if t is None:
-        types = []
-        for k, t in register.types.items():
-            types.append(json.loads(t.toJson()))
-        return types
-    return register.types[t].toJson()
+# --- Export some useful functions
 
-
-class Definitions:
-    """Allow easy access to XPM tasks"""
+class _Definitions:
+    """Allow easy access to XPM tasks with dot notation to tasks or types"""
 
     def __init__(self, retriever, path=None):
         self.__retriever = retriever
@@ -392,18 +401,9 @@ class Definitions:
         return definition.__call__(*args, **options)
 
 
-types = Definitions(register.getType)
-tasks = Definitions(register.getTask)
+types = _Definitions(register.getType)
+tasks = _Definitions(register.getTask)
 
+# --- Sets some useful functions
 
-def typename(object):
-    """Returns the type name of the object"""
-    return object.type().typeName()
-
-
-# # --- Export some useful functions
-
-from experimaestro.rpc import Functions
-
-for name in ["set_experiment"]:
-    locals()[name] = getattr(Functions, name)
+set_experiment = Functions.set_experiment
