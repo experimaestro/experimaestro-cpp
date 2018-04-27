@@ -3,7 +3,6 @@
  */
 #include "includes.h"
 
-
 TEST_CASE("simple_file_logger", "[simple_logger]]")
 {
     prepare_logdir();
@@ -12,14 +11,17 @@ TEST_CASE("simple_file_logger", "[simple_logger]]")
     auto logger = spdlog::create<spdlog::sinks::simple_file_sink_mt>("logger", filename);
     logger->set_pattern("%v");
 
-
+#if !defined(SPDLOG_FMT_PRINTF)
     logger->info("Test message {}", 1);
     logger->info("Test message {}", 2);
+#else
+    logger->info("Test message %d", 1);
+    logger->info("Test message %d", 2);
+#endif
     logger->flush();
     REQUIRE(file_contents(filename) == std::string("Test message 1\nTest message 2\n"));
     REQUIRE(count_lines(filename) == 2);
 }
-
 
 TEST_CASE("flush_on", "[flush_on]]")
 {
@@ -33,8 +35,13 @@ TEST_CASE("flush_on", "[flush_on]]")
     logger->trace("Should not be flushed");
     REQUIRE(count_lines(filename) == 0);
 
+#if !defined(SPDLOG_FMT_PRINTF)
     logger->info("Test message {}", 1);
     logger->info("Test message {}", 2);
+#else
+    logger->info("Test message %d", 1);
+    logger->info("Test message %d", 2);
+#endif
     logger->flush();
     REQUIRE(file_contents(filename) == std::string("Should not be flushed\nTest message 1\nTest message 2\n"));
     REQUIRE(count_lines(filename) == 3);
@@ -47,13 +54,18 @@ TEST_CASE("rotating_file_logger1", "[rotating_logger]]")
     auto logger = spdlog::rotating_logger_mt("logger", basename, 1024, 0);
 
     for (int i = 0; i < 10; ++i)
+    {
+#if !defined(SPDLOG_FMT_PRINTF)
         logger->info("Test message {}", i);
+#else
+        logger->info("Test message %d", i);
+#endif
+    }
 
     logger->flush();
     auto filename = basename;
     REQUIRE(count_lines(filename) == 10);
 }
-
 
 TEST_CASE("rotating_file_logger2", "[rotating_logger]]")
 {
@@ -67,7 +79,13 @@ TEST_CASE("rotating_file_logger2", "[rotating_logger]]")
     auto filename = basename;
     REQUIRE(count_lines(filename) == 10);
     for (int i = 0; i < 1000; i++)
+    {
+#if !defined(SPDLOG_FMT_PRINTF)
         logger->info("Test message {}", i);
+#else
+        logger->info("Test message %d", i);
+#endif
+    }
 
     logger->flush();
     REQUIRE(get_filesize(filename) <= 1024);
@@ -75,11 +93,10 @@ TEST_CASE("rotating_file_logger2", "[rotating_logger]]")
     REQUIRE(get_filesize(filename1) <= 1024);
 }
 
-
 TEST_CASE("daily_logger", "[daily_logger]]")
 {
     prepare_logdir();
-    //calculate filename (time based)
+    // calculate filename (time based)
     std::string basename = "logs/daily_log";
     std::tm tm = spdlog::details::os::localtime();
     fmt::MemoryWriter w;
@@ -88,21 +105,24 @@ TEST_CASE("daily_logger", "[daily_logger]]")
     auto logger = spdlog::daily_logger_mt("logger", basename, 0, 0);
     logger->flush_on(spdlog::level::info);
     for (int i = 0; i < 10; ++i)
+    {
+#if !defined(SPDLOG_FMT_PRINTF)
         logger->info("Test message {}", i);
+#else
+        logger->info("Test message %d", i);
+#endif
+    }
 
     auto filename = w.str();
     REQUIRE(count_lines(filename) == 10);
 }
 
-
 TEST_CASE("daily_logger with dateonly calculator", "[daily_logger_dateonly]]")
 {
-    using sink_type = spdlog::sinks::daily_file_sink<
-                      std::mutex,
-                      spdlog::sinks::dateonly_daily_file_name_calculator>;
+    using sink_type = spdlog::sinks::daily_file_sink<std::mutex, spdlog::sinks::dateonly_daily_file_name_calculator>;
 
     prepare_logdir();
-    //calculate filename (time based)
+    // calculate filename (time based)
     std::string basename = "logs/daily_dateonly";
     std::tm tm = spdlog::details::os::localtime();
     fmt::MemoryWriter w;
@@ -110,7 +130,13 @@ TEST_CASE("daily_logger with dateonly calculator", "[daily_logger_dateonly]]")
 
     auto logger = spdlog::create<sink_type>("logger", basename, 0, 0);
     for (int i = 0; i < 10; ++i)
+    {
+#if !defined(SPDLOG_FMT_PRINTF)
         logger->info("Test message {}", i);
+#else
+        logger->info("Test message %d", i);
+#endif
+    }
     logger->flush();
     auto filename = w.str();
     REQUIRE(count_lines(filename) == 10);
@@ -118,7 +144,7 @@ TEST_CASE("daily_logger with dateonly calculator", "[daily_logger_dateonly]]")
 
 struct custom_daily_file_name_calculator
 {
-    static spdlog::filename_t calc_filename(const spdlog::filename_t& basename)
+    static spdlog::filename_t calc_filename(const spdlog::filename_t &basename)
     {
         std::tm tm = spdlog::details::os::localtime();
         fmt::MemoryWriter w;
@@ -129,12 +155,10 @@ struct custom_daily_file_name_calculator
 
 TEST_CASE("daily_logger with custom calculator", "[daily_logger_custom]]")
 {
-    using sink_type = spdlog::sinks::daily_file_sink<
-                      std::mutex,
-                      custom_daily_file_name_calculator>;
+    using sink_type = spdlog::sinks::daily_file_sink<std::mutex, custom_daily_file_name_calculator>;
 
     prepare_logdir();
-    //calculate filename (time based)
+    // calculate filename (time based)
     std::string basename = "logs/daily_dateonly";
     std::tm tm = spdlog::details::os::localtime();
     fmt::MemoryWriter w;
@@ -142,10 +166,69 @@ TEST_CASE("daily_logger with custom calculator", "[daily_logger_custom]]")
 
     auto logger = spdlog::create<sink_type>("logger", basename, 0, 0);
     for (int i = 0; i < 10; ++i)
+    {
+#if !defined(SPDLOG_FMT_PRINTF)
         logger->info("Test message {}", i);
+#else
+        logger->info("Test message %d", i);
+#endif
+    }
 
     logger->flush();
     auto filename = w.str();
     REQUIRE(count_lines(filename) == 10);
 }
 
+/*
+ * File name calculations
+ */
+
+TEST_CASE("rotating_file_sink::calc_filename1", "[rotating_file_sink]]")
+{
+    auto filename = spdlog::sinks::rotating_file_sink_st::calc_filename("rotated.txt", 3);
+    REQUIRE(filename == "rotated.3.txt");
+}
+
+TEST_CASE("rotating_file_sink::calc_filename2", "[rotating_file_sink]]")
+{
+    auto filename = spdlog::sinks::rotating_file_sink_st::calc_filename("rotated", 3);
+    REQUIRE(filename == "rotated.3");
+}
+
+TEST_CASE("rotating_file_sink::calc_filename3", "[rotating_file_sink]]")
+{
+    auto filename = spdlog::sinks::rotating_file_sink_st::calc_filename("rotated.txt", 0);
+    REQUIRE(filename == "rotated.txt");
+}
+
+// regex supported only from gcc 4.9 and above
+#if defined(_MSC_VER) || !(__GNUC__ <= 4 && __GNUC_MINOR__ < 9)
+#include <regex>
+TEST_CASE("daily_file_sink::default_daily_file_name_calculator1", "[daily_file_sink]]")
+{
+    // daily_YYYY-MM-DD_hh-mm.txt
+    auto filename = spdlog::sinks::default_daily_file_name_calculator::calc_filename("daily.txt");
+    std::regex re(R"(^daily_(19|20)\d\d-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])_\d\d-[0-5][0-9].txt$)");
+    std::smatch match;
+    REQUIRE(std::regex_match(filename, match, re));
+}
+
+TEST_CASE("daily_file_sink::default_daily_file_name_calculator2", "[daily_file_sink]]")
+{
+    // daily_YYYY-MM-DD_hh-mm.txt
+    auto filename = spdlog::sinks::default_daily_file_name_calculator::calc_filename("daily");
+    std::regex re(R"(^daily_(19|20)\d\d-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])_\d\d-[0-5][0-9]$)");
+    std::smatch match;
+    REQUIRE(std::regex_match(filename, match, re));
+}
+
+TEST_CASE("daily_file_sink::dateonly_daily_file_name_calculator", "[daily_file_sink]]")
+{
+    // daily_YYYY-MM-DD_hh-mm.txt
+    auto filename = spdlog::sinks::dateonly_daily_file_name_calculator::calc_filename("daily.txt");
+    // date regex based on https://www.regular-expressions.info/dates.html
+    std::regex re(R"(^daily_(19|20)\d\d-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])\.txt$)");
+    std::smatch match;
+    REQUIRE(std::regex_match(filename, match, re));
+}
+#endif
