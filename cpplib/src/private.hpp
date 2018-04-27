@@ -11,11 +11,13 @@
 #include <spdlog/fmt/ostr.h>
 #include <openssl/sha.h>
 
+#include <xpm/common.hpp>
+
 #define DEFINE_LOGGER(name) namespace { auto LOGGER = ::xpm::logger(name); }
 
 namespace xpm {
 
-std::shared_ptr<spdlog::logger> logger(std::string const &name);
+ptr<spdlog::logger> logger(std::string const &name);
 
 class StructuredValue;
 class TypeName;

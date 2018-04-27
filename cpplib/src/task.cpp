@@ -14,15 +14,15 @@ using nlohmann::json;
 
 bool Task::_running = false;
 
-Task::Task(TypeName const &typeName, std::shared_ptr<Type> const &type) : _identifier(typeName), _type(type) {
+Task::Task(TypeName const &typeName, ptr<Type> const &type) : _identifier(typeName), _type(type) {
 }
 
-Task::Task(std::shared_ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
+Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 }
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(std::shared_ptr<StructuredValue> const &sv,
+void Task::submit(ptr<StructuredValue> const &sv,
                   bool send,
                   Launcher const &launcher
   ) const {
@@ -95,7 +95,7 @@ nlohmann::json Task::toJson() {
 Type::Ptr Task::type() {
   return _type;
 }
-std::shared_ptr<PathGenerator> Task::getPathGenerator() const {
+ptr<PathGenerator> Task::getPathGenerator() const {
   return std::make_shared<PathGenerator>(_identifier.localName());
 };
 }

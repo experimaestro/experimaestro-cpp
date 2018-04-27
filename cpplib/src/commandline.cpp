@@ -143,7 +143,6 @@ nlohmann::json Command::toJson() const {
 AbstractCommandComponent::AbstractCommandComponent() {
 
 }
-
 AbstractCommandComponent::~AbstractCommandComponent() {
 
 }
@@ -290,7 +289,6 @@ template<>
 struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
   Path path;
   Reference(const Path &path) : path(path) {}
-
   virtual nlohmann::json toJson() const override {
     auto j = nlohmann::json::object();
     j["path"] = path.toString();

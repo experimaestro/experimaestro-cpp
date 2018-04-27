@@ -78,15 +78,15 @@ Register::Register() {
 }
 Register::~Register() {}
 
-void Register::addType(std::shared_ptr<Type> const &type) {
+void Register::addType(ptr<Type> const &type) {
   _types[type->typeName()] = type;
 }
 
-void Register::addTask(std::shared_ptr<Task> const &task) {
+void Register::addTask(ptr<Task> const &task) {
   _tasks[task->identifier()] = task;
 }
 
-std::shared_ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
+ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
   auto it = _tasks.find(typeName);
   if (it != _tasks.end()) {
     return it->second;
@@ -94,7 +94,7 @@ std::shared_ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlac
   return nullptr;
 }
 
-std::shared_ptr<Type> Register::getType(TypeName const &typeName) {
+ptr<Type> Register::getType(TypeName const &typeName) {
   auto it = _types.find(typeName);
   if (it != _types.end()) {
     return it->second;
@@ -103,7 +103,7 @@ std::shared_ptr<Type> Register::getType(TypeName const &typeName) {
 }
 
 // Find a type given a type name
-std::shared_ptr<Type> Register::getType(std::shared_ptr<StructuredValue> const &object) {
+ptr<Type> Register::getType(ptr<StructuredValue> const &object) {
   return object->type();
 }
 
@@ -172,12 +172,12 @@ void Register::parse(std::vector<std::string> const &_args) {
  
 }
 
-void Register::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) {
+void Register::runTask(ptr<Task> const & task, ptr<StructuredValue> const & sv) {
 
 }
 
   /// Create object
-std::shared_ptr<Object> Register::createObject(std::shared_ptr<StructuredValue> const & sv) {
+ptr<Object> Register::createObject(ptr<StructuredValue> const & sv) {
   return nullptr;
 }
 
@@ -206,7 +206,7 @@ void Register::generate() const {
   std::cout << "}" << std::endl;
 }
 
-std::shared_ptr<StructuredValue> Register::build(std::string const &value) {
+ptr<StructuredValue> Register::build(std::string const &value) {
   return std::make_shared<StructuredValue>(*this, json::parse(value));
 }
 

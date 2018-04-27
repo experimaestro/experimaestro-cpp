@@ -17,7 +17,7 @@ namespace xpm {
 class StructuredValue;
 
 struct CommandContext {
-  std::shared_ptr<StructuredValue> parameters;
+  ptr<StructuredValue> parameters;
 };
 
 /// Base class for all command arguments

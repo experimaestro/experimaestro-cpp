@@ -46,7 +46,7 @@ const TypeName REAL_TYPE("real");
 const TypeName ARRAY_TYPE("array");
 const TypeName ANY_TYPE("any");
 const TypeName PATH_TYPE("path");
-const std::shared_ptr<Object> NULL_OBJECT;
+const ptr<Object> NULL_OBJECT;
 
 static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
 
@@ -97,7 +97,7 @@ StructuredValue::StructuredValue(Value const &v) : _flags(0) {
 StructuredValue::StructuredValue() : _flags(0), _type(AnyType) {
 }
 
-StructuredValue::StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map)
+StructuredValue::StructuredValue(std::map<std::string, ptr<StructuredValue>> &map)
     : _flags(0), _content(map) {
 }
 
@@ -113,7 +113,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
     // --- Object
     case nlohmann::json::value_t::object: {
       // (1) Get the type of the object
-      std::shared_ptr<Type> type;
+      ptr<Type> type;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         _type = xpmRegister.getType(typeName);
@@ -178,7 +178,7 @@ json StructuredValue::toJson() {
   return o;
 }
 
-std::shared_ptr<StructuredValue> StructuredValue::copy() {
+ptr<StructuredValue> StructuredValue::copy() {
   return std::make_shared<StructuredValue>(*this);
 }
 
@@ -222,7 +222,7 @@ std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
 
 
 
-std::shared_ptr<Type> StructuredValue::type() const {
+ptr<Type> StructuredValue::type() const {
   if (_type) return _type;
   if (_value.defined()) return _value.type();
   return AnyType;
@@ -232,7 +232,7 @@ bool StructuredValue::hasKey(std::string const &key) const {
   return _content.find(key) != _content.end();
 }
 
-std::shared_ptr<StructuredValue> StructuredValue::set(const std::string &key, std::shared_ptr<StructuredValue> const &value) {
+ptr<StructuredValue> StructuredValue::set(const std::string &key, ptr<StructuredValue> const &value) {
   if (get(Flag::SEALED)) {
     throw sealed_error();
   }
@@ -249,7 +249,7 @@ std::shared_ptr<StructuredValue> StructuredValue::set(const std::string &key, st
   return it == _content.end() ? nullptr : it->second;
 }
 
-std::shared_ptr<StructuredValue> StructuredValue::get(const std::string &key) {
+ptr<StructuredValue> StructuredValue::get(const std::string &key) {
   auto value = _content.find(key);
   if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
@@ -312,28 +312,28 @@ std::string StructuredValue::uniqueIdentifier() const {
   return s;
 }
 
-std::map<std::string, std::shared_ptr<StructuredValue>> const &StructuredValue::content() {
+std::map<std::string, ptr<StructuredValue>> const &StructuredValue::content() {
   return _content;
 }
 
 /** Get type */
-void StructuredValue::type(std::shared_ptr<Type> const &type) {
+void StructuredValue::type(ptr<Type> const &type) {
   _type = type;
 }
 
-void StructuredValue::object(std::shared_ptr<Object> const &object) {
+void StructuredValue::object(ptr<Object> const &object) {
   _object = object;
 }
 
-std::shared_ptr<Object> StructuredValue::object() {
+ptr<Object> StructuredValue::object() {
   return _object;
 }
 
-void StructuredValue::task(std::shared_ptr<Task> const &task) {
+void StructuredValue::task(ptr<Task> const &task) {
   _task = task;
 }
 
-std::shared_ptr<Task> StructuredValue::task() {
+ptr<Task> StructuredValue::task() {
   return _task;
 }
 
@@ -492,7 +492,7 @@ void StructuredValue::validate() {
   set(Flag::VALIDATED, true);
 }
 
-void StructuredValue::setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value) {
+void StructuredValue::setValue(std::string const &name, ptr<StructuredValue> const &value) {
   if (_object) {
     _object->setValue(name, value);
   }
@@ -551,22 +551,22 @@ Argument &Argument::help(const std::string &help) {
   return *this;
 }
 
-Argument &Argument::defaultValue(std::shared_ptr<StructuredValue> const &defaultValue) {
+Argument &Argument::defaultValue(ptr<StructuredValue> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
 }
-std::shared_ptr<StructuredValue> Argument::defaultValue() const { return _defaultValue; }
+ptr<StructuredValue> Argument::defaultValue() const { return _defaultValue; }
 
-std::shared_ptr<Generator> Argument::generator() { return _generator; }
-std::shared_ptr<Generator> const &Argument::generator() const { return _generator; }
-Argument &Argument::generator(std::shared_ptr<Generator> const &generator) {
+ptr<Generator> Argument::generator() { return _generator; }
+ptr<Generator> const &Argument::generator() const { return _generator; }
+Argument &Argument::generator(ptr<Generator> const &generator) {
   _generator = generator;
   return *this;
 }
 
-std::shared_ptr<Type> const &Argument::type() const { return _type; }
-Argument &Argument::type(std::shared_ptr<Type> const &type) {
+ptr<Type> const &Argument::type() const { return _type; }
+Argument &Argument::type(ptr<Type> const &type) {
   _type = type;
   return *this;
 }
@@ -574,31 +574,31 @@ Argument &Argument::type(std::shared_ptr<Type> const &type) {
 
 // ---- Type
 
-std::shared_ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
-std::shared_ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
-std::shared_ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
-std::shared_ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
-std::shared_ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
-std::shared_ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
+ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
+ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
+ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
+ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
+ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
+ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
 
-std::shared_ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
+ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
 
-Type::Type(TypeName const &type, std::shared_ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
+Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
     _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {}
 
 Type::~Type() {}
 
 
-void Type::addArgument(std::shared_ptr<Argument> const &argument) {
+void Type::addArgument(ptr<Argument> const &argument) {
   _arguments[argument->name()] = argument;
 }
 
-std::unordered_map<std::string, std::shared_ptr<Argument>> &Type::arguments() {
+std::unordered_map<std::string, ptr<Argument>> &Type::arguments() {
   return _arguments;
 }
 
-std::unordered_map<std::string, std::shared_ptr<Argument>> const &Type::arguments() const {
+std::unordered_map<std::string, ptr<Argument>> const &Type::arguments() const {
   return _arguments;
 }
 
@@ -704,7 +704,7 @@ bool Type::accepts(Type::Ptr const &other) const {
 
 // ---- Generators
 
-GeneratorContext::GeneratorContext(std::shared_ptr<StructuredValue> const &sv) {
+GeneratorContext::GeneratorContext(ptr<StructuredValue> const &sv) {
   stack.push_back(sv.get());
 }
 GeneratorContext::GeneratorContext() {
@@ -716,7 +716,7 @@ GeneratorLock::GeneratorLock(GeneratorContext * context, StructuredValue *sv) : 
 
 const std::string PathGenerator::TYPE = "path";
 
-std::shared_ptr<Generator> Generator::createFromJSON(nlohmann::json const &j) {
+ptr<Generator> Generator::createFromJSON(nlohmann::json const &j) {
   std::string type = j["type"];
   if (type == PathGenerator::TYPE) {
     return std::make_shared<PathGenerator>(j);
@@ -735,11 +735,11 @@ nlohmann::json PathGenerator::toJson() const {
   };
 }
 
-std::shared_ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
+ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
   Path p = Context::current().workdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
-  if (std::shared_ptr<Task> task = context.stack[0]->task()) {
+  if (ptr<Task> task = context.stack[0]->task()) {
     p = Path(p, {task->identifier().toString()});
   }
 

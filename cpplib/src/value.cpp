@@ -213,7 +213,7 @@ Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
   }
 }
 
-std::shared_ptr<Type> Value::type() const {
+ptr<Type> Value::type() const {
   switch (_scalarType) {
     case ValueType::NONE:
     case ValueType::UNSET:
@@ -506,7 +506,7 @@ std::string const &Value::getString() {
   return _value.string;
 }
 
-void Value::push_back(std::shared_ptr<StructuredValue> const &element) {
+void Value::push_back(ptr<StructuredValue> const &element) {
   if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot push an element");
   _value.array.push_back(element);
 }
@@ -516,7 +516,7 @@ size_t Value::size() const {
   return _value.array.size();
 }
 
-std::shared_ptr<StructuredValue> &Value::operator[](const size_t index) {
+ptr<StructuredValue> &Value::operator[](const size_t index) {
   if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get an element");
   return _value.array[index];
 }

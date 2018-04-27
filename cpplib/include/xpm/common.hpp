@@ -10,6 +10,8 @@
 
 namespace xpm {
 
+template <typename T> using ptr = std::shared_ptr<T>;
+
 /** Base exception */
 class exception : public std::exception {
   std::string _message;
