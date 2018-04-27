@@ -8,7 +8,7 @@
 #include <xpm/filesystem.hpp>
 #include <xpm/register.hpp>
 #include <yaml-cpp/yaml.h>
-
+#include "CLI11.hpp"
 #include "private.hpp"
 
 namespace xpm {
@@ -107,79 +107,69 @@ std::shared_ptr<Type> Register::getType(std::shared_ptr<StructuredValue> const &
   return object->type();
 }
 
-void Register::parse(std::vector<std::string> const &args) {
-  if (args.size() < 1) {
-    throw argument_error("Expected at least one argument (use help to get some help)");
+void Register::parse(std::vector<std::string> const &_args) {
+  
+  std::vector<std::string> args;
+  for(size_t i = _args.size(); i > 0; --i) {
+    args.push_back(_args[i-1]);
   }
 
-  if (args[0] == "help") {
-    std::cerr << "[Commands]\n";
-    std::cerr << "   help\tGet some help" << std::endl;
-    std::cerr << "   generate\tGenerate definitions in JSON format" << std::endl;
-    std::cerr << "   run" << std::endl;
+  CLI::App app{"Experimaestro command line parser"};
+  app.require_subcommand(1);
+  app.fallthrough(false);
 
-    std::cerr << std::endl;
-
-    std::cerr << "[available tasks]\n";
-    for (auto &entry: _tasks) {
-      std::cerr << "   " << entry.first << std::endl;
-    }
-    std::cerr << std::endl;
-    return;
-  }
-
-  if (args[0] == "generate") {
+  auto _generate = app.add_subcommand("generate", "Generate definitions in JSON format");
+  _generate->set_callback( [&](){
     generate();
-    return;
+  });
+
+  {
+    auto _run = app.add_subcommand("run", "Run a given task");
+    
+    std::string taskName;
+    _run->add_option("task", taskName, "Task name", true)->required();
+
+    std::string paramFile;
+    _run->add_option("jsonfile", paramFile, "Parameter file in JSON format", true)
+      ->check(CLI::ExistingFile)
+      ->required();
+
+    _run->set_callback( [&](){
+      // Retrieve the task
+      auto task = this->getTask(TypeName(taskName));
+      if (!task) {
+        throw argument_error(taskName + " is not a task");
+
+      }
+
+      std::ifstream stream(paramFile);
+      json j;
+      try {
+        j = json::parse(stream);
+      } catch (...) {
+        LOGGER->error("Error while parsing " + paramFile);
+        throw;
+      }
+
+      auto sv = std::make_shared<StructuredValue>(*this, j);
+
+      // Run the task
+      progress(-1);
+      sv->createObjects(*this);
+      runTask(task, sv);
+      return;
+    });
   }
 
-  if (args[0] == "run") {
-    // Retrieve the task
-    std::string taskName = args[1];
-    auto task = this->getTask(TypeName(taskName));
-    if (!task) {
-      throw argument_error(taskName + " is not a task");
-
-    }
-
-    // Retrieve the structured value
-    // TODO:
-    // - process other arguments (SV)
-    // - process command lines
-    std::ifstream stream(args[2]);
-    if (!stream) {
-      throw argument_error(args[2] + " is not a file");
-    }
-
-    json j;
-    try {
-      j = json::parse(stream);
-    } catch (...) {
-      LOGGER->error("Error while parsing " + args[2]);
-      throw;
-    }
-
-    auto sv = std::make_shared<StructuredValue>(*this, j);
-
-    // TODO: check if needed
-    // auto value = task->create(_defaultObjectFactory);
-    // value->fill(*this, j);
-
-    // Parse further command line options
-    // size_t ix = 3;
-    // while (ix < args.size()) {
-    //   std::string const &arg = args[ix];
-    //   auto p_equals = arg.find("=");
-    // }
-
-    // Run the task
-    progress(-1);
-    sv->createObjects(*this);
-    runTask(task, sv);
-    return;
+  try {
+    app.parse(const_cast<std::vector<std::string>&>(args));
+  } catch(const CLI::ParseError &e) {                                                                                \
+    if (app.exit(e)) {
+      throw exception();
+    }                                                                                         
   }
 
-  throw argument_error("Unexpected command: " + args[0]);
+ 
 }
 
 void Register::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) {
