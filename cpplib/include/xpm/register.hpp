@@ -64,9 +64,6 @@ class Register {
   /// Find a type given a t ype name
   std::shared_ptr<Type> getType(std::shared_ptr<StructuredValue> const &object);
 
-  /// Build
-  std::shared_ptr<StructuredValue> build(std::shared_ptr<StructuredValue> const &value);
-
   /// Build from a JSON string
   std::shared_ptr<StructuredValue> build(std::string const &value);
 

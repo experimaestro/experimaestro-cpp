@@ -93,6 +93,12 @@ def structuredValue(value):
     # For anything else, we try to convert it to a value
     return StructuredValue(Value(value))
 
+def checknullsv(sv):
+    """Returns either None or the sv"""
+    if sv.value().scalarType() == ValueType_NONE:
+        return None
+    return sv
+
 class XPMObject(Object):
     """Holds XPM information for a PyObject"""
     def __init__(self, pyobject):
@@ -108,16 +114,16 @@ class XPMObject(Object):
     
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
-        svobject = sv.object()
         if sv is None:
             value = None
             svtype = None
-        elif svobject is not None:
-            svtype = sv.type()
-            value = svobject.pyobject
         else:
             svtype = sv.type()
-            value = VALUECONVERTERS.get(svtype.toString(), lambda v: v)(sv)
+            object = sv.object()
+            if object:
+                value = object.pyobject
+            else:
+                value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
         logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
                      svtype, type(value), type(self.pyobject))
         setattr(self.pyobject, key, value)

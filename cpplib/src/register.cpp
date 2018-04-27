@@ -107,56 +107,6 @@ std::shared_ptr<Type> Register::getType(std::shared_ptr<StructuredValue> const &
   return object->type();
 }
 
-std::shared_ptr<StructuredValue> Register::build(std::shared_ptr<StructuredValue> const &value) {
-  // FIXME: discard?
-  NOT_IMPLEMENTED();
-  // std::shared_ptr<Type> objectType = value->type();
-  // LOGGER->debug("Building object with type {}", *objectType);
-
-  // // Create the object
-  // std::cerr << "Creating object..." << std::endl;
-  // auto object = objectType ? objectType->create(_defaultObjectFactory) : _defaultObjectFactory->create();
-
-  // std::cerr << "Created object... " << object.get() << std::endl;
-  // object->setValue(value);
-
-  // if (!object) {
-  //   throw std::runtime_error("Object of type " + objectType->toString() + " was not created");
-  // }
-
-  // // Loop over all the type hierarchy
-  // for (auto type = objectType; type; type = type->_parent) {
-
-  //   // Loop over the arguments
-  //   for (auto entry: type->arguments()) {
-  //     auto key = entry.first;
-
-  //     // Check required argument
-  //     auto const hasKey = value->hasKey(key);
-  //     if (!hasKey && entry.second->required()) {
-  //       throw argument_error("Argument " + key + " was required but not provided");
-  //     }
-
-  //     // Build subtype
-  //     if (hasKey) {
-  //       std::cerr << "Building " << key << std::endl;
-  //       auto subvalue = build(value->get(key));
-
-  //       // Set argument
-  //       std::cerr << "Setting " << key << std::endl;
-  //       object->set(key, subvalue);
-  //     } else {
-  //       auto defaultValue = entry.second->defaultValue();
-  //       if (defaultValue) {
-  //         object->set(key, defaultValue->copy());
-  //       }
-  //     }
-  //   }
-  // }
-
-  // return object;
-}
-
 void Register::parse(std::vector<std::string> const &args) {
   if (args.size() < 1) {
     throw argument_error("Expected at least one argument (use help to get some help)");
@@ -164,8 +114,8 @@ void Register::parse(std::vector<std::string> const &args) {
 
   if (args[0] == "help") {
     std::cerr << "[Commands]\n";
-    std::cerr << "   help" << std::endl;
-    std::cerr << "   generate" << std::endl;
+    std::cerr << "   help\tGet some help" << std::endl;
+    std::cerr << "   generate\tGenerate definitions in JSON format" << std::endl;
     std::cerr << "   run" << std::endl;
 
     std::cerr << std::endl;

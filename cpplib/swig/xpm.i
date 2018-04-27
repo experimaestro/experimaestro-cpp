@@ -98,8 +98,6 @@
 // Template instanciation
 %template(StringList) std::vector<std::string>;
 
-
-
 %exception {
     try {
         $action
