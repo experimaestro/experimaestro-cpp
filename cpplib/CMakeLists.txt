@@ -11,6 +11,7 @@ find_package(YamlCPP REQUIRED)
 add_definitions("-Wall")
 enable_testing()
 
+
 set(PUBLIC_HEADERS
         include/xpm/utils.hpp
         include/xpm/json.hpp
@@ -20,7 +21,15 @@ set(PUBLIC_HEADERS
         include/xpm/task.hpp
         include/xpm/filesystem.hpp
         include/xpm/commandline.hpp
-        include/xpm/logging.hpp)
+        include/xpm/logging.hpp
+        include/xpm/cpp.hpp 
+)
+
+set(PRIVATE_HEADERS
+    src/xpmssh.hpp
+    src/jsonserialization.hpp
+)
+
 
 set(RPC_HEADERS
         include/xpm/rpc/optional.hpp
@@ -28,24 +37,23 @@ set(RPC_HEADERS
 )
 
 set(SOURCES
-        ${PUBLIC_HEADERS}
+        ${PUBLIC_HEADERS} 
+        ${PRIVATE_HEADERS}
         ${RPC_HEADERS}
-        src/rpc/jsonrpcclient.cpp
         src/xpm.cpp
         src/filesystem.cpp
         src/context.cpp
         src/commandline.cpp
         src/private.cpp
-        src/rpc/client.cpp
-        src/rpc/objects.cpp
-        src/rpc/utils.cpp
-        src/rpc/notifications.cpp
         src/xpmssh.cpp
-        src/xpmssh.hpp
-        include/xpm/cpp.cpp include/xpm/cpp.hpp src/task.cpp src/common.cpp src/register.cpp src/jsonserialization.cpp
-        src/jsonserialization.hpp
+        src/notifications.cpp
+        src/cpp.cpp 
+        src/task.cpp 
+        src/common.cpp 
+        src/register.cpp 
+        src/jsonserialization.cpp
         src/value.cpp)
-
+        
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
