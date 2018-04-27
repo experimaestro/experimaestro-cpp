@@ -55,19 +55,17 @@ void Task::submit(std::shared_ptr<StructuredValue> const &sv,
     // Get generated directory as locator
     auto locator = Path(sv->resource());
 
-    // FIXME: Generate command and launch
-
     // Add dependencies
-    // LOGGER->info("Adding {} dependencies", dependencies.size());
-    // for (auto dependency: dependencies) {
-      // LOGGER->info("Adding dependency {}", dependency->identifier());
-      // command->add_dependency(dependency);
-    // }
-    // auto task = std::make_shared<rpc::CommandLineTask>(locator);
-    // task->taskId(identifier().toString());
-    // task->command(command);
-    // task->setLauncher(launcher, launcherParameters);
-    // task->submit();
+    LOGGER->info("Adding {} dependencies", dependencies.size());
+    for (auto dependency: dependencies) {
+      LOGGER->info("Adding dependency {}", dependency->identifier());
+      command->add_dependency(dependency);
+    }
+    auto task = CommandLineJob(locator);
+    task->taskId(identifier().toString());
+    task->command(command);
+    task->setLauncher(launcher, launcherParameters);
+    task->submit();
   } else {
     LOGGER->warn("Not sending task {}", identifier());
   }

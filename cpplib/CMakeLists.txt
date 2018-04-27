@@ -19,8 +19,10 @@ set(PUBLIC_HEADERS
         include/xpm/context.hpp
         include/xpm/value.hpp
         include/xpm/task.hpp
+        include/xpm/launchers.hpp
         include/xpm/filesystem.hpp
         include/xpm/commandline.hpp
+        include/xpm/scheduler.hpp
         include/xpm/logging.hpp
         include/xpm/cpp.hpp 
         
@@ -41,10 +43,12 @@ set(SOURCES
         # Source files
         src/xpm.cpp
         src/filesystem.cpp
+        src/scheduler.cpp
         src/context.cpp
         src/commandline.cpp
         src/private.cpp
         src/xpmssh.cpp
+        src/launchers.cpp 
         src/cpp.cpp 
         src/task.cpp 
         src/common.cpp 
