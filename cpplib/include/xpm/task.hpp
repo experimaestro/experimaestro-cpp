@@ -6,6 +6,9 @@
 
 namespace xpm {
 
+class Workspace;
+class CommandLine;
+
 /**
  * A task can be executed and has an associated type
  */
@@ -30,12 +33,13 @@ class Task
 
   /**
    * Configure the object
-   * @param object The object corresponding to the task type
-   * @param send If false, the job will not be sent to the experimaestro server
+   * @param workspace The workspace
+   * @param launcher The launcher used to launch the task (or null if not sending)
+   * @param object The structured value with which the task is defined
    */
-  void submit(ptr<StructuredValue> const &object,
-              bool send,
-              Launcher const & launcher) const;
+  void submit(ptr<Workspace> const & workspace,
+              ptr<Launcher> const & launcher,
+              ptr<StructuredValue> const & sv) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;
@@ -47,7 +51,7 @@ class Task
   std::string toString() const;
   
   /** Sets the command line for the task */
-  void commandline(CommandLine command);
+  void commandline(ptr<CommandLine> const & command);
 
   /** Gets the task identifier */
   TypeName const &identifier() const;

@@ -8,8 +8,6 @@
 #include <vector>
 #include <unordered_map>
 
-#include <xpm/dependencies.hpp>
-
 namespace xpm {
   // SHA-1 digest lenght
   static const int DIGEST_LENGTH = 20;
@@ -19,9 +17,11 @@ namespace xpm {
   class AbstractObjectHolder;
   class Type;
   class Object;
+  class Job;
   class Task;
   class Register;
   struct Helper;
+  class Resource;
   struct Digest;
   class GeneratorContext;
 
@@ -246,11 +246,11 @@ class StructuredValue
   ptr<Task> task();
 
   /**
-   * Find dependencies
-   * @param dependencies A dependency vector to fill
+   * Add dependencies to a given job
+   * @param job Job for which the dependencies have to be added
    * @param skipThis True if skipping this object
    */
-  void findDependencies(std::vector<Dependency> &dependencies, bool skipThis);
+  void addDependencies(ptr<Job> const & job, bool skipThis);
 
   /**
    * Validate values
@@ -291,10 +291,10 @@ class StructuredValue
   Value & value() { return _value; }
 
   /// Get resource
-  inline std::string const & resource() const { return _resource; }
+  inline ptr<Resource> const & resource() const { return _resource; }
 
   /// Set resource
-  inline void resource(std::string const & _resource) { this->_resource = _resource; }
+  inline void resource( ptr<Resource> const & _resource) { this->_resource = _resource; }
 
  private:
   /// Create objects
@@ -311,7 +311,7 @@ class StructuredValue
    * 
    * This field is set when the corresponding task is submitted
    */
-  std::string _resource;
+  ptr<Resource> _resource;
 
   /// Associated object, if any
   ptr<Object> _object;

@@ -4,6 +4,8 @@
 
 #include <xpm/common.hpp>
 #include <xpm/task.hpp>
+#include <xpm/workspace.hpp>
+
 #include "private.hpp"
 
 DEFINE_LOGGER("xpm")
@@ -22,23 +24,15 @@ Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(ptr<StructuredValue> const &sv,
-                  bool send,
-                  Launcher const &launcher
-  ) const {
-  
+void Task::submit(ptr<Workspace> const & workspace,
+              ptr<Launcher> const & launcher,
+              ptr<StructuredValue> const & sv
+) {
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
-  // Find dependencies
-  std::vector<Dependency> dependencies;
-  if (send) {
-    sv->findDependencies(dependencies, true);
-  }
-
   // Set locator
   auto svlocator = getPathGenerator()->generate(sv);
-  sv->resource(svlocator->value().asString());
 
   // Validate and seal the task sv
   LOGGER->info("Configuring task");
@@ -53,25 +47,22 @@ void Task::submit(ptr<StructuredValue> const &sv,
     LOGGER->info("Sending task");
 
     // Get generated directory as locator
-    auto locator = Path(sv->resource());
+    auto job = std::make_shared<CommandLineJob>(svlocator);
+    sv->resource(job);
+
+    // Adding dependencies
+    sv->addDependencies(job, true);
 
     // Add dependencies
-    LOGGER->info("Adding {} dependencies", dependencies.size());
-    for (auto dependency: dependencies) {
-      LOGGER->info("Adding dependency {}", dependency->identifier());
-      command->add_dependency(dependency);
-    }
-    auto task = CommandLineJob(locator);
-    task->taskId(identifier().toString());
-    task->command(command);
-    task->setLauncher(launcher, launcherParameters);
-    task->submit();
+    job->command(_commandLine);
+    job->setLauncher(launcher);
+    workspace->submit(job);
   } else {
     LOGGER->warn("Not sending task {}", identifier());
   }
 }
 
-void Task::commandline(CommandLine command) {
+void Task::commandline(ptr<CommandLine> const & command) {
   _commandLine = command;
 }
 

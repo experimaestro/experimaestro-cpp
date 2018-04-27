@@ -22,7 +22,7 @@ set(PUBLIC_HEADERS
         include/xpm/launchers.hpp
         include/xpm/filesystem.hpp
         include/xpm/commandline.hpp
-        include/xpm/scheduler.hpp
+        include/xpm/workspace.hpp
         include/xpm/logging.hpp
         include/xpm/cpp.hpp 
         
@@ -43,7 +43,7 @@ set(SOURCES
         # Source files
         src/xpm.cpp
         src/filesystem.cpp
-        src/scheduler.cpp
+        src/workspace.cpp
         src/context.cpp
         src/commandline.cpp
         src/private.cpp
