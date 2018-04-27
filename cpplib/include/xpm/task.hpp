@@ -2,6 +2,7 @@
 #define EXPERIMAESTRO_TASK_HPP
 
 #include <xpm/xpm.hpp>
+#include <xpm/launchers.hpp>
 
 namespace xpm {
 
@@ -34,8 +35,7 @@ class Task
    */
   void submit(std::shared_ptr<StructuredValue> const &object,
               bool send,
-              std::shared_ptr<rpc::Launcher> const &launcher,
-              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
+              Launcher const & launcher) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;

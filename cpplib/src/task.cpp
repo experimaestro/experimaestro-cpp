@@ -24,15 +24,14 @@ TypeName Task::typeName() const { return _type->typeName(); }
 
 void Task::submit(std::shared_ptr<StructuredValue> const &sv,
                   bool send,
-                  std::shared_ptr<rpc::Launcher> const &launcher,
-                  std::shared_ptr<rpc::LauncherParameters> const &launcherParameters
+                  Launcher const &launcher
   ) const {
   
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
   // Find dependencies
-  std::vector<std::shared_ptr<rpc::Dependency>> dependencies;
+  std::vector<Dependency> dependencies;
   if (send) {
     sv->findDependencies(dependencies, true);
   }
@@ -54,20 +53,21 @@ void Task::submit(std::shared_ptr<StructuredValue> const &sv,
     LOGGER->info("Sending task");
 
     // Get generated directory as locator
-    auto locator = rpc::Path::toPath(sv->resource());
-    auto command = _commandLine.rpc(context);
+    auto locator = Path(sv->resource());
+
+    // FIXME: Generate command and launch
 
     // Add dependencies
-    LOGGER->info("Adding {} dependencies", dependencies.size());
-    for (auto dependency: dependencies) {
-      LOGGER->info("Adding dependency {}", dependency->identifier());
-      command->add_dependency(dependency);
-    }
-    auto task = std::make_shared<rpc::CommandLineTask>(locator);
-    task->taskId(identifier().toString());
-    task->command(command);
-    task->setLauncher(launcher, launcherParameters);
-    task->submit();
+    // LOGGER->info("Adding {} dependencies", dependencies.size());
+    // for (auto dependency: dependencies) {
+      // LOGGER->info("Adding dependency {}", dependency->identifier());
+      // command->add_dependency(dependency);
+    // }
+    // auto task = std::make_shared<rpc::CommandLineTask>(locator);
+    // task->taskId(identifier().toString());
+    // task->command(command);
+    // task->setLauncher(launcher, launcherParameters);
+    // task->submit();
   } else {
     LOGGER->warn("Not sending task {}", identifier());
   }

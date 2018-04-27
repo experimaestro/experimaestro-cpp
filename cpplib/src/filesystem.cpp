@@ -7,7 +7,7 @@
 #include <fstream>
 #include <streambuf>
 
-#include <xpm/rpc/objects.hpp>
+#include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
 namespace xpm {
@@ -97,8 +97,9 @@ std::string Path::getContent() const {
     return str;
   }
 
-  auto rpcPath = rpc::Path::toPath(toString());
-  return rpcPath->read_all();
+  // auto rpcPath = rpc::Path::toPath(toString());
+  // return rpcPath->read_all();
+  NOT_IMPLEMENTED();
 }
 
 }

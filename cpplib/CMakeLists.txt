@@ -33,17 +33,10 @@ set(PRIVATE_HEADERS
     src/jsonserialization.hpp
 )
 
-
-set(RPC_HEADERS
-        include/xpm/rpc/optional.hpp
-        include/xpm/rpc/objects.hpp
-)
-
 set(SOURCES
         # Include files
         ${PUBLIC_HEADERS} 
         ${PRIVATE_HEADERS}
-        ${RPC_HEADERS}
 
         # Source files
         src/xpm.cpp
@@ -59,14 +52,10 @@ set(SOURCES
         src/jsonserialization.cpp
         src/value.cpp
 
-
         # RPC sources
         src/rpc/notifications.cpp
         src/rpc/jsonrpcclient.cpp
         src/rpc/client.cpp
-
-        src/rpc/objects.cpp
-        src/rpc/utils.cpp
 )
         
 find_package (Threads)
@@ -137,7 +126,7 @@ add_custom_target(documentation DEPENDS documentation.i)
 
 # --- General SWIG configuration
 
-set_source_files_properties(swig/xpm.i swig/xpm_rpc.i PROPERTIES CPLUSPLUS ON)
+set_source_files_properties(swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
 # --- Python support
 
@@ -164,10 +153,6 @@ if (true)
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     swig_add_module(experimaestro_python python swig/xpm.i)
 
-    # Build module experimaestro.rpc
-    set(SWIG_MODULE_experimaestro_rpc_python_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-    swig_add_module(experimaestro_rpc_python python swig/xpm_rpc.i)
-
     # Determine appropriate loader path
     if(APPLE)
         set(XPM_LOADER_PATH @loader_path)
@@ -176,7 +161,7 @@ if (true)
     endif()
 
     # Set output name and path
-    foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
+    foreach(swigtargetlist "experimaestro;experimaestro")
         # set(swigtargetlist ${swigtarget})
         list(GET swigtargetlist 0 swigtargetname)
         list(GET swigtargetlist 1 swigpythonname)
@@ -195,7 +180,7 @@ if (true)
     endforeach()
 	install(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 	install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-    add_dependencies(_experimaestro_python documentation _experimaestro_rpc_python)
+    add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
     #    add_dependencies(run-tests DEPENDS _experimaestro_python)
@@ -222,9 +207,6 @@ endif ()
 
 # set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
 # swig_add_module(experimaestro_java java swig/xpm.i)
-
-# set(SWIG_MODULE_experimaestro_rpc_java_EXTRA_DEPS ${RPC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-# swig_add_module(experimaestro_rpc_java java swig/xpm_rpc.i)
 
 # foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
 #     # set(swigtargetlist ${swigtarget})

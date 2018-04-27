@@ -8,6 +8,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include <xpm/dependencies.hpp>
+
 namespace xpm {
   // SHA-1 digest lenght
   static const int DIGEST_LENGTH = 20;
@@ -248,7 +250,7 @@ class StructuredValue
    * @param dependencies A dependency vector to fill
    * @param skipThis True if skipping this object
    */
-  void findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies, bool skipThis);
+  void findDependencies(std::vector<Dependency> &dependencies, bool skipThis);
 
   /**
    * Validate values

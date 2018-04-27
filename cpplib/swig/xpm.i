@@ -17,6 +17,8 @@
 #include <xpm/value.hpp>
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
+#include <xpm/launchers.hpp>
+#include <xpm/dependencies.hpp>
 #undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
@@ -60,7 +62,6 @@
 
 // Imports
 %import "ignores.i";
-%import "xpm_rpc.i"
 
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
@@ -87,6 +88,8 @@
 
 // Include file
 %include <xpm/filesystem.hpp>
+%include <xpm/launchers.hpp>
+%include <xpm/dependencies.hpp>
 %include <xpm/commandline.hpp>
 %include <xpm/context.hpp>
 %include <xpm/value.hpp>

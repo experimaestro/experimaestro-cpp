@@ -10,7 +10,6 @@
 #include <xpm/value.hpp>
 #include <xpm/task.hpp>
 #include <xpm/context.hpp>
-#include <xpm/rpc/client.hpp>
 #include "private.hpp"
 
 DEFINE_LOGGER("xpm")
@@ -364,14 +363,16 @@ void StructuredValue::createObjects(xpm::Register &xpmRegister) {
 }
 
 
-void StructuredValue::findDependencies(std::vector<std::shared_ptr<rpc::Dependency>> &dependencies,  bool skipThis) {
+void StructuredValue::findDependencies(std::vector<Dependency> &dependencies,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
 
   if (!_resource.empty()) {
     LOGGER->info("Found dependency {}", _resource);
-    dependencies.push_back(std::make_shared<rpc::ReadWriteDependency>(_resource));
+    // FIXME: not implemented
+    // dependencies.push_back(Dependency(_resource));
+    NOT_IMPLEMENTED();
   } else {
     for (auto &entry: _content) {
       entry.second->findDependencies(dependencies, false);
