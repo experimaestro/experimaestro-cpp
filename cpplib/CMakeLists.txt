@@ -23,6 +23,9 @@ set(PUBLIC_HEADERS
         include/xpm/commandline.hpp
         include/xpm/logging.hpp
         include/xpm/cpp.hpp 
+        
+        include/xpm/rpc/client.hpp
+        include/xpm/rpc/jsonrpcclient.hpp
 )
 
 set(PRIVATE_HEADERS
@@ -37,22 +40,34 @@ set(RPC_HEADERS
 )
 
 set(SOURCES
+        # Include files
         ${PUBLIC_HEADERS} 
         ${PRIVATE_HEADERS}
         ${RPC_HEADERS}
+
+        # Source files
         src/xpm.cpp
         src/filesystem.cpp
         src/context.cpp
         src/commandline.cpp
         src/private.cpp
         src/xpmssh.cpp
-        src/notifications.cpp
         src/cpp.cpp 
         src/task.cpp 
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
-        src/value.cpp)
+        src/value.cpp
+
+
+        # RPC sources
+        src/rpc/notifications.cpp
+        src/rpc/jsonrpcclient.cpp
+        src/rpc/client.cpp
+
+        src/rpc/objects.cpp
+        src/rpc/utils.cpp
+)
         
 find_package (Threads)
 set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})

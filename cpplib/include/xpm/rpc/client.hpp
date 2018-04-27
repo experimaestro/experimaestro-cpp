@@ -11,7 +11,6 @@
 #include <xpm/rpc/jsonrpcclient.hpp>
 
 namespace xpm {
-namespace rpc {
 
 struct HostConfiguration {
   std::string id;
@@ -21,11 +20,11 @@ struct HostConfiguration {
   std::string password;
 };
 
-class StructuredValue {
+class ConfigurationStructuredValue {
   std::unordered_map<std::string, HostConfiguration> configurations;
   std::string defaultHost;
  public:
-  StructuredValue(std::string const &path = "");
+  ConfigurationStructuredValue(std::string const &path = "");
   HostConfiguration const &defaultConfiguration() const;
 };
 
@@ -51,7 +50,6 @@ class Client {
   static Client &defaultClient();
 };
 
-}
 }
 
 #endif //PROJECT_XPMCLIENT_H

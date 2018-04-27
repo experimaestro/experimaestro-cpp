@@ -7,12 +7,10 @@
 
 #include <xpm/common.hpp>
 #include <xpm/rpc/client.hpp>
-#include <spdlog/tests/includes.h>
 
 #include "../private.hpp"
 
 namespace xpm {
-namespace rpc {
 using nlohmann::json;
 
 namespace {
@@ -22,7 +20,7 @@ namespace {
 
 Client *Client::DEFAULT_CLIENT = nullptr;
 
-StructuredValue::StructuredValue(std::string const &path) {
+ConfigurationStructuredValue::ConfigurationStructuredValue(std::string const &path) {
   std::string _path = path;
   if (path.empty()) {
     _path = std::string(std::getenv("HOME")) + "/.experimaestro/settings.json";
@@ -59,7 +57,7 @@ StructuredValue::StructuredValue(std::string const &path) {
   }
 }
 
-HostConfiguration const& StructuredValue::defaultConfiguration() const {
+HostConfiguration const& ConfigurationStructuredValue::defaultConfiguration() const {
   return configurations.find(defaultHost)->second;
 }
 
@@ -109,7 +107,7 @@ void Client::handler(nlohmann::json const &message) {
 Client &Client::defaultClient() {
   if (DEFAULT_CLIENT == nullptr) {
     // Try to connect
-    StructuredValue configuration;
+    ConfigurationStructuredValue configuration;
     const auto conf = configuration.defaultConfiguration();
     std::string uri = "ws://" + conf.host + ":" + std::to_string(conf.port) + "/web-socket";
     LOGGER->info("Connecting to default client {}", uri);
@@ -123,4 +121,3 @@ Client &Client::defaultClient() {
 }
 
 } // xpm ns
-} // rpc ns
