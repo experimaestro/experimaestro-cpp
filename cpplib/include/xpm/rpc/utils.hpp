@@ -5,6 +5,7 @@
 #ifndef XPM_UTILS_HPP
 #define XPM_UTILS_HPP
 
+#include <xpm/common.hpp>
 #include <xpm/json.hpp>
 #include <xpm/rpc/optional.hpp>
 
@@ -26,7 +27,7 @@ class ServerObject {
   typedef nlohmann::json json;
 
  protected:
-  static std::shared_ptr<ServerObject> OBJECTS;
+  static ptr<ServerObject> OBJECTS;
 
   ServerObject();
   virtual ~ServerObject();
@@ -53,14 +54,14 @@ struct RPCConverter {
 };
 
 template<typename T>
-struct RPCConverter<std::shared_ptr<T>> {
-  static inline nlohmann::json toJson(std::shared_ptr<T> const &x) {
+struct RPCConverter<ptr<T>> {
+  static inline nlohmann::json toJson(ptr<T> const &x) {
     return x ? x->_identifier : -1;
   }
-  static inline std::shared_ptr<T> toCPP(nlohmann::json const &x) {
+  static inline ptr<T> toCPP(nlohmann::json const &x) {
     ObjectIdentifierType id = (ObjectIdentifierType) x;
     if (id >= 0) {
-      return std::shared_ptr<T>(new T(ObjectIdentifier(id)));
+      return ptr<T>(new T(ObjectIdentifier(id)));
     }
     return nullptr;
   }

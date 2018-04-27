@@ -84,6 +84,9 @@
 %include "java/xpm.i"
 #endif
 
+namespace xpm {
+    template <typename T> using ptr = std::shared_ptr<T>;
+}
 
 // Include file
 %include <xpm/filesystem.hpp>

@@ -19,23 +19,23 @@ class Task
    * @param taskIdentifier The task identifier
    * @param outputType The output type
    */
-  Task(TypeName const &taskIdentifier, std::shared_ptr<Type> const &outputType);
+  Task(TypeName const &taskIdentifier, ptr<Type> const &outputType);
 
   /**
    * Initialize a task with the same identifier as the type
    * @param outputType The output type, whose typename is used as the task identifier
    */
-  Task(std::shared_ptr<Type> const &outputType);
+  Task(ptr<Type> const &outputType);
 
   /**
    * Configure the object
    * @param object The object corresponding to the task type
    * @param send If false, the job will not be sent to the experimaestro server
    */
-  void submit(std::shared_ptr<StructuredValue> const &object,
+  void submit(ptr<StructuredValue> const &object,
               bool send,
-              std::shared_ptr<rpc::Launcher> const &launcher,
-              std::shared_ptr<rpc::LauncherParameters> const &launcherParameters) const;
+              ptr<rpc::Launcher> const &launcher,
+              ptr<rpc::LauncherParameters> const &launcherParameters) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;
@@ -56,7 +56,7 @@ class Task
   nlohmann::json toJson();
 
   /** Get path generator for resource location */
-  std::shared_ptr<PathGenerator> getPathGenerator() const;
+  ptr<PathGenerator> getPathGenerator() const;
 
   /** Gets the running status */
   static bool isRunning() { return _running; }
@@ -65,7 +65,7 @@ class Task
   TypeName _identifier;
 
   /// The type for this task
-  std::shared_ptr<Type> _type;
+  ptr<Type> _type;
 
   /// Command line
   CommandLine _commandLine;

@@ -126,7 +126,7 @@ class OARLauncher;
 // Classes
 class AbstractCommandComponent : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<AbstractCommandComponent>>;
+  friend struct RPCConverter<ptr<AbstractCommandComponent>>;
   explicit AbstractCommandComponent(ObjectIdentifier o);
   AbstractCommandComponent() {}
 
@@ -135,7 +135,7 @@ public:
 
 class Resource : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Resource>>;
+  friend struct RPCConverter<ptr<Resource>>;
   explicit Resource(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -145,20 +145,20 @@ public:
   /**   */
   virtual std::string toString();
   /**   */
-  virtual std::shared_ptr<Path> resolve(std::string const &string);
+  virtual ptr<Path> resolve(std::string const &string);
   /**   */
-  virtual std::shared_ptr<Path> file();
+  virtual ptr<Path> file();
   /**   */
   virtual std::string taskId();
   /**   */
   virtual void taskId(std::string const &string);
   /**   */
-  virtual std::shared_ptr<Path> output();
+  virtual ptr<Path> output();
 };
 
 class Connector : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Connector>>;
+  friend struct RPCConverter<ptr<Connector>>;
   explicit Connector(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -166,18 +166,18 @@ protected:
 
 public:
   /**   */
-  virtual std::string resolve(std::shared_ptr<Path> const &path);
+  virtual std::string resolve(ptr<Path> const &path);
   /**   */
-  static std::shared_ptr<Connector> create(std::string const &string, std::string const &string_1, std::shared_ptr<ConnectorOptions> const &connectorOptions = std::shared_ptr<ConnectorOptions>());
+  static ptr<Connector> create(std::string const &string, std::string const &string_1, ptr<ConnectorOptions> const &connectorOptions = ptr<ConnectorOptions>());
   /**   */
-  virtual std::shared_ptr<SingleHostConnector> asSingleHostConnector();
+  virtual ptr<SingleHostConnector> asSingleHostConnector();
   /**   */
-  virtual std::shared_ptr<Launcher> defaultlauncher();
+  virtual ptr<Launcher> defaultlauncher();
 };
 
 class Job : public Resource {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Job>>;
+  friend struct RPCConverter<ptr<Job>>;
   explicit Job(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -185,12 +185,12 @@ protected:
 
 public:
   /**   */
-  virtual std::shared_ptr<Resource> submit();
+  virtual ptr<Resource> submit();
 };
 
 class Dependency : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Dependency>>;
+  friend struct RPCConverter<ptr<Dependency>>;
   explicit Dependency(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -201,7 +201,7 @@ public:
 
 class CommandComponent : public AbstractCommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<CommandComponent>>;
+  friend struct RPCConverter<ptr<CommandComponent>>;
   explicit CommandComponent(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -212,7 +212,7 @@ public:
 
 class LauncherParameters : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<LauncherParameters>>;
+  friend struct RPCConverter<ptr<LauncherParameters>>;
   explicit LauncherParameters(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -223,7 +223,7 @@ public:
 
 class Content : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Content>>;
+  friend struct RPCConverter<ptr<Content>>;
   explicit Content(ObjectIdentifier o);
   Content() {}
 
@@ -232,7 +232,7 @@ public:
 
 class Launcher : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Launcher>>;
+  friend struct RPCConverter<ptr<Launcher>>;
   explicit Launcher(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -240,14 +240,14 @@ protected:
 
 public:
   /**   */
-  virtual std::shared_ptr<LauncherParameters> parameters();
+  virtual ptr<LauncherParameters> parameters();
   /**   */
   virtual std::string environment(std::string const &key);
   /**   */
   virtual void set_notification_url(std::string const &string);
   /** Sets the temporary directory for this launcher
   */
-  virtual void set_tmpdir(std::shared_ptr<Path> const &path);
+  virtual void set_tmpdir(ptr<Path> const &path);
   /** Sets an environment variable and returns the old value (if any)
   */
   virtual std::string env(std::string const &key, std::string const &value);
@@ -258,7 +258,7 @@ public:
 
 class SingleHostConnector : public Connector {
 protected:
-  friend struct RPCConverter<std::shared_ptr<SingleHostConnector>>;
+  friend struct RPCConverter<ptr<SingleHostConnector>>;
   explicit SingleHostConnector(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -269,7 +269,7 @@ public:
 
 class ConnectorOptions : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<ConnectorOptions>>;
+  friend struct RPCConverter<ptr<ConnectorOptions>>;
   explicit ConnectorOptions(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -280,7 +280,7 @@ public:
 
 class AbstractCommand : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<AbstractCommand>>;
+  friend struct RPCConverter<ptr<AbstractCommand>>;
   explicit AbstractCommand(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -288,14 +288,14 @@ protected:
 
 public:
   /**   */
-  virtual void add_dependency(std::shared_ptr<Dependency> const &dependency);
+  virtual void add_dependency(ptr<Dependency> const &dependency);
   /**   */
-  virtual std::shared_ptr<CommandOutput> output();
+  virtual ptr<CommandOutput> output();
 };
 
 class LocalhostConnector : public SingleHostConnector {
 protected:
-  friend struct RPCConverter<std::shared_ptr<LocalhostConnector>>;
+  friend struct RPCConverter<ptr<LocalhostConnector>>;
   explicit LocalhostConnector(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -308,7 +308,7 @@ public:
 
 class ContentsFile : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<ContentsFile>>;
+  friend struct RPCConverter<ptr<ContentsFile>>;
   explicit ContentsFile(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -318,14 +318,14 @@ public:
   /**   */
   virtual void add(std::string const &string);
   /**   */
-  virtual void add(std::shared_ptr<Path> const &path);
+  virtual void add(ptr<Path> const &path);
   /**   */
-  virtual void add(std::shared_ptr<Content> const &content);
+  virtual void add(ptr<Content> const &content);
 };
 
 class PathContent : public Content {
 protected:
-  friend struct RPCConverter<std::shared_ptr<PathContent>>;
+  friend struct RPCConverter<ptr<PathContent>>;
   explicit PathContent(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -336,22 +336,22 @@ public:
 
 class CommandLineTask : public Job {
 protected:
-  friend struct RPCConverter<std::shared_ptr<CommandLineTask>>;
+  friend struct RPCConverter<ptr<CommandLineTask>>;
   explicit CommandLineTask(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  CommandLineTask(std::shared_ptr<Path> const &path);
+  CommandLineTask(ptr<Path> const &path);
   /**   */
-  virtual void setLauncher(std::shared_ptr<Launcher> const &launcher, std::shared_ptr<LauncherParameters> const &launcherParameters);
+  virtual void setLauncher(ptr<Launcher> const &launcher, ptr<LauncherParameters> const &launcherParameters);
   /**   */
-  virtual void command(std::shared_ptr<AbstractCommand> const &abstractCommand);
+  virtual void command(ptr<AbstractCommand> const &abstractCommand);
 };
 
 class CommandString : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<CommandString>>;
+  friend struct RPCConverter<ptr<CommandString>>;
   explicit CommandString(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -364,7 +364,7 @@ public:
 
 class ReadWriteDependency : public Dependency {
 protected:
-  friend struct RPCConverter<std::shared_ptr<ReadWriteDependency>>;
+  friend struct RPCConverter<ptr<ReadWriteDependency>>;
   explicit ReadWriteDependency(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -372,12 +372,12 @@ public:
   /**   */
   ReadWriteDependency(std::string const &locator);
   /**   */
-  ReadWriteDependency(std::shared_ptr<Resource> const &resource);
+  ReadWriteDependency(ptr<Resource> const &resource);
 };
 
 class CommandPath : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<CommandPath>>;
+  friend struct RPCConverter<ptr<CommandPath>>;
   explicit CommandPath(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -388,7 +388,7 @@ public:
 
 class TokenResource : public Resource {
 protected:
-  friend struct RPCConverter<std::shared_ptr<TokenResource>>;
+  friend struct RPCConverter<ptr<TokenResource>>;
   explicit TokenResource(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -405,7 +405,7 @@ public:
 
 class SSHOptions : public ConnectorOptions {
 protected:
-  friend struct RPCConverter<std::shared_ptr<SSHOptions>>;
+  friend struct RPCConverter<ptr<SSHOptions>>;
   explicit SSHOptions(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -419,11 +419,11 @@ public:
   /**   */
   virtual void set_use_ssh_agent(bool const &boolean);
   /**   */
-  virtual void set_stream_proxy(std::shared_ptr<SSHConnector> const &proxy);
+  virtual void set_stream_proxy(ptr<SSHConnector> const &proxy);
   /**   */
-  virtual void set_stream_proxy(std::string const &uri, std::shared_ptr<SSHOptions> const &options);
+  virtual void set_stream_proxy(std::string const &uri, ptr<SSHOptions> const &options);
   /**   */
-  virtual std::shared_ptr<SSHOptions> check_host(bool const &boolean);
+  virtual ptr<SSHOptions> check_host(bool const &boolean);
   /**   */
   virtual void hostname(std::string const &string);
   /**   */
@@ -436,7 +436,7 @@ public:
 
 class Commands : public AbstractCommand {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Commands>>;
+  friend struct RPCConverter<ptr<Commands>>;
   explicit Commands(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -444,14 +444,14 @@ public:
   /**   */
   Commands();
   /**   */
-  Commands(std::vector<std::shared_ptr<AbstractCommand>> const &abstractCommand);
+  Commands(std::vector<ptr<AbstractCommand>> const &abstractCommand);
   /**   */
-  virtual void add(std::shared_ptr<AbstractCommand> const &abstractCommand);
+  virtual void add(ptr<AbstractCommand> const &abstractCommand);
 };
 
 class XPM : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<XPM>>;
+  friend struct RPCConverter<ptr<XPM>>;
   explicit XPM(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -459,12 +459,12 @@ protected:
 
 public:
   /** com.sun.javafx.binding.StringConstant@56928307com.sun.javafx.binding.StringConstant@3899782c  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
+  static ptr<TokenResource> token_resource(std::string const &path, bool const &post_process);
   /** Retrieve (or creates) a token resource with a given xpath
 com.sun.javafx.binding.StringConstant@1603cd68  */
-  static std::shared_ptr<TokenResource> token_resource(std::string const &path);
+  static ptr<TokenResource> token_resource(std::string const &path);
   /** com.sun.javafx.binding.StringConstant@4b23c30a  */
-  static std::shared_ptr<TokenResource> token(std::string const &path);
+  static ptr<TokenResource> token(std::string const &path);
   /** Set the simulate flag: When true, the jobs are not submitted but just output
   */
   virtual bool simulate(bool const &boolean);
@@ -477,7 +477,7 @@ com.sun.javafx.binding.StringConstant@1603cd68  */
 
 class Namespace : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Namespace>>;
+  friend struct RPCConverter<ptr<Namespace>>;
   explicit Namespace(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -490,7 +490,7 @@ public:
 
 class ParameterFile : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<ParameterFile>>;
+  friend struct RPCConverter<ptr<ParameterFile>>;
   explicit ParameterFile(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -501,18 +501,18 @@ public:
 
 class DirectLauncher : public Launcher {
 protected:
-  friend struct RPCConverter<std::shared_ptr<DirectLauncher>>;
+  friend struct RPCConverter<ptr<DirectLauncher>>;
   explicit DirectLauncher(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  DirectLauncher(std::shared_ptr<Connector> const &connector);
+  DirectLauncher(ptr<Connector> const &connector);
 };
 
 class OARParameters : public LauncherParameters {
 protected:
-  friend struct RPCConverter<std::shared_ptr<OARParameters>>;
+  friend struct RPCConverter<ptr<OARParameters>>;
   explicit OARParameters(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -543,7 +543,7 @@ public:
 
 class Functions : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Functions>>;
+  friend struct RPCConverter<ptr<Functions>>;
   explicit Functions(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -551,23 +551,23 @@ protected:
 
 public:
   /**   */
-  static std::shared_ptr<Path> path(std::shared_ptr<Path> const &uri);
+  static ptr<Path> path(ptr<Path> const &uri);
   /** Returns a path object from an URI
   */
-  static std::shared_ptr<Path> path(std::string const &uri);
+  static ptr<Path> path(std::string const &uri);
   /** Defines a new relationship between a network share and a path on a connector
 com.sun.javafx.binding.StringConstant@6581dc0a  */
-  static void define_share(std::string const &host, std::string const &share, std::shared_ptr<SingleHostConnector> const &connector, std::string const &path, optional<int32_t> const &priority = optional<int32_t>());
+  static void define_share(std::string const &host, std::string const &share, ptr<SingleHostConnector> const &connector, std::string const &path, optional<int32_t> const &priority = optional<int32_t>());
   /** Defines the default launcher
   */
-  static void set_default_launcher(std::shared_ptr<Launcher> const &launcher);
+  static void set_default_launcher(ptr<Launcher> const &launcher);
   /** Set the experiment for all future commands
 com.sun.javafx.binding.StringConstant@39de3d36  */
   static void set_experiment(std::string const &identifier, optional<bool> const &holdPrevious = optional<bool>());
   /**   */
-  static void set_workdir(std::shared_ptr<Path> const &path);
+  static void set_workdir(ptr<Path> const &path);
   /**   */
-  static std::shared_ptr<LocalhostConnector> get_localhost_connector();
+  static ptr<LocalhostConnector> get_localhost_connector();
   /** Returns the notification URL
   */
   static std::string notification_url();
@@ -575,7 +575,7 @@ com.sun.javafx.binding.StringConstant@39de3d36  */
 
 class StringContent : public Content {
 protected:
-  friend struct RPCConverter<std::shared_ptr<StringContent>>;
+  friend struct RPCConverter<ptr<StringContent>>;
   explicit StringContent(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -586,7 +586,7 @@ public:
 
 class Pipe : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Pipe>>;
+  friend struct RPCConverter<ptr<Pipe>>;
   explicit Pipe(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -597,7 +597,7 @@ public:
 
 class Command : public AbstractCommandComponent, public AbstractCommand {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Command>>;
+  friend struct RPCConverter<ptr<Command>>;
   explicit Command(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -607,14 +607,14 @@ public:
   /**   */
   virtual void add(std::vector<std::string> const &string);
   /**   */
-  virtual void add(std::vector<std::shared_ptr<AbstractCommandComponent>> const &abstractCommandComponent);
+  virtual void add(std::vector<ptr<AbstractCommandComponent>> const &abstractCommandComponent);
   /**   */
-  virtual void add_subcommand(std::shared_ptr<Commands> const &commands);
+  virtual void add_subcommand(ptr<Commands> const &commands);
 };
 
 class Path : public virtual ServerObject {
 protected:
-  friend struct RPCConverter<std::shared_ptr<Path>>;
+  friend struct RPCConverter<ptr<Path>>;
   explicit Path(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -629,7 +629,7 @@ already exists.
   */
   virtual void mkdirs();
   /**   */
-  static std::shared_ptr<Path> toPath(std::string const &path);
+  static ptr<Path> toPath(std::string const &path);
   /**   */
   virtual std::string toSource();
   /**   */
@@ -645,20 +645,20 @@ already exists.
 
 class SSHConnector : public SingleHostConnector {
 protected:
-  friend struct RPCConverter<std::shared_ptr<SSHConnector>>;
+  friend struct RPCConverter<ptr<SSHConnector>>;
   explicit SSHConnector(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  SSHConnector(std::string const &string, std::string const &string_1, std::shared_ptr<ConnectorOptions> const &connectorOptions);
+  SSHConnector(std::string const &string, std::string const &string_1, ptr<ConnectorOptions> const &connectorOptions);
   /**   */
-  virtual std::string env(std::shared_ptr<Launcher> const &launcher, optional<std::string> const &string = optional<std::string>());
+  virtual std::string env(ptr<Launcher> const &launcher, optional<std::string> const &string = optional<std::string>());
 };
 
 class CommandOutput : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<CommandOutput>>;
+  friend struct RPCConverter<ptr<CommandOutput>>;
   explicit CommandOutput(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
@@ -669,15 +669,15 @@ public:
 
 class OARLauncher : public Launcher {
 protected:
-  friend struct RPCConverter<std::shared_ptr<OARLauncher>>;
+  friend struct RPCConverter<ptr<OARLauncher>>;
   explicit OARLauncher(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 
 public:
   /**   */
-  OARLauncher(std::shared_ptr<Connector> const &connector);
+  OARLauncher(ptr<Connector> const &connector);
   /**   */
-  virtual std::shared_ptr<OARParameters> oarParameters();
+  virtual ptr<OARParameters> oarParameters();
   /** Send a notification email. Process it to notify experimaestro when a job status changes.
   */
   virtual void email(std::string const &string);
@@ -687,7 +687,7 @@ public:
 
 class SubCommand : public CommandComponent {
 protected:
-  friend struct RPCConverter<std::shared_ptr<SubCommand>>;
+  friend struct RPCConverter<ptr<SubCommand>>;
   explicit SubCommand(ObjectIdentifier o);
   virtual std::string const &__name__() const override;
 

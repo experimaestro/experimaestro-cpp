@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <memory>
 
+#include <xpm/common.hpp>
+
 #ifndef SWIG
 #define SWIG_IGNORE
 #define SWIG_REMOVE(x) x
@@ -49,7 +51,7 @@ struct NullPimpl {
 template<typename T>
 class Pimpl {
  protected:
-  typedef std::shared_ptr<Reference<T>> ThisPtr;
+  typedef ptr<Reference<T>> ThisPtr;
   friend struct Reference<T>;
 
   Reference<T> &self() {

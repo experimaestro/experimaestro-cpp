@@ -34,8 +34,8 @@ enum class ValueType : int8_t {
  */
 class Value {
  public:
-  typedef std::vector<std::shared_ptr<StructuredValue>> Array;
-  typedef std::shared_ptr<Value> Ptr;
+  typedef std::vector<ptr<StructuredValue>> Array;
+  typedef ptr<Value> Ptr;
 
   Value();
   Value(double value);
@@ -59,10 +59,10 @@ class Value {
   Value &operator=(Value const &other);
 
   virtual ~Value();
-  // virtual std::shared_ptr<StructuredValue> copy();
+  // virtual ptr<StructuredValue> copy();
 
   ValueType const scalarType() const;
-  std::shared_ptr<Type> type() const;
+  ptr<Type> type() const;
 
   /** Is the value defined? */
   bool defined() const;
@@ -75,7 +75,7 @@ class Value {
   virtual bool equals(Value const &) const;
 
   /// Cast to other simple type
-  Value cast(std::shared_ptr<Type> const &type);
+  Value cast(ptr<Type> const &type);
 
   /** @defgroup content Access to value content
    *  @{
@@ -113,13 +113,13 @@ class Value {
   // Array methods (throw an exception if the value is not an array)
 
   /// Add a new object to the array
-  void push_back(std::shared_ptr<StructuredValue> const &element);
+  void push_back(ptr<StructuredValue> const &element);
 
   /// Returns the size of the array
   size_t size() const;
 
   /// Access to the new array
-  std::shared_ptr<StructuredValue> &operator[](const size_t index);
+  ptr<StructuredValue> &operator[](const size_t index);
 
   /// A constant
   static const Value NONE;
@@ -163,12 +163,12 @@ inline bool operator==(Value const &a, Value const &b) {
 
 // class Array : public Object {
 //  public:
-//   typedef std::vector<std::shared_ptr<StructuredValue>> Content;
+//   typedef std::vector<ptr<StructuredValue>> Content;
 //   virtual ~Array();
 //   Array();
 
 //   /// Shallow copy of the array
-//   virtual std::shared_ptr<StructuredValue> copy() override;
+//   virtual ptr<StructuredValue> copy() override;
   
 //   /// Computes the hash for the object
 //   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
@@ -178,7 +178,7 @@ inline bool operator==(Value const &a, Value const &b) {
 
 
 //   /// Cast an object to Array type
-//   static std::shared_ptr<Array> cast(std::shared_ptr<StructuredValue> const &);
+//   static ptr<Array> cast(ptr<StructuredValue> const &);
 //  private:
 //   Content _array;
 // };

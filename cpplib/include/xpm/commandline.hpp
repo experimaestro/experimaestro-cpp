@@ -18,7 +18,7 @@ namespace xpm {
 class StructuredValue;
 
 struct CommandContext {
-  std::shared_ptr<StructuredValue> parameters;
+  ptr<StructuredValue> parameters;
 };
 
 /// Base class for all command arguments
@@ -27,7 +27,7 @@ class XPM_PIMPL(AbstractCommandComponent) {
   AbstractCommandComponent();
  public:
   virtual ~AbstractCommandComponent();
-  std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const;
+  ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const;
   virtual nlohmann::json toJson() const;
 };
 
@@ -78,7 +78,7 @@ class Command {
  public:
   void add(AbstractCommandComponent component);
 
-  std::shared_ptr<rpc::Command> rpc(CommandContext &context) const;
+  ptr<rpc::Command> rpc(CommandContext &context) const;
   nlohmann::json toJson() const;
   void load(nlohmann::json const & j);
 };
@@ -88,7 +88,7 @@ class CommandLine {
  public:
   CommandLine();
 
-  std::shared_ptr<rpc::AbstractCommand> rpc(CommandContext &context) const;
+  ptr<rpc::AbstractCommand> rpc(CommandContext &context) const;
   void add(Command command);
   nlohmann::json toJson() const;
   void load(nlohmann::json const & j);

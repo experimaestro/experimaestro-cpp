@@ -9,8 +9,8 @@
 
 namespace xpm {
 namespace {
-std::shared_ptr<spdlog::sinks::ansicolor_stderr_sink_mt> sink;
-std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> loggers;
+ptr<spdlog::sinks::ansicolor_stderr_sink_mt> sink;
+std::unordered_map<std::string, ptr<spdlog::logger>> loggers;
 
 void initLogging() {
   static bool initialized = false;
@@ -31,7 +31,7 @@ void initLogging() {
 
 }
 
-std::shared_ptr<spdlog::logger> logger(std::string const &name) {
+ptr<spdlog::logger> logger(std::string const &name) {
   initLogging();
 
   auto logger = spdlog::get(name);

@@ -30,9 +30,11 @@
 %include "std_string.i"
 
 namespace xpm {
+    template <typename T> using ptr = std::shared_ptr<T>;
     namespace rpc {
 }
 }
+
 
 %shared_ptr(xpm::rpc::ServerObject);
 

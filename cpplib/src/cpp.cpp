@@ -10,7 +10,7 @@ namespace xpm {
 CommandPath EXECUTABLE_PATH = CommandPath(Path("."));
 
 namespace {
-  std::shared_ptr<Register> CURRENTREGISTER;
+  ptr<Register> CURRENTREGISTER;
   void init() {
     static bool initialized = false;
     if (!initialized) {
@@ -21,12 +21,12 @@ namespace {
   }
 }
 
-std::shared_ptr<Register> currentRegister() {
+ptr<Register> currentRegister() {
   init();
   return CURRENTREGISTER;
 }
 
-void currentRegister(std::shared_ptr<Register> const &_register) {
+void currentRegister(ptr<Register> const &_register) {
   CURRENTREGISTER = _register;
 }
 

@@ -19,7 +19,7 @@ namespace xpm {
 template<>
 struct Reference<AbstractCommandComponent> {
   virtual ~Reference<AbstractCommandComponent>() {}
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const {
     throw std::runtime_error("Pure virtual function for " + std::string(typeid(*this).name()));
   }
   virtual nlohmann::json toJson() const {
@@ -30,8 +30,8 @@ struct Reference<AbstractCommandComponent> {
 CommandLine::CommandLine() {
 
 }
-std::shared_ptr<rpc::AbstractCommand> CommandLine::rpc(CommandContext &context) const {
-  std::shared_ptr<rpc::Commands> rpcCommand = std::make_shared<rpc::Commands>();
+ptr<rpc::AbstractCommand> CommandLine::rpc(CommandContext &context) const {
+  ptr<rpc::Commands> rpcCommand = std::make_shared<rpc::Commands>();
   for (auto &command: commands) {
     rpcCommand->add(command.rpc(context));
   }
@@ -98,7 +98,7 @@ template<>
 struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
   std::string value;
   Reference(const std::string &value) : value(value) {}
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::CommandString>(transform(Context::current(), value));
   }
   virtual nlohmann::json toJson() const override {
@@ -122,7 +122,7 @@ void Command::add(AbstractCommandComponent component) {
   components.push_back(component);
 }
 
-std::shared_ptr<rpc::Command> Command::rpc(CommandContext &context) const {
+ptr<rpc::Command> Command::rpc(CommandContext &context) const {
   auto rpc = std::make_shared<rpc::Command>();
   for (auto &component: components) {
     rpc->add({component.rpc(context)});
@@ -162,7 +162,7 @@ nlohmann::json Command::toJson() const {
 AbstractCommandComponent::AbstractCommandComponent() {
 
 }
-std::shared_ptr<rpc::AbstractCommandComponent> AbstractCommandComponent::rpc(CommandContext &context) const {
+ptr<rpc::AbstractCommandComponent> AbstractCommandComponent::rpc(CommandContext &context) const {
   return self().rpc(context);
 }
 AbstractCommandComponent::~AbstractCommandComponent() {
@@ -177,7 +177,7 @@ struct Reference<CommandContent> : public Reference<AbstractCommandComponent> {
   std::string key;
   std::string content;
   Reference(std::string const &key, std::string const &content) : key(key), content(content) {}
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::ParameterFile>(key, content);
   }
 
@@ -203,7 +203,7 @@ CommandContent::~CommandContent() {
 
 namespace {
   /// Generates the JSON that will be used to configure the task
-  void fill(rpc::ContentsFile &f, std::ostringstream &oss, std::shared_ptr<StructuredValue> const & conf) {
+  void fill(rpc::ContentsFile &f, std::ostringstream &oss, ptr<StructuredValue> const & conf) {
     if (conf->value().defined()) {
       // The object has one value, just use this and discards the rest
       switch(conf->value().scalarType()) {
@@ -264,7 +264,7 @@ namespace {
 
 template<>
 struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     auto r = std::make_shared<rpc::ContentsFile>("params", ".json");
     std::ostringstream oss;
     fill(*r, oss, context.parameters);
@@ -293,7 +293,7 @@ template<>
 struct Reference<CommandPathReference> : public Reference<AbstractCommandComponent> {
   std::string key;
   Reference(const std::string &key) : key(key) {}
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &commandContext) const override {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &commandContext) const override {
     auto context = Context::current();
     if (!context.has(key)) {
       throw std::invalid_argument("Context has no variable named [" + key + "]");
@@ -327,7 +327,7 @@ template<>
 struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
   Path path;
   Reference(const Path &path) : path(path) {}
-  virtual std::shared_ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
+  virtual ptr<rpc::AbstractCommandComponent> rpc(CommandContext &context) const override {
     return std::make_shared<rpc::CommandPath>(path.toString());
   }
   virtual nlohmann::json toJson() const override {

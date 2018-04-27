@@ -24,4 +24,7 @@ build
 /server/out
 /server/bin/
 /server/jsch-extension/bin/
-/server/jsch-nio/bin/
+/server/jsch-nio/bin//cpplib/languages/java/bin/
+/server/jsch-extension/out
+/server/jsch-nio/out
+/cpplib/languages/java/bin/
