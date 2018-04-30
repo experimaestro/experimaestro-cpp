@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <functional>
 #include "utils.hpp"
 
 namespace xpm {
@@ -62,8 +63,31 @@ class Path : public Pimpl<Path> {
    * Get file content
    */
    std::string getContent() const;
+
+   /**
+    * Equality
+    */
+  friend bool operator==(Path const & lhs, Path const & rhs);
+
+  template<typename OStream>
+  friend OStream& operator<<(OStream& os, const Path & path) {
+    return os << path.toString();
+  }
 };
 
+  bool operator==(Path const & lhs, Path const & rhs);
+
 }
+
+#ifndef SWIG
+namespace std {
+  template<>
+  struct hash<xpm::Path> {
+    size_t operator()(const xpm::Path & path) const {
+      return hash<std::string>()(path.toString());
+    }
+  };
+}
+#endif
 
 #endif //PROJECT_FILESYSTEM_H

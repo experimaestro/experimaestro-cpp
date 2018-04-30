@@ -75,6 +75,8 @@
 
 %shared_ptr(xpm::Dependency)
 %shared_ptr(xpm::Resource)
+%shared_ptr(xpm::Token)
+%shared_ptr(xpm::CounterToken)
 %shared_ptr(xpm::Job)
 %shared_ptr(xpm::CommandLineJob)
 %shared_ptr(xpm::Workspace)

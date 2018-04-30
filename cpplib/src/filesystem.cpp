@@ -39,6 +39,13 @@ Path::Path(std::string const &pathstring) : Pimpl("", "", pathstring) {
 Path::Path() : Pimpl("", "", "/")  {
 }
 
+bool operator==(Path const & lhs, Path const & rhs) {
+  return (lhs.self().share == rhs.self().share)
+    && (lhs.self().node == rhs.self().node)
+    && (lhs.self().path == rhs.self().path);
+}
+
+
 Path::Path(Path const &parent, std::initializer_list<std::string> const &relative) :
     Pimpl(parent._this->share, parent._this->node,
           std::accumulate(relative.begin(), relative.end(), parent._this->path == "/" ?  "" :  parent._this->path,

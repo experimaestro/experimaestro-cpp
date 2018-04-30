@@ -5,29 +5,19 @@
 
 #include <map>
 #include <string>
+#include <vector>
 #include <memory>
 
 namespace xpm {
 
 typedef std::map<std::string, std::string> Environment;
 
-/**
- * Builds a process
- */
-class ProcessBuilder {
-public:
-  typedef std::shared_ptr<ProcessBuilder> Ptr;
-
-  /// Sets the environment
-  void environment(Environment const & environment);
-
-private:
-  Environment _environment;
-};
 
 /** Access to a host and command line process */
 class Connector {
 public:
+  virtual  ~Connector();
+
   /** Returns a new process builder */
   virtual ProcessBuilder::Ptr processBuilder() = 0;
 
@@ -50,6 +40,7 @@ class ScriptBuilder {};
 class Launcher {
 public:
   Launcher(Connector::Ptr const &connector);
+  virtual ~Launcher();
   virtual ProcessBuilder::Ptr processBuilder() = 0;
 
   inline Connector::Ptr connector() { return _connector; }

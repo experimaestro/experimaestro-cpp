@@ -7,32 +7,35 @@ find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 add_definitions("-Wall")
 enable_testing()
 
 
 set(PUBLIC_HEADERS
-        include/xpm/utils.hpp
-        include/xpm/json.hpp
-        include/xpm/xpm.hpp
-        include/xpm/context.hpp
-        include/xpm/value.hpp
-        include/xpm/task.hpp
-        include/xpm/launchers.hpp
-        include/xpm/filesystem.hpp
-        include/xpm/commandline.hpp
-        include/xpm/workspace.hpp
-        include/xpm/logging.hpp
-        include/xpm/cpp.hpp 
+        include/public/xpm/utils.hpp
+        include/public/xpm/json.hpp
+        include/public/xpm/xpm.hpp
+        include/public/xpm/context.hpp
+        include/public/xpm/value.hpp
+        include/public/xpm/task.hpp
+        include/public/xpm/launchers.hpp
+        include/public/xpm/filesystem.hpp
+        include/public/xpm/commandline.hpp
+        include/public/xpm/workspace.hpp
+        include/public/xpm/logging.hpp
+        include/public/xpm/local.hpp
+        include/public/xpm/cpp.hpp 
         
-        include/xpm/rpc/client.hpp
-        include/xpm/rpc/jsonrpcclient.hpp
+        include/public/xpm/rpc/client.hpp
+        include/public/xpm/rpc/jsonrpcclient.hpp
 )
 
 set(PRIVATE_HEADERS
     src/xpmssh.hpp
     src/jsonserialization.hpp
+    include/private/local.hpp
 )
 
 set(SOURCES
@@ -54,6 +57,7 @@ set(SOURCES
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
+        src/local.cpp
         src/value.cpp
 
         # RPC sources
@@ -63,7 +67,13 @@ set(SOURCES
 )
         
 find_package (Threads)
-set(LINKED_LIBRARIES ${OPENSSL_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${LIBSSH_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${LIBYAMLCPP_LIBRARY})
+set(LINKED_LIBRARIES 
+    ${OPENSSL_LIBRARIES} 
+    ${LIBWEBSOCKETS_LIBRARIES} 
+    ${LIBSSH_LIBRARY} 
+    ${CMAKE_THREAD_LIBS_INIT} 
+    ${LIBYAMLCPP_LIBRARY} 
+    ${SQLite3_INCLUDE_DIR})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
 include_directories(
@@ -82,7 +92,7 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib} PRIVATE ${LIBSSH_INCLUDE_DIR})
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${SQLite3_INCLUDE_DIR})
     set_target_properties(${xpmlib} PROPERTIES
         CXX_STANDARD 11
         OUTPUT_NAME experimaestro)
