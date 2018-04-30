@@ -5,7 +5,7 @@
 #include <xpm/xpm.hpp>
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
-#include "private.hpp"
+#include <__xpm/common.hpp>
 
 typedef std::string stdstring;
 using nlohmann::json;

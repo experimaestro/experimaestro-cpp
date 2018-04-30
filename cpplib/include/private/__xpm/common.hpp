@@ -2,8 +2,8 @@
 // Created by Benjamin Piwowarski on 12/12/2016.
 //
 
-#ifndef PROJECT_PRIVATE_HPP
-#define PROJECT_PRIVATE_HPP
+#ifndef EXPERIMAESTRO__COMMON_HPP
+#define EXPERIMAESTRO__COMMON_HPP
 
 #include <array>
 

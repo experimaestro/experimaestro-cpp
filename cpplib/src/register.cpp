@@ -8,8 +8,8 @@
 #include <xpm/filesystem.hpp>
 #include <xpm/register.hpp>
 #include <yaml-cpp/yaml.h>
-#include "CLI11.hpp"
-#include "private.hpp"
+#include <__xpm/CLI11.hpp>
+#include <__xpm/common.hpp>
 
 namespace xpm {
 

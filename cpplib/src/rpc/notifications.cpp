@@ -9,7 +9,7 @@
 #include <condition_variable>
 
 #include <asio.hpp>
-#include "../private.hpp"
+#include <__xpm/common.hpp>
 
 DEFINE_LOGGER("rpc")
 

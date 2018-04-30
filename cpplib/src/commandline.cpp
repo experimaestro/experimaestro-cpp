@@ -11,7 +11,7 @@
 #include <xpm/common.hpp>
 #include <xpm/context.hpp>
 
-#include "private.hpp"
+#include <__xpm/common.hpp>
 
 DEFINE_LOGGER("xpm")
 

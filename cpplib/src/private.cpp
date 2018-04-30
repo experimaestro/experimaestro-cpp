@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <xpm/logging.hpp>
-#include "private.hpp"
+#include <__xpm/common.hpp>
 
 namespace xpm {
 namespace {

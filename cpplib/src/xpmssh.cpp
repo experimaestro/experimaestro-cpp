@@ -4,7 +4,8 @@
 
 #include <string>
 #include <libssh/libssh.h>
-#include "xpmssh.hpp"
+
+#include <__xpm/xpmssh.hpp>
 
 namespace xpm {
 

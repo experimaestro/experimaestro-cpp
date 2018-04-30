@@ -6,7 +6,7 @@
 #include <xpm/task.hpp>
 #include <xpm/workspace.hpp>
 
-#include "private.hpp"
+#include <__xpm/common.hpp>
 
 DEFINE_LOGGER("xpm")
 

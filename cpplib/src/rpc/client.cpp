@@ -8,7 +8,7 @@
 #include <xpm/common.hpp>
 #include <xpm/rpc/client.hpp>
 
-#include "../private.hpp"
+#include <__xpm/common.hpp>
 
 namespace xpm {
 using nlohmann::json;

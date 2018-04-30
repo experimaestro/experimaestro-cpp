@@ -2,7 +2,7 @@
 // Created by Benjamin Piwowarski on 15/01/2017.
 //
 
-#include "jsonserialization.hpp"
+#include <__xpm/jsonserialization.hpp>
 
 namespace xpm {
 

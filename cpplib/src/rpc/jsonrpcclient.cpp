@@ -12,7 +12,7 @@
 #include <websocketpp/config/asio_no_tls_client.hpp>
 #include <websocketpp/client.hpp>
 #include <xpm/common.hpp>
-#include "../private.hpp"
+#include <__xpm/common.hpp>
 
 DEFINE_LOGGER("rpc");
 

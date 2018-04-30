@@ -8,10 +8,22 @@
 #include <vector>
 #include <memory>
 
+#include <xpm/common.hpp>
+
 namespace xpm {
 
 typedef std::map<std::string, std::string> Environment;
 
+class ProcessBuilder {
+public:
+  ~ProcessBuilder();
+  void environment(Environment const & environment);
+  void command(std::vector<std::string> const & command);
+  virtual void start() = 0;
+private:
+  Environment _environment;
+  std::vector<std::string> _command;
+};
 
 /** Access to a host and command line process */
 class Connector {
@@ -19,9 +31,7 @@ public:
   virtual  ~Connector();
 
   /** Returns a new process builder */
-  virtual ProcessBuilder::Ptr processBuilder() = 0;
-
-  typedef std::shared_ptr<Connector> Ptr;
+  virtual ptr<ProcessBuilder> processBuilder() = 0;
 };
 
 /** Localhost connector */
@@ -39,11 +49,11 @@ class ScriptBuilder {};
  */
 class Launcher {
 public:
-  Launcher(Connector::Ptr const &connector);
+  Launcher(ptr<Connector> const &connector);
   virtual ~Launcher();
-  virtual ProcessBuilder::Ptr processBuilder() = 0;
+  virtual ptr<ProcessBuilder> processBuilder() = 0;
 
-  inline Connector::Ptr connector() { return _connector; }
+  inline ptr<Connector> connector() { return _connector; }
   inline Environment const & environment() { return _environment; }
 
 private:
@@ -60,13 +70,13 @@ private:
   /**
    * The connecctor
    */
-  Connector::Ptr _connector;
+  ptr<Connector> _connector;
 };
 
 /** A direct launcher */
 class DirectLauncher : public Launcher {
 public:
-  virtual ProcessBuilder::Ptr processBuilder() override;
+  virtual ptr<ProcessBuilder> processBuilder() override;
 };
 
 } // namespace xpm
