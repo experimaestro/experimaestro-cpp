@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/bpiwowar/tiny-process-library.git
+	branch = master
+	commit = a2dc4ed8e5b3b8842ce44e5a82c3daae084cd30f
+	parent = fe2e391ceb3da1ea489489d4a1b4c62018ac35f5
+	method = merge
+	cmdver = 0.4.0
