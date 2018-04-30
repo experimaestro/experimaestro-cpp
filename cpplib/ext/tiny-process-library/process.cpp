@@ -2,10 +2,11 @@
 
 namespace TinyProcessLib
 {
-	Process::Process(const string_type &command, const string_type &path,
-	                 std::function<void(const char *bytes, size_t n)> read_stdout,
-	                 std::function<void(const char *bytes, size_t n)> read_stderr,
-	                 bool open_stdin, size_t buffer_size) noexcept:
+	Process::Process(const string_type &command, const string_type &path = string_type(),
+		        OutputRedirect const & read_stdout = RedirectInherit(),
+		        OutputRedirect const & read_stderr = RedirectInherit(),
+		        InputRedirect const & write_stdin = RedirectInherit(),
+		        size_t buffer_size = 131072) noexcept:
 		closed(true), read_stdout(std::move(read_stdout)), read_stderr(std::move(read_stderr)), open_stdin(open_stdin), buffer_size(buffer_size)
 	{
 		open(command, path);

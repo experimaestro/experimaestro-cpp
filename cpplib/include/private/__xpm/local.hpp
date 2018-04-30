@@ -5,16 +5,14 @@
 
 #include <xpm/launchers.hpp>
 
-namespace TinyProcessLib { class Process; }
-
 namespace xpm {
+
+class LocalProcess;
 
 class LocalProcessBuilder : public ProcessBuilder {
 public:
-  virtual void start() override;
-  
-private:
-  std::unique_ptr<TinyProcessLib::Process> _process;
+  virtual ptr<Process> start() override;
+  friend class LocalProcess;
 };
 
 }

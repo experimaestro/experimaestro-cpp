@@ -13,6 +13,25 @@
 
 namespace TinyProcessLib
 {
+	/** base class for redirect */
+	struct OutputRedirect {};
+	struct InputRedirect {};
+	
+	/** Redirect to/from a file */
+	struct RedirectFile : public InputRedirect, public OutputRedirect {
+		std::string path;
+	};
+
+	/** Redirect to/from the null stream */
+	struct RedirectNull : public InputRedirect, public OutputRedirect {
+	};
+
+	/** Redirect to a callback */
+	struct RedirectCallback : public OutputRedirect {
+		std::function<void(const char *bytes, size_t n)> function;
+	};
+
+
 	///Platform independent class for creating processes
 	class Process
 	{
@@ -40,20 +59,24 @@ namespace TinyProcessLib
 		///Note on Windows: it seems not possible to specify which pipes to redirect.
 		///Thus, at the moment, if read_stdout==nullptr, read_stderr==nullptr and open_stdin==false,
 		///the stdout, stderr and stdin are sent to the parent process instead.
-		Process(const string_type &command, const string_type &path = string_type(),
-		        std::function<void(const char *bytes, size_t n)> read_stdout = nullptr,
-		        std::function<void(const char *bytes, size_t n)> read_stderr = nullptr,
-		        bool open_stdin = false,
+		Process(const string_type &command, 
+				const string_type &path = string_type(),
+		        std::unique_ptr<OutputRedirect> && read_stdout = nullptr,
+		        std::unique_ptr<OutputRedirect> && read_stderr = nullptr,
+		        std::unique_ptr<InputRedirect> && write_stdin = nullptr,
 		        size_t buffer_size = 131072) noexcept;
 #ifndef _WIN32
 		/// Supported on Unix-like systems only.
 		Process(std::function<void()> function,
-		        std::function<void(const char *bytes, size_t n)> read_stdout = nullptr,
-		        std::function<void(const char *bytes, size_t n)> read_stderr = nullptr,
-		        bool open_stdin = false,
+		        std::unique_ptr<OutputRedirect> && read_stdout = nullptr,
+		        std::unique_ptr<OutputRedirect> && read_stderr = nullptr,
+		        std::unique_ptr<InputRedirect> && write_stdin = nullptr,
 		        size_t buffer_size = 131072) noexcept;
 #endif
 		~Process() noexcept;
+
+		/// Set the working directory
+		
 
 		///Get the process id of the started process.
 		id_type get_id() const noexcept;

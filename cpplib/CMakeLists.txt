@@ -32,7 +32,7 @@ set(PUBLIC_HEADERS
 )
 
 set(PRIVATE_HEADERS
-    include/private/__xpm/private.hpp
+    include/private/__xpm/common.hpp
     include/private/__xpm/xpmssh.hpp
     include/private/__xpm/jsonserialization.hpp
     include/private/__xpm/local.hpp
@@ -76,8 +76,6 @@ set(LINKED_LIBRARIES
     ${SQLite3_INCLUDE_DIR})
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
-add_subdirectory("ext/tiny-process-library")
-
 include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/ext"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/public"
@@ -85,7 +83,6 @@ include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/ext/tiny-process-library"
 )
 
 # --- experimaestro library
