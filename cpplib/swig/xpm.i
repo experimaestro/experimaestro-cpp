@@ -18,7 +18,7 @@
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
 #include <xpm/launchers.hpp>
-#include <xpm/dependencies.hpp>
+#include <xpm/workspace.hpp>
 #undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
@@ -73,6 +73,12 @@
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
 
+%shared_ptr(xpm::Dependency)
+%shared_ptr(xpm::Resource)
+%shared_ptr(xpm::Job)
+%shared_ptr(xpm::CommandLineJob)
+%shared_ptr(xpm::Workspace)
+
 // Object and object factory have virtual methods that have to be overridden
 %feature("director") xpm::Register;
 %feature("director") xpm::Object;
@@ -92,8 +98,8 @@ namespace xpm {
 // Include file
 %include <xpm/filesystem.hpp>
 %include <xpm/launchers.hpp>
-%include <xpm/dependencies.hpp>
 %include <xpm/commandline.hpp>
+%include <xpm/workspace.hpp>
 %include <xpm/context.hpp>
 %include <xpm/value.hpp>
 %include <xpm/xpm.hpp>

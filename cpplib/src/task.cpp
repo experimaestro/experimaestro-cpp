@@ -46,7 +46,7 @@ void Task::submit(ptr<Workspace> const & workspace,
   LOGGER->info("Sending task");
 
   // Get generated directory as locator
-  auto job = std::make_shared<CommandLineJob>(svlocator, launcher, _commandLine);
+  auto job = std::make_shared<CommandLineJob>(svlocator->value().asPath(), launcher, _commandLine);
   sv->resource(job);
 
   // Adding dependencies
