@@ -25,9 +25,9 @@ Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 TypeName Task::typeName() const { return _type->typeName(); }
 
 void Task::submit(ptr<Workspace> const & workspace,
-              ptr<Launcher> const & launcher,
-              ptr<StructuredValue> const & sv
-) {
+  ptr<Launcher> const & launcher,
+  ptr<StructuredValue> const & sv
+) const {
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
@@ -43,23 +43,16 @@ void Task::submit(ptr<Workspace> const & workspace,
   // Prepare the command line
   CommandContext context = { sv };
 
-  if (send) {
-    LOGGER->info("Sending task");
+  LOGGER->info("Sending task");
 
-    // Get generated directory as locator
-    auto job = std::make_shared<CommandLineJob>(svlocator);
-    sv->resource(job);
+  // Get generated directory as locator
+  auto job = std::make_shared<CommandLineJob>(svlocator, launcher, _commandLine);
+  sv->resource(job);
 
-    // Adding dependencies
-    sv->addDependencies(job, true);
+  // Adding dependencies
+  sv->addDependencies(job, true);
 
-    // Add dependencies
-    job->command(_commandLine);
-    job->setLauncher(launcher);
-    workspace->submit(job);
-  } else {
-    LOGGER->warn("Not sending task {}", identifier());
-  }
+  workspace->submit(job);
 }
 
 void Task::commandline(ptr<CommandLine> const & command) {
@@ -79,7 +72,7 @@ nlohmann::json Task::toJson() {
   auto j = json::object();
   j["identifier"] = _identifier.toString();
   j["type"] = _type->typeName().toString();
-  j["command"] = _commandLine.toJson();
+  j["command"] = _commandLine->toJson();
   return j;
 }
 

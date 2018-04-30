@@ -6,51 +6,59 @@
 #define XPM_SCHEDULER_H
 
 #include <string>
-#include <xpm/utils.hpp>
 #include <xpm/filesystem.hpp>
 
 namespace xpm {
 
 class Launcher;
 class Resource;
+class Command;
 
-class XPM_PIMPL(Dependency) {
+class Dependency {
 public:
-  Dependency(Resource & job);
+  Dependency(ptr<Resource> const &job);
+private:
+  ptr<Resource> job;
 };
 
 /// Base class for any resource
-class XPM_PIMPL(Resource) {
+class Resource {
 public:
-  Resource(xpm::Path const & locator);
-  xpm::Path const & locator() { return _locator; }
+  Resource(Path const & locator);
+  Path const & locator() { return _locator; }
+private:
+  Path _locator;
 };
 
 /// Base class for jobs
-class XPM_PIMPL_CHILD(Job, Resource) {
+class Job : public Resource {
 public:
-  Job(xpm::Path const & locator, ptr<Launcher> const & launcher);
+  Job(Path const & locator, ptr<Launcher> const & launcher);
+
   void addDependency(ptr<Dependency> const & dependency);
 };
 
 /// A command line job
-class XPM_PIMPL_CHILD(CommandLineJob, Job) {
+class CommandLineJob : public Job {
 public:
-  CommandLineJob(Path locator, Launcher launcher, Command command);
-  void submit();
+  CommandLineJob(Path const & locator, 
+    ptr<Launcher> const & launcher,
+    ptr<Command> const & command);
+private:
+  ptr<Command> _command;
 };
 
 
 /** 
  * Workspace tracking resources, jobs and scheduling
  */
-class XPM_PIMPL(Workspace) {
+class Workspace {
 public:
   /// Creates a new work space with a given path
   Workspace(std::string const &path);
 
   /// Submit a job
-  void submit(Job const & job);
+  void submit(ptr<Job> const & job);
 };
 
 }

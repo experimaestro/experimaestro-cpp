@@ -72,7 +72,7 @@ class Task
   ptr<Type> _type;
 
   /// Command line
-  CommandLine _commandLine;
+  ptr<CommandLine> _commandLine;
 
   /// True if a task is running
   static bool _running;

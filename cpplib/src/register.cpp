@@ -353,8 +353,8 @@ void Register::load(nlohmann::json const &j) {
     if (!e.count("command")) {
       throw argument_error("No command for task " + identifier.toString());
     }
-    CommandLine commandLine;
-    commandLine.load(e["command"]);
+    auto commandLine = std::make_shared<CommandLine>();
+    commandLine->load(e["command"]);
     auto task = std::make_shared<Task>(identifier, typePtr);
     task->commandline(commandLine);
     addTask(task);

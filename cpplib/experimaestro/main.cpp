@@ -2,7 +2,6 @@
 // Created by Benjamin Piwowarski on 30/11/2016.
 //
 
-#include <xpm/rpc/objects.hpp>
 #include <xpm/rpc/client.hpp>
 #include <xpm/register.hpp>
 #include <xpm/xpm.hpp>

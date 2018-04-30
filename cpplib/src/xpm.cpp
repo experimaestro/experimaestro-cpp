@@ -1,4 +1,3 @@
-
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
@@ -368,9 +367,9 @@ void StructuredValue::addDependencies(std::shared_ptr<Job> const & job,  bool sk
   if (canIgnore())
     return;
 
-  if (!_resource.empty()) {
+  if (_resource) {
     LOGGER->info("Found dependency {}", _resource);
-    job->addDependency(Dependency(_resource));
+    job->addDependency(std::make_shared<Dependency> (_resource));
   } else {
     for (auto &entry: _content) {
       entry.second->addDependencies(job, false);
@@ -403,12 +402,6 @@ void StructuredValue::generate(GeneratorContext & context) {
     if (get(Flag::GENERATED)) {
       LOGGER->debug("Object already generated");
     } else {
-      // (3) Add resource
-      if (_task) {
-        _resource = _task->getPathGenerator()->generate(context)->value().asString();
-        LOGGER->info("Setting resource to {}", _resource);
-      }
-
       LOGGER->debug("Generating values...");
       for (auto type = _type; type; type = type->parentType()) {
         for (auto entry: type->arguments()) {
