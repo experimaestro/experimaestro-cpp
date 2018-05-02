@@ -9,6 +9,13 @@ namespace xpm {
 
 class LocalProcess;
 
+/** Localhost connector */
+class LocalConnector : public Connector {
+public:
+  virtual ptr<ProcessBuilder> processBuilder() override;
+  std::string resolve(Path const & path) override;
+};
+
 class LocalProcessBuilder : public ProcessBuilder {
 public:
   virtual ptr<Process> start() override;

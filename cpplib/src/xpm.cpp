@@ -53,6 +53,7 @@ static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
 sealed_error::sealed_error() : exception("Object is sealed: cannot modify") {}
 argument_error::argument_error(const std::string &message) : exception(message) {}
 cast_error::cast_error(const std::string &message) : exception(message) {}
+assertion_error::assertion_error(const std::string &message) : exception(message) {}
 not_implemented_error::not_implemented_error(const std::string &message,
                                              const std::string &file, int line) : exception(
     "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}

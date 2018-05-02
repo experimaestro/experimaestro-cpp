@@ -34,6 +34,7 @@ set(PUBLIC_HEADERS
 set(PRIVATE_HEADERS
     include/private/__xpm/common.hpp
     include/private/__xpm/xpmssh.hpp
+    include/private/__xpm/scriptbuilder.hpp
     include/private/__xpm/jsonserialization.hpp
     include/private/__xpm/local.hpp
 )
@@ -57,8 +58,9 @@ set(SOURCES
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
-        src/local.cpp
+        src/local_unix.cpp
         src/value.cpp
+        src/scriptbuilder.cpp
 
         # RPC sources
         src/rpc/notifications.cpp

@@ -1,5 +1,5 @@
 /**
- * Workspace and related classes (launcher, connector, etc.)
+ * An experimental workspace
  */
 
 #ifndef XPM_WORKSPACE_H
@@ -27,12 +27,88 @@ struct JobPriorityComparator;
  */
 class Dependency {
 public:
-  Dependency(ptr<Resource> const & resource);
-  void to(ptr<Resource> const & resource);
-  ptr<Resource> from();
+  virtual ~Dependency();
+
+  /// Sets the dependent
+  void target(ptr<Resource> const & resource);
+
+  /// Is the dependency satisfied?
+  virtual bool satisfied() = 0;
+
+  /// Check the status and update the dependent if needed
+  void check();
+
 private:
-  ptr<Resource> _from;
-  ptr<Resource> _to;
+  // The dependent
+  ptr<Resource> _target;
+
+  /// Old satisfaction status
+  bool _oldSatisfied;
+  
+  /// Resource mutex
+  std::mutex _mutex;
+
+  friend class Resource;
+};
+
+
+
+/// Base class for any resource
+class Resource 
+#ifndef SWIG
+: public std::enable_shared_from_this<Resource>
+#endif
+{
+public:
+  Resource();
+  ~Resource();
+
+
+  void addDependent(ptr<Dependency> const & dependency);
+protected:
+  /// Resource that depend on this one to be completed
+  std::set<ptr<Dependency>> _dependents;
+
+  /// Resource mutex
+  std::mutex _mutex;
+
+  /// Signals a change in a dependency
+  virtual void dependencyChanged(Dependency & dependency, bool satisfied);
+
+  friend class Dependency;
+};
+
+
+
+
+/// Tokens are used to limit the number of running jobs
+class Token : public Resource {
+};
+
+
+/// A simple token based on counts
+class CounterToken : public Token {
+public:
+  typedef uint32_t TokenCounter;
+
+  /// Initialize the token
+  CounterToken(TokenCounter limit);
+  
+  /// Set the limit
+  void limit(TokenCounter _limit);
+
+  /// Create a new dependency
+  ptr<Dependency> createDependency(TokenCounter count);
+private:
+    /**
+     * Maximum number of tokens available
+     */
+    TokenCounter _limit;
+
+    /**
+     * Number of used tokens
+     */
+    TokenCounter _usedTokens;
 };
 
 /**
@@ -42,7 +118,7 @@ private:
  * - WAITING <-> READY -> RUNNING -> { ERROR, DONE } -> { WAITING, READY }
  * - {WAITING, READY} -> ON_HOLD -> READY
  */
-enum struct ResourceState {
+enum struct JobState {
    /**
      * For a job only: the job is waiting dependencies status be met
      */
@@ -74,72 +150,35 @@ enum struct ResourceState {
     DONE
 };
 
-/// Base class for any resource
-class Resource 
-#ifndef SWIG
-: public std::enable_shared_from_this<Resource>
-#endif
-{
-public:
-  Resource();
-  ~Resource();
-
-  void addDependent(ptr<Resource> const & resource);
-  ResourceState state() const;
-private:
-  /// Resource that depend on this one to be completed
-  std::set<ptr<Resource>> _dependents;
-
-  /// Resource state
-  ResourceState _state;
-};
-
-
-
-
-/// Tokens are used to limit the number of running jobs
-class Token : public Resource {
-};
-
-/// A simple token based on counts
-class CounterToken : public Token {
-public:
-
-  /// Initialize the token
-  CounterToken(uint32_t limit);
-  
-  /// Set the limit
-  void limit(uint32_t _limit);
-
-private:
-    /**
-     * Maximum number of tokens available
-     */
-    uint32_t _limit;
-
-    /**
-     * Number of used tokens
-     */
-    uint32_t _usedTokens;
-};
-
-
 /// Base class for jobs
 class Job : public Resource {
 public:
   Job(Path const & locator, ptr<Launcher> const & launcher);
 
+  /// Adds a new dependency
   void addDependency(ptr<Dependency> const & dependency);
 
   /// The locator
   Path const & locator() { return _locator; }
-  
+
+  /// Returns true if the job is ready to run
+  void ready();
+
+  /// Get the current state
+  JobState state() const;
+
   /// Run the job
   virtual void run() = 0;
 
-private:
+  /// Get a dependency to this resource
+  ptr<Dependency> dependency();
+
+protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
+
+  /// Signals a dependency change
+  virtual dependencyChanged(Dependency & dependency, bool satisfied) override;
 
   /// The workspace
   ptr<Workspace> _workspace;
@@ -158,6 +197,9 @@ private:
 
   /// Number of dependencies that are not satisifed
   size_t _unsatisfied;
+
+  /// Resource state
+  JobState _state;
 };
 
 /// A command line job
@@ -194,9 +236,6 @@ public:
   void submit(ptr<Job> const & job);
 
 private:
-  /// Jobs that are ready to run
-  std::priority_queue<ptr<Job>, std::vector<ptr<Job>>, JobPriorityComparator> _ready;
-
   /// All the jobs
   std::unordered_map<Path, ptr<Job>> _jobs;
 

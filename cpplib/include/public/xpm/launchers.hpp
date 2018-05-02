@@ -10,45 +10,57 @@
 #include <functional>
 
 #include <xpm/common.hpp>
+#include <xpm/filesystem.hpp>
 
 namespace xpm {
 
+// Foward declarations
+class ScriptBuilder;
+
+// Type definitions
 typedef std::map<std::string, std::string> Environment;
 
 
-/** base class for redirect */
-struct Redirect {};
+enum class Redirection {
+  INHERIT, FILE, PIPE, NONE
+};
 
-/** Redirect to/from a file */
-struct RedirectFile : public Redirect {
+typedef std::function<void(const char *bytes, size_t n)> PipeFunction;
+
+/** Redirect specification */
+struct Redirect {
+  Redirection type;
   std::string path;
+  PipeFunction function;
+
+  static Redirect file(std::string const &path);
+  static Redirect pipe(PipeFunction function);
+  static Redirect none();
+  static Redirect inherit();
+protected:
+  Redirect(Redirection);
 };
 
-/** Redirect to/from the null stream */
-struct RedirectNull : public Redirect {
-};
-
-/** Redirect to a callback */
-struct RedirectPipe : public Redirect {
-  std::function<void(const char *bytes, size_t n)> function;
-};
 
 class Process {
 public:
   /// Process
-  ~Process();
+  virtual ~Process();
 
   /// isRunning
-  virtual void isRunning() = 0;
+  virtual bool isRunning() = 0;
 
   /// Exit code 
   virtual int exitCode() = 0;
 
   /// Kill
-  virtual void kill() = 0;
+  virtual void kill(bool force) = 0;
 
-  /// Write to stdin
-  virtual void writeStdin(std::string const & string) = 0;
+  /**
+   *  Write to stdin
+   * @return true if the write succeeded, false otherwise
+   */
+  virtual bool writeStdin(std::string const & string) = 0;
 };
 
 /**
@@ -58,36 +70,15 @@ public:
  */
 class ProcessBuilder {
 public:
-  ~ProcessBuilder();
+  virtual ~ProcessBuilder();
+  virtual ptr<Process> start() = 0;
 
-  /// Sets the command
-  void command(std::vector<std::string> const & command);
-  
-  /// Sets the envionment
-  void environment(Environment const & environment);
-
-  /// Sets the working directory
-  void workingDirectory(std::string const & workingDirectory);
-
-  /// Sets the standard input
-  void stdin(ptr<Redirect> const & redirect);
-
-  /// Sets the standard output
-  void stdout(ptr<Redirect> const & redirect);
-
-  /// Sets the standard error
-  void stderr(ptr<Redirect> const & redirect);
-
-  /// Starts
-  virtual std::shared_ptr<Process> start() = 0;
-
-protected:
-  Environment _environment;
-  std::vector<std::string> _command;
-  std::string _workingDirectory;
-  std::shared_ptr<Redirect> _stdin;
-  std::shared_ptr<Redirect> _stdout;
-  std::shared_ptr<Redirect> _stderr;
+  std::string workingDirectory;
+  Redirect stdin;
+  Redirect stdout;
+  Redirect stderr;
+  Environment environment;
+  std::vector<std::string> command;
 };
 
 
@@ -99,15 +90,11 @@ public:
 
   /** Returns a new process builder */
   virtual ptr<ProcessBuilder> processBuilder() = 0;
+
+  /** Resolve a path */
+  virtual std::string resolve(Path const & path) = 0;
 };
 
-/** Localhost connector */
-class LocalConnector {};
-
-/**
- * Base class for script builders
- */
-class ScriptBuilder {};
 
 /** Specifies a way to launch process.
  *
@@ -119,6 +106,7 @@ public:
   Launcher(ptr<Connector> const &connector);
   virtual ~Launcher();
   virtual ptr<ProcessBuilder> processBuilder() = 0;
+  virtual ptr<ScriptBuilder> scriptBuilder() = 0;
 
   inline ptr<Connector> connector() { return _connector; }
   inline Environment const & environment() { return _environment; }

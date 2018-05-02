@@ -1,7 +1,3 @@
-//
-// Created by Benjamin Piwowarski on 16/01/2017.
-//
-
 #ifndef EXPERIMAESTRO_REGISTER_HPP
 #define EXPERIMAESTRO_REGISTER_HPP
 

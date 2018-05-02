@@ -2,8 +2,8 @@
 // Created by Benjamin Piwowarski on 12/12/2016.
 //
 
-#ifndef PROJECT_COMMON_HPP
-#define PROJECT_COMMON_HPP
+#ifndef EXPERIMAESTRO_COMMON_HPP
+#define EXPERIMAESTRO_COMMON_HPP
 
 #include <string>
 #include <exception>
@@ -40,6 +40,12 @@ class argument_error : public exception {
 class cast_error : public exception {
  public:
   cast_error(std::string const &message);
+};
+
+/** Thrown when an argument cannot be converted to a given type */
+class assertion_error : public exception {
+ public:
+  assertion_error(std::string const &message);
 };
 
 /** Thrown when something has not been implemented */

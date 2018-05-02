@@ -1,6 +1,6 @@
-//
-// Created by Benjamin Piwowarski on 09/12/2016.
-//
+/**
+ * How a command line can be defined
+ */
 
 #ifndef PROJECT_COMMANDLINE_HPP
 #define PROJECT_COMMANDLINE_HPP
@@ -20,7 +20,9 @@ struct CommandContext {
   ptr<StructuredValue> parameters;
 };
 
-/// Base class for all command arguments
+/**
+ * A command component that can be processed depending on where the command is running.
+ */
 class XPM_PIMPL(AbstractCommandComponent) {
  protected:
   AbstractCommandComponent();
