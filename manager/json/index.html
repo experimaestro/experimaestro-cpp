@@ -38,7 +38,7 @@
     
     
       
-        <title>Json Input/Output format</title>
+        <title>Object format</title>
       
     
     
@@ -427,9 +427,59 @@
       
     
     
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Output
+      </label>
+    
     <a href="./" title="Output" class="md-nav__link md-nav__link--active">
       Output
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#reserved-json-keys" title="Reserved JSON keys" class="md-nav__link">
+    Reserved JSON keys
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#predefined-types" title="Predefined types" class="md-nav__link">
+    Predefined types
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature" title="Signature" class="md-nav__link">
+    Signature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tags" title="Tags" class="md-nav__link">
+    Tags
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
     
   </li>
 
@@ -480,6 +530,43 @@
     
   
   
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#reserved-json-keys" title="Reserved JSON keys" class="md-nav__link">
+    Reserved JSON keys
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#predefined-types" title="Predefined types" class="md-nav__link">
+    Predefined types
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature" title="Signature" class="md-nav__link">
+    Signature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tags" title="Tags" class="md-nav__link">
+    Tags
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -494,7 +581,15 @@
                 
                 
                 <h1 id="introduction">Introduction</h1>
-<p>JSON is used to describe resources. Special names are reserved by experimaestro in order to ensure</p>
+<p>JSON is used to describe resources. Special names are reserved by experimaestro
+to automate some processes. </p>
+<div class="admonition important">
+<p class="admonition-title">Signature</p>
+<p>A key point of JSON objects are that a <strong>signature</strong> can be 
+computed. This signature allows to identify completely one
+experimental results by tracing back all its parameters. Signature
+computation is explained in <a href="#signature">this section</a>.</p>
+</div>
 <p>We will make use of an example of a message</p>
 <div class="codehilite"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;alpha&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
@@ -516,15 +611,18 @@
 </ul>
 </li>
 </ol>
-<h1 id="reserved-json-keys">Reserved JSON keys</h1>
+<h2 id="reserved-json-keys">Reserved JSON keys</h2>
 <p>Some keys have a special meaning in experimaestro:</p>
 <ul>
 <li><code>$value</code> correspond to the simple value of the JSON</li>
 <li><code>$type</code> correspond to the type of the JSON</li>
 <li><code>$tag</code> correspond to a tag - those can be used to mark special values (e.g. parameters under study)</li>
 <li><code>$resource</code> corresponds to an experimaestro resource</li>
+<li><code>$default</code> default value</li>
+<li><code>$path</code> the path</li>
+<li><code>$ignore</code> list of keys to ignore (besides those prefixed by <code>$</code>)</li>
 </ul>
-<h1 id="predefined-types">Predefined types</h1>
+<h2 id="predefined-types">Predefined types</h2>
 <ul>
 <li><code>string</code> for strings</li>
 <li><code>integer</code> for boolean</li>
@@ -532,7 +630,7 @@
 <li><code>real</code> for reals</li>
 <li><code>path</code> for anything corresponding to a file or a directory (even on the network)</li>
 </ul>
-<h1 id="signature">Signature</h1>
+<h2 id="signature">Signature</h2>
 <p>Each JSON can be reduced to a signature that corresponds to the JSON describing the factor
 of variation of the outcome of an experiment.</p>
 <ol>
@@ -557,26 +655,20 @@ of variation of the outcome of an experiment.</p>
 <span class="p">}</span>
 </pre></div>
 
-<h1 id="tags">Tags</h1>
+<h2 id="tags">Tags</h2>
 <p>Tags are used to mark parameters that are under study, i.e. parameters that the current experiment are interested in looking at.
 When a parameter is tagged, the JSON representation adds a <code>$tag</code> entry that gives the name of the parameter
 <div class="codehilite"><pre><span></span><span class="p">{</span> <span class="nt">&quot;$type&quot;</span><span class="p">:</span> <span class="s2">&quot;integer&quot;</span><span class="p">,</span> <span class="nt">&quot;$value&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span> <span class="nt">&quot;$tag&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span> <span class="p">}</span><span class="err">,</span>
 </pre></div></p>
 <p>This can be achieved by calling the function <code>tag</code> from xpm:
-[[[{"language": "python", "title": "Python"}
-from xpm import tag
-tag("x", 1)
-[[[{"language": "javascript", "title": "JS"}
-tag("x", 1)
-]]]</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">xpm</span> <span class="kn">import</span> <span class="n">tag</span>
+<span class="n">tag</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div></p>
 <p>Tags can be retrieved using the <code>retrieve_tags</code> function.</p>
 <p>This can be achieved by calling the function <code>tag</code> from xpm:
-[[[{"language": "python", "title": "Python"}
-from xpm import retrieve_tags
-retrieve_tags(json)
-[[[{"language": "javascript", "title": "JS"}
-retrieve_tags("x", 1)
-]]]</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">xpm</span> <span class="kn">import</span> <span class="n">retrieve_tags</span>
+<span class="n">retrieve_tags</span><span class="p">(</span><span class="n">json</span><span class="p">)</span>
+</pre></div></p>
 <p>If <code>json</code> is
 <div class="codehilite"><pre><span></span><span class="err">json</span> <span class="err">=</span> <span class="p">{</span>
 <span class="nt">&quot;x&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&quot;$type&quot;</span><span class="p">:</span> <span class="s2">&quot;integer&quot;</span><span class="p">,</span> <span class="nt">&quot;$value&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span> <span class="nt">&quot;$tag&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span> <span class="p">},</span>

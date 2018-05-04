@@ -4,7 +4,7 @@
     
     <url>
      <loc>/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
     
@@ -13,25 +13,25 @@
         
     <url>
      <loc>/scheduler/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/installing/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/scheduler/connectors/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/scheduler/notification/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -41,31 +41,31 @@
         
     <url>
      <loc>/manager/intro/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/manager/definitions/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/manager/json/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/manager/java/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>/manager/python/</loc>
-     <lastmod>2018-03-16</lastmod>
+     <lastmod>2018-05-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
