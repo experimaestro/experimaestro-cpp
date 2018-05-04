@@ -16,9 +16,7 @@ class MyModel: pass
 ```
 import experimaestro as xpm
 
-# Put your definitions here:
-# - load a YAML
-# - import the definitions
+# Put your definitions here: either load a YAML or import the definitions
 
 if __name__ == "__main__":
     xpm.logger.setLevel(logging.DEBUG)
