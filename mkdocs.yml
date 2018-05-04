@@ -1,10 +1,14 @@
 site_name: experimaestro
 site_description: experimaestro Computer science experiments manager and scheduler
+
 pages:
-- Home: 'index.md'
+
+- Basics: 
+    - Basics: 'index.md'
+    - Installing: 'installing.md'
+
 - Scheduler:
     - Home: scheduler/index.md
-    - Installing: 'installing.md'
     - "Connectors & Launchers": scheduler/connectors.md
     - Notification: scheduler/notification.md
 - Manager:
