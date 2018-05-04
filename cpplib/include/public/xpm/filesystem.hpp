@@ -45,6 +45,11 @@ class Path : public Pimpl<Path> {
   /// Returns the parent path
   Path parent() const;
 
+  /// Resolve
+  inline Path resolve(std::initializer_list<std::string> const &relative) { 
+    return Path(*this, relative);
+  }
+
   /// Returns a string representation of the path (that can be parsed)
   std::string toString() const;
 
@@ -54,6 +59,11 @@ class Path : public Pimpl<Path> {
    */
   std::string localpath() const;
 
+  /**
+   * Return the name
+   */
+  std::string name() const;
+  
   /**
    * Is local
    */

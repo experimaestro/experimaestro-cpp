@@ -14,6 +14,8 @@
 
 #include <xpm/filesystem.hpp>
 
+struct sqlite3;
+
 namespace xpm {
 
 class Launcher;
@@ -21,12 +23,20 @@ class Resource;
 class Workspace;
 class CommandLine;
 struct JobPriorityComparator;
+class CounterDependency;
+
+typedef std::uint64_t ResourceId;
 
 /**
  * A dependency between resources
  */
-class Dependency {
+class Dependency
+#ifndef SWIG
+: public std::enable_shared_from_this<Dependency>
+#endif
+{
 public:
+  Dependency(ptr<Resource> const & origin);
   virtual ~Dependency();
 
   /// Sets the dependent
@@ -39,6 +49,9 @@ public:
   void check();
 
 private:
+  // The origin
+  ptr<Resource> _origin;
+
   // The dependent
   ptr<Resource> _target;
 
@@ -63,14 +76,20 @@ public:
   Resource();
   ~Resource();
 
+  /// Get the workspace resource ID
+  inline ResourceId getId() const { return _resourceId; }
 
   void addDependent(ptr<Dependency> const & dependency);
+  void removeDependent(ptr<Dependency> const & dependency);
 protected:
   /// Resource that depend on this one to be completed
-  std::set<ptr<Dependency>> _dependents;
+  std::set<std::weak_ptr<Dependency>> _dependents;
 
   /// Resource mutex
   std::mutex _mutex;
+
+  /// Resource id
+  ResourceId _resourceId;
 
   /// Signals a change in a dependency
   virtual void dependencyChanged(Dependency & dependency, bool satisfied);
@@ -89,26 +108,27 @@ class Token : public Resource {
 /// A simple token based on counts
 class CounterToken : public Token {
 public:
-  typedef uint32_t TokenCounter;
+  typedef uint32_t Value;
 
   /// Initialize the token
-  CounterToken(TokenCounter limit);
+  CounterToken(Value limit);
   
   /// Set the limit
-  void limit(TokenCounter _limit);
+  void limit(Value _limit);
 
   /// Create a new dependency
-  ptr<Dependency> createDependency(TokenCounter count);
+  ptr<Dependency> createDependency(Value count);
 private:
+  friend class CounterDependency;
     /**
      * Maximum number of tokens available
      */
-    TokenCounter _limit;
+    Value _limit;
 
     /**
      * Number of used tokens
      */
-    TokenCounter _usedTokens;
+    Value _usedTokens;
 };
 
 /**
@@ -162,7 +182,7 @@ public:
   Path const & locator() { return _locator; }
 
   /// Returns true if the job is ready to run
-  void ready();
+  bool ready() const;
 
   /// Get the current state
   JobState state() const;
@@ -178,7 +198,7 @@ protected:
   friend struct JobPriorityComparator;
 
   /// Signals a dependency change
-  virtual dependencyChanged(Dependency & dependency, bool satisfied) override;
+  virtual void dependencyChanged(Dependency & dependency, bool satisfied) override;
 
   /// The workspace
   ptr<Workspace> _workspace;
@@ -241,6 +261,9 @@ private:
 
   /// State mutex
   std::mutex _mutex;
+
+  /// SQL Lite
+  sqlite3 * db;
 };
 
 }

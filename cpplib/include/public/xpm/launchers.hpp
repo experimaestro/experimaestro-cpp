@@ -3,6 +3,7 @@
 #ifndef EXPERIMAESTRO_LAUNCHERS_HPP
 #define EXPERIMAESTRO_LAUNCHERS_HPP
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -89,10 +90,16 @@ public:
   virtual  ~Connector();
 
   /** Returns a new process builder */
-  virtual ptr<ProcessBuilder> processBuilder() = 0;
+  virtual ptr<ProcessBuilder> processBuilder() const = 0;
 
-  /** Resolve a path */
-  virtual std::string resolve(Path const & path) = 0;
+  /** Resolve a path so it is relative to the connector */
+  virtual std::string resolve(Path const & path) const = 0;
+
+  /** Get an output stream */
+  virtual std::unique_ptr<std::ostream> ostream(Path const & path) const = 0;
+
+  /** Get an output stream */
+  virtual std::unique_ptr<std::istream> istream(Path const & path) const = 0;
 };
 
 

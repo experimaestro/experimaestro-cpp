@@ -80,6 +80,14 @@ std::string Path::toString() const {
   if (_this->share.empty()) return _this->path;
   return "shares:" + _this->share + ":" + _this->node + ":" + _this->path;
 }
+
+std::string Path::name() const {
+  std::string const & p = self().path;
+  auto pos = p.rfind('/');
+
+  return pos == std::string::npos ? p : p.substr(pos + 1);
+}
+
 std::string Path::localpath() const {
   if (!isLocal())
     throw std::logic_error("Path " + toString() + " is not local");

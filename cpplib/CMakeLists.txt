@@ -8,6 +8,7 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(FMT REQUIRED)
 
 add_definitions("-Wall")
 enable_testing()
@@ -75,7 +76,9 @@ set(LINKED_LIBRARIES
     ${LIBSSH_LIBRARY} 
     ${CMAKE_THREAD_LIBS_INIT} 
     ${LIBYAMLCPP_LIBRARY} 
-    ${SQLite3_INCLUDE_DIR})
+    ${SQLite3_INCLUDE_DIR}
+    ${FMT_INCLUDE_DIR}
+    )
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
 include_directories(

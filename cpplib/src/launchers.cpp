@@ -2,7 +2,7 @@
 
 namespace xpm {
 
-Redirect::Redirect(Redirection r) : redirection(r) {}
+Redirect::Redirect(Redirection r) : type(r) {}
 
 Redirect Redirect::file(std::string const &path) {
   Redirect r(Redirection::FILE);

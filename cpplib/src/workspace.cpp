@@ -3,6 +3,7 @@
 
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
+#include <sqlite3.h>
 
 DEFINE_LOGGER("workspace");
 
@@ -10,7 +11,12 @@ namespace xpm {
 
 // --- Dependency
 
-Dependency::~Dependency() {}
+Dependency::Dependency(ptr<Resource> const & origin) : _origin(origin), _oldSatisfied(false) {}
+Dependency::~Dependency() {
+  if (_origin) {
+    _origin->removeDependent(shared_from_this());
+  }
+}
 
 void Dependency::target(ptr<Resource> const &resource) { _target = resource; }
 
@@ -18,7 +24,7 @@ void Dependency::check() {
   std::unique_lock<std::mutex> lock(_mutex);
   bool s = satisfied();
   if (s != _oldSatisfied) {
-    _target->dependencyChange(*this, s);
+    _target->dependencyChanged(*this, s);
   }
 }
 
@@ -31,8 +37,13 @@ void Resource::addDependent(ptr<Dependency> const & dependency) {
   _dependents.insert(dependency);
 }
 
-virtual Resource::dependencyChanged(Dependency &dependency,
-                                    bool satisfied) const {
+void Resource::removeDependent(ptr<Dependency> const & dependency) {
+  _dependents.erase(dependency);
+}
+
+
+void Resource::dependencyChanged(Dependency &dependency,
+                                    bool satisfied) {
   throw assertion_error(
       "A resource cannot handle a change in dependency directly");
 }
@@ -42,6 +53,23 @@ virtual Resource::dependencyChanged(Dependency &dependency,
 CounterToken::CounterToken(uint32_t limit) : _limit(limit), _usedTokens(0) {}
 void CounterToken::limit(uint32_t limit) { _limit = limit; }
 
+class CounterDependency : public Dependency {
+public:
+  CounterDependency(ptr<CounterToken> const & counter, CounterToken::Value value) 
+    : Dependency(counter), _counter(counter), _value(value) {}
+
+  virtual bool satisfied() {
+    return _counter->_usedTokens + _value <= _counter->_limit;
+  }
+private:
+  ptr<CounterToken> _counter;
+  CounterToken::Value _value;
+};
+
+ptr<Dependency> CounterToken::createDependency(Value count) {
+  return std::make_shared<CounterDependency>(shared_from_this(), count);
+}
+
 // --- Job
 
 Job::Job(Path const &locator, ptr<Launcher> const &launcher)
@@ -49,7 +77,9 @@ Job::Job(Path const &locator, ptr<Launcher> const &launcher)
 
 JobState Job::state() const { return _state; }
 
-void Job::dependencyChanged(Dependency &dependency, bool satisfied) const {
+bool Job::ready() const { return _unsatisfied == 0; }
+
+void Job::dependencyChanged(Dependency &dependency, bool satisfied) {
   {
     std::unique_lock<std::mutex> lock(_mutex);
     _unsatisfied += satisfied ? -1 : 1;
@@ -64,20 +94,13 @@ void Job::addDependency(ptr<Dependency> const &dependency) {
   // Add the dependency
   _dependencies.push_back(dependency);
   auto self = shared_from_this();
-  dependency->to(self);
-  dependency->from()->addDependent(self);
+  dependency->target(self);
 
   // Update the dependency (it is unsatisfied at the start)
   _unsatisfied += 1;
   dependency->check();
 }
 
-void Job::updateDependency(Dependency const &dependency) {
-  std::unique_lock<std::mutex> jobLock(_mutex);
-
-  int change = dependency.change();
-  _unsatisfied += change;
-}
 
 // --- Command line job
 
@@ -90,7 +113,7 @@ void CommandLineJob::run() {
   auto scriptBuilder = _launcher->scriptBuilder();
   auto processBuilder = _launcher->processBuilder();
 
-  Path scriptPath = scriptBuilder->write(_launcher->connector(), _locator);
+  Path scriptPath = scriptBuilder->write(*_launcher->connector(), _locator);
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));
 
@@ -105,7 +128,7 @@ void CommandLineJob::run() {
     // Notify dependents if we exited clearly
     if (exitCode == 0) {
       for (auto &entry : this->_dependents) {
-        entry->check();
+        entry.lock()->check();
       }
     }
 
@@ -123,7 +146,10 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
   return lhs->_submissionTime > rhs->_submissionTime;
 }
 
-Workspace::Workspace(std::string const &path) {}
+Workspace::Workspace(std::string const &path) {
+  int rc = sqlite3_open(argv[1], db);
+  if (rc) throw exception("Could not open database");
+}
 
 void Workspace::submit(ptr<Job> const &job) {
   std::lock_guard<std::mutex> lock(_mutex);
@@ -134,6 +160,8 @@ void Workspace::submit(ptr<Job> const &job) {
                  job->locator());
     return;
   }
+
+  // TODO: get a new resource ID
 
   // Add job to list
   job->_submissionTime = std::time(nullptr);

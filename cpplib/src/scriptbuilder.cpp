@@ -1,7 +1,10 @@
 #include <sstream>
+#include <unordered_map>
+#include <fmt/format.h>
 
 #include <__xpm/scriptbuilder.hpp>
 #include <xpm/launchers.hpp>
+#include <xpm/workspace.hpp>
 
 namespace xpm {
 
@@ -18,50 +21,45 @@ std::string protect_quoted(std::string const &string) {
 struct NamedPipeRedirections {
   std::vector<Path> outputRedirections;
   std::vector<Path> errorRedirections;
-}
+};
 
 NamedPipeRedirections EMPTY_REDIRECTIONS;
 
 struct CommandContext {
-  unordered_map<ptr<Command>, NamedPipeRedirections> namedPipeRedirectionsMap;
+  std::unordered_map<ptr<Command>, NamedPipeRedirections> namedPipeRedirectionsMap;
 
-  NamedPipeRedirections &getNamedRedirections(AbstractCommand key,
-                                              boolean create) {
+  NamedPipeRedirections &getNamedRedirections(ptr<Command> const & key,
+                                              bool create) {
     auto x = namedPipeRedirectionsMap.find(key);
-    if (x != NamedPipeRedirections.end()) {
-      return *x;
+    if (x != namedPipeRedirectionsMap.end()) {
+      return x->second;
     }
 
     if (!create)
       return EMPTY_REDIRECTIONS;
 
-    return namedPipeRedirectionsMap.put[key];
+    return namedPipeRedirectionsMap[key] = NamedPipeRedirections();
   }
 };
 
 struct FolderContext : public CommandContext {
   Path folder;
-  std::string basename;
+  std::string name;
+  std::unordered_map<std::string, int> counts;
 
-  Path getAuxiliaryFile(String prefix,
-                        String suffix) throws FileSystemException {
-    final String reference = format("%s.%s%s", name, prefix, suffix);
-    MutableInt count = counts.get(reference);
-    if (count == null) {
-      count = new MutableInt();
-      counts.put(reference, count);
-    } else {
-      count.increment();
-    }
-    return folder.resolve(
-        format("%s_%02d.%s%s", name, count.intValue(), prefix, suffix));
+  FolderContext(Path const & folder, std::string const & name) : folder(folder), name(name) {
   }
 
-public
-  Path getWorkingDirectory() throws IOException { return folder; }
+  Path getAuxiliaryFile(std::string const & prefix,
+                        std::string const & suffix) {
+    std::string reference = name + "." + prefix + suffix;
+    int & count = ++counts[reference];
+    return folder.resolve({ fmt::format("{}_{0:2d}.{}{}", name, count, prefix, suffix) });
+  }
 
-public
-  void close() throws IOException {
+  Path getWorkingDirectory() { return folder; }
+
+  void close() {
     // Keep all the files
   }
 };
@@ -70,23 +68,27 @@ ScriptBuilder::~ScriptBuilder() {}
 
 ShScriptBuilder::ShScriptBuilder() : shPath("/bin/sh") {}
 
-ShScriptBuilder::write(Connector const & connector, Path const &path, Job const & job) {
-  command().prepare(env);
-
+Path ShScriptBuilder::write(Connector const & connector, Path const & path, Job const & job) {
   // First generate the run file
-  std::unique_ptr<std::ostream> _out = connector.ostream(path);
+  Path directory = path.parent();
+  Path scriptpath = directory.resolve({ path.name() + ".sh" });
+  Path donepath = directory.resolve({ path.name() + ".done" });
+  Path startlockPath = directory.resolve({ path.name() + ".lock.start" });
+  Path pidFile = directory.resolve({ path.name() + ".pid" });
+
+  std::unique_ptr<std::ostream> _out = connector.ostream(scriptpath);
   std::ostream &out = *_out;
 
   out << "#!" << shPath << std::endl;
   out << "# Experimaestro generated task" << std::endl << std::endl;
 
-  FolderContext context{basepath, baseName};
+  FolderContext context(path.parent(), path.name());
 
   // --- Checks locks right away
 
   // Checks the main lock - if not there, we are not protected
-  if (!lockFiles.isEmpty()) {
-    std::cerr << "# Checks that the locks are set" << std::endl;
+  if (!lockFiles.empty()) {
+    out << "# Checks that the locks are set" << std::endl;
     for (Path const &lockFile : lockFiles) {
       out << "test -f " << lockFile << " || (echo Locks not set; exit 017)"
           << std::endl;
@@ -104,27 +106,21 @@ ShScriptBuilder::write(Connector const & connector, Path const &path, Job const 
   // Use pipefail for fine grained analysis of errors in commands
   out << "set -o pipefail" << std::endl << std::endl;
 
-  if (pidFile != null) {
-    out << "echo $? > \"" << protect_quoted(env.resolve(pidFile, null)) << "\""
-        << std::endl,
-        ;
-  }
+  out << "echo $? > \"" << protect_quoted(connector.resolve(pidFile)) << "\""
+        << std::endl << std::endl;
 
-  out << std::endl;
-
-  for (Map.Entry<String, String> pair : environment().entrySet()) {
-    out << "export %s=\"%s\"" << std::endl, pair.getKey(),
-        protect(pair.getValue());
+  for (auto const & pair : environment) {
+    out << "export " << pair.first << "=\"" << protect_quoted(pair.second) << "\"" << std::endl;
   }
 
   // Adds notification URL to script
-  if (notificationURL != null) {
-    out << "export %s=\"" << protect_quoted(notificationURL) << "/%d\"" << Constants.XPM_NOTIFICATION_URL;
-                ().toString()), job.getId());
+  if (!notificationURL.empty()) {
+    out << "export %s=\"" << protect_quoted(notificationURL) 
+        << "/" << job.getId() << std::endl;
   }
 
   out << "cd \"%s\"" << std::endl,
-      protect(env.resolve(directory(), null), QUOTED_SPECIAL);
+      protect_quoted(connector.resolve(directory));
 
   // Write some command
   if (preprocessCommands != null) {
@@ -181,15 +177,15 @@ ShScriptBuilder::write(Connector const & connector, Path const &path, Job const 
   // Write the command
   out << "code=$?" << std::endl;
   out << "if test $code -ne 0; then" << std::endl;
-  out << " echo $code > \"" << protect_quoted(env.resolve(exitCodePath, basepath) << "\"" << std::endl,
+  out << " echo $code > \"" << protect_quoted(env.resolve(exitCodePath, basepath)) << "\"" << std::endl,
 
   out << " exit $code" << std::endl;
   out << "fi" << std::endl;
 
   switch (input.type()) {
-  case INHERIT:
+  case Redirection::INHERIT:
     break;
-  case READ:
+  case Redirection::READ:
     out << "cat \"%s\" | ", env.resolve(input.file(), basepath);
     break;
   default:
@@ -204,7 +200,7 @@ ShScriptBuilder::write(Connector const & connector, Path const &path, Job const 
   out << "(" << std::endl;
 
   // The prepare all the command
-  writeCommands(env, writer, command);
+  writeCommands(env, out, command);
 
   out << ") ";
 
@@ -271,7 +267,7 @@ void ShScriptBuilder::writeCommands(CommandContext &env, std::ostream &out,
     } else {
       for (CommandComponent & argument : command.components()) {
         if (argument instanceof Unprotected) {
-          out << argument.toString(env);
+          out << argument.tostd::string const &(env);
         }
 
         out << ' ';
@@ -283,7 +279,7 @@ void ShScriptBuilder::writeCommands(CommandContext &env, std::ostream &out,
           out << std::endl;
           out << " )";
         } else {
-          out << protect(argument.toString(env), SHELL_SPECIAL);
+          out << protect(argument.tostd::string const &(env), SHELL_SPECIAL);
         }
       }
     }

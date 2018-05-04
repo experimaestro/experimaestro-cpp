@@ -2,6 +2,7 @@
 #define EXPERIMAESTRO_SCRIPTBUILDER_HPP
 
 #include <xpm/filesystem.hpp>
+#include <xpm/launchers.hpp>
 
 namespace xpm {
 
@@ -16,6 +17,11 @@ class Job;
  */
 class ScriptBuilder {
 public:
+    /**
+     * Environment
+     */
+    Environment environment;
+    
     /**
      * Commands
      */
@@ -34,7 +40,7 @@ public:
     virtual ~ScriptBuilder();
 
     /// Write the script
-    virtual Path write(ptr<Connector> const & connector, Path const & path) = 0;
+    virtual Path write(Connector const & connector, Path const & path, Job const & job) = 0;
 };
 
 
@@ -43,9 +49,10 @@ public:
     /// Path to sh (default /bin/sh)
     std::string shPath;
 
-    virtual Path write(ptr<Connector> const &connector, Path const &path, Job const & job) override;
+    ShScriptBuilder();
+    virtual Path write(Connector const & connector, Path const &path, Job const & job) override;
 private:
-    void writeRedirection(CommandContext & env, std::ostream &out, Redirect redirect, int stream)
+    void writeRedirection(CommandContext & env, std::ostream &out, Redirect redirect, int stream);
     void writeCommands(CommandContext & env, std::ostream &out, ptr<Command> commands);
     void printRedirections(CommandContext & env, int stream, std::ostream &out, 
         Redirect const & outputRedirect, std::vector<Path> const & outputRedirects);
