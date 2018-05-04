@@ -8,9 +8,19 @@
 #include <string>
 #include <exception>
 
+#ifndef SWIG
+  #define NOSWIG(...) __VA_ARGS__
+#else
+  #define NOSWIG(x) 
+#endif
+
 namespace xpm {
 
+/// Template 
 template <typename T> using ptr = std::shared_ptr<T>;
+
+template<class T, class... Args> 
+inline ptr<T> mkptr(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
 
 /** Base exception */
 class exception : public std::exception {

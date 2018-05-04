@@ -7,7 +7,7 @@
 
 namespace xpm {
 
-CommandPath EXECUTABLE_PATH = CommandPath(Path("."));
+ptr<CommandPath> EXECUTABLE_PATH = std::make_shared<CommandPath>(Path("."));
 
 namespace {
   ptr<Register> CURRENTREGISTER;

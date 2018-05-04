@@ -17,29 +17,46 @@ DEFINE_LOGGER("xpm")
 
 namespace xpm {
 
-template<>
-struct Reference<AbstractCommandComponent> {
-  virtual ~Reference<AbstractCommandComponent>() {}
-  virtual nlohmann::json toJson() const {
-    throw std::runtime_error("Pure virtual function for " + std::string(typeid(*this).name()));
-  }
-};
+
+void CommandPart::addDependency(Job & job) {
+}
+
+void CommandPart::forEach(std::function<void(CommandPart &)> f) {
+  f(*this);
+}
+
+
+// ---- Abstract command
+
+AbstractCommandComponent::AbstractCommandComponent() {
+
+}
+AbstractCommandComponent::~AbstractCommandComponent() {
+
+}
+nlohmann::json AbstractCommandComponent::toJson() const {
+  return toJson();
+}
+
+
+// --- Command line
 
 CommandLine::CommandLine() {
 
 }
 
-void CommandLine::add(Command command) {
+void CommandLine::add(ptr<Command> const & command) {
   commands.push_back(command);
 }
 
 nlohmann::json CommandLine::toJson() const {
   if (commands.size() == 1) {
-    return commands[0].toJson();
+    return commands[0]->toJson();
   }
+
   auto j = nlohmann::json::array();
   for(auto &command: commands) {
-    j.push_back(command.toJson());
+    j.push_back(command->toJson());
   }
   return j;
 }
@@ -48,17 +65,25 @@ void CommandLine::load(nlohmann::json const &j) {
 
   if (!j.empty() && !j[0].is_array()) {
     // Simplified array
-    Command c;
-    c.load(j);
+    auto c = mkptr<Command>();
+    c->load(j);
     this->commands.push_back(c);
   } else {
     for (auto &e: j) {
-      Command c;
-      c.load(e);
+      auto c = mkptr<Command>();
+      c->load(e);
       this->commands.push_back(c);
     }
   }
 }
+
+void CommandLine::forEach(std::function<void(CommandPart &)> f) {
+  CommandPart::forEach(f);
+  for(auto & c : commands) {
+    c->forEach(f);
+  }
+}
+
 
 namespace {
 std::string transform(Context &context, std::string const &value) {
@@ -85,29 +110,31 @@ std::string transform(Context &context, std::string const &value) {
 }
 }
 
-template<>
-struct Reference<CommandString> : public Reference<AbstractCommandComponent> {
-  std::string value;
-  Reference(const std::string &value) : value(value) {}
-  virtual nlohmann::json toJson() const override {
-    return value;
-  }
-};
+nlohmann::json CommandString::toJson() const {
+  return value;
+}
 
 CommandString::CommandString(const std::string &value)
-    : PimplChild(value) {
+    : value(value) {
 }
 
 std::string CommandString::toString() const {
-  return self().value;
+  return value;
 }
 
 CommandString::~CommandString() {
 
 }
 
-void Command::add(AbstractCommandComponent component) {
+void Command::add(ptr<AbstractCommandComponent> const & component) {
   components.push_back(component);
+}
+
+void Command::forEach(std::function<void(CommandPart &)> f) {
+  CommandPart::forEach(f);
+  for(auto & c : components) {
+    c->forEach(f);
+  }
 }
 
 
@@ -115,17 +142,17 @@ void Command::load(nlohmann::json const &j) {
   assert(j.is_array());
   for(auto &e: j) {
     if (e.is_string()) {
-      components.push_back(CommandString(e.get<std::string>()));
+      components.push_back(mkptr<CommandString>(e.get<std::string>()));
     } else {
       std::string type = e.value("type", "");
       if (type == "content") {
-        components.push_back(CommandContent(e["key"], e["content"]));
+        components.push_back(mkptr<CommandContent>(e["key"], e["content"]));
       } else if (type == "parameters") {
-        components.push_back(CommandParameters());
+        components.push_back(mkptr<CommandParameters>());
       } else if (type == "path" || (type == "" && e.count("path"))) {
-        components.push_back(CommandPath(Path(e["path"].get<std::string>())));
+        components.push_back(mkptr<CommandPath>(Path(e["path"].get<std::string>())));
       } else if (type == "pathref" || (type == "" && e.count("pathref"))) {
-        components.push_back(CommandPathReference(CommandPathReference(e["pathref"].get<std::string>())));
+        components.push_back(mkptr<CommandPathReference>(CommandPathReference(e["pathref"].get<std::string>())));
       } else {
         throw std::invalid_argument("Unknown type for command component: " + type);
       }
@@ -136,37 +163,25 @@ void Command::load(nlohmann::json const &j) {
 nlohmann::json Command::toJson() const {
   auto j = nlohmann::json::array();
   for(auto &component: this->components) {
-    j.push_back(component.toJson());
+    j.push_back(component->toJson());
   }
   return j;
 }
-AbstractCommandComponent::AbstractCommandComponent() {
 
-}
-AbstractCommandComponent::~AbstractCommandComponent() {
 
-}
-nlohmann::json AbstractCommandComponent::toJson() const {
-  return self().toJson();
+
+// ---- Command content
+
+CommandContent::CommandContent(std::string const &key, std::string const &value) : key(key), content(value) {
 }
 
-template<>
-struct Reference<CommandContent> : public Reference<AbstractCommandComponent> {
-  std::string key;
-  std::string content;
-  Reference(std::string const &key, std::string const &content) : key(key), content(content) {}
-
-  virtual nlohmann::json toJson() const override {
+nlohmann::json CommandContent::toJson() const {
     auto j = nlohmann::json::object();
     j["type"] = "content";
     j["key"] = key;
     j["content"] = content;
     return j;
   }
-};
-
-CommandContent::CommandContent(std::string const &key, std::string const &value) : PimplChild(key, value) {
-}
 
 std::string CommandContent::toString() const {
   return std::string();
@@ -174,6 +189,10 @@ std::string CommandContent::toString() const {
 
 CommandContent::~CommandContent() {
 }
+
+
+
+// --- CommandParameters
 
 
 namespace {
@@ -241,14 +260,8 @@ namespace {
       oss << "}";
     }
   }
-}
+} // end unnamed ns
 
-template<>
-struct Reference<CommandParameters> : public Reference<AbstractCommandComponent> {
-  virtual nlohmann::json toJson() const override {
-    return { {"type", "parameters"} };
-  }
-};
 
 CommandParameters::~CommandParameters() {
 
@@ -256,57 +269,76 @@ CommandParameters::~CommandParameters() {
 CommandParameters::CommandParameters() {
 }
 
+nlohmann::json CommandParameters::toJson() const {
+  return { {"type", "parameters"} };
+}
+
+void CommandParameters::setValue(ptr<StructuredValue> const & value) {
+  this->value = value;
+}
+
+void CommandParameters::addDependencies(Job & job) {
+  if (!this->value) throw exception("Cannot set dependencies since value is null");
+
+  this->value->addDependencies(job, false);
+}
+
+
 
 // --- CommandPathReference
 
-template<>
-struct Reference<CommandPathReference> : public Reference<AbstractCommandComponent> {
-  std::string key;
-  Reference(const std::string &key) : key(key) {}
-
-  virtual nlohmann::json toJson() const override {
-    auto j = nlohmann::json::object();
-    j["pathref"] = key;
-    return j;
-  }
-};
-
-CommandPathReference::CommandPathReference(std::string const &key) : PimplChild(key) {
+CommandPathReference::CommandPathReference(std::string const &key) : key(key) {
 
 }
 CommandPathReference::~CommandPathReference() {
 }
 
-std::string CommandPathReference::toString() const {
-  return "pathref(" + self().key + ")";
+nlohmann::json CommandPathReference::toJson() const {
+  auto j = nlohmann::json::object();
+  j["pathref"] = key;
+  return j;
 }
 
-
+std::string CommandPathReference::toString() const {
+  return "pathref(" + key + ")";
+}
 
 // --- CommandPath
 
-template<>
-struct Reference<CommandPath> : public Reference<AbstractCommandComponent> {
-  Path path;
-  Reference(const Path &path) : path(path) {}
-  virtual nlohmann::json toJson() const override {
-    auto j = nlohmann::json::object();
-    j["path"] = path.toString();
-    return j;
-  }
-};
-
-CommandPath::CommandPath(Path path) : PimplChild(path) {
-
+CommandPath::CommandPath(Path path) : _path(path) {
 }
+
 CommandPath::~CommandPath() {
 }
 
-std::string CommandPath::toString() const {
-  return self().path.toString();
-}
-void CommandPath::path(Path path) {
-  self().path = path;
+nlohmann::json CommandPath::toJson() const {
+  auto j = nlohmann::json::object();
+  j["path"] = _path.toString();
+  return j;
 }
 
+std::string CommandPath::toString() const {
+  return _path.toString();
 }
+void CommandPath::path(Path path) {
+  path = path;
+}
+
+namespace {
+  NamedPipeRedirections EMPTY_REDIRECTIONS;
+}
+
+NamedPipeRedirections &CommandContext::getNamedRedirections(CommandPart & key,
+  bool create) {
+    auto x = namedPipeRedirectionsMap.find(key);
+    if (x != namedPipeRedirectionsMap.end()) {
+      return x->second;
+    }
+
+    if (!create)
+      return EMPTY_REDIRECTIONS;
+
+    return namedPipeRedirectionsMap[key] = NamedPipeRedirections();
+}
+
+} // end xpm ns

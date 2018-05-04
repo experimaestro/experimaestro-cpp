@@ -10,30 +10,27 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include "utils.hpp"
 
 namespace xpm {
 
-/**
- * Represents a file system access point
- */
-class Share : public Pimpl<Share> {
- public:
-  Share(std::string const &host, std::string const &name);
-};
+
 
 /**
  * Represents a path
  */
-class Path : public Pimpl<Path> {
- public:
+class Path {
+private:
+  std::string share;
+  std::string path;
+
+public:
   Path();
 
   /// Constructs a path from a string representation
   Path(std::string const &pathstring);
 
-  /// Constructs a path from a triplet (share, node, path)
-  Path(std::string const &share, std::string const &node, std::string const &path);
+  /// Constructs a path from a triplet (share, path)
+  Path(std::string const &share, std::string const &path);
 
 #ifndef SWIG
   Path(Path const &parent, std::initializer_list<std::string> const &relative);
@@ -52,6 +49,9 @@ class Path : public Pimpl<Path> {
 
   /// Returns a string representation of the path (that can be parsed)
   std::string toString() const;
+
+  /// Returns true if this is a relative path
+  bool isRelative() const;
 
   /** Local path.
    * Returns a path on the current host
@@ -73,6 +73,11 @@ class Path : public Pimpl<Path> {
    * Get file content
    */
    std::string getContent() const;
+
+   /**
+    * Compute a version of this path relative to the path represented by other
+    */
+   Path relativeTo(Path const & other) const;
 
    /**
     * Equality

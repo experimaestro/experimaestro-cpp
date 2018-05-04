@@ -28,6 +28,8 @@ void Task::submit(ptr<Workspace> const & workspace,
   ptr<Launcher> const & launcher,
   ptr<StructuredValue> const & sv
 ) const {
+  LOGGER->info("Preparing job");
+
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
@@ -40,18 +42,21 @@ void Task::submit(ptr<Workspace> const & workspace,
   LOGGER->info("Validating task");
   sv->validate();
 
-  // Prepare the command line
-  CommandContext context = { sv };
-
-  LOGGER->info("Sending task");
 
   // Get generated directory as locator
+
+  // Set the command parameters
+  _commandLine->forEach([&sv](CommandPart & c) -> {
+    if (auto cp = dynamic_cast<CommandParameters*>(&c)) {
+      cp->setValue(sv);
+    }
+  });
+
   auto job = std::make_shared<CommandLineJob>(svlocator->value().asPath(), launcher, _commandLine);
   sv->resource(job);
 
-  // Adding dependencies
-  sv->addDependencies(job, true);
 
+  LOGGER->info("Submitting job");
   workspace->submit(job);
 }
 

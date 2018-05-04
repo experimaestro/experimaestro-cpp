@@ -38,6 +38,7 @@ struct Redirect {
   static Redirect pipe(PipeFunction function);
   static Redirect none();
   static Redirect inherit();
+  Redirect();
 protected:
   Redirect(Redirection);
 };
@@ -94,6 +95,16 @@ public:
 
   /** Resolve a path so it is relative to the connector */
   virtual std::string resolve(Path const & path) const = 0;
+
+  /** 
+   * Resolve a path so it is relative to the other path on the connector 
+   * @param path The path to resolve
+   * @param base The base path for relative 
+  */
+  std::string resolve(Path const & path, Path const & base) const;
+
+  /** Marks the file as executable (or not) */
+  virtual void setExecutable(Path const & path, bool flag) const = 0;
 
   /** Get an output stream */
   virtual std::unique_ptr<std::ostream> ostream(Path const & path) const = 0;

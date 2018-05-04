@@ -2,6 +2,8 @@
 
 namespace xpm {
 
+Redirect::Redirect() : type(Redirection::INHERIT) {}
+
 Redirect::Redirect(Redirection r) : type(r) {}
 
 Redirect Redirect::file(std::string const &path) {
@@ -30,6 +32,10 @@ ProcessBuilder::~ProcessBuilder() {}
 
 
 Connector::~Connector() {}
+std::string Connector::resolve(Path const & path, Path const & base) const {
+  return Path(resolve(path)).relativeTo(resolve(base)).toString();
+}
+
 
 Launcher::Launcher(ptr<Connector> const & connector) : _connector(connector) {
 }

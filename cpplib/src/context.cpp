@@ -8,31 +8,26 @@
 
 namespace xpm {
 
-template<>
-struct Reference<Context> {
-  Path basepath;
-};
 
-Context Context::CURRENT_CONTEXT(std::make_shared<Reference<Context>>());
+ptr<Context> Context::CURRENT_CONTEXT(std::make_shared<Context>());
 
-Context &Context::current() {
+Context::Context() {}
+
+ptr<Context> const & Context::current() {
   return CURRENT_CONTEXT;
 }
 
 /// Set the current context
-void Context::current(Context &&context) {
+void Context::current(ptr<Context> const & context) {
   CURRENT_CONTEXT = context;
 }
 
-Context::Context(ThisPtr const &ptr) : Pimpl(ptr) {
-}
-
 Path const Context::workdir() const {
-  return _this->basepath;
+  return basepath;
 }
 
 void Context::workdir(Path const&path) {
-  _this->basepath = path;
+  basepath = path;
 }
 
 void Context::set(std::string const &key, std::string const &value) {
@@ -76,7 +71,7 @@ bool Context::has(std::string const &key) const {
 // --- Global methods
 
 void set_workdir(Path const &path) {
-  Context::current().workdir(path);
+  Context::current()->workdir(path);
 }
 
 

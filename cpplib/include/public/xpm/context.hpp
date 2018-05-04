@@ -7,16 +7,21 @@
 
 #include <map>
 #include <xpm/filesystem.hpp>
+#include <xpm/common.hpp>
 
 namespace xpm {
 
 /**
  * Context when running tasks
  */
-class Context : public Pimpl<Context> {
-  Context(ThisPtr const &);
-  static Context CURRENT_CONTEXT;
+class Context {
+public:
+  Context(Context const &) = delete;
+  Context();
+
+  static ptr<Context> CURRENT_CONTEXT;
   std::map<std::string, std::string> _variables;
+  Path basepath;
 
   /// Get an iterator for a key
 #ifndef SWIG
@@ -24,10 +29,10 @@ class Context : public Pimpl<Context> {
 #endif
  public:
   /// Get the current context
-  static Context &current();
+  static ptr<Context> const &current();
 
   /// Set the current context
-  static void current(Context &&context);
+  static void current(ptr<Context> const & context);
 
   /// Get the basepath
   Path const workdir() const;

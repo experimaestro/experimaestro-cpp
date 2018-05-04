@@ -1,9 +1,10 @@
 #include <xpm/launchers.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/commandline.hpp>
 
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
-#include <sqlite3.h>
+#include <SQLiteCpp/SQLiteCpp.h>
 
 DEFINE_LOGGER("workspace");
 
@@ -67,10 +68,27 @@ private:
 };
 
 ptr<Dependency> CounterToken::createDependency(Value count) {
-  return std::make_shared<CounterDependency>(shared_from_this(), count);
+  return mkptr<CounterDependency>(shared_from_this(), count);
+}
+
+ptr<Dependency> CounterToken::createDependency() {
+  throw exception("Cannot make a simple dependency from a token");
 }
 
 // --- Job
+
+class JobDependency : public Dependency {
+  ptr<Job> job;
+public:
+  JobDependency(ptr<Job> const & job);
+  virtual bool satisfied() override;  
+};
+
+JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {}
+bool JobDependency::satisfied() {
+  return job->state == JobState::DONE;
+}
+
 
 Job::Job(Path const &locator, ptr<Launcher> const &launcher)
     : _locator(locator), _launcher(launcher), _unsatisfied(0) {}
@@ -101,19 +119,27 @@ void Job::addDependency(ptr<Dependency> const &dependency) {
   dependency->check();
 }
 
+ptr<Dependency> Job::createDependency() {
+  return mkptr<JobDependency>(shared_from_this());
+}
+
 
 // --- Command line job
 
 CommandLineJob::CommandLineJob(xpm::Path const &locator,
                                ptr<Launcher> const &launcher,
                                ptr<CommandLine> const &command)
-    : Job(locator, launcher), _command(command) {}
+    : Job(locator, launcher), _command(command) {
+
+  // Adding dependencies
+  _command->forEach([&](CommandPart &c) -> { c.addDependencies(*this) });
+}
 
 void CommandLineJob::run() {
   auto scriptBuilder = _launcher->scriptBuilder();
   auto processBuilder = _launcher->processBuilder();
 
-  Path scriptPath = scriptBuilder->write(*_launcher->connector(), _locator);
+  Path scriptPath = scriptBuilder->write(*_launcher->connector(), _locator, *this);
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));
 
@@ -147,8 +173,7 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
 }
 
 Workspace::Workspace(std::string const &path) {
-  int rc = sqlite3_open(argv[1], db);
-  if (rc) throw exception("Could not open database");
+  _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path, SQLite::OPEN_READONLY));
 }
 
 void Workspace::submit(ptr<Job> const &job) {

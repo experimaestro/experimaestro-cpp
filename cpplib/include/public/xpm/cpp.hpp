@@ -157,7 +157,7 @@ class CppObject : public Parent {
   }
 };
 
-extern CommandPath EXECUTABLE_PATH;
+extern ptr<CommandPath> EXECUTABLE_PATH;
 
 template<typename _Type, typename _Task>
 struct TaskBuilder {
@@ -166,13 +166,13 @@ struct TaskBuilder {
   TaskBuilder(std::string const &tname) {
     auto task = std::make_shared<Task>(TypeName(tname), CppType<_Type>::SELF->type);
 
-    CommandLine commandLine;
-    Command command;
-    command.add(EXECUTABLE_PATH);
-    command.add(CommandString("run"));
-    command.add(CommandString(tname));
-    command.add(CommandParameters());
-    commandLine.add(command);
+    auto commandLine = std::make_shared<CommandLine>();
+    auto command = std::make_shared<Command>();
+    command->add(EXECUTABLE_PATH);
+    command->add(std::make_shared<CommandString>("run"));
+    command->add(std::make_shared<CommandString>(tname));
+    command->add(std::make_shared<CommandParameters>());
+    commandLine->add(command);
     task->commandline(commandLine);
     currentRegister()->addTask(task);
   }

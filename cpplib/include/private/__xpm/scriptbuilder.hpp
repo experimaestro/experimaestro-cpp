@@ -8,6 +8,8 @@ namespace xpm {
 
 class ProcessBuilder;
 class Command;
+class Commands;
+class AbstractCommand;
 struct CommandContext;
 class Connector;
 class Job;
@@ -23,20 +25,30 @@ public:
     Environment environment;
     
     /**
-     * Commands
+     * Command line
      */
-    ptr<Command> command;
+    ptr<AbstractCommand> command;
+
+    /**
+     * Pre-process commands
+     */
+    ptr<AbstractCommand> preprocessCommands;
 
     /**
      * The notification URL (if any)
      */
     std::string notificationURL;
 
+    Redirect stdin;
+    Redirect stdout;
+    Redirect stderr;
+
     /**
      * Files that should be locked when beginning, and unlock at the end
      */
     std::vector<Path> lockFiles;
 
+    
     virtual ~ScriptBuilder();
 
     /// Write the script
@@ -52,8 +64,9 @@ public:
     ShScriptBuilder();
     virtual Path write(Connector const & connector, Path const &path, Job const & job) override;
 private:
-    void writeRedirection(CommandContext & env, std::ostream &out, Redirect redirect, int stream);
-    void writeCommands(CommandContext & env, std::ostream &out, ptr<Command> commands);
+    void writeCommands(CommandContext & env, std::ostream &out, AbstractCommand const & commands);
+    
+    void writeRedirection(Connector & connector, CommandContext & env, std::ostream &out, Redirect const & redirect, int stream);
     void printRedirections(CommandContext & env, int stream, std::ostream &out, 
         Redirect const & outputRedirect, std::vector<Path> const & outputRedirects);
 };

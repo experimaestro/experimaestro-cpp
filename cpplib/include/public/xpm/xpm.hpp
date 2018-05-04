@@ -28,7 +28,6 @@ namespace xpm {
 }
 
 #include <xpm/json.hpp>
-#include <xpm/utils.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/value.hpp>
 
@@ -250,7 +249,7 @@ class StructuredValue
    * @param job Job for which the dependencies have to be added
    * @param skipThis True if skipping this object
    */
-  void addDependencies(ptr<Job> const & job, bool skipThis);
+  void addDependencies(Job & job, bool skipThis);
 
   /**
    * Validate values

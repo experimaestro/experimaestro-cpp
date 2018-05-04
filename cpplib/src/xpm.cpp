@@ -363,14 +363,14 @@ void StructuredValue::createObjects(xpm::Register &xpmRegister) {
   }
 }
 
-void StructuredValue::addDependencies(std::shared_ptr<Job> const & job,  bool skipThis) {
+void StructuredValue::addDependencies(Job & job,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
 
   if (_resource) {
     LOGGER->info("Found dependency {}", _resource);
-    job->addDependency(std::make_shared<Dependency> (_resource));
+    job.addDependency(_resource->createDependency());
   } else {
     for (auto &entry: _content) {
       entry.second->addDependencies(job, false);
@@ -728,7 +728,7 @@ nlohmann::json PathGenerator::toJson() const {
 }
 
 ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
-  Path p = Context::current().workdir();
+  Path p = Context::current()->workdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
   if (ptr<Task> task = context.stack[0]->task()) {

@@ -14,7 +14,7 @@
 
 #include <xpm/filesystem.hpp>
 
-struct sqlite3;
+namespace SQLite { class Database; }
 
 namespace xpm {
 
@@ -81,6 +81,9 @@ public:
 
   void addDependent(ptr<Dependency> const & dependency);
   void removeDependent(ptr<Dependency> const & dependency);
+
+  // Create a simple dependency
+  virtual ptr<Dependency> createDependency() = 0;
 protected:
   /// Resource that depend on this one to be completed
   std::set<std::weak_ptr<Dependency>> _dependents;
@@ -118,6 +121,9 @@ public:
 
   /// Create a new dependency
   ptr<Dependency> createDependency(Value count);
+
+  virtual ptr<Dependency> createDependency() override;
+
 private:
   friend class CounterDependency;
     /**
@@ -139,35 +145,23 @@ private:
  * - {WAITING, READY} -> ON_HOLD -> READY
  */
 enum struct JobState {
-   /**
-     * For a job only: the job is waiting dependencies status be met
-     */
-    WAITING,
+  /// For a job only: the job is waiting dependencies status be met
+  WAITING,
 
-    /**
-     * For a job only: the job is waiting for an available thread status launch it
-     */
-    READY,
+  /// For a job only: the job is waiting for an available thread status launch it
+  READY,
 
-    /**
-     * For a job only: The job is currently running
-     */
-    RUNNING,
+  /// For a job only: The job is currently running
+  RUNNING,
 
-    /**
-     * The job is on hold
-     */
-    ON_HOLD,
+  /// The job is on hold
+  ON_HOLD,
 
-    /**
-     * The job ran but did not complete or the data was not generated
-     */
-    ERROR,
+  /// The job ran but did not complete or the data was not generated
+  ERROR,
 
-    /**
-     * Completed (for a job) or generated (for a data resource)
-     */
-    DONE
+  /// Completed (for a job) or generated (for a data resource)
+  DONE
 };
 
 /// Base class for jobs
@@ -191,7 +185,7 @@ public:
   virtual void run() = 0;
 
   /// Get a dependency to this resource
-  ptr<Dependency> dependency();
+  ptr<Dependency> createDependency() override;
 
 protected:
   friend class Workspace;
@@ -263,7 +257,7 @@ private:
   std::mutex _mutex;
 
   /// SQL Lite
-  sqlite3 * db;
+  std::unique_ptr<SQLite::Database> _db;
 };
 
 }

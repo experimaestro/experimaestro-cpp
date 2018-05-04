@@ -7,8 +7,12 @@ find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
-find_package(SQLite3 REQUIRED)
+# find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 find_package(FMT REQUIRED)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
+
+# ---
 
 add_definitions("-Wall")
 enable_testing()
@@ -76,8 +80,9 @@ set(LINKED_LIBRARIES
     ${LIBSSH_LIBRARY} 
     ${CMAKE_THREAD_LIBS_INIT} 
     ${LIBYAMLCPP_LIBRARY} 
-    ${SQLite3_INCLUDE_DIR}
-    ${FMT_INCLUDE_DIR}
+    SQLiteCpp
+    sqlite3
+    ${FMT_LIBRARY}
     )
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
@@ -88,7 +93,9 @@ include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
+        "${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp/include"
 )
+
 
 # --- experimaestro library
 
@@ -98,8 +105,8 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${SQLite3_INCLUDE_DIR})
-    set_target_properties(${xpmlib} PROPERTIES
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
+    set_target_properties(${xpmlib} PROPERTIES 
         CXX_STANDARD 11
         OUTPUT_NAME experimaestro)
 
@@ -171,7 +178,11 @@ if (true)
 
     # Build module experimaestro
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-    swig_add_module(experimaestro_python python swig/xpm.i)
+    if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
+        swig_add_module(experimaestro_python python swig/xpm.i)
+    else()
+        swig_add_library(experimaestro_python LANGUAGE python SOURCES swig/xpm.i)
+    endif()
 
     # Determine appropriate loader path
     if(APPLE)
@@ -245,4 +256,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

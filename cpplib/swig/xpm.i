@@ -72,6 +72,7 @@
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
+%shared_ptr(xpm::Context)
 
 %shared_ptr(xpm::Dependency)
 %shared_ptr(xpm::Resource)
