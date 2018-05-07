@@ -14,13 +14,14 @@ find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
-# find_package(FMT)
-if(true)
+find_package(FMT)
+if(FMT_FOUND)
+    list(APPEND LINKED_LIBRARIES ${FMT_LIBRARY})
+    list(APPEND INCLUDE_DIRECTORIES ${FMT_INCLUDE_DIRS})
+else()
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib)
     list(APPEND LINKED_LIBRARIES fmt)
     list(APPEND INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib/include)
-else()
-    list(APPEND LINKED_LIBRARIES ${FMT_LIBRARY})
 endif()
 
 
