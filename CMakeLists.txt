@@ -19,7 +19,6 @@ enable_testing()
 
 
 set(PUBLIC_HEADERS
-        include/public/xpm/utils.hpp
         include/public/xpm/json.hpp
         include/public/xpm/xpm.hpp
         include/public/xpm/context.hpp
@@ -177,7 +176,7 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
     # Build module experimaestro
-    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
         swig_add_module(experimaestro_python python swig/xpm.i)
     else()

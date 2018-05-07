@@ -46,7 +46,7 @@ void Task::submit(ptr<Workspace> const & workspace,
   // Get generated directory as locator
 
   // Set the command parameters
-  _commandLine->forEach([&sv](CommandPart & c) -> {
+  _commandLine->forEach([&sv](CommandPart & c) -> void {
     if (auto cp = dynamic_cast<CommandParameters*>(&c)) {
       cp->setValue(sv);
     }

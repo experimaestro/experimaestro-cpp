@@ -13,6 +13,7 @@
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
 
 %rename(append) *::push_back;
+%rename(equals) *::operator==;
 
 
 // Attributes

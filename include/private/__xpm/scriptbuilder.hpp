@@ -63,12 +63,8 @@ public:
 
     ShScriptBuilder();
     virtual Path write(Connector const & connector, Path const &path, Job const & job) override;
-private:
-    void writeCommands(CommandContext & env, std::ostream &out, AbstractCommand const & commands);
-    
-    void writeRedirection(Connector & connector, CommandContext & env, std::ostream &out, Redirect const & redirect, int stream);
-    void printRedirections(CommandContext & env, int stream, std::ostream &out, 
-        Redirect const & outputRedirect, std::vector<Path> const & outputRedirects);
+
+    static std::string protect_quoted(std::string const & text);
 };
 
 }

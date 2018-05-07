@@ -35,11 +35,19 @@ Resource::Resource() {}
 Resource::~Resource() {}
 
 void Resource::addDependent(ptr<Dependency> const & dependency) {
-  _dependents.insert(dependency);
+  _dependents.push_back(dependency);
 }
 
 void Resource::removeDependent(ptr<Dependency> const & dependency) {
-  _dependents.erase(dependency);
+  for(auto it = _dependents.begin(); it != _dependents.end(); ++it) {
+    auto ptr= it->lock();
+    if (!ptr) {
+      _dependents.erase(it);
+    } else if (ptr == dependency) {
+      _dependents.erase(it);
+      return;
+    }
+  }
 }
 
 
@@ -68,7 +76,7 @@ private:
 };
 
 ptr<Dependency> CounterToken::createDependency(Value count) {
-  return mkptr<CounterDependency>(shared_from_this(), count);
+  return mkptr<CounterDependency>(std::static_pointer_cast<CounterToken>(shared_from_this()), count);
 }
 
 ptr<Dependency> CounterToken::createDependency() {
@@ -85,8 +93,9 @@ public:
 };
 
 JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {}
+
 bool JobDependency::satisfied() {
-  return job->state == JobState::DONE;
+  return job->state() == JobState::DONE;
 }
 
 
@@ -120,7 +129,7 @@ void Job::addDependency(ptr<Dependency> const &dependency) {
 }
 
 ptr<Dependency> Job::createDependency() {
-  return mkptr<JobDependency>(shared_from_this());
+  return mkptr<JobDependency>(std::static_pointer_cast<Job>(shared_from_this()));
 }
 
 
@@ -132,7 +141,9 @@ CommandLineJob::CommandLineJob(xpm::Path const &locator,
     : Job(locator, launcher), _command(command) {
 
   // Adding dependencies
-  _command->forEach([&](CommandPart &c) -> { c.addDependencies(*this) });
+  _command->forEach([&](CommandPart &c) -> void { 
+    c.addDependencies(*this); 
+  });
 }
 
 void CommandLineJob::run() {
@@ -175,6 +186,9 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
 Workspace::Workspace(std::string const &path) {
   _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path, SQLite::OPEN_READONLY));
 }
+
+Workspace::~Workspace() {}
+
 
 void Workspace::submit(ptr<Job> const &job) {
   std::lock_guard<std::mutex> lock(_mutex);

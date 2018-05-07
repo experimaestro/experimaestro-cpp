@@ -2,7 +2,7 @@
 
 
 #define SWIG_IGNORE %ignore
-#define SWIG_REMOVE(x)
+#define NOSWIG(...)
 #define XPM_PIMPL(x) x
 #define XPM_PIMPL_CHILD(name, parent) name: public parent
 
@@ -19,9 +19,10 @@
 #include <xpm/logging.hpp>
 #include <xpm/launchers.hpp>
 #include <xpm/workspace.hpp>
+#include <SQLiteCpp/SQLiteCpp.h>
+
 #undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
-
 
 
 #ifdef SWIGPYTHON
@@ -59,10 +60,6 @@
 // Documentation
 %include "documentation.i"
 
-
-// Imports
-%import "ignores.i";
-
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::SimpleType)
@@ -81,6 +78,18 @@
 %shared_ptr(xpm::Job)
 %shared_ptr(xpm::CommandLineJob)
 %shared_ptr(xpm::Workspace)
+
+%shared_ptr(xpm::AbstractCommandComponent)
+%shared_ptr(xpm::AbstractCommand)
+%shared_ptr(xpm::CommandPart)
+%shared_ptr(xpm::CommandLine)
+%shared_ptr(xpm::Command)
+%shared_ptr(xpm::CommandPath)
+%shared_ptr(xpm::CommandContent)
+%shared_ptr(xpm::CommandPathReference)
+%shared_ptr(xpm::CommandParameters)
+%shared_ptr(xpm::CommandString)
+
 
 // Object and object factory have virtual methods that have to be overridden
 %feature("director") xpm::Register;

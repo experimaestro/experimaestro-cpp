@@ -6,7 +6,6 @@
 #define XPM_WORKSPACE_H
 
 #include <string>
-#include <set>
 #include <queue>
 #include <unordered_map>
 #include <vector>
@@ -64,8 +63,6 @@ private:
   friend class Resource;
 };
 
-
-
 /// Base class for any resource
 class Resource 
 #ifndef SWIG
@@ -86,7 +83,7 @@ public:
   virtual ptr<Dependency> createDependency() = 0;
 protected:
   /// Resource that depend on this one to be completed
-  std::set<std::weak_ptr<Dependency>> _dependents;
+  std::vector<std::weak_ptr<Dependency>> _dependents;
 
   /// Resource mutex
   std::mutex _mutex;
@@ -245,6 +242,7 @@ class Workspace
 public:
   /// Creates a new work space with a given path
   Workspace(std::string const &path);
+  virtual ~Workspace();
 
   /// Submit a job
   void submit(ptr<Job> const & job);

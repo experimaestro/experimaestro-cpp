@@ -9,7 +9,7 @@
 
 namespace xpm {
 
-std::string protect_quoted(std::string const &string) {
+std::string ShScriptBuilder::protect_quoted(std::string const &string) {
   std::ostringstream oss;
   for (char c : string) {
     if (c == '"' || c == '$')
@@ -19,27 +19,6 @@ std::string protect_quoted(std::string const &string) {
   return oss.str();
 }
 
-struct FolderContext : public CommandContext {
-  Path folder;
-  std::string name;
-  std::unordered_map<std::string, int> counts;
-
-  FolderContext(Path const &folder, std::string const &name)
-      : folder(folder), name(name) {}
-
-  Path getAuxiliaryFile(std::string const &prefix, std::string const &suffix) {
-    std::string reference = name + "." + prefix + suffix;
-    int &count = ++counts[reference];
-    return folder.resolve(
-        {fmt::format("{}_{0:2d}.{}{}", name, count, prefix, suffix)});
-  }
-
-  Path getWorkingDirectory() { return folder; }
-
-  void close() {
-    // Keep all the files
-  }
-};
 
 ScriptBuilder::~ScriptBuilder() {}
 
@@ -61,7 +40,7 @@ Path ShScriptBuilder::write(Connector const &connector, Path const &path,
   out << "#!" << shPath << std::endl;
   out << "# Experimaestro generated task" << std::endl << std::endl;
 
-  FolderContext context(path.parent(), path.name());
+  CommandContext context(connector, path.parent(), path.name());
 
   // --- Checks locks right away
 
@@ -104,7 +83,7 @@ Path ShScriptBuilder::write(Connector const &connector, Path const &path,
 
   // Write some command
   if (preprocessCommands) {
-    writeCommands(context, out, *preprocessCommands);
+    preprocessCommands->output(context, out);
   }
 
   // --- CLEANUP
@@ -168,11 +147,11 @@ Path ShScriptBuilder::write(Connector const &connector, Path const &path,
 
   // The prepare all the command
   out << "(" << std::endl;
-  writeCommands(context, out, *command);
+  command->output(context, out);
   out << ") ";
 
-  writeRedirection(context, out, stdout, 1);
-  writeRedirection(context, out, stderr, 2);
+  context.writeRedirection(out, stdout, 1);
+  context.writeRedirection(out, stderr, 2);
 
   // Retrieve PID
   out << " & " << std::endl;
@@ -187,118 +166,7 @@ Path ShScriptBuilder::write(Connector const &connector, Path const &path,
   // Set the file as executable
   _out = nullptr;
   connector.setExecutable(path, true);
-} // namespace xpm
-
-void ShScriptBuilder::writeRedirection(Connector & connector,
-    CommandContext &context,
-    std::ostream &out,
-    Redirect const &redirect, int stream) {
-  switch (redirect.type) {
-  case Redirection::INHERIT:
-    break;
-  case Redirection::FILE:
-    out << " " 
-        << stream << "> " 
-        << protect_quote(connector.resolve(redirect.file, context.getWorkingDirectory()));
-    break;
-  default:
-    throw exception("Unsupported output redirection type");
-  }
-}
-
-void ShScriptBuilder::writeCommands(CommandContext &env, std::ostream &out,
-                                    Command &commands) {
-  // std::vector<ptr<Command>> list = commands.reorder();
-
-  int detached = 0;
-
-  for (Command command : list) {
-    // Write files
-    final CommandContext::NamedPipeRedirections namedRedirections =
-        env.getNamedRedirections(command, false);
-
-    // Write named pipes
-    for (Path file : Iterables.concat(namedRedirections.outputRedirections,
-                                      namedRedirections.errorRedirections)) {
-      out << " mkfifo \""
-          << protect_quoted(env.resolve(file, env.getWorkingDirectory()))
-          << "\"" << std::endl;
-    }
-
-    if (command.inputRedirect != null &&
-        command.inputRedirect.type() == Redirect.Type.READ) {
-      out << " cat \""
-          << protect_quoted(env.resolve(command.inputRedirect.file(),
-                                        env.getWorkingDirectory()))
-          << "\" | ";
-    }
-
-    if (auto commands = dynamic_cast<Commands *>(command)) {
-      out << "(" << std::endl;
-      writeCommands(env, out, command);
-      out << ") ";
-    } else {
-      for (CommandComponent &argument : command.components()) {
-        if (argument instanceof Unprotected) {
-          out << argument.tostd::string const & (env);
-        }
-
-        out << ' ';
-        if (argument instanceof Pipe) {
-          out << " | ";
-        } else if (argument instanceof SubCommand) {
-          out << " (" << std::endl;
-          writeCommands(env, out, ((SubCommand)argument).get());
-          out << std::endl;
-          out << " )";
-        } else {
-          out << protect(argument.tostd::string const &(env), SHELL_SPECIAL);
-        }
-      }
-    }
-
-    printRedirections(env, 1, out, command.getOutputRedirect(),
-                      namedRedirections.outputRedirections);
-    printRedirections(env, 2, out, command.getErrorRedirect(),
-                      namedRedirections.errorRedirections);
-    out << " || checkerror \"${PIPESTATUS[@]}\" ";
-
-    if (env.detached(command)) {
-      // Just keep a pointer
-      out << " & CHILD_" << detached << "=$!" << std::endl;
-      detached++;
-    } else {
-      // Stop if an error occurred
-      out << " || exit $?" << std::endl;
-    }
-  }
-
-  // Monitors detached jobs
-  for (int i = 0; i < detached; i++) {
-    out.format("wait $CHILD_%d || exit $?%n", i);
-  }
-}
-
-void ShScriptBuilder::printRedirections(
-    CommandContext &env, int stream, std::ostream &out,
-    Redirect const &outputRedirect, std::vector<Path> const &outputRedirects) {
-  if (!outputRedirects.isEmpty()) {
-
-    // Special case : just one redirection
-    if (outputRedirects.size() == 1 && outputRedirect == null) {
-      writeRedirection(env, out, Redirect.file(outputRedirects.get(0)), stream);
-    } else {
-      out << " : " << stream << "> >(tee";
-      for (Path file : outputRedirects) {
-        out(" \"" <<  protect_quote(env.resolve(file, env.getWorkingDirectory()) << "\"",
-      }
-      writeRedirection(env, out, outputRedirect, stream);
-      out << ")";
-    }
-  } else {
-    // Finally, write the main redirection
-    writeRedirection(env, out, outputRedirect, stream);
-  }
-}
+  return scriptpath;
+} 
 
 } // namespace xpm

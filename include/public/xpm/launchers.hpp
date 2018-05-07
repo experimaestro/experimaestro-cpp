@@ -106,11 +106,13 @@ public:
   /** Marks the file as executable (or not) */
   virtual void setExecutable(Path const & path, bool flag) const = 0;
 
+#ifndef SWIG
   /** Get an output stream */
   virtual std::unique_ptr<std::ostream> ostream(Path const & path) const = 0;
 
   /** Get an output stream */
   virtual std::unique_ptr<std::istream> istream(Path const & path) const = 0;
+#endif
 };
 
 

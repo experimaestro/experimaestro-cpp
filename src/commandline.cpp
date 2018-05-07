@@ -10,6 +10,7 @@
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
 #include <xpm/context.hpp>
+#include <__xpm/scriptbuilder.hpp>
 
 #include <__xpm/common.hpp>
 
@@ -17,8 +18,9 @@ DEFINE_LOGGER("xpm")
 
 namespace xpm {
 
+// ---- Command part
 
-void CommandPart::addDependency(Job & job) {
+void CommandPart::addDependencies(Job & job) {
 }
 
 void CommandPart::forEach(std::function<void(CommandPart &)> f) {
@@ -34,8 +36,346 @@ AbstractCommandComponent::AbstractCommandComponent() {
 AbstractCommandComponent::~AbstractCommandComponent() {
 
 }
-nlohmann::json AbstractCommandComponent::toJson() const {
-  return toJson();
+
+// --- Command string
+
+namespace {
+std::string transform(Context &context, std::string const &value) {
+  static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
+  std::ostringstream out;
+  std::sregex_iterator
+      it(value.begin(), value.end(), re),
+      end;
+  size_t lastpos = 0;
+
+  do {
+    std::smatch match = *it;
+    out << value.substr(lastpos, match.position() - lastpos)
+        << context.get(match[1].str());
+    lastpos = match.position() + match.length();
+  } while (++it != end);
+
+  out << value.substr(lastpos);
+
+  std::string tvalue = out.str();
+  LOGGER->debug("Transformed {} into {}", value, tvalue);
+  return tvalue;
+
+}
+}
+
+nlohmann::json CommandString::toJson() const {
+  return value;
+}
+
+CommandString::CommandString(const std::string &value)
+    : value(value) {
+}
+
+std::string CommandString::toString() const {
+  return value;
+}
+
+CommandString::~CommandString() {
+}
+
+void CommandString::output(CommandContext & context, std::ostream & out) const {
+  out << transform(*Context::current(), value);
+}
+
+
+
+// ---- Command content
+
+CommandContent::CommandContent(std::string const &key, std::string const &value) : key(key), content(value) {
+}
+
+nlohmann::json CommandContent::toJson() const {
+    auto j = nlohmann::json::object();
+    j["type"] = "content";
+    j["key"] = key;
+    j["content"] = content;
+    return j;
+  }
+
+std::string CommandContent::toString() const {
+  return std::string();
+}
+
+CommandContent::~CommandContent() {
+}
+
+void CommandContent::output(CommandContext &context, std::ostream & out) const {
+  auto path = context.getAuxiliaryFile(key, ".input");
+  auto fileOut = context.connector.ostream(path);
+  *fileOut << content;
+  out << context.connector.resolve(path);
+}
+
+
+// --- CommandParameters
+
+
+namespace {
+  /// Generates the JSON that will be used to configure the task
+  void fill(CommandContext & context, std::ostream & out, std::shared_ptr<StructuredValue> const & conf) {
+    if (conf->value().defined()) {
+      // The object has one value, just use this and discards the rest
+      switch(conf->value().scalarType()) {
+        case ValueType::ARRAY: {
+          auto & array = conf->value();
+          out << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->typeName().toString() << "\",\""
+              << xpm::KEY_VALUE << "\": [";
+          for(size_t i = 0; i < array.size(); ++i) {
+            if (i > 0) out << ", ";
+            fill(context, out, array[i]);
+          }
+          out << "]}";
+          break;
+        }
+
+        case ValueType::PATH:
+          out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
+              << xpm::KEY_VALUE << "\": \"";
+          out << context.connector.resolve(conf->value().asPath());
+          out << "\"}";
+          break;
+
+        default:
+         out << conf->value().toJson();
+         break;
+      }
+    } else {
+      // No simple value: output the structure
+
+      out << "{";
+      bool first = true;
+      if (conf->type()) {
+        out << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
+        first = false;
+      }
+
+      for (auto type = conf->type(); type; type = type->parentType()) {
+        for (auto entry: type->arguments()) {
+          Argument &argument = *entry.second;
+          if (first) first = false;
+          else out << ',';
+          out << "\"" << entry.first << "\":";
+          
+          if (conf->hasKey(argument.name())) {
+            fill(context, out, conf->get(argument.name()));
+          } else {
+            out << "null";
+          }
+        }
+      }
+
+      out << "}";
+    }
+  }
+} // end unnamed ns
+
+void CommandParameters::output(CommandContext &context, std::ostream & out) const {
+  auto path = context.getAuxiliaryFile("params", ".json");
+  auto fileOut = context.connector.ostream(path);
+  fill(context, *fileOut, value);
+  out << context.connector.resolve(path);
+}
+
+CommandParameters::~CommandParameters() {
+
+}
+CommandParameters::CommandParameters() {
+}
+
+nlohmann::json CommandParameters::toJson() const {
+  return { {"type", "parameters"} };
+}
+
+void CommandParameters::setValue(ptr<StructuredValue> const & value) {
+  this->value = value;
+}
+
+void CommandParameters::addDependencies(Job & job) {
+  if (!this->value) throw exception("Cannot set dependencies since value is null");
+
+  this->value->addDependencies(job, false);
+}
+
+
+
+// --- CommandPathReference
+
+CommandPathReference::CommandPathReference(std::string const &key) : key(key) {
+
+}
+CommandPathReference::~CommandPathReference() {
+}
+
+nlohmann::json CommandPathReference::toJson() const {
+  auto j = nlohmann::json::object();
+  j["pathref"] = key;
+  return j;
+}
+
+std::string CommandPathReference::toString() const {
+  return "pathref(" + key + ")";
+}
+
+void CommandPathReference::output(CommandContext & context, std::ostream & out) const {
+  auto & _context = *Context::current();
+  if (!_context.has(key)) {
+    throw std::invalid_argument("Context has no variable named [" + key + "]");
+  }
+
+  auto value = _context.get(key);
+  LOGGER->debug("Path ref {} is {}", key, value);
+  out << value;
+}
+
+// --- CommandPath
+
+CommandPath::CommandPath(Path path) : _path(path) {
+}
+
+CommandPath::~CommandPath() {
+}
+
+nlohmann::json CommandPath::toJson() const {
+  auto j = nlohmann::json::object();
+  j["path"] = _path.toString();
+  return j;
+}
+
+std::string CommandPath::toString() const {
+  return _path.toString();
+}
+void CommandPath::path(Path path) {
+  path = path;
+}
+
+void CommandPath::output(CommandContext & context, std::ostream & out) const {
+  out << context.connector.resolve(_path);
+}
+
+// --- Abstract command
+
+void AbstractCommand::output(CommandContext & context, std::ostream & out) const {
+    std::vector<ptr<AbstractCommand>> list = reorder();
+
+  int detached = 0;
+
+  if (list.size() > 1) {
+    out << "(" << std::endl;
+  }
+
+  for (auto & command : list) {
+
+    // Write files
+    NamedPipeRedirections &namedRedirections = context.getNamedRedirections(*command, false);
+
+    // Write named pipes
+    auto mkfifo = [&](Path const &file) {
+      out << " mkfifo \""
+          << ShScriptBuilder::protect_quoted(context.connector.resolve(file, context.getWorkingDirectory()))
+          << "\"" << std::endl;
+    };
+
+    for (auto & file : namedRedirections.outputRedirections) {
+      mkfifo(file);
+    }
+    for (auto & file : namedRedirections.errorRedirections) {
+      mkfifo(file);
+    }
+
+
+    if (command->inputRedirect.type == Redirection::FILE) {
+      out << " cat \""
+          << ShScriptBuilder::protect_quoted(context.connector.resolve(inputRedirect.path,
+                                        context.getWorkingDirectory()))
+          << "\" | ";
+    }
+
+    command->output(context, out);
+
+    context.printRedirections(1, out, command->outputRedirect,
+                      namedRedirections.outputRedirections);
+    context.printRedirections(2, out, command->errorRedirect,
+                      namedRedirections.errorRedirections);
+    out << " || checkerror \"${PIPESTATUS[@]}\" ";
+
+    // if (env.detached(command)) {
+    //   // Just keep a pointer
+    //   out << " & CHILD_" << detached << "=$!" << std::endl;
+    //   detached++;
+    // } else {
+      // Stop if an error occurred
+      out << " || exit $?" << std::endl;
+    // }
+  }
+
+  // Monitors detached jobs
+  for (int i = 0; i < detached; i++) {
+    out << "wait $CHILD_" << i << " || exit $?%" << std::endl;
+  }
+
+  if (list.size() > 1) {
+    out << ")" << std::endl;
+  }
+}
+
+
+
+
+// --- Command
+
+void Command::add(ptr<AbstractCommandComponent> const & component) {
+  components.push_back(component);
+}
+
+void Command::forEach(std::function<void(CommandPart &)> f) {
+  CommandPart::forEach(f);
+  for(auto & c : components) {
+    c->forEach(f);
+  }
+}
+
+
+void Command::load(nlohmann::json const &j) {
+  assert(j.is_array());
+  for(auto &e: j) {
+    if (e.is_string()) {
+      components.push_back(mkptr<CommandString>(e.get<std::string>()));
+    } else {
+      std::string type = e.value("type", "");
+      if (type == "content") {
+        components.push_back(mkptr<CommandContent>(e["key"], e["content"]));
+      } else if (type == "parameters") {
+        components.push_back(mkptr<CommandParameters>());
+      } else if (type == "path" || (type == "" && e.count("path"))) {
+        components.push_back(mkptr<CommandPath>(Path(e["path"].get<std::string>())));
+      } else if (type == "pathref" || (type == "" && e.count("pathref"))) {
+        components.push_back(mkptr<CommandPathReference>(CommandPathReference(e["pathref"].get<std::string>())));
+      } else {
+        throw std::invalid_argument("Unknown type for command component: " + type);
+      }
+    }
+  }
+}
+
+std::vector<ptr<AbstractCommand>> Command::reorder() const {
+  std::vector<ptr<AbstractCommand>> list;
+  list.push_back(std::static_pointer_cast<AbstractCommand>(const_cast<Command*>(this)->shared_from_this()));
+  return list;
+}
+
+
+nlohmann::json Command::toJson() const {
+  auto j = nlohmann::json::array();
+  for(auto &component: this->components) {
+    j.push_back(component->toJson());
+  }
+  return j;
 }
 
 
@@ -84,253 +424,63 @@ void CommandLine::forEach(std::function<void(CommandPart &)> f) {
   }
 }
 
-
-namespace {
-std::string transform(Context &context, std::string const &value) {
-  static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
-  std::ostringstream out;
-  std::sregex_iterator
-      it(value.begin(), value.end(), re),
-      end;
-  size_t lastpos = 0;
-
-  do {
-    std::smatch match = *it;
-    out << value.substr(lastpos, match.position() - lastpos)
-        << context.get(match[1].str());
-    lastpos = match.position() + match.length();
-  } while (++it != end);
-
-  out << value.substr(lastpos);
-
-  std::string tvalue = out.str();
-  LOGGER->debug("Transformed {} into {}", value, tvalue);
-  return tvalue;
-
-}
-}
-
-nlohmann::json CommandString::toJson() const {
-  return value;
-}
-
-CommandString::CommandString(const std::string &value)
-    : value(value) {
-}
-
-std::string CommandString::toString() const {
-  return value;
-}
-
-CommandString::~CommandString() {
-
-}
-
-void Command::add(ptr<AbstractCommandComponent> const & component) {
-  components.push_back(component);
-}
-
-void Command::forEach(std::function<void(CommandPart &)> f) {
-  CommandPart::forEach(f);
-  for(auto & c : components) {
-    c->forEach(f);
-  }
-}
-
-
-void Command::load(nlohmann::json const &j) {
-  assert(j.is_array());
-  for(auto &e: j) {
-    if (e.is_string()) {
-      components.push_back(mkptr<CommandString>(e.get<std::string>()));
-    } else {
-      std::string type = e.value("type", "");
-      if (type == "content") {
-        components.push_back(mkptr<CommandContent>(e["key"], e["content"]));
-      } else if (type == "parameters") {
-        components.push_back(mkptr<CommandParameters>());
-      } else if (type == "path" || (type == "" && e.count("path"))) {
-        components.push_back(mkptr<CommandPath>(Path(e["path"].get<std::string>())));
-      } else if (type == "pathref" || (type == "" && e.count("pathref"))) {
-        components.push_back(mkptr<CommandPathReference>(CommandPathReference(e["pathref"].get<std::string>())));
-      } else {
-        throw std::invalid_argument("Unknown type for command component: " + type);
-      }
-    }
-  }
-}
-
-nlohmann::json Command::toJson() const {
-  auto j = nlohmann::json::array();
-  for(auto &component: this->components) {
-    j.push_back(component->toJson());
-  }
-  return j;
+std::vector<ptr<AbstractCommand>> CommandLine::reorder() const {
+  return commands;
 }
 
 
 
-// ---- Command content
+// --- Command context
 
-CommandContent::CommandContent(std::string const &key, std::string const &value) : key(key), content(value) {
-}
-
-nlohmann::json CommandContent::toJson() const {
-    auto j = nlohmann::json::object();
-    j["type"] = "content";
-    j["key"] = key;
-    j["content"] = content;
-    return j;
-  }
-
-std::string CommandContent::toString() const {
-  return std::string();
-}
-
-CommandContent::~CommandContent() {
-}
-
-
-
-// --- CommandParameters
-
-
-namespace {
-  /// Generates the JSON that will be used to configure the task
-  void fill(std::ostringstream &oss, std::shared_ptr<StructuredValue> const & conf) {
-    if (conf->value().defined()) {
-      // The object has one value, just use this and discards the rest
-      switch(conf->value().scalarType()) {
-        case ValueType::ARRAY: {
-          auto & array = conf->value();
-          oss << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->typeName().toString() << "\",\""
-              << xpm::KEY_VALUE << "\": [";
-          for(size_t i = 0; i < array.size(); ++i) {
-            if (i > 0) oss << ", ";
-          // FIXME: not implemented
-            NOT_IMPLEMENTED();
-            // fill(f, oss, array[i]);
-          }
-          oss << "]}";
-          break;
-        }
-
-        case ValueType::PATH:
-          oss << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
-              << xpm::KEY_VALUE << "\": \"";
-          // FIXME: not implemented
-          NOT_IMPLEMENTED();
-          // f.add(oss.str());
-          oss.str("");
-          // f.add(rpc::Path::toPath(conf->value().asPath().toString()));
-          oss << "\"}";
-          break;
-
-        default:
-         oss << conf->value().toJson();
-         break;
-      }
-    } else {
-      // No simple value: output the structure
-
-      oss << "{";
-      bool first = true;
-      if (conf->type()) {
-        oss << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
-        first = false;
-      }
-
-      for (auto type = conf->type(); type; type = type->parentType()) {
-        for (auto entry: type->arguments()) {
-          Argument &argument = *entry.second;
-          if (first) first = false;
-          else oss << ',';
-          oss << "\"" << entry.first << "\":";
-          
-          if (conf->hasKey(argument.name())) {
-            // FIXME: not implemented
-            NOT_IMPLEMENTED();
-            // fill(f, oss, conf->get(argument.name()));
-          } else {
-            oss << "null";
-          }
-        }
-      }
-
-      oss << "}";
-    }
-  }
-} // end unnamed ns
-
-
-CommandParameters::~CommandParameters() {
-
-}
-CommandParameters::CommandParameters() {
-}
-
-nlohmann::json CommandParameters::toJson() const {
-  return { {"type", "parameters"} };
-}
-
-void CommandParameters::setValue(ptr<StructuredValue> const & value) {
-  this->value = value;
-}
-
-void CommandParameters::addDependencies(Job & job) {
-  if (!this->value) throw exception("Cannot set dependencies since value is null");
-
-  this->value->addDependencies(job, false);
-}
-
-
-
-// --- CommandPathReference
-
-CommandPathReference::CommandPathReference(std::string const &key) : key(key) {
-
-}
-CommandPathReference::~CommandPathReference() {
-}
-
-nlohmann::json CommandPathReference::toJson() const {
-  auto j = nlohmann::json::object();
-  j["pathref"] = key;
-  return j;
-}
-
-std::string CommandPathReference::toString() const {
-  return "pathref(" + key + ")";
-}
-
-// --- CommandPath
-
-CommandPath::CommandPath(Path path) : _path(path) {
-}
-
-CommandPath::~CommandPath() {
-}
-
-nlohmann::json CommandPath::toJson() const {
-  auto j = nlohmann::json::object();
-  j["path"] = _path.toString();
-  return j;
-}
-
-std::string CommandPath::toString() const {
-  return _path.toString();
-}
-void CommandPath::path(Path path) {
-  path = path;
-}
 
 namespace {
   NamedPipeRedirections EMPTY_REDIRECTIONS;
 }
 
-NamedPipeRedirections &CommandContext::getNamedRedirections(CommandPart & key,
+CommandContext::CommandContext(Connector const & connector, Path const &folder, std::string const &name)
+      : connector(connector), folder(folder), name(name) {}
+
+
+Path CommandContext::getWorkingDirectory() { return folder; }
+
+void CommandContext::writeRedirection(std::ostream &out, Redirect const &redirect, int stream) {
+  switch (redirect.type) {
+    case Redirection::INHERIT:
+      break;
+    case Redirection::FILE:
+      out << " " 
+          << stream << "> " 
+          << ShScriptBuilder::protect_quoted(connector.resolve(redirect.path, getWorkingDirectory()));
+      break;
+    default:
+      throw exception("Unsupported output redirection type");
+  }
+}
+
+void CommandContext::printRedirections(int stream, std::ostream &out,
+    Redirect const &outputRedirect, std::vector<Path> const &outputRedirects) {
+  if (!outputRedirects.empty()) {
+
+    // Special case : just one redirection
+    if (outputRedirects.size() == 1 && outputRedirect.type == Redirection::INHERIT) {
+      writeRedirection(out, Redirect::file(outputRedirects[0].toString()), stream);
+    } else {
+      out << " : " << stream << "> >(tee";
+      for (Path file : outputRedirects) {
+        out << " \"" <<  ShScriptBuilder::protect_quoted(connector.resolve(file, getWorkingDirectory())) << "\"";
+      }
+      writeRedirection(out, outputRedirect, stream);
+      out << ")";
+    }
+  } else {
+    // Finally, write the main redirection
+    writeRedirection(out, outputRedirect, stream);
+  }
+}
+
+NamedPipeRedirections &CommandContext::getNamedRedirections(CommandPart const & key,
   bool create) {
-    auto x = namedPipeRedirectionsMap.find(key);
+    auto x = namedPipeRedirectionsMap.find(&key);
     if (x != namedPipeRedirectionsMap.end()) {
       return x->second;
     }
@@ -338,7 +488,15 @@ NamedPipeRedirections &CommandContext::getNamedRedirections(CommandPart & key,
     if (!create)
       return EMPTY_REDIRECTIONS;
 
-    return namedPipeRedirectionsMap[key] = NamedPipeRedirections();
+    return namedPipeRedirectionsMap[&key] = NamedPipeRedirections();
 }
+
+Path CommandContext::getAuxiliaryFile(std::string const & prefix, std::string const & suffix) {
+    std::string reference = name + "." + prefix + suffix;
+    int &count = ++counts[reference];
+    return folder.resolve(
+        {fmt::format("{}_{0:2d}.{}{}", name, count, prefix, suffix)});
+}
+
 
 } // end xpm ns
