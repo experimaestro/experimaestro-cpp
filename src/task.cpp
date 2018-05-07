@@ -5,6 +5,7 @@
 #include <xpm/common.hpp>
 #include <xpm/task.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/launchers.hpp>
 
 #include <__xpm/common.hpp>
 
@@ -25,7 +26,7 @@ Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 TypeName Task::typeName() const { return _type->typeName(); }
 
 void Task::submit(ptr<Workspace> const & workspace,
-  ptr<Launcher> const & launcher,
+  ptr<Launcher> const & _launcher,
   ptr<StructuredValue> const & sv
 ) const {
   LOGGER->info("Preparing job");
@@ -33,12 +34,14 @@ void Task::submit(ptr<Workspace> const & workspace,
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
+  auto &launcher = _launcher ? _launcher : Launcher::defaultLauncher();
+
   // Set locator
-  auto svlocator = getPathGenerator()->generate(sv);
+  auto svlocator = getPathGenerator()->generate(GeneratorContext(*workspace, sv));
 
   // Validate and seal the task sv
   LOGGER->info("Configuring task");
-  sv->configure();
+  sv->configure(*workspace);
   LOGGER->info("Validating task");
   sv->validate();
 

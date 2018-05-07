@@ -18,6 +18,7 @@ namespace xpm {
 class StructuredValue;
 class Job;
 struct CommandContext;
+class Workspace;
 
 /** Base class for all command related classes */
 class CommandPart NOSWIG(: public std::enable_shared_from_this<CommandPart>) {
@@ -154,6 +155,7 @@ struct NamedPipeRedirections {
  */
 struct CommandContext {
   Connector const & connector;
+  Workspace & workspace;
   std::shared_ptr<StructuredValue> parameters;
   std::unordered_map<CommandPart const *, NamedPipeRedirections> namedPipeRedirectionsMap;
   Path folder;
@@ -161,7 +163,7 @@ struct CommandContext {
   std::unordered_map<std::string, int> counts;
   
   
-  CommandContext(Connector const & connector, Path const &folder, std::string const &name);
+  CommandContext(Workspace & workspace, Connector const & connector, Path const &folder, std::string const &name);
   
   NamedPipeRedirections &getNamedRedirections(CommandPart const & key, bool create);
 

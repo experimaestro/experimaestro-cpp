@@ -12,6 +12,7 @@ class Commands;
 class AbstractCommand;
 struct CommandContext;
 class Connector;
+class Workspace;
 class Job;
 
 /**
@@ -52,7 +53,7 @@ public:
     virtual ~ScriptBuilder();
 
     /// Write the script
-    virtual Path write(Connector const & connector, Path const & path, Job const & job) = 0;
+    virtual Path write(Workspace & ws, Connector const & connector, Path const & path, Job const & job) = 0;
 };
 
 
@@ -62,7 +63,7 @@ public:
     std::string shPath;
 
     ShScriptBuilder();
-    virtual Path write(Connector const & connector, Path const &path, Job const & job) override;
+    virtual Path write(Workspace & ws, Connector const & connector, Path const &path, Job const & job) override;
 
     static std::string protect_quoted(std::string const & text);
 };

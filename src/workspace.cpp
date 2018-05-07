@@ -150,7 +150,7 @@ void CommandLineJob::run() {
   auto scriptBuilder = _launcher->scriptBuilder();
   auto processBuilder = _launcher->processBuilder();
 
-  Path scriptPath = scriptBuilder->write(*_launcher->connector(), _locator, *this);
+  Path scriptPath = scriptBuilder->write(*_workspace, *_launcher->connector(), _locator, *this);
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));
 
@@ -184,7 +184,7 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
 }
 
 Workspace::Workspace(std::string const &path) {
-  _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path, SQLite::OPEN_READONLY));
+  _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
 }
 
 Workspace::~Workspace() {}
@@ -212,5 +212,47 @@ void Workspace::submit(ptr<Job> const &job) {
     job->run();
   }
 }
+
+Path const Workspace::workdir() const {
+  return _path;
+}
+
+void Workspace::set(std::string const &key, std::string const &value) {
+  _variables[key] = value;
+}
+
+
+void Workspace::set(std::string const &ns, std::string const &key, std::string const &value) {
+  _variables[ns + "." + key] = value;
+}
+
+std::map<std::string,std::string>::const_iterator Workspace::find(std::string const &key) const {
+  size_t last_dot = key.rfind('.');
+  std::string name = key.substr(last_dot == std::string::npos ? 0 : last_dot + 1);
+
+  for (;last_dot != std::string::npos; last_dot = key.rfind('.', last_dot - 1)) {
+    // Get the key
+    std::string _key = last_dot == std::string::npos ? 
+        name : key.substr(0, last_dot) + "." + name;
+
+    auto it = _variables.find(_key);
+    if (it != _variables.end()) {
+      return it;
+    }
+  }
+
+  // Search for name
+  return _variables.find(name);
+}
+
+std::string Workspace::get(std::string const &key) const {
+  auto it = find(key);
+  return it != _variables.end() ? it->second : "";
+}
+
+bool Workspace::has(std::string const &key) const {
+  return find(key) != _variables.end();
+}
+
 
 } // namespace xpm

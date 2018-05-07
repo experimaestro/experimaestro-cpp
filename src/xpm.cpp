@@ -8,7 +8,6 @@
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
 #include <xpm/task.hpp>
-#include <xpm/context.hpp>
 #include <xpm/workspace.hpp>
 #include <__xpm/common.hpp>
 
@@ -141,7 +140,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
         }
       }
 
-      LOGGER->debug("Got an object of type {}", _type->toString());
+      LOGGER->debug("Got an object of type {}", _type ? _type->toString() : "?");
       break;
     }
 
@@ -338,8 +337,8 @@ ptr<Task> StructuredValue::task() {
   return _task;
 }
 
-void StructuredValue::configure() {
-  GeneratorContext context;
+void StructuredValue::configure(Workspace & ws) {
+  GeneratorContext context(ws);
   generate(context);
   validate();
   seal();
@@ -696,10 +695,10 @@ bool Type::accepts(Type::Ptr const &other) const {
 
 // ---- Generators
 
-GeneratorContext::GeneratorContext(ptr<StructuredValue> const &sv) {
+GeneratorContext::GeneratorContext(Workspace & ws, ptr<StructuredValue> const &sv) : workspace(ws) {
   stack.push_back(sv.get());
 }
-GeneratorContext::GeneratorContext() {
+GeneratorContext::GeneratorContext(Workspace & ws) : workspace(ws) {
 }
 
 GeneratorLock::GeneratorLock(GeneratorContext * context, StructuredValue *sv) : context(context) {
@@ -728,7 +727,7 @@ nlohmann::json PathGenerator::toJson() const {
 }
 
 ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
-  Path p = Context::current()->workdir();
+  Path p = context.workspace.workdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
   if (ptr<Task> task = context.stack[0]->task()) {

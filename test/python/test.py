@@ -45,9 +45,10 @@ if __name__ == '__main__':
     print("PYTHON PATH=%s" % pythonpath)
 
     # Default values
-    set_workdir(osp.realpath(args.workdir))
 
+    Workspace(args.workdir)
     # set_experiment("cpp.test", True)
+    # set_workdir(osp.realpath(args.workdir))
 
     model = A()
 
@@ -58,4 +59,4 @@ if __name__ == '__main__':
         a2.submit()
 
         b = B(a=a2)
-        b.submit()
+        submit(b)

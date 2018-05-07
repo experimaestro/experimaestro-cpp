@@ -11,7 +11,6 @@
 %{
 #include <xpm/xpm.hpp>
 #include <xpm/common.hpp>
-#include <xpm/context.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/value.hpp>
@@ -77,6 +76,8 @@ namespace xpm {
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
 %shared_ptr(xpm::PathGenerator)
+%shared_ptr(xpm::Launcher)
+%shared_ptr(xpm::DirectLauncher)
 %shared_ptr(xpm::Context)
 
 %shared_ptr(xpm::Dependency)
@@ -116,7 +117,6 @@ namespace xpm {
 %include <xpm/launchers.hpp>
 %include <xpm/commandline.hpp>
 %include <xpm/workspace.hpp>
-%include <xpm/context.hpp>
 %include <xpm/value.hpp>
 %include <xpm/xpm.hpp>
 %include <xpm/task.hpp>

@@ -1,4 +1,6 @@
 #include <xpm/launchers.hpp>
+#include <__xpm/scriptbuilder.hpp>
+#include <__xpm/local.hpp>
 
 namespace xpm {
 
@@ -41,11 +43,27 @@ Launcher::Launcher(ptr<Connector> const & connector) : _connector(connector) {
 }
 Launcher::~Launcher() {}
 
+ptr<Launcher> Launcher::DEFAULT_LAUNCHER;
+
+ptr<Launcher> Launcher::defaultLauncher() {
+  if (!DEFAULT_LAUNCHER) {
+    DEFAULT_LAUNCHER = mkptr<DirectLauncher>(mkptr<LocalConnector>());
+  }
+  return DEFAULT_LAUNCHER;
+}
+
+
+DirectLauncher::DirectLauncher(ptr<Connector> const & connector) : Launcher(connector) {}
 
 ptr<ProcessBuilder> DirectLauncher::processBuilder() {
   auto builder = connector()->processBuilder();
   builder->environment = environment();
   return builder;
 }
+
+std::shared_ptr<ScriptBuilder> DirectLauncher::scriptBuilder() {
+  return mkptr<ShScriptBuilder>();
+}
+
 
 }

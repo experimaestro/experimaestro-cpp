@@ -9,9 +9,8 @@
 #include <xpm/xpm.hpp>
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
-#include <xpm/context.hpp>
+#include <xpm/workspace.hpp>
 #include <__xpm/scriptbuilder.hpp>
-
 #include <__xpm/common.hpp>
 
 DEFINE_LOGGER("xpm")
@@ -40,7 +39,7 @@ AbstractCommandComponent::~AbstractCommandComponent() {
 // --- Command string
 
 namespace {
-std::string transform(Context &context, std::string const &value) {
+std::string transform(Workspace &context, std::string const &value) {
   static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
   std::ostringstream out;
   std::sregex_iterator
@@ -80,7 +79,7 @@ CommandString::~CommandString() {
 }
 
 void CommandString::output(CommandContext & context, std::ostream & out) const {
-  out << transform(*Context::current(), value);
+  out << transform(context.workspace, value);
 }
 
 
@@ -223,12 +222,12 @@ std::string CommandPathReference::toString() const {
 }
 
 void CommandPathReference::output(CommandContext & context, std::ostream & out) const {
-  auto & _context = *Context::current();
-  if (!_context.has(key)) {
+  auto & ws = context.workspace;
+  if (!ws.has(key)) {
     throw std::invalid_argument("Context has no variable named [" + key + "]");
   }
 
-  auto value = _context.get(key);
+  auto value = ws.get(key);
   LOGGER->debug("Path ref {} is {}", key, value);
   out << value;
 }
@@ -437,8 +436,8 @@ namespace {
   NamedPipeRedirections EMPTY_REDIRECTIONS;
 }
 
-CommandContext::CommandContext(Connector const & connector, Path const &folder, std::string const &name)
-      : connector(connector), folder(folder), name(name) {}
+CommandContext::CommandContext(Workspace & workspace, Connector const & connector, Path const &folder, std::string const &name)
+      : workspace(workspace), connector(connector), folder(folder), name(name) {}
 
 
 Path CommandContext::getWorkingDirectory() { return folder; }

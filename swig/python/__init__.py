@@ -141,22 +141,23 @@ class PyObject:
         for k, v in kwargs.items():
             self.__xpm__.set(k, v)
 
-    def _submit(self, *, launcher=None, launcherParameters=None, send=None):
+    def submit(self, *, workspace=None, launcher=None, send=SUBMIT_TASKS):
         """Submit this task"""
-        logging.info("Submitting")
-        if send is None:
-            send = SUBMIT_TASKS
-        self.__class__.__xpmtask__.submit(self.__xpm__.configuration, 
-            send, launcher, launcherParameters)
+        if send:
+            logging.info("Submitting")
+            self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.configuration)
         return self
 
     def _prepare(self):
         """Prepare object after creation"""
         pass
 
+# Another way to submit if the method is overriden
+def submit(*args, **kwargs):
+    PyObject.submit(*args, **kwargs)
+
 # Defines a class property
 PyObject.__xpmtype__ = AnyType
-
 
 
 class PythonRegister(Register):

@@ -242,14 +242,40 @@ class Workspace
 public:
   /// Creates a new work space with a given path
   Workspace(std::string const &path);
+
+  /// Destructor
   virtual ~Workspace();
 
   /// Submit a job
   void submit(std::shared_ptr<Job> const & job);
 
+  /// Get an iterator for a key
+  NOSWIG(std::map<std::string, std::string>::const_iterator find(std::string const &key) const;)
+
+ public:
+  /// Get the basepath
+  Path const workdir() const;
+
+  /// Sets a variable
+  void set(std::string const &key, std::string const &value);
+
+  /// Sets a variable with a ns
+  void set(std::string const &ns, std::string const &key, std::string const &value);
+
+  /// Gets a variable given a fully qualified name
+  std::string get(std::string const &key) const;
+
+  /// Checks if the variable exists
+  bool has(std::string const &key) const;
 private:
+  /// Working directory path
+  Path _path;
+
   /// All the jobs
   std::unordered_map<Path, std::shared_ptr<Job>> _jobs;
+
+  /// The variables for this workspace
+  std::map<std::string, std::string> _variables;
 
   /// State mutex
   std::mutex _mutex;

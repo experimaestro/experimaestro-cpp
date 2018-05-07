@@ -24,7 +24,7 @@ ScriptBuilder::~ScriptBuilder() {}
 
 ShScriptBuilder::ShScriptBuilder() : shPath("/bin/sh") {}
 
-Path ShScriptBuilder::write(Connector const &connector, Path const &path,
+Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path const &path,
                             Job const &job) {
   // First generate the run file
   Path directory = path.parent();
@@ -40,7 +40,7 @@ Path ShScriptBuilder::write(Connector const &connector, Path const &path,
   out << "#!" << shPath << std::endl;
   out << "# Experimaestro generated task" << std::endl << std::endl;
 
-  CommandContext context(connector, path.parent(), path.name());
+  CommandContext context(ws, connector, path.parent(), path.name());
 
   // --- Checks locks right away
 

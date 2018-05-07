@@ -131,7 +131,12 @@ public:
   inline std::shared_ptr<Connector> connector() { return _connector; }
   inline Environment const & environment() { return _environment; }
 
+  /// Get the default launcher
+  static std::shared_ptr<Launcher> defaultLauncher();
+
 private:
+  static std::shared_ptr<Launcher> DEFAULT_LAUNCHER;
+
   /**
    * The notification URL
    */
@@ -151,7 +156,9 @@ private:
 /** A direct launcher */
 class DirectLauncher : public Launcher {
 public:
+  DirectLauncher(std::shared_ptr<Connector> const &connector);
   virtual std::shared_ptr<ProcessBuilder> processBuilder() override;
+  virtual std::shared_ptr<ScriptBuilder> scriptBuilder() override;
 };
 
 } // namespace xpm

@@ -20,6 +20,7 @@ namespace xpm {
   struct Helper;
   class Resource;
   struct Digest;
+  class Workspace;
   class GeneratorContext;
 
 }
@@ -271,7 +272,7 @@ class StructuredValue
    * <li>Seal the object</li>
    * </ol>
    */
-  void configure();
+  void configure(Workspace & ws);
 
   /**
    * Copy the configuration
@@ -340,6 +341,8 @@ class StructuredValue
 // --- Type and parser
 // ---
 
+#ifndef SWIG
+
 struct GeneratorLock {
   GeneratorLock(GeneratorContext * context, StructuredValue * configuration);
   inline operator bool() { return true; }
@@ -349,12 +352,15 @@ struct GeneratorLock {
 class GeneratorContext {
 public:
   std::vector<StructuredValue *> stack;
-  GeneratorContext();
-  GeneratorContext(std::shared_ptr<StructuredValue> const &sv);
+  Workspace & workspace;
+  
+  GeneratorContext(Workspace & ws);
+  GeneratorContext(Workspace & ws, std::shared_ptr<StructuredValue> const &sv);
   inline GeneratorLock enter(StructuredValue * configuration) {
     return GeneratorLock(this, configuration);
   }
 };
+#endif
 
 /**
  * Generator for values

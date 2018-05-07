@@ -37,7 +37,6 @@ enable_testing()
 set(PUBLIC_HEADERS
         include/public/xpm/json.hpp
         include/public/xpm/xpm.hpp
-        include/public/xpm/context.hpp
         include/public/xpm/value.hpp
         include/public/xpm/task.hpp
         include/public/xpm/launchers.hpp
@@ -68,13 +67,13 @@ set(SOURCES
         src/xpm.cpp
         src/filesystem.cpp
         src/workspace.cpp
-        src/context.cpp
         src/commandline.cpp
         src/private.cpp
         src/xpmssh.cpp
         src/launchers.cpp 
         src/cpp.cpp 
         src/task.cpp 
+        src/local.cpp 
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
