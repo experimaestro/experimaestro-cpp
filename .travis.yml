@@ -8,12 +8,9 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise-3.6
-      - george-edison55/cmake-3.x
     packages:
       - swig
       - doxygen
-      - cmake
-      - cmake-data
       - libyaml-cpp-dev
       - libssh-dev
       - g++-7
