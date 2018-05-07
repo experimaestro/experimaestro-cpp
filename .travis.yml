@@ -9,7 +9,7 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise-3.6
     packages:
-      - swig
+      - swig3.0
       - doxygen
       - libyaml-cpp-dev
       - libssh-dev
