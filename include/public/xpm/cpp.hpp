@@ -12,8 +12,8 @@
 
 namespace xpm {
 
-ptr<Register> currentRegister();
-void currentRegister(ptr<Register> const &_register);
+std::shared_ptr<Register> currentRegister();
+void currentRegister(std::shared_ptr<Register> const &_register);
 
 template<typename T>  struct type_of {};
 
@@ -37,10 +37,10 @@ struct ArgumentHolder {
 // }
 
 template<typename T>
-inline void assignValue(xpm::StructuredValue::Ptr const &value, ptr<T> &p) {
+inline void assignValue(xpm::StructuredValue::Ptr const &value, std::shared_ptr<T> &p) {
   p = std::dynamic_pointer_cast<T>(value);
   if (!p && value) {
-    throw xpm::argument_error(std::string("Expected ") + type_of<ptr<T>>::value()->toString()
+    throw xpm::argument_error(std::string("Expected ") + type_of<std::shared_ptr<T>>::value()->toString()
                                   + " but got " + value->type()->toString());
   }
 }
@@ -60,28 +60,27 @@ struct TypedArgumentHolder : public ArgumentHolder<T> {
 
 template<typename T>
 struct CppType  {
-  static_assert(std::is_base_of<StructuredValue, T>::value,  "Type should be a subtype of CppObject");
-  ptr<Type> type;
+  std::shared_ptr<Type> type;
   std::unordered_map<std::string, std::unique_ptr<ArgumentHolder<T>>> _arguments;
 
-  static ptr<CppType<T>> SELF;
+  static std::shared_ptr<CppType<T>> SELF;
 
   CppType(std::string const &name) : type(std::make_shared<Type>(TypeName(name))) {
   }
 };
-template<typename T> ptr<CppType<T>>
+template<typename T> std::shared_ptr<CppType<T>>
     CppType<T>::SELF;
 
 /// Type of a variable
-template<typename T>  struct type_of<ptr<T>> {
-  static ptr<Type> value() {
+template<typename T>  struct type_of<std::shared_ptr<T>> {
+  static std::shared_ptr<Type> value() {
     return CppType<T>::SELF->type;
   }
 };
 
 
 #define XPM_SIMPLETYPE_OF(CPPTYPE, XPMTYPE) \
-  template<> struct type_of<CPPTYPE> { static ptr<Type> value() { return XPMTYPE; } };
+  template<> struct type_of<CPPTYPE> { static std::shared_ptr<Type> value() { return XPMTYPE; } };
 
 XPM_SIMPLETYPE_OF(std::string, StringType);
 XPM_SIMPLETYPE_OF(bool, BooleanType);
@@ -89,22 +88,22 @@ XPM_SIMPLETYPE_OF(long, IntegerType);
 XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
-XPM_SIMPLETYPE_OF(ptr<StructuredValue>, AnyType);
+XPM_SIMPLETYPE_OF(std::shared_ptr<StructuredValue>, AnyType);
 XPM_SIMPLETYPE_OF(Path, PathType);
 
 
 template<typename T, typename Parent>
 struct CppTypeBuilder {
-  ptr<CppType<T>> type;
-  ptr<Argument> _argument;
-  ptr<Register> _register = currentRegister();
+  std::shared_ptr<CppType<T>> type;
+  std::shared_ptr<Argument> _argument;
+  std::shared_ptr<Register> _register = currentRegister();
 
   CppTypeBuilder(std::string const &name) : type(std::make_shared<CppType<T>>(name)) {
     currentRegister()->addType(type->type);
     CppType<T>::SELF = type;
 
     if (!std::is_same<xpm::StructuredValue, Parent>::value) {
-      type->type->parentType(type_of<ptr<Parent>>::value());
+      type->type->parentType(type_of<std::shared_ptr<Parent>>::value());
     }
   }
 
@@ -121,7 +120,7 @@ struct CppTypeBuilder {
     return *this;
   }
 
-  CppTypeBuilder &generator(ptr<Generator> const &g) {
+  CppTypeBuilder &generator(std::shared_ptr<Generator> const &g) {
     _argument->generator(g);
     return *this;
   }
@@ -136,7 +135,7 @@ struct CppTypeBuilder {
     _argument->defaultValue(std::make_shared<StructuredValue>(*_register, j));
     return *this;
   }
-  operator ptr<CppType<T>>() {
+  operator std::shared_ptr<CppType<T>>() {
     return type;
   }
 };
@@ -144,9 +143,9 @@ struct CppTypeBuilder {
 template<typename T, typename Parent = xpm::StructuredValue>
 class CppObject : public Parent {
  public:
-  static ptr<CppType<T>> XPM_TYPE;
+  static std::shared_ptr<CppType<T>> XPM_TYPE;
 
-  void setValue(std::string const &name, ptr<StructuredValue> const &value) override {
+  void setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value) override {
     auto it = XPM_TYPE->_arguments.find(name);
     if (it != XPM_TYPE->_arguments.end()) {
       T &t = dynamic_cast<T&>(*this);
@@ -157,7 +156,7 @@ class CppObject : public Parent {
   }
 };
 
-extern ptr<CommandPath> EXECUTABLE_PATH;
+extern std::shared_ptr<CommandPath> EXECUTABLE_PATH;
 
 template<typename _Type, typename _Task>
 struct TaskBuilder {
@@ -184,7 +183,7 @@ struct TaskBuilder {
 #define XPM_TASK(tname, TYPE, TASK) xpm::TaskBuilder<TYPE, TASK> TASK ## __LINE__ (tname);
 
 #define XPM_SUBTYPE(NAME, TYPE, PARENT) \
-  template<> ptr<xpm::CppType<TYPE>> xpm::CppObject<TYPE, PARENT>::XPM_TYPE \
+  template<> std::shared_ptr<xpm::CppType<TYPE>> xpm::CppObject<TYPE, PARENT>::XPM_TYPE \
      = xpm::CppTypeBuilder<TYPE, PARENT>(NAME)
 #define XPM_TYPE(NAME, TYPE) XPM_SUBTYPE(NAME, TYPE, xpm::Object)
 

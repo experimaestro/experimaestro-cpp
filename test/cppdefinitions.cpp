@@ -1,5 +1,5 @@
 //
-// Created by Benjamin Piwowarski on 12/01/2017.
+// Test for CPP interface
 //
 
 #include <string>

@@ -86,11 +86,11 @@ class CommandContent : public AbstractCommandComponent {
 
 /** Just a placeholder for the JSON parameter file path */
 class CommandParameters : public AbstractCommandComponent {
-  ptr<StructuredValue> value;
+  std::shared_ptr<StructuredValue> value;
 public:
   CommandParameters();
   virtual ~CommandParameters();
-  void setValue(ptr<StructuredValue> const & value);
+  void setValue(std::shared_ptr<StructuredValue> const & value);
   virtual void addDependencies(Job & job) override;
   virtual nlohmann::json toJson() const override;
   virtual void output(CommandContext & context, std::ostream & out) const override;
@@ -107,38 +107,38 @@ public:
 
   virtual void output(CommandContext & context, std::ostream & out) const override;
 protected:
-  virtual std::vector<ptr<AbstractCommand>> reorder() const = 0;
+  virtual std::vector<std::shared_ptr<AbstractCommand>> reorder() const = 0;
 };
 
 /**
  * A command is composed of command components
  */
 class Command : public AbstractCommand {
-  std::vector<ptr<AbstractCommandComponent>> components;
+  std::vector<std::shared_ptr<AbstractCommandComponent>> components;
  public:
-  void add(ptr<AbstractCommandComponent> const & component);
+  void add(std::shared_ptr<AbstractCommandComponent> const & component);
 
   nlohmann::json toJson() const override;
   void load(nlohmann::json const & j);
   virtual void forEach(std::function<void(CommandPart &)> f) override;
 protected:
-  virtual std::vector<ptr<AbstractCommand>> reorder() const override;
+  virtual std::vector<std::shared_ptr<AbstractCommand>> reorder() const override;
 };
 
 /**
  * A command line
  */
 class CommandLine : public AbstractCommand {
-  std::vector<ptr<AbstractCommand>> commands;
+  std::vector<std::shared_ptr<AbstractCommand>> commands;
  public:
   CommandLine();
 
-  void add(ptr<Command> const & command);
+  void add(std::shared_ptr<Command> const & command);
   nlohmann::json toJson() const override;
   void load(nlohmann::json const & j);
   virtual void forEach(std::function<void(CommandPart &)> f) override;
 protected:
-  virtual std::vector<ptr<AbstractCommand>> reorder() const override;
+  virtual std::vector<std::shared_ptr<AbstractCommand>> reorder() const override;
 };
 
 
@@ -154,7 +154,7 @@ struct NamedPipeRedirections {
  */
 struct CommandContext {
   Connector const & connector;
-  ptr<StructuredValue> parameters;
+  std::shared_ptr<StructuredValue> parameters;
   std::unordered_map<CommandPart const *, NamedPipeRedirections> namedPipeRedirectionsMap;
   Path folder;
   std::string name;

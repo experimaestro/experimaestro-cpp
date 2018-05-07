@@ -19,7 +19,7 @@ public:
   Context(Context const &) = delete;
   Context();
 
-  static ptr<Context> CURRENT_CONTEXT;
+  static std::shared_ptr<Context> CURRENT_CONTEXT;
   std::map<std::string, std::string> _variables;
   Path basepath;
 
@@ -29,10 +29,10 @@ public:
 #endif
  public:
   /// Get the current context
-  static ptr<Context> const &current();
+  static std::shared_ptr<Context> const &current();
 
   /// Set the current context
-  static void current(ptr<Context> const & context);
+  static void current(std::shared_ptr<Context> const & context);
 
   /// Get the basepath
   Path const workdir() const;

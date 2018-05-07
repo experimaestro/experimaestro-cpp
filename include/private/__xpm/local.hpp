@@ -12,7 +12,7 @@ class LocalProcess;
 /** Localhost connector */
 class LocalConnector : public Connector {
 public:
-  virtual ptr<ProcessBuilder> processBuilder() const override;
+  virtual std::shared_ptr<ProcessBuilder> processBuilder() const override;
   std::string resolve(Path const & path) const override;
 
   std::unique_ptr<std::ostream> ostream(Path const & path) const override;
@@ -21,7 +21,7 @@ public:
 
 class LocalProcessBuilder : public ProcessBuilder {
 public:
-  virtual ptr<Process> start() override;
+  virtual std::shared_ptr<Process> start() override;
   friend class LocalProcess;
 };
 

@@ -16,11 +16,14 @@
 
 namespace xpm {
 
+// SHA-1 digest lenght
+static const int DIGEST_LENGTH = 20;
+
 /// Template 
 template <typename T> using ptr = std::shared_ptr<T>;
 
 template<class T, class... Args> 
-inline ptr<T> mkptr(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
+inline std::shared_ptr<T> mkptr(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
 
 /** Base exception */
 class exception : public std::exception {

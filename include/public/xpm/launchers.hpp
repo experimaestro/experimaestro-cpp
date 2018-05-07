@@ -73,7 +73,7 @@ public:
 class ProcessBuilder {
 public:
   virtual ~ProcessBuilder();
-  virtual ptr<Process> start() = 0;
+  virtual std::shared_ptr<Process> start() = 0;
 
   std::string workingDirectory;
   Redirect stdin;
@@ -91,7 +91,7 @@ public:
   virtual  ~Connector();
 
   /** Returns a new process builder */
-  virtual ptr<ProcessBuilder> processBuilder() const = 0;
+  virtual std::shared_ptr<ProcessBuilder> processBuilder() const = 0;
 
   /** Resolve a path so it is relative to the connector */
   virtual std::string resolve(Path const & path) const = 0;
@@ -123,12 +123,12 @@ public:
  */
 class Launcher {
 public:
-  Launcher(ptr<Connector> const &connector);
+  Launcher(std::shared_ptr<Connector> const &connector);
   virtual ~Launcher();
-  virtual ptr<ProcessBuilder> processBuilder() = 0;
-  virtual ptr<ScriptBuilder> scriptBuilder() = 0;
+  virtual std::shared_ptr<ProcessBuilder> processBuilder() = 0;
+  virtual std::shared_ptr<ScriptBuilder> scriptBuilder() = 0;
 
-  inline ptr<Connector> connector() { return _connector; }
+  inline std::shared_ptr<Connector> connector() { return _connector; }
   inline Environment const & environment() { return _environment; }
 
 private:
@@ -145,13 +145,13 @@ private:
   /**
    * The connecctor
    */
-  ptr<Connector> _connector;
+  std::shared_ptr<Connector> _connector;
 };
 
 /** A direct launcher */
 class DirectLauncher : public Launcher {
 public:
-  virtual ptr<ProcessBuilder> processBuilder() override;
+  virtual std::shared_ptr<ProcessBuilder> processBuilder() override;
 };
 
 } // namespace xpm

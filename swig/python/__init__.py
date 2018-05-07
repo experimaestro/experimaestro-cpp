@@ -7,7 +7,6 @@ import os.path as op
 import logging
 import pathlib
 from pathlib import Path as PPath
-from experimaestro.rpc import Functions
 
 # Import C++ library
 from .experimaestro import *
@@ -44,19 +43,19 @@ def value2array(array):
     r = []
     for i in range(len(array)):
         sv = array[i]
-        v = VALUECONVERTERS.get(sv.type().toString(), lambda v: v)(sv)
+        v = VALUECONVERTERS.get(str(sv.type()), lambda v: v)(sv)
         r.append(v)
     return r
 
 
 """Dictionary of converteres"""
 VALUECONVERTERS = {
-    BooleanType.toString(): lambda v: v.value().asBoolean(),
-    IntegerType.toString(): lambda v: v.value().asInteger(),
-    StringType.toString(): lambda v: v.value().asString(),
-    RealType.toString(): lambda v: v.value().asReal(),
-    PathType.toString(): lambda v: v.value().asPath(),
-    ArrayType.toString(): value2array
+    str(BooleanType): lambda v: v.value().asBoolean(),
+    str(IntegerType): lambda v: v.value().asInteger(),
+    str(StringType): lambda v: v.value().asString(),
+    str(RealType): lambda v: v.value().asReal(),
+    str(PathType): lambda v: v.value().asPath(),
+    str(ArrayType): value2array
 }
 
 # --- From Python to C++ types
@@ -404,6 +403,3 @@ class _Definitions:
 types = _Definitions(register.getType)
 tasks = _Definitions(register.getTask)
 
-# --- Sets some useful functions
-
-set_experiment = Functions.set_experiment

@@ -3,8 +3,6 @@
 
 
 %include <swiginterface.i>
-%interface_impl(xpm::rpc::ServerObject);
-
 
 namespace std {
     template<class T> class vector {

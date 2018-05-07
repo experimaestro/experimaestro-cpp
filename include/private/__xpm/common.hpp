@@ -17,7 +17,7 @@
 
 namespace xpm {
 
-ptr<spdlog::logger> logger(std::string const &name);
+std::shared_ptr<spdlog::logger> logger(std::string const &name);
 
 class StructuredValue;
 class TypeName;

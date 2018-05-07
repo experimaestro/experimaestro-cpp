@@ -118,7 +118,7 @@ void CommandContent::output(CommandContext &context, std::ostream & out) const {
 
 namespace {
   /// Generates the JSON that will be used to configure the task
-  void fill(CommandContext & context, std::ostream & out, std::shared_ptr<StructuredValue> const & conf) {
+  void fill(CommandContext & context, std::ostream & out, ptr<StructuredValue> const & conf) {
     if (conf->value().defined()) {
       // The object has one value, just use this and discards the rest
       switch(conf->value().scalarType()) {

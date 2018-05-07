@@ -23,13 +23,13 @@ class Task
    * @param taskIdentifier The task identifier
    * @param outputType The output type
    */
-  Task(TypeName const &taskIdentifier, ptr<Type> const &outputType);
+  Task(TypeName const &taskIdentifier, std::shared_ptr<Type> const &outputType);
 
   /**
    * Initialize a task with the same identifier as the type
    * @param outputType The output type, whose typename is used as the task identifier
    */
-  Task(ptr<Type> const &outputType);
+  Task(std::shared_ptr<Type> const &outputType);
 
   /**
    * Configure the object
@@ -37,9 +37,9 @@ class Task
    * @param launcher The launcher used to launch the task (or null if not sending)
    * @param object The structured value with which the task is defined
    */
-  void submit(ptr<Workspace> const & workspace,
-              ptr<Launcher> const & launcher,
-              ptr<StructuredValue> const & sv) const;
+  void submit(std::shared_ptr<Workspace> const & workspace,
+              std::shared_ptr<Launcher> const & launcher,
+              std::shared_ptr<StructuredValue> const & sv) const;
 
   /** Returns the type of this task */
   TypeName typeName() const;
@@ -51,7 +51,7 @@ class Task
   std::string toString() const;
   
   /** Sets the command line for the task */
-  void commandline(ptr<CommandLine> const & command);
+  void commandline(std::shared_ptr<CommandLine> const & command);
 
   /** Gets the task identifier */
   TypeName const &identifier() const;
@@ -60,7 +60,7 @@ class Task
   nlohmann::json toJson();
 
   /** Get path generator for resource location */
-  ptr<PathGenerator> getPathGenerator() const;
+  std::shared_ptr<PathGenerator> getPathGenerator() const;
 
   /** Gets the running status */
   static bool isRunning() { return _running; }
@@ -69,10 +69,10 @@ class Task
   TypeName _identifier;
 
   /// The type for this task
-  ptr<Type> _type;
+  std::shared_ptr<Type> _type;
 
   /// Command line
-  ptr<CommandLine> _commandLine;
+  std::shared_ptr<CommandLine> _commandLine;
 
   /// True if a task is running
   static bool _running;

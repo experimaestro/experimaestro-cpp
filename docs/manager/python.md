@@ -21,6 +21,5 @@ import experimaestro as xpm
 if __name__ == "__main__":
     xpm.logger.setLevel(logging.DEBUG)
     xpm.setLogLevel("xpm", xpm.LogLevel_DEBUG)
-    xpm.setLogLevel("rpc", xpm.LogLevel_INFO)
     xpm.register.parse()
 ```

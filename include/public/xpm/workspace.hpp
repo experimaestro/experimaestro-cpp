@@ -35,11 +35,11 @@ class Dependency
 #endif
 {
 public:
-  Dependency(ptr<Resource> const & origin);
+  Dependency(std::shared_ptr<Resource> const & origin);
   virtual ~Dependency();
 
   /// Sets the dependent
-  void target(ptr<Resource> const & resource);
+  void target(std::shared_ptr<Resource> const & resource);
 
   /// Is the dependency satisfied?
   virtual bool satisfied() = 0;
@@ -49,10 +49,10 @@ public:
 
 private:
   // The origin
-  ptr<Resource> _origin;
+  std::shared_ptr<Resource> _origin;
 
   // The dependent
-  ptr<Resource> _target;
+  std::shared_ptr<Resource> _target;
 
   /// Old satisfaction status
   bool _oldSatisfied;
@@ -76,11 +76,11 @@ public:
   /// Get the workspace resource ID
   inline ResourceId getId() const { return _resourceId; }
 
-  void addDependent(ptr<Dependency> const & dependency);
-  void removeDependent(ptr<Dependency> const & dependency);
+  void addDependent(std::shared_ptr<Dependency> const & dependency);
+  void removeDependent(std::shared_ptr<Dependency> const & dependency);
 
   // Create a simple dependency
-  virtual ptr<Dependency> createDependency() = 0;
+  virtual std::shared_ptr<Dependency> createDependency() = 0;
 protected:
   /// Resource that depend on this one to be completed
   std::vector<std::weak_ptr<Dependency>> _dependents;
@@ -117,9 +117,9 @@ public:
   void limit(Value _limit);
 
   /// Create a new dependency
-  ptr<Dependency> createDependency(Value count);
+  std::shared_ptr<Dependency> createDependency(Value count);
 
-  virtual ptr<Dependency> createDependency() override;
+  virtual std::shared_ptr<Dependency> createDependency() override;
 
 private:
   friend class CounterDependency;
@@ -164,10 +164,10 @@ enum struct JobState {
 /// Base class for jobs
 class Job : public Resource {
 public:
-  Job(Path const & locator, ptr<Launcher> const & launcher);
+  Job(Path const & locator, std::shared_ptr<Launcher> const & launcher);
 
   /// Adds a new dependency
-  void addDependency(ptr<Dependency> const & dependency);
+  void addDependency(std::shared_ptr<Dependency> const & dependency);
 
   /// The locator
   Path const & locator() { return _locator; }
@@ -182,7 +182,7 @@ public:
   virtual void run() = 0;
 
   /// Get a dependency to this resource
-  ptr<Dependency> createDependency() override;
+  std::shared_ptr<Dependency> createDependency() override;
 
 protected:
   friend class Workspace;
@@ -192,16 +192,16 @@ protected:
   virtual void dependencyChanged(Dependency & dependency, bool satisfied) override;
 
   /// The workspace
-  ptr<Workspace> _workspace;
+  std::shared_ptr<Workspace> _workspace;
 
   /// Main identifier of the task
   Path _locator;
 
   /// The launcher used for this task
-  ptr<Launcher> _launcher;
+  std::shared_ptr<Launcher> _launcher;
 
   /// The dependencies of this task
-  std::vector<ptr<Dependency>> _dependencies;
+  std::vector<std::shared_ptr<Dependency>> _dependencies;
 
   /// Submission time
   std::time_t _submissionTime;
@@ -217,17 +217,17 @@ protected:
 class CommandLineJob : public Job {
 public:
   CommandLineJob(Path const & locator, 
-    ptr<Launcher> const & launcher,
-    ptr<CommandLine> const & command);
+    std::shared_ptr<Launcher> const & launcher,
+    std::shared_ptr<CommandLine> const & command);
   
   virtual void run();
 private:
-  ptr<CommandLine> _command;
+  std::shared_ptr<CommandLine> _command;
 };
 
 /// Defines the priority between two jobs
 struct JobPriorityComparator {
-  bool operator()( ptr<Job> const & lhs, ptr<Job> const & rhs ) const;
+  bool operator()( std::shared_ptr<Job> const & lhs, std::shared_ptr<Job> const & rhs ) const;
 
 };
 
@@ -245,11 +245,11 @@ public:
   virtual ~Workspace();
 
   /// Submit a job
-  void submit(ptr<Job> const & job);
+  void submit(std::shared_ptr<Job> const & job);
 
 private:
   /// All the jobs
-  std::unordered_map<Path, ptr<Job>> _jobs;
+  std::unordered_map<Path, std::shared_ptr<Job>> _jobs;
 
   /// State mutex
   std::mutex _mutex;

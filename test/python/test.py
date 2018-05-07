@@ -6,7 +6,6 @@ logging.basicConfig(level=logging.INFO)
 
 xpmcpp = TypeName("xpmcpplib")
 
-setLogLevel("rpc", LogLevel_INFO)
 setLogLevel("xpm", LogLevel_INFO)
 
 @RegisterType(xpmcpp("A"))
@@ -48,21 +47,15 @@ if __name__ == '__main__':
     # Default values
     set_workdir(osp.realpath(args.workdir))
 
-    rpc.Functions.set_experiment("cpp.test", True)
+    # set_experiment("cpp.test", True)
 
-    connector = rpc.Functions.get_localhost_connector()
-    launcher = connector.default_launcher()
-    launcher.env("PYTHONPATH", pythonpath)
-    launcher.set_notification_url("http://localhost:12346/notification") #rpc.Functions.notification_url())
-    rpc.Functions.set_default_launcher(launcher)
-
-    model = A.create()
+    model = A()
 
     # Create and then run
     for size in  [5, 10]:
-        a2 = A2.create(size=size, any={"zoé": 1})
+        a2 = A2(size=size, any={"zoé": 1})
         a2.model = model
         a2.submit()
 
-        b = B.create(a=a2)
+        b = B(a=a2)
         b.submit()

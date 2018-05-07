@@ -27,12 +27,12 @@ public:
     /**
      * Command line
      */
-    ptr<AbstractCommand> command;
+    std::shared_ptr<AbstractCommand> command;
 
     /**
      * Pre-process commands
      */
-    ptr<AbstractCommand> preprocessCommands;
+    std::shared_ptr<AbstractCommand> preprocessCommands;
 
     /**
      * The notification URL (if any)

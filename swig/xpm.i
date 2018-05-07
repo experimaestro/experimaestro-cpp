@@ -25,6 +25,11 @@
 %}
 
 
+namespace xpm {
+    static const int DIGEST_LENGTH = 20;
+}
+
+
 #ifdef SWIGPYTHON
 // Implicit conversions
 %implicitconv;
@@ -50,7 +55,10 @@
 #endif
 
 %include "std_map.i"
+
+// --- Shared pointers
 %include "std_shared_ptr.i"
+
 // Handles exceptions
 %include "exception.i"
 // Handle attributes for languages supporting this (Python)
@@ -102,10 +110,6 @@
 #ifdef SWIGJAVA
 %include "java/xpm.i"
 #endif
-
-namespace xpm {
-    template <typename T> using ptr = std::shared_ptr<T>;
-}
 
 // Include file
 %include <xpm/filesystem.hpp>
