@@ -1,14 +1,28 @@
 cmake_minimum_required(VERSION 3.0.0)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
+
+set(LINKED_LIBRARIES "")
+set(INCLUDE_DIRECTORIES "")
+
 include(UseSWIG)
+
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
-find_package(FMT REQUIRED)
+
+# find_package(FMT)
+if(true)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib)
+    list(APPEND LINKED_LIBRARIES fmt)
+    list(APPEND INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib/include)
+else()
+    list(APPEND LINKED_LIBRARIES ${FMT_LIBRARY})
+endif()
+
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
 
@@ -73,7 +87,7 @@ set(SOURCES
 )
         
 find_package (Threads)
-set(LINKED_LIBRARIES 
+list(APPEND LINKED_LIBRARIES 
     ${OPENSSL_LIBRARIES} 
     ${LIBWEBSOCKETS_LIBRARIES} 
     ${LIBSSH_LIBRARY} 
@@ -81,19 +95,20 @@ set(LINKED_LIBRARIES
     ${LIBYAMLCPP_LIBRARY} 
     SQLiteCpp
     sqlite3
-    ${FMT_LIBRARY}
     )
+message(STATUS "Linked libraries: ${LINKED_LIBRARIES}")
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
-include_directories(
-        "${CMAKE_CURRENT_SOURCE_DIR}/ext"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/public"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
-        "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
-        "${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp/include"
+list(APPEND INCLUDE_DIRECTORIES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/public"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
+    "${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp/include"
 )
+include_directories(${INCLUDE_DIRECTORIES})
 
 
 # --- experimaestro library
@@ -255,4 +270,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 fmt FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
