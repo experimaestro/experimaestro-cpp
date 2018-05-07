@@ -16,5 +16,5 @@ log "cmake version $(cmake --version)"
 mkdir build
 cd build || exit 1
 
-cmake -C ..
+CXX=g++-7 CC=gcc-7 cmake -C ..
 make experimaestro-tests
