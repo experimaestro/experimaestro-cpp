@@ -14,7 +14,7 @@ find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
-find_package(FMT)
+find_package(FMT QUIET)
 if(FMT_FOUND)
 list(APPEND LINKED_LIBRARIES ${FMT_LIBRARY})
     list(APPEND INCLUDE_DIRECTORIES ${FMT_INCLUDE_DIRS})
