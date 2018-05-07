@@ -20,8 +20,6 @@ addons:
 sudo: false
 
 # Configuration
-cache:
-  directories: []
 branches:
   only:
    - master

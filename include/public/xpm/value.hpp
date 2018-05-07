@@ -5,8 +5,6 @@
 #ifndef EXPERIMAESTRO_VALUE_HPP
 #define EXPERIMAESTRO_VALUE_HPP
 
-#include <xpm/xpm.hpp>
-
 namespace xpm {
 
 class Type;
@@ -152,37 +150,3 @@ inline bool operator==(Value const &a, Value const &b) {
 }
 
 #endif //ANCHOR_JUDGES_VALUE_HPP
-
-// FIXME: Remove - just for reference
-// #ifndef EXPERIMAESTRO_ARRAY_HPP
-// #define EXPERIMAESTRO_ARRAY_HPP
-
-// #include "xpm.hpp"
-
-// namespace xpm {
-
-// class Array : public Object {
-//  public:
-//   typedef std::vector<ptr<StructuredValue>> Content;
-//   virtual ~Array();
-//   Array();
-
-//   /// Shallow copy of the array
-//   virtual ptr<StructuredValue> copy() override;
-  
-//   /// Computes the hash for the object
-//   virtual std::array<unsigned char, DIGEST_LENGTH> digest() const override;
-
-//   /// Transforms into JSON
-//   virtual nlohmann::json toJson() override;
-
-
-//   /// Cast an object to Array type
-//   static ptr<Array> cast(ptr<StructuredValue> const &);
-//  private:
-//   Content _array;
-// };
-
-// }
-
-// #endif

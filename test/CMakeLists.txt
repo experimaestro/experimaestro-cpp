@@ -6,6 +6,7 @@ ExternalProject_Add(googletest
         EXCLUDE_FROM_ALL 1
         BINARY_DIR ${CMAKE_BINARY_DIR}/external/googletest.build
         CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${EXT_INSTALL_DIR}"
+        INSTALL_COMMAND   ""
 )
 
 

@@ -1,4 +1,0 @@
-icolor==1.2
-websocket-client>=0.21.0
-requests>=2.4.3
-click>=6.0.0
