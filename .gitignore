@@ -28,3 +28,10 @@ build
 /server/jsch-extension/out
 /server/jsch-nio/out
 /cpplib/languages/java/bin/
+.idea
+.pypirc
+MANIFEST
+cmake-build-*
+dist
+out
+build

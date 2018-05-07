@@ -1,7 +1,0 @@
-.idea
-.pypirc
-MANIFEST
-cmake-build-*
-dist
-out
-build
