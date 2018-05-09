@@ -267,6 +267,12 @@ public:
 
   /// Checks if the variable exists
   bool has(std::string const &key) const;
+
+  /// Set the current workspace
+  void current();
+
+  /// Current workspace 
+  static std::shared_ptr<Workspace> currentWorkspace();
 private:
   /// Working directory path
   Path _path;

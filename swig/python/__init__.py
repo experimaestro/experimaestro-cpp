@@ -104,11 +104,16 @@ class XPMObject(Object):
         self.configuration = StructuredValue()
         self.configuration.object(self)
         self.configuration.type(self.pyobject.__class__.__xpmtype__)
+        self.setting = False
 
     def set(self, k, v):
         logging.info("Called set: %s, %s", k, v)
-        self.configuration.set(k, structuredValue(v))
-    
+        try:
+            self.setting = True
+            self.configuration.set(k, structuredValue(v))
+        finally:
+            self.setting = False
+
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
         if sv is None:
@@ -121,9 +126,12 @@ class XPMObject(Object):
                 value = object.pyobject
             else:
                 value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
-        logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
+    
+        # Set the value on the object if not setting otherwise
+        if not self.setting:
+            logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
                      svtype, type(value), type(self.pyobject))
-        setattr(self.pyobject, key, value)
+            setattr(self.pyobject, key, value)
     
     def run(self):
         self.pyobject.execute()
@@ -147,6 +155,12 @@ class PyObject:
             logging.info("Submitting")
             self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.configuration)
         return self
+
+    def __setattr__(self, name, value):
+        if Task.isRunning:
+            if name != "__xpm__":
+                self.__xpm__.set(name, value)
+        super().__setattr__(name, value)
 
     def _prepare(self):
         """Prepare object after creation"""
@@ -404,3 +418,6 @@ class _Definitions:
 types = _Definitions(register.getType)
 tasks = _Definitions(register.getTask)
 
+
+def workspace(path):
+    Workspace(str(path)).current()

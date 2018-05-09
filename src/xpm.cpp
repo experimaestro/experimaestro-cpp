@@ -89,6 +89,10 @@ std::string TypeName::localName() const {
 
 Object::~Object() {}
 
+void Object::run() {
+  throw assertion_error("Object is not a task: cannot run it!");
+}
+
 StructuredValue::StructuredValue(Value const &v) : _flags(0) {
   _value = v;
   _type = v.type();
@@ -556,7 +560,7 @@ Argument &Argument::generator(ptr<Generator> const &generator) {
   return *this;
 }
 
-ptr<Type> const &Argument::type() const { return _type; }
+ptr<Type> const &Argument::type() const { return _type ? _type : AnyType; }
 Argument &Argument::type(ptr<Type> const &type) {
   _type = type;
   return *this;

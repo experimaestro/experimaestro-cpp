@@ -46,7 +46,8 @@ if __name__ == '__main__':
 
     # Default values
 
-    Workspace(args.workdir)
+    workspace(args.workdir)
+
     # set_experiment("cpp.test", True)
     # set_workdir(osp.realpath(args.workdir))
 

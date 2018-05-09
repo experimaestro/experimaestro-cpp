@@ -173,7 +173,16 @@ void Register::parse(std::vector<std::string> const &_args) {
 }
 
 void Register::runTask(ptr<Task> const & task, ptr<StructuredValue> const & sv) {
-
+  auto object = createObject(sv);
+  if (!object) {
+    throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
+  }
+  
+  Task::_running = true;
+  finally([] {  
+    Task::_running = false;
+  });
+  object->run();
 }
 
   /// Create object

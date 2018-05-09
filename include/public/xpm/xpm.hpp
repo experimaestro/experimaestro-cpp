@@ -128,6 +128,9 @@ public:
 
   /** Sets a value in the native object */
   virtual void setValue(std::string const &name, std::shared_ptr<StructuredValue> const & value) = 0;
+
+  /** Run (if this is a task) */
+  virtual void run();
 };
 
 

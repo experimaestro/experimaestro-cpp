@@ -64,6 +64,7 @@ class Task
 
   /** Gets the running status */
   static bool isRunning() { return _running; }
+
  private:
   /// Task identifier
   TypeName _identifier;
@@ -76,6 +77,8 @@ class Task
 
   /// True if a task is running
   static bool _running;
+
+  friend class Register;
 };
 
 } // ns

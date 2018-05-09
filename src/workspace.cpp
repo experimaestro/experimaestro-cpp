@@ -175,6 +175,10 @@ void CommandLineJob::run() {
 
 // -- Workspace
 
+namespace {
+  std::shared_ptr<Workspace> CURRENT_WORKSPACE;
+}
+
 bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
                                        ptr<Job> const &rhs) const {
   // Returns true if the lhs should have a lower priority than the rhs
@@ -187,7 +191,8 @@ Workspace::Workspace(std::string const &path) {
   _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
 }
 
-Workspace::~Workspace() {}
+Workspace::~Workspace() {
+}
 
 
 void Workspace::submit(ptr<Job> const &job) {
@@ -211,6 +216,14 @@ void Workspace::submit(ptr<Job> const &job) {
   if (job->ready()) {
     job->run();
   }
+}
+
+void Workspace::current() {
+  CURRENT_WORKSPACE = shared_from_this();
+}
+
+std::shared_ptr<Workspace> Workspace::currentWorkspace() {
+  return CURRENT_WORKSPACE;
 }
 
 Path const Workspace::workdir() const {

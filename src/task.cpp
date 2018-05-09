@@ -25,7 +25,7 @@ Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
 
 TypeName Task::typeName() const { return _type->typeName(); }
 
-void Task::submit(ptr<Workspace> const & workspace,
+void Task::submit(ptr<Workspace> const & _workspace,
   ptr<Launcher> const & _launcher,
   ptr<StructuredValue> const & sv
 ) const {
@@ -34,6 +34,10 @@ void Task::submit(ptr<Workspace> const & workspace,
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
+  auto workspace = _workspace ? _workspace : Workspace::currentWorkspace();
+  if (!workspace) {
+    throw argument_error("No workspace was created");
+  }
   auto &launcher = _launcher ? _launcher : Launcher::defaultLauncher();
 
   // Set locator
