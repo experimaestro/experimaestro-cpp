@@ -5,3 +5,8 @@ root = true
 [**.cpp, **.hpp]
 indent_style = space
 indent_size = 2
+
+# Python files
+[**.py]
+indent_style = space
+indent_size = 4
