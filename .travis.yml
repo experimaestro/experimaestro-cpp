@@ -28,5 +28,9 @@ branches:
 
 # Build steps
 script:
-  - ./travis.sh
+  - mkdir -p build
+  - cd build
+  - cmake --version
+  - cmake ..
+  - make experimaestro-tests
 
