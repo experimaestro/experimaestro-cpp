@@ -503,7 +503,7 @@ Path CommandContext::getAuxiliaryFile(std::string const & prefix, std::string co
     std::string reference = name + "." + prefix + suffix;
     int &count = ++counts[reference];
     return folder.resolve(
-        {fmt::format("{}_{:2d}.{}{}", name, count, prefix, suffix)});
+        {fmt::format("{}_{:02d}.{}{}", name, count, prefix, suffix)});
 }
 
 

@@ -40,6 +40,9 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
 
   LOGGER->info("Writing script {}", scriptpath);
   std::unique_ptr<std::ostream> _out = connector.ostream(scriptpath);
+  if (!_out) {
+    throw io_error(fmt::format("Could not open file {}", scriptpath));
+  }
   std::ostream &out = *_out;
 
   out << "#!" << shPath << std::endl;
@@ -53,7 +56,8 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   if (!lockFiles.empty()) {
     out << "# Checks that the locks are set" << std::endl;
     for (Path const &lockFile : lockFiles) {
-      out << "test -f " << lockFile << " || (echo Locks not set; exit 017)"
+      out << "if ! test -f " << connector.resolve(lockFile) 
+           << "; then echo Locks not set; exit 017; fi"
           << std::endl;
     }
   }
@@ -61,8 +65,8 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   // Checks the start lock to avoid two experimaestro launched processes to
   // start
   out << "# Checks that the start lock is set, and removes it" << std::endl;
-  out << "test -f " << connector.resolve(startlockPath)
-      << " || (echo start lock not set; exit 017)" << std::endl;
+  out << "if ! test -f " << connector.resolve(startlockPath)
+      << "; then echo start lock not set; exit 017; fi" << std::endl;
   out << "rm -f " << connector.resolve(startlockPath) << std::endl;
   out << std::endl;
 
@@ -154,10 +158,8 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   // The prepare all the command
   out << "(" << std::endl;
   command->output(context, out);
-  out << ") ";
 
-  context.writeRedirection(out, stdout, 1);
-  context.writeRedirection(out, stderr, 2);
+  out << ") ";
 
   // Retrieve PID
   out << " & " << std::endl;
@@ -171,7 +173,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
 
   // Set the file as executable
   _out = nullptr;
-  connector.setExecutable(path, true);
+  connector.setExecutable(scriptpath, true);
   return scriptpath;
 } 
 

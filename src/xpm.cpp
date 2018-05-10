@@ -395,47 +395,47 @@ bool StructuredValue::equals(StructuredValue const &other) const {
 
 void StructuredValue::generate(GeneratorContext & context) {
   if (auto A = context.enter(this)) {
+    // Already generated
+    if (get(Flag::GENERATED)) {
+      LOGGER->debug("Object already generated");
+      return;
+    }
+
     // Check if we can modify this object
     if (isSealed()) {
       throw exception("Cannot generate values within a sealed object");
     }
 
-    // Already generated
-    if (get(Flag::GENERATED)) return;
-
     // (2) Generate values
-    if (get(Flag::GENERATED)) {
-      LOGGER->debug("Object already generated");
-    } else {
-      LOGGER->debug("Generating values...");
-      for (auto type = _type; type; type = type->parentType()) {
-        for (auto entry: type->arguments()) {
-          Argument &argument = *entry.second;
-          auto generator = argument.generator();
+    LOGGER->debug("Generating values...");
+    for (auto type = _type; type; type = type->parentType()) {
+      for (auto entry: type->arguments()) {
+        Argument &argument = *entry.second;
+        auto generator = argument.generator();
 
-          if (!hasKey(argument.name())) {
-            if (generator) {
-            auto generated = generator->generate(context);
-            LOGGER->debug("Generating value for {}", argument.name());
-            set(argument.name(), generated);
-            } else if (argument.defaultValue()) {
-              LOGGER->debug("Setting default value for {}...", argument.name());
-              auto value = argument.defaultValue()->copy();
-              value->set(Flag::DEFAULT, true);
-              value->set(Flag::IGNORE, argument.ignore());
-              set(argument.name(), value);
-            } else if (!argument.required()) {
-              // Set value null
-              auto value = std::make_shared<StructuredValue>(Value::NONE);
-              value->set(Flag::DEFAULT, true);
-              setValue(argument.name(), nullptr);
+        if (!hasKey(argument.name())) {
+          if (generator) {
+          auto generated = generator->generate(context);
+          LOGGER->debug("Generating value for {}", argument.name());
+          set(argument.name(), generated);
+          } else if (argument.defaultValue()) {
+            LOGGER->debug("Setting default value for {}...", argument.name());
+            auto value = argument.defaultValue()->copy();
+            value->set(Flag::DEFAULT, true);
+            value->set(Flag::IGNORE, argument.ignore());
+            set(argument.name(), value);
+          } else if (!argument.required()) {
+            // Set value null
+            auto value = std::make_shared<StructuredValue>(Value::NONE);
+            value->set(Flag::DEFAULT, true);
+            setValue(argument.name(), nullptr);
           }
-          } else {
-            // Generate sub-structures
-            _content[argument.name()]->generate(context);
-        }
+        } else {
+          // Generate sub-structures
+          _content[argument.name()]->generate(context);
       }
-      }
+    }
+    
       set(Flag::GENERATED, true);
     }
   }

@@ -150,20 +150,31 @@ void CommandLineJob::run() {
   auto scriptBuilder = _launcher->scriptBuilder();
   auto processBuilder = _launcher->processBuilder();
 
-  _launcher->connector()->mkdirs(_locator.parent(), true, false);
+  auto & connector = *_launcher->connector();
+
+  // TODO: lock all dependencies
+
+  Path directory = _locator.parent();
+  _launcher->connector()->mkdirs(directory, true, false);
 
   scriptBuilder->command = _command;
-  Path scriptPath = scriptBuilder->write(*_workspace, *_launcher->connector(), _locator, *this);
+  Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
+  
+  LOGGER->info("Starting job {}", _locator);
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));
+  processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
+  processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
 
-  LOGGER->info("Starting job {}", _locator);
   ptr<Process> process = processBuilder->start();
   std::thread([this, &process]() {
     // Wait for end of execution
+    LOGGER->info("Waiting for job {} to finish", _locator);
     int exitCode = process->exitCode();
     LOGGER->info("Job {} finished with exit code {}", _locator, exitCode);
     _state = exitCode == 0 ? JobState::DONE : JobState::ERROR;
+
+  // TODO: unlock all dependencies
 
     // Notify dependents if we exited clearly
     if (exitCode == 0) {

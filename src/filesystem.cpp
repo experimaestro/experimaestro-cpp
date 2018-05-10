@@ -101,16 +101,24 @@ Path Path::relativeTo(Path const & other) const {
   if (share != other.share) return *this;
 
   std::string const & b = other.path;
-  std::string const & r = path;
 
   // TODO: normalize paths
   
   // TODO: find common root
   size_t i = 0;
   size_t last_slash = 0;
-  while (b[i] == r[i]) {
-    ++i;
+  while (b[i] == path[i]) {
     if (b[i] == '/') last_slash = i;
+    ++i;
+  }
+
+  if (b.size() == i) {
+    if (path.size() == i) {
+      return Path(".");
+    }
+    if (path[i] == '/') {
+      last_slash = i;
+    }
   }
 
   // Add back relative
@@ -119,7 +127,7 @@ Path Path::relativeTo(Path const & other) const {
   while ((pos = b.find('/', pos + 1)) != std::string::npos) {
     oss << "../";
   }
-  oss << b.substr(last_slash + 1);
+  oss << path.substr(last_slash + 1);
 
   Path relative(oss.str());
   return relative;

@@ -40,10 +40,6 @@ public:
      */
     std::string notificationURL;
 
-    Redirect stdin;
-    Redirect stdout;
-    Redirect stderr;
-
     /**
      * Files that should be locked when beginning, and unlock at the end
      */
