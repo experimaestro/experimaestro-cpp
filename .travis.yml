@@ -31,6 +31,6 @@ script:
   - mkdir -p build
   - cd build
   - cmake --version
-  - cmake ..
+  - CC=gcc-7 CXX=g++-7 cmake ..
   - make experimaestro-tests
 
