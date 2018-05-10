@@ -67,6 +67,12 @@ class not_implemented_error : public exception {
   not_implemented_error(std::string const &method, std::string const &file, int line);
 };
 
+/** Thrown if an I/O error occurs */
+class io_error : public exception {
+ public:
+  io_error(std::string const &message);
+};
+
 #define NOT_IMPLEMENTED() throw not_implemented_error(__func__, __FILE__, __LINE__)
 }
 

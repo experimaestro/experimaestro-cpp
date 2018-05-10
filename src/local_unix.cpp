@@ -1,6 +1,7 @@
 #ifndef _WIN32
 
 #include <__xpm/local.hpp>
+#include <__xpm/common.hpp>
 
 // For Windows, see
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx
@@ -11,6 +12,7 @@
 #include <signal.h>
 #include <thread>
 #include <unistd.h>
+#include <sys/stat.h>
 
 namespace {
 // TODO: promote to parameter?
@@ -269,6 +271,52 @@ public:
 
 ptr<Process> LocalProcessBuilder::start() {
   return std::make_shared<LocalProcess>(*this);
+}
+
+
+void LocalConnector::setExecutable(Path const & path, bool flag) const {
+  if (chmod(path.localpath().c_str(), S_IRWXU) != 0) {
+    throw io_error(fmt::format("Could not chmod {} to be executable ({})",
+      path, strerror(errno)));
+  }
+}
+
+FileType LocalConnector::fileType(Path const & path) const {
+  struct stat s;   
+  if (stat (path.localpath().c_str(), &s) != 0)
+    return FileType::UNEXISTING;
+
+  if (s.st_mode & S_IFDIR)
+    return FileType::DIRECTORY;
+
+  if (s.st_mode & S_IFREG)
+    return FileType::FILE;
+
+  return FileType::OTHER;
+
+}
+
+void LocalConnector::mkdirs(Path const & path, bool createParents, bool errorExists) const {
+  FileType type = fileType(path);
+  if (type == FileType::DIRECTORY) {
+    if (errorExists) throw io_error(fmt::format("Directory {} already exists", path));
+    return;
+  } else if (type != FileType::UNEXISTING) {
+    if (errorExists) throw io_error(fmt::format("Path {} is not a directory", path));
+  }
+
+  // Create parents if needed
+  Path parent = path.parent();
+  if (createParents) {
+    mkdirs(path.parent(), true, false);
+  }
+
+  // Make directory
+  if (mkdir(path.localpath().c_str(), 0777) != 0) {
+    throw io_error(fmt::format("Could not create directory {} ({})",
+      path, strerror(errno))); 
+  } 
+  
 }
 
 } // namespace

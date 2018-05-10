@@ -150,6 +150,9 @@ void CommandLineJob::run() {
   auto scriptBuilder = _launcher->scriptBuilder();
   auto processBuilder = _launcher->processBuilder();
 
+  _launcher->connector()->mkdirs(_locator.parent(), true, false);
+
+  scriptBuilder->command = _command;
   Path scriptPath = scriptBuilder->write(*_workspace, *_launcher->connector(), _locator, *this);
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));

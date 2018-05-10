@@ -12,8 +12,15 @@
 
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
+#include <__xpm/common.hpp>
+
+DEFINE_LOGGER("filesystem");
 
 namespace xpm {
+
+std::ostream &operator<<(std::ostream & out, Path const & path) {
+  return out << path.toString();
+}
 
 Path::Path(std::string const &path) : Path("", path) {
 }
@@ -70,7 +77,7 @@ std::string Path::name() const {
 }
 
 bool Path::isRelative() const {
-  return path[0] == '/';
+  return path[0] != '/';
 }
 
 std::string Path::localpath() const {
@@ -83,8 +90,14 @@ bool Path::isLocal() const {
   return share.empty();
 }
 
+bool Path::isRoot() const {
+  return path == "/";
+}
+
 Path Path::relativeTo(Path const & other) const {
-  if (isRelative() || other.isRelative()) throw argument_error("Cannot relativize with relative paths");
+  if (isRelative() || other.isRelative()) 
+    throw argument_error(fmt::format("Cannot relativize with relative paths {} and {}",
+      this->toString(), other.toString()));
   if (share != other.share) return *this;
 
   std::string const & b = other.path;
@@ -103,12 +116,13 @@ Path Path::relativeTo(Path const & other) const {
   // Add back relative
   std::ostringstream oss;
   auto pos = last_slash;
-  while ((pos = b.find('/', pos)) != std::string::npos) {
+  while ((pos = b.find('/', pos + 1)) != std::string::npos) {
     oss << "../";
   }
-  oss << b.substr(last_slash);
+  oss << b.substr(last_slash + 1);
 
-  return Path(oss.str());
+  Path relative(oss.str());
+  return relative;
 }
 
 

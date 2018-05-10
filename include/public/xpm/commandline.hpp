@@ -118,7 +118,8 @@ class Command : public AbstractCommand {
   std::vector<std::shared_ptr<AbstractCommandComponent>> components;
  public:
   void add(std::shared_ptr<AbstractCommandComponent> const & component);
-
+  void output(CommandContext & context, std::ostream & out) const override;
+  
   nlohmann::json toJson() const override;
   void load(nlohmann::json const & j);
   virtual void forEach(std::function<void(CommandPart &)> f) override;
@@ -154,8 +155,8 @@ struct NamedPipeRedirections {
  * Context of a command used to generate the actual command line instructions
  */
 struct CommandContext {
-  Connector const & connector;
   Workspace & workspace;
+  Connector const & connector;
   std::shared_ptr<StructuredValue> parameters;
   std::unordered_map<CommandPart const *, NamedPipeRedirections> namedPipeRedirectionsMap;
   Path folder;

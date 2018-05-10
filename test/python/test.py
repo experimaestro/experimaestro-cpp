@@ -4,16 +4,16 @@ import json
 
 logging.basicConfig(level=logging.INFO)
 
-xpmcpp = TypeName("xpmcpplib")
+testns = TypeName("testns")
+setLogLevel("xpm", LogLevel_DEBUG)
 
-setLogLevel("xpm", LogLevel_INFO)
 
-@RegisterType(xpmcpp("A"))
+@RegisterType(testns("A"))
 class A():
     pass
 
 @TypeArgument("model", type=A, required=True, help="object A")
-@RegisterType(xpmcpp("A1"))
+@RegisterType(testns("A1"))
 class A1():
     pass
 
@@ -23,12 +23,12 @@ class A1():
 @TypeArgument("size", type=int, required=True, help="A size")
 @TypeArgument("any", type=AnyType, required=True, help="Any type")
 @RegisterTask("task-a2.py")
-@RegisterType(xpmcpp("A2"))
+@RegisterType(testns("A2"))
 class A2(A1): pass
 
 @TypeArgument("a", type=A1)
 @RegisterTask("task-a2.py")
-@RegisterType(xpmcpp("B"))
+@RegisterType(testns("B"))
 class B(object):
     pass
 

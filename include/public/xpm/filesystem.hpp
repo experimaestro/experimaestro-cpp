@@ -80,6 +80,11 @@ public:
    Path relativeTo(Path const & other) const;
 
    /**
+    * Returns true if this is the root path
+    */
+   bool isRoot() const;
+   
+   /**
     * Equality
     */
   friend bool operator==(Path const & lhs, Path const & rhs);

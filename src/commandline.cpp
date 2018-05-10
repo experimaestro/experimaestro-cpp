@@ -339,6 +339,14 @@ void Command::forEach(std::function<void(CommandPart &)> f) {
   }
 }
 
+void Command::output(CommandContext & context, std::ostream & out) const {
+  bool first = true;
+  for(auto & c : components) {
+    c->output(context, out);
+    if (first) first = false;
+    else out << " ";
+  }
+}
 
 void Command::load(nlohmann::json const &j) {
   assert(j.is_array());
@@ -364,7 +372,8 @@ void Command::load(nlohmann::json const &j) {
 
 std::vector<ptr<AbstractCommand>> Command::reorder() const {
   std::vector<ptr<AbstractCommand>> list;
-  list.push_back(std::static_pointer_cast<AbstractCommand>(const_cast<Command*>(this)->shared_from_this()));
+  auto ptr = std::static_pointer_cast<AbstractCommand>(const_cast<Command*>(this)->shared_from_this());
+  list.push_back(ptr);
   return list;
 }
 
@@ -494,7 +503,7 @@ Path CommandContext::getAuxiliaryFile(std::string const & prefix, std::string co
     std::string reference = name + "." + prefix + suffix;
     int &count = ++counts[reference];
     return folder.resolve(
-        {fmt::format("{}_{0:2d}.{}{}", name, count, prefix, suffix)});
+        {fmt::format("{}_{:2d}.{}{}", name, count, prefix, suffix)});
 }
 
 

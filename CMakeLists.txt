@@ -14,17 +14,6 @@ find_package(libssh REQUIRED)
 find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
-find_package(FMT QUIET)
-if(FMT_FOUND)
-list(APPEND LINKED_LIBRARIES ${FMT_LIBRARY})
-    list(APPEND INCLUDE_DIRECTORIES ${FMT_INCLUDE_DIRS})
-else()
-    message(STATUS "Using internal FMT library")
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib)
-    list(APPEND LINKED_LIBRARIES fmt)
-    list(APPEND INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/ext/fmtlib/include)
-endif()
-
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
 
@@ -107,7 +96,7 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
-    "${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
 )
 include_directories(${INCLUDE_DIRECTORIES})
 
@@ -272,4 +261,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 fmt FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

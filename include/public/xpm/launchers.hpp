@@ -83,7 +83,13 @@ public:
   std::vector<std::string> command;
 };
 
-
+enum struct FileType {
+  UNEXISTING,
+  FILE,
+  DIRECTORY,
+  PIPE,
+  OTHER
+};
 
 /** Access to a host and command line process */
 class Connector {
@@ -105,6 +111,20 @@ public:
 
   /** Marks the file as executable (or not) */
   virtual void setExecutable(Path const & path, bool flag) const = 0;
+
+  /** 
+   * Make directories 
+   * @param createParents if parents should be created should they not exist
+   * @param errorExists throw an error if the directory exists
+   * @throws ioexception If an error occurs
+   */
+  virtual void mkdirs(Path const & path, bool createParents = false, bool errorExists = false) const = 0;
+
+  /** 
+   * Returns file type 
+   * @throws ioexception If an error occurs
+   */
+  virtual FileType fileType(Path const & path) const = 0;
 
 #ifndef SWIG
   /** Get an output stream */

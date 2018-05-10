@@ -2,10 +2,14 @@
 #include <unordered_map>
 
 #include <spdlog/fmt/fmt.h>
+
 #include <__xpm/scriptbuilder.hpp>
+#include <__xpm/common.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/launchers.hpp>
 #include <xpm/workspace.hpp>
+
+DEFINE_LOGGER("scriptbuilder");
 
 namespace xpm {
 
@@ -34,6 +38,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   Path startlockPath = directory.resolve({path.name() + ".lock.start"});
   Path pidFile = directory.resolve({path.name() + ".pid"});
 
+  LOGGER->info("Writing script {}", scriptpath);
   std::unique_ptr<std::ostream> _out = connector.ostream(scriptpath);
   std::ostream &out = *_out;
 
@@ -79,7 +84,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
         << job.getId() << std::endl;
   }
 
-  out << "cd \"%s\"" << std::endl, protect_quoted(connector.resolve(directory));
+  out << "cd \"" << protect_quoted(connector.resolve(directory)) << "\"" << std::endl;
 
   // Write some command
   if (preprocessCommands) {
@@ -121,9 +126,9 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   }
 
   // Kills remaining processes
-  out << " test ! -z \"$PID\" && pkill -KILL -P $PID";
+  out << " test ! -z \"$PID\" && pkill -KILL -P $PID" << std::endl;
 
-  out << "}" << std::endl;
+  out << "}" << std::endl << std::endl;
 
   // --- END CLEANUP
 
@@ -135,15 +140,16 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   out << "if test $code -ne 0; then" << std::endl;
   out << " echo $code > \""
       << protect_quoted(connector.resolve(exitcodepath, directory)) << "\""
-      << std::endl,
+      << std::endl;
 
-      out << " exit $code" << std::endl;
+  out << " exit $code" << std::endl;
   out << "fi" << std::endl;
 
-  out << "%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && "
+  out << std::endl
+    << "checkerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && "
          "[[ "
-         "\"$e\" != 141 ]] && exit $e; done; return 0; }%n"
-      << std::endl;
+         "\"$e\" != 141 ]] && exit $e; done; return 0; }"
+      << std::endl << std::endl;
 
   // The prepare all the command
   out << "(" << std::endl;
@@ -158,10 +164,10 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   out << "PID=$!" << std::endl;
   out << "wait $PID" << std::endl;
 
-  out << "echo 0 > \"%s\"" << std::endl,
-      protect_quoted(connector.resolve(exitcodepath, directory));
-  out << "touch \"%s\"" << std::endl,
-      protect_quoted(connector.resolve(donepath, directory));
+  out << "echo 0 > \"" 
+    << protect_quoted(connector.resolve(exitcodepath, directory))
+    << "\"" << std::endl;
+  out << "touch \"" << protect_quoted(connector.resolve(donepath, directory)) << "\"" << std::endl;
 
   // Set the file as executable
   _out = nullptr;

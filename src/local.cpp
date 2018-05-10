@@ -19,8 +19,4 @@ std::unique_ptr<std::istream> LocalConnector::istream(Path const & path) const {
     return std::unique_ptr<std::istream>(new std::ifstream(resolve(path)));
 }
 
-void LocalConnector::setExecutable(Path const & path, bool flag) const {
-    NOT_IMPLEMENTED();
-}
-
 }
