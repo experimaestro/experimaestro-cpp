@@ -84,10 +84,12 @@ struct Pipe {
 
     case Redirection::FILE:
     case Redirection::NONE: {
-      int fd = open(redirect.type == Redirection::NONE
+      auto path = redirect.type == Redirection::NONE
                         ? "/dev/null"
-                        : redirect.path.c_str(),
-                    outputStream ? O_RDONLY : O_WRONLY | O_TRUNC | O_CREAT);
+                        : redirect.path.c_str();
+      std::cerr << "Changing redirection to " << path << " to fd " << tofd << std::endl;
+      int fd = open(path,
+                    outputStream ?  O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0)
         throw exception();
       dup2(fd, tofd);
