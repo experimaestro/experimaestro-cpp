@@ -1,7 +1,7 @@
-#include <fmt/format.h>
 #include <sstream>
 #include <unordered_map>
 
+#include <spdlog/fmt/fmt.h>
 #include <__xpm/scriptbuilder.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/launchers.hpp>

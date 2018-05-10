@@ -8,6 +8,8 @@
 #include <sstream>
 #include <streambuf>
 
+#include <spdlog/fmt/fmt.h>
+
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
