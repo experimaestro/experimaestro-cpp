@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+
+DEFINE_LOGGER("local");
+
 namespace {
 // TODO: promote to parameter?
 const size_t buffer_size = 8192;
@@ -87,7 +90,7 @@ struct Pipe {
       auto path = redirect.type == Redirection::NONE
                         ? "/dev/null"
                         : redirect.path.c_str();
-      std::cerr << "Changing redirection to " << path << " to fd " << tofd << std::endl;
+      LOGGER->debug("Changing redirection for fd {} to path {}", tofd, path);
       int fd = open(path,
                     outputStream ?  O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0)

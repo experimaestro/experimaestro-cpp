@@ -373,7 +373,7 @@ void StructuredValue::addDependencies(Job & job,  bool skipThis) {
     return;
 
   if (_resource) {
-    LOGGER->info("Found dependency {}", _resource);
+    LOGGER->info("Found dependency resource {}", _resource);
     job.addDependency(_resource->createDependency());
   } else {
     for (auto &entry: _content) {

@@ -7,6 +7,7 @@
 
 #include <string>
 #include <exception>
+#include <iostream>
 
 #ifndef SWIG
   #define NOSWIG(...) __VA_ARGS__
@@ -24,6 +25,13 @@ template <typename T> using ptr = std::shared_ptr<T>;
 
 template<class T, class... Args> 
 inline std::shared_ptr<T> mkptr(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
+
+/** Output */
+template<class T>
+std::ostream & operator<<(std::ostream & out, std::shared_ptr<T> const &t) {
+  if (t) return out << *t;
+  return out << "[null]";
+}
 
 /** Base exception */
 class exception : public std::exception {

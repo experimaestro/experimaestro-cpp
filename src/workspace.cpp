@@ -33,6 +33,7 @@ void Dependency::check() {
 
 Resource::Resource() {}
 Resource::~Resource() {}
+void Resource::init() {}
 
 void Resource::addDependent(ptr<Dependency> const & dependency) {
   _dependents.push_back(dependency);
@@ -56,6 +57,11 @@ void Resource::dependencyChanged(Dependency &dependency,
   throw assertion_error(
       "A resource cannot handle a change in dependency directly");
 }
+
+std::ostream & operator<<(std::ostream &out, Resource const &r) {
+  return out << r._resourceId;
+}
+
 
 // --- Token
 
@@ -139,8 +145,10 @@ CommandLineJob::CommandLineJob(xpm::Path const &locator,
                                ptr<Launcher> const &launcher,
                                ptr<CommandLine> const &command)
     : Job(locator, launcher), _command(command) {
+}
 
-  // Adding dependencies
+void CommandLineJob::init() {
+    // Adding dependencies
   _command->forEach([&](CommandPart &c) -> void { 
     c.addDependencies(*this); 
   });

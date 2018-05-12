@@ -73,6 +73,9 @@ public:
   Resource();
   ~Resource();
 
+  /// Finish the initialization
+  virtual void init();
+
   /// Get the workspace resource ID
   inline ResourceId getId() const { return _resourceId; }
 
@@ -95,6 +98,7 @@ protected:
   virtual void dependencyChanged(Dependency & dependency, bool satisfied);
 
   friend class Dependency;
+  friend std::ostream & operator<<(std::ostream &, Resource const &);
 };
 
 
@@ -219,8 +223,8 @@ public:
   CommandLineJob(Path const & locator, 
     std::shared_ptr<Launcher> const & launcher,
     std::shared_ptr<CommandLine> const & command);
-  
-  virtual void run();
+  virtual void run() override;
+  virtual void init() override;
 private:
   std::shared_ptr<CommandLine> _command;
 };
