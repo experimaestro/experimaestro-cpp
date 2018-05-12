@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include <xpm/common.hpp>
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
 #include "json.hpp"
 #include "filesystem.hpp"
 

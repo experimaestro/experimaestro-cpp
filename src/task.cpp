@@ -5,7 +5,7 @@
 #include <xpm/common.hpp>
 #include <xpm/task.hpp>
 #include <xpm/workspace.hpp>
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
 
 #include <__xpm/common.hpp>
 

@@ -1,5 +1,5 @@
 #include <fstream>
-#include <__xpm/local.hpp>
+#include <xpm/connectors/local.hpp>
 
 namespace xpm {
 

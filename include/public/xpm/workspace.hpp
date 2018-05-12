@@ -8,9 +8,11 @@
 #include <string>
 #include <queue>
 #include <unordered_map>
+#include <map>
 #include <vector>
 #include <mutex>
 
+#include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
 namespace SQLite { class Database; }

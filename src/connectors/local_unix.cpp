@@ -1,6 +1,6 @@
 #ifndef _WIN32
 
-#include <__xpm/local.hpp>
+#include <xpm/connectors/local.hpp>
 #include <__xpm/common.hpp>
 
 // For Windows, see

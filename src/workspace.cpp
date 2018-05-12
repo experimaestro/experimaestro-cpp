@@ -1,6 +1,9 @@
-#include <xpm/launchers.hpp>
 #include <xpm/workspace.hpp>
 #include <xpm/commandline.hpp>
+
+#include <xpm/launchers/launchers.hpp>
+#include <xpm/connectors/connectors.hpp>
+
 
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>

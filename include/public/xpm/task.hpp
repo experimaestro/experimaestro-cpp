@@ -2,7 +2,7 @@
 #define EXPERIMAESTRO_TASK_HPP
 
 #include <xpm/xpm.hpp>
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
 
 namespace xpm {
 

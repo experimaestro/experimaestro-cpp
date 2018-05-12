@@ -28,23 +28,27 @@ set(PUBLIC_HEADERS
         include/public/xpm/xpm.hpp
         include/public/xpm/value.hpp
         include/public/xpm/task.hpp
-        include/public/xpm/launchers.hpp
         include/public/xpm/filesystem.hpp
         include/public/xpm/commandline.hpp
         include/public/xpm/workspace.hpp
         include/public/xpm/logging.hpp
         include/public/xpm/cpp.hpp 
-        
+
+        include/public/xpm/connectors/connectors.hpp
+        include/public/xpm/connectors/ssh.hpp
+        include/public/xpm/connectors/local.hpp
+
+        include/public/xpm/launchers/launchers.hpp
+        include/public/xpm/launchers/oar.hpp
+
         include/public/xpm/rpc/client.hpp
         include/public/xpm/rpc/jsonrpcclient.hpp
 )
 
 set(PRIVATE_HEADERS
     include/private/__xpm/common.hpp
-    include/private/__xpm/xpmssh.hpp
     include/private/__xpm/scriptbuilder.hpp
     include/private/__xpm/jsonserialization.hpp
-    include/private/__xpm/local.hpp
 )
 
 set(SOURCES
@@ -58,17 +62,22 @@ set(SOURCES
         src/workspace.cpp
         src/commandline.cpp
         src/private.cpp
-        src/xpmssh.cpp
-        src/launchers.cpp 
         src/cpp.cpp 
         src/task.cpp 
-        src/local.cpp 
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
-        src/local_unix.cpp
         src/value.cpp
         src/scriptbuilder.cpp
+
+        # Launchers
+        src/launchers/launchers.cpp 
+        src/launchers/oar.cpp 
+
+        # Connectors
+        src/connectors/ssh.cpp        
+        src/connectors/local.cpp        
+        src/connectors/local_unix.cpp        
 
         # RPC sources
         src/rpc/notifications.cpp

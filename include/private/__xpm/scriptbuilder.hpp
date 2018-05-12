@@ -2,7 +2,7 @@
 #define EXPERIMAESTRO_SCRIPTBUILDER_HPP
 
 #include <xpm/filesystem.hpp>
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
 
 namespace xpm {
 

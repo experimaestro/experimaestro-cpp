@@ -10,6 +10,9 @@
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
 #include <xpm/workspace.hpp>
+
+#include <xpm/connectors/connectors.hpp>
+
 #include <__xpm/scriptbuilder.hpp>
 #include <__xpm/common.hpp>
 

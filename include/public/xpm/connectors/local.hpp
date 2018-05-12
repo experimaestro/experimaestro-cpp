@@ -3,7 +3,8 @@
 #ifndef EXPERIMAESTRO__LOCAL_HPP
 #define EXPERIMAESTRO__LOCAL_HPP
 
-#include <xpm/launchers.hpp>
+#include <xpm/connectors/connectors.hpp>
+#include <xpm/launchers/launchers.hpp>
 
 namespace xpm {
 

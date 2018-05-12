@@ -6,7 +6,8 @@
 #include <__xpm/scriptbuilder.hpp>
 #include <__xpm/common.hpp>
 #include <xpm/commandline.hpp>
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
+#include <xpm/connectors/connectors.hpp>
 #include <xpm/workspace.hpp>
 
 DEFINE_LOGGER("scriptbuilder");

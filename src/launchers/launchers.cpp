@@ -1,6 +1,6 @@
-#include <xpm/launchers.hpp>
+#include <xpm/launchers/launchers.hpp>
 #include <__xpm/scriptbuilder.hpp>
-#include <__xpm/local.hpp>
+#include <xpm/connectors/local.hpp>
 
 namespace xpm {
 
@@ -18,11 +18,12 @@ Redirect Redirect::pipe(PipeFunction function) {
   Redirect r(Redirection::PIPE);
   r.function = function;
   return r;
-
 }
+
 Redirect Redirect::none() {
   return Redirect(Redirection::NONE);
 }
+
 Redirect Redirect::inherit() {
   return Redirect(Redirection::INHERIT);
 }
