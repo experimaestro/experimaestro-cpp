@@ -1,13 +1,11 @@
-# Experimaestro
+Tired to **manually** manage your experiments? Experimaestro manager
+gives you a systematic way to write and run experiments where parameters varies.
 
-Experimaestro is an experiment manager based on a server that contains a job scheduler (job dependencies, locking mechanisms) and a framework to write the experiments.
+The overall goals of the experimaestro manager are to:
 
-- A **job scheduler** that handles dependencies between jobs and provides locking mechanisms
+* Decompose experiments into a set of parameterizable tasks
+* Schedule tasks and handle dependencies between tasks
+* Avoids to re-run the same task two times by computing unique task IDs dependending on the parameters
 
-- A **modular experiment description framework**, that allows easy description of the various parts of experiments:
-    - Experiments are written in any language (currently supported: Python)
-    - Tasks can be composed through imperative programming
-
-Experimaestro is in a **alpha** state currently.
-
-<!-- ![A screenshot of experimaestro running](docs/xpm-screenshot.png) -->
+!!! Warning 
+    Experimaestro is in an **alpha** state.
