@@ -5,6 +5,7 @@ pages:
 
 - Basics: 
     - Basics: 'index.md'
+    - Main concepts: 'main concepts.md'
     - Installing: 'installing.md'
 
 - Scheduler:
@@ -30,16 +31,17 @@ theme:
         code: 'Roboto Mono'
 
 markdown_extensions:
+  # https://pypi.org/project/markdown-include
+  - markdown_include.include:
+       base_path: .
   - codehilite
   - admonition
   - pymdownx.superfences
 
 extra_javascript:
-    - jquery-ui.min.js
     - xpm.js
 
 extra_css:
-    - jquery-ui.min.css
     - xpm.css
 
 repo_url: 'https://github.com/bpiwowar/experimaestro'

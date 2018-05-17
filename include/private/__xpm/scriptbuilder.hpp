@@ -50,6 +50,9 @@ public:
 
     /// Write the script
     virtual Path write(Workspace & ws, Connector const & connector, Path const & path, Job const & job) = 0;
+
+    static const Path getDonePath(Path const &locator);
+    static const Path getStartLockPath(Path const &locator);
 };
 
 

@@ -77,10 +77,21 @@ public:
   virtual std::shared_ptr<Process> start() = 0;
 
   std::string workingDirectory;
+
+  /// Standard input redirection
   Redirect stdin;
+
+  /// Standard output redirection
   Redirect stdout;
+
+  /// Standard error redirection
   Redirect stderr;
+
+  /// Should the process be detached
+  bool detach;
   Environment environment;
+
+  /// The command to execute
   std::vector<std::string> command;
 };
 

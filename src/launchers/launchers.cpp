@@ -32,14 +32,6 @@ Process::~Process() {}
 
 ProcessBuilder::~ProcessBuilder() {}
 
-
-
-Connector::~Connector() {}
-std::string Connector::resolve(Path const & path, Path const & base) const {
-  return Path(resolve(path)).relativeTo(resolve(base)).toString();
-}
-
-
 Launcher::Launcher(ptr<Connector> const & connector) : _connector(connector) {
 }
 Launcher::~Launcher() {}

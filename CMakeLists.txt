@@ -19,7 +19,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
 
 # ---
 
-add_definitions("-Wall")
+add_definitions("-Wall -Werror=return-type")
 enable_testing()
 
 
@@ -75,6 +75,7 @@ set(SOURCES
         src/launchers/oar.cpp 
 
         # Connectors
+        src/connectors/connectors.cpp        
         src/connectors/ssh.cpp        
         src/connectors/local.cpp        
         src/connectors/local_unix.cpp        

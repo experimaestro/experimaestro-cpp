@@ -27,6 +27,13 @@ std::string ShScriptBuilder::protect_quoted(std::string const &string) {
 
 ScriptBuilder::~ScriptBuilder() {}
 
+const Path ScriptBuilder::getDonePath(Path const &locator) {
+  return locator.changeExtension("done");
+}
+const Path ScriptBuilder::getStartLockPath(Path const &locator) {
+  return locator.changeExtension("lock.start");
+}
+
 ShScriptBuilder::ShScriptBuilder() : shPath("/bin/sh") {}
 
 Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path const &path,
@@ -34,9 +41,9 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   // First generate the run file
   Path directory = path.parent();
   Path scriptpath = directory.resolve({path.name() + ".sh"});
-  Path donepath = directory.resolve({path.name() + ".done"});
+  Path donepath = getDonePath(path);
   Path exitcodepath = directory.resolve({path.name() + ".code"});
-  Path startlockPath = directory.resolve({path.name() + ".lock.start"});
+  Path startlockPath = getStartLockPath(path);
   Path pidFile = directory.resolve({path.name() + ".pid"});
 
   LOGGER->info("Writing script {}", scriptpath);
@@ -140,15 +147,6 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   out << "# Set trap to cleanup when exiting" << std::endl;
   out << "trap cleanup 0" << std::endl;
 
-  // Write the command
-  out << "code=$?" << std::endl;
-  out << "if test $code -ne 0; then" << std::endl;
-  out << " echo $code > \""
-      << protect_quoted(connector.resolve(exitcodepath, directory)) << "\""
-      << std::endl;
-
-  out << " exit $code" << std::endl;
-  out << "fi" << std::endl;
 
   out << std::endl
     << "checkerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && "
@@ -166,7 +164,15 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   out << " & " << std::endl;
   out << "PID=$!" << std::endl;
   out << "wait $PID" << std::endl;
+  out << "code=$?" << std::endl;
+  out << "if test $code -ne 0; then" << std::endl;
+  out << " echo $code > \""
+      << protect_quoted(connector.resolve(exitcodepath, directory)) << "\""
+      << std::endl;
 
+  out << " exit $code" << std::endl;
+  out << "fi" << std::endl;
+  
   out << "echo 0 > \"" 
     << protect_quoted(connector.resolve(exitcodepath, directory))
     << "\"" << std::endl;

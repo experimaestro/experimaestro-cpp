@@ -46,6 +46,8 @@ namespace xpm {
 #endif
 
 %include "std_string.i"
+%include "std_map.i"
+
 
 #ifdef SWIGJAVA
 %include "java/common.i"
@@ -153,6 +155,7 @@ namespace xpm {
 
 // Template instanciation
 %template(StringList) std::vector<std::string>;
+%template(String2String) std::map<std::string, std::string>;
 
 %exception {
     try {

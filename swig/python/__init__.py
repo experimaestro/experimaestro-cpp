@@ -4,6 +4,7 @@ import json
 import sys
 import inspect
 import os.path as op
+import os
 import logging
 import pathlib
 from pathlib import Path as PPath
@@ -33,6 +34,8 @@ JSON_ENCODER = JSONEncoder()
 # Flag for simulating
 SUBMIT_TASKS = True
 
+# Default launcher
+DEFAULT_LAUNCHER = None
 
 # --- From C++ types to Python
 
@@ -152,6 +155,8 @@ class PyObject:
     def submit(self, *, workspace=None, launcher=None, send=SUBMIT_TASKS):
         """Submit this task"""
         if send:
+            print(DEFAULT_LAUNCHER)
+            launcher = launcher or DEFAULT_LAUNCHER
             logging.info("Submitting")
             self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.configuration)
         return self
@@ -228,7 +233,7 @@ class PythonRegister(Register):
         sv.object().run()
 
     def createObject(self, sv):
-        type = self.registered.get(sv.type().typeName(), None)
+        type = self.registered.get(sv.type().typeName(), PyObject)
         logger.info("Creating object for %s [%s]", sv, type)
         pyobject = type()
         pyobject._prepare()
@@ -421,3 +426,11 @@ tasks = _Definitions(register.getTask)
 
 def workspace(path):
     Workspace(str(path)).current()
+
+def set_launcher(launcher):
+    global DEFAULT_LAUNCHER
+    DEFAULT_LAUNCHER = launcher
+
+launcher = DirectLauncher(LocalConnector())
+launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
+set_launcher(launcher)

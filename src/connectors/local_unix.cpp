@@ -11,6 +11,7 @@
 #include <mutex>
 #include <signal.h>
 #include <thread>
+#include <fstream>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -123,8 +124,12 @@ class LocalProcess : public Process {
   int pid = -1;
 
 public:
+  ~LocalProcess() {
+    LOGGER->debug("Deleting LocalProcess", (void*)this);
+  }
   LocalProcess(LocalProcessBuilder &builder) {
     // Pipes for the different streams
+    LOGGER->debug("Creating LocalProcess", (void*)this);
     Pipe stdin_p(builder.stdin, false);
     Pipe stdout_p(builder.stdout, true);
     Pipe stderr_p(builder.stderr, true);
@@ -301,28 +306,22 @@ FileType LocalConnector::fileType(Path const & path) const {
 
 }
 
-void LocalConnector::mkdirs(Path const & path, bool createParents, bool errorExists) const {
-  FileType type = fileType(path);
-  if (type == FileType::DIRECTORY) {
-    if (errorExists) throw io_error(fmt::format("Directory {} already exists", path));
-    return;
-  } else if (type != FileType::UNEXISTING) {
-    if (errorExists) throw io_error(fmt::format("Path {} is not a directory", path));
-  }
-
-  // Create parents if needed
-  Path parent = path.parent();
-  if (createParents) {
-    mkdirs(path.parent(), true, false);
-  }
-
+void LocalConnector::mkdir(Path const & path) const {
   // Make directory
-  if (mkdir(path.localpath().c_str(), 0777) != 0) {
+  if (::mkdir(path.localpath().c_str(), 0777) != 0) {
     throw io_error(fmt::format("Could not create directory {} ({})",
       path, strerror(errno))); 
   } 
-  
 }
+
+void LocalConnector::touch(Path const &path) const {
+  std::ofstream out(path.localpath());
+}
+
+void LocalConnector::deleteTree(Path const &path, bool recursive) const {
+  NOT_IMPLEMENTED();
+}
+
 
 } // namespace
 

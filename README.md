@@ -1,7 +1,5 @@
 # Experimaestro
 
-<!-- A [full documentation is available](http://bpiwowar.github.io/experimaestro/) -->
-
 Experimaestro is an experiment manager based on a server that contains a job scheduler (job dependencies, locking mechanisms) and a framework to write the experiments.
 
 - A **job scheduler** that handles dependencies between jobs and provides locking mechanisms

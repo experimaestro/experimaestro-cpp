@@ -14,10 +14,12 @@ class LocalProcess;
 class LocalConnector : public Connector {
 public:
   virtual std::shared_ptr<ProcessBuilder> processBuilder() const override;
-  std::string resolve(Path const & path) const override;
   virtual void setExecutable(Path const & path, bool flag) const override;
-  virtual void mkdirs(Path const & path, bool createParents = false, bool errorExists = false) const override;
+  virtual void mkdir(Path const & path) const override;
   virtual FileType fileType(Path const & path) const override;
+
+  virtual void touch(Path const &path) const override;
+  virtual void deleteTree(Path const &path, bool recursive=false) const override;
 
   std::unique_ptr<std::ostream> ostream(Path const & path) const override;
   std::unique_ptr<std::istream> istream(Path const & path) const override;

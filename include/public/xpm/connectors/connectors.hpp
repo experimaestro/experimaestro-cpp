@@ -1,6 +1,8 @@
 #ifndef EXPERIMAESTRO_CONNECTORS_HPP
 #define EXPERIMAESTRO_CONNECTORS_HPP
 
+#include <map>
+
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
@@ -10,8 +12,15 @@ class ProcessBuilder;
 
 enum struct FileType { UNEXISTING, FILE, DIRECTORY, PIPE, OTHER };
 
+
 /** Access to a host and command line process */
 class Connector NOSWIG(: public std::enable_shared_from_this<Connector>) {
+  struct Mapping {
+    std::string serverpath;
+    std::string localpath;
+  };
+
+  std::map<std::string, std::vector<Mapping>> _mounts;
 public:
   virtual ~Connector();
 
@@ -19,7 +28,7 @@ public:
   virtual std::shared_ptr<ProcessBuilder> processBuilder() const = 0;
 
   /** Resolve a path so it is relative to the connector */
-  virtual std::string resolve(Path const &path) const = 0;
+  std::string resolve(Path const &path) const;
 
   /**
    * Resolve a path so it is relative to the other path on the connector
@@ -37,14 +46,30 @@ public:
    * @param errorExists throw an error if the directory exists
    * @throws ioexception If an error occurs
    */
-  virtual void mkdirs(Path const &path, bool createParents = false,
-                      bool errorExists = false) const = 0;
+  void mkdirs(Path const &path, bool createParents = false,
+                      bool errorExists = false) const;
+
+  /**
+   * Make one directory
+   * @throws ioexception If the directory exists or cannot be created
+   */
+  virtual void mkdir(Path const &path) const = 0;
 
   /**
    * Returns file type
    * @throws ioexception If an error occurs
    */
   virtual FileType fileType(Path const &path) const = 0;
+
+  /**
+   * Create a file
+   */
+  virtual void touch(Path const &path) const = 0;
+
+  /**
+   * Delete a file / directory
+   */
+  virtual void deleteTree(Path const &path, bool recursive=false) const = 0;
 
 #ifndef SWIG
   /** Get an output stream */

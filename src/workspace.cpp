@@ -170,15 +170,17 @@ void CommandLineJob::run() {
 
   scriptBuilder->command = _command;
   Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
+  connector.touch(scriptBuilder->getStartLockPath(_locator));
   
   LOGGER->info("Starting job {}", _locator);
+  processBuilder->environment = _launcher->environment();
   processBuilder->command.push_back(
       _launcher->connector()->resolve(scriptPath));
   processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
   processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
 
   ptr<Process> process = processBuilder->start();
-  std::thread([this, &process]() {
+  std::thread([this, process]() {
     // Wait for end of execution
     LOGGER->info("Waiting for job {} to finish", _locator);
     int exitCode = process->exitCode();

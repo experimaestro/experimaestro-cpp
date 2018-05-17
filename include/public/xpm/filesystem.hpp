@@ -20,8 +20,8 @@ namespace xpm {
  */
 class Path {
 private:
-  std::string share;
-  std::string path;
+  std::string _share;
+  std::string _path;
 
 public:
   Path();
@@ -47,11 +47,20 @@ public:
     return Path(*this, relative);
   }
 
+  /// Change extension
+  Path changeExtension(std::string const & extension) const;
+
   /// Returns a string representation of the path (that can be parsed)
   std::string toString() const;
 
   /// Returns true if this is a relative path
   bool isRelative() const;
+
+
+  /** Local part.
+   * Returns a path on the current host
+   */
+  std::string const & localpart() const;
 
   /** Local path.
    * Returns a path on the current host
@@ -64,6 +73,11 @@ public:
    */
   std::string name() const;
   
+  /**
+   * Returns the share
+   */
+  std::string share() const;
+
   /**
    * Is local
    */

@@ -22,9 +22,11 @@ std::shared_ptr<spdlog::logger> logger(std::string const &name);
 class StructuredValue;
 class TypeName;
 class Type;
+class Path;
 
 std::ostream &operator<<(std::ostream &os, const TypeName &c);
 std::ostream &operator<<(std::ostream &os, const Type &c);
+std::ostream &operator<<(std::ostream &os, const Path &c);
 
 struct Digest {
   SHA_CTX context;

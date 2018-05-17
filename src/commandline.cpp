@@ -345,9 +345,9 @@ void Command::forEach(std::function<void(CommandPart &)> f) {
 void Command::output(CommandContext & context, std::ostream & out) const {
   bool first = true;
   for(auto & c : components) {
-    c->output(context, out);
     if (first) first = false;
     else out << " ";
+    c->output(context, out);
   }
 }
 

@@ -25,98 +25,115 @@ std::ostream &operator<<(std::ostream & out, Path const & path) {
 Path::Path(std::string const &path) : Path("", path) {
 }
 
-Path::Path() : path("/")  {
+Path::Path() : _path("/")  {
 }
 
 bool operator==(Path const & lhs, Path const & rhs) {
-  return (lhs.share == rhs.share)
-    && (lhs.path == rhs.path);
+  return (lhs._share == rhs._share)
+    && (lhs._path == rhs._path);
 }
 
 
 Path::Path(Path const &parent, std::initializer_list<std::string> const &relative) :
-    Path(parent.share, std::accumulate(relative.begin(), relative.end(), parent.path == "/" ?  "" :  parent.path,
+    Path(parent._share, std::accumulate(relative.begin(), relative.end(), parent._path == "/" ?  "" :  parent._path,
                           [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
 
 }
 Path::Path(Path const &parent, std::vector<std::string> const &relative) :
-    Path(parent.share, std::accumulate(relative.begin(), relative.end(), parent.path == "/" ?  "" :  parent.path,
+    Path(parent._share, std::accumulate(relative.begin(), relative.end(), parent._path == "/" ?  "" :  parent._path,
                           [](std::string &s, const std::string &piece) -> std::string { return s += "/" + piece; })) {
 
 }
 
-Path::Path(std::string const &share, std::string const &path) : share(share), path(path) {
+Path::Path(std::string const &share, std::string const &path) : _share(share), _path(path) {
   // TODO: perform some cleanup
 }
 
 
 Path Path::parent() const {
-  unsigned long i = path.rfind('/');
+  unsigned long i = _path.rfind('/');
   if (i == 0) {
-    return Path(share, "/");
+    return Path(_share, "/");
   }
   if (i != std::string::npos) {
-    std::string parentpath = path.substr(0, i);
-    return Path(share, parentpath);
+    std::string parentpath = _path.substr(0, i);
+    return Path(_share, parentpath);
   }
 
   return *this;
 }
 
+Path Path::changeExtension(std::string const & extension) const {
+  auto pos = _path.rfind("/");
+  if (pos == std::string::npos) pos = 0;
+  pos = _path.find('.', pos);
+  return Path(_share, pos == std::string::npos ? 
+    _path + "." + extension 
+    : _path.substr(0, pos) + extension
+  );
+}
 
 
 std::string Path::toString() const {
-  if (share.empty()) return path;
-  return share + ":" + path;
+  if (_share.empty()) return _path;
+  return _share + ":" + _path;
+}
+
+std::string Path::share() const {
+  return _share;
+}
+
+std::string const & Path::localpart() const {
+  return _path;
 }
 
 std::string Path::name() const {
-  auto pos = path.rfind('/');
+  auto pos = _path.rfind('/');
 
-  return pos == std::string::npos ? path : path.substr(pos + 1);
+  return pos == std::string::npos ? _path : _path.substr(pos + 1);
 }
 
 bool Path::isRelative() const {
-  return path[0] != '/';
+  return _path[0] != '/';
 }
 
 std::string Path::localpath() const {
   if (!isLocal())
     throw std::logic_error("Path " + toString() + " is not local");
-  return path;
+  return _path;
 }
 
 bool Path::isLocal() const {
-  return share.empty();
+  return _share.empty();
 }
 
 bool Path::isRoot() const {
-  return path == "/";
+  return _path == "/";
 }
 
 Path Path::relativeTo(Path const & other) const {
   if (isRelative() || other.isRelative()) 
     throw argument_error(fmt::format("Cannot relativize with relative paths {} and {}",
       this->toString(), other.toString()));
-  if (share != other.share) return *this;
+  if (_share != other._share) return *this;
 
-  std::string const & b = other.path;
+  std::string const & b = other._path;
 
   // TODO: normalize paths
   
   // TODO: find common root
   size_t i = 0;
   size_t last_slash = 0;
-  while (b[i] == path[i]) {
+  while (b[i] == _path[i]) {
     if (b[i] == '/') last_slash = i;
     ++i;
   }
 
   if (b.size() == i) {
-    if (path.size() == i) {
+    if (_path.size() == i) {
       return Path(".");
     }
-    if (path[i] == '/') {
+    if (_path[i] == '/') {
       last_slash = i;
     }
   }
@@ -127,7 +144,7 @@ Path Path::relativeTo(Path const & other) const {
   while ((pos = b.find('/', pos + 1)) != std::string::npos) {
     oss << "../";
   }
-  oss << path.substr(last_slash + 1);
+  oss << _path.substr(last_slash + 1);
 
   Path relative(oss.str());
   return relative;
