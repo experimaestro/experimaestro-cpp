@@ -1,11 +1,9 @@
-.classpath
 .DS_Store
 .project
-.idea
-.gradle
 .vscode
 
-*.iml
+/languages/java/bin/
+
 *.pyc
 
 project.properties
@@ -14,19 +12,8 @@ log4j.properties
 
 build
 
-/target
 /site
 
-/server/build
-
-/server/src/main/ts/built
-/server/node_modules
-/server/out
-/server/bin/
-/server/jsch-extension/bin/
-/server/jsch-nio/bin//cpplib/languages/java/bin/
-/server/jsch-extension/out
-/server/jsch-nio/out
 /cpplib/languages/java/bin/
 .idea
 .pypirc

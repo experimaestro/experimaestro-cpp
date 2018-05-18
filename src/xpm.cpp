@@ -201,20 +201,29 @@ void Digest::updateDigest(StructuredValue const & sv) {
     updateDigest(0);
   }
 
-  for (auto &item: sv._content) {
-    auto const &key = item.first;
+  if (sv.value().defined()) {
+    // If there is a value, ignore the rest
+    // of the structure
+    updateDigest(0);
+    sv.value().updateDigest(*this);
+  } else {
+    updateDigest(1);
+    for (auto &item: sv._content) {
+      auto const &key = item.first;
 
-    if (item.second->canIgnore()) {
-      // Remove keys that can be ignored (e.g. paths)
-      continue;
+      if (item.second->canIgnore()) {
+        // Remove keys that can be ignored (e.g. paths)
+        continue;
+      }
+
+      // Update digest with key
+      updateDigest(key);
+
+      // Update digest with *value digest* (this allows digest caching)
+      updateDigest(item.second->digest());
     }
-
-    // Update digest with key
-    updateDigest(key);
-
-    // Update digest with *value digest* (this allows digest caching)
-    updateDigest(item.second->digest());
   }
+
 }
 
 /// Internal digest function

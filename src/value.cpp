@@ -435,8 +435,7 @@ json Value::toJson() const {
   throw std::out_of_range("Scalar type is not known (converting to json)");
 }
 
-std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
-  Digest d;
+void Value::updateDigest(Digest &d) const {
 
   d.updateDigest(scalarType());
 
@@ -469,8 +468,6 @@ std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
         d.updateDigest(*element);
       }
   }
-
-  return d.get();
 }
 
 bool Value::defined() const {

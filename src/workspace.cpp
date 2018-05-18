@@ -219,6 +219,7 @@ Workspace::Workspace(std::string const &path) : _path(path) {
 }
 
 Workspace::~Workspace() {
+  LOGGER->info("Waiting that all tasks are completed");
 }
 
 
@@ -294,5 +295,13 @@ bool Workspace::has(std::string const &key) const {
   return find(key) != _variables.end();
 }
 
+void Workspace::experiment(std::string const & name) {
+  _experiment = name;
+}
+
+
+void Workspace::waitUntilTaskCompleted() {
+  LOGGER->warn("Wait until completed not implemented...");
+}
 
 } // namespace xpm

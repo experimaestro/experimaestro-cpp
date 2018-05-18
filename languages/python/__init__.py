@@ -155,7 +155,6 @@ class PyObject:
     def submit(self, *, workspace=None, launcher=None, send=SUBMIT_TASKS):
         """Submit this task"""
         if send:
-            print(DEFAULT_LAUNCHER)
             launcher = launcher or DEFAULT_LAUNCHER
             logging.info("Submitting")
             self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.configuration)
@@ -424,8 +423,15 @@ types = _Definitions(register.getType)
 tasks = _Definitions(register.getTask)
 
 
-def workspace(path):
-    Workspace(str(path)).current()
+def experiment(path, name):
+    """Defines an experiment
+    
+    :param path: The working directory for the experiment
+    :param name: The name of the experiment
+    """
+    workspace = Workspace(str(path))
+    workspace.current()
+    workspace.experiment(name)
 
 def set_launcher(launcher):
     global DEFAULT_LAUNCHER
@@ -434,3 +440,9 @@ def set_launcher(launcher):
 launcher = DirectLauncher(LocalConnector())
 launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
 set_launcher(launcher)
+
+
+# --- Wait for tasks
+
+import atexit
+atexit.register(Workspace.waitUntilTaskCompleted)

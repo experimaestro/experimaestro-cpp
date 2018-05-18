@@ -167,7 +167,7 @@ add_custom_target(documentation DEPENDS documentation.i)
 
 # --- General SWIG configuration
 
-set_source_files_properties(swig/xpm.i PROPERTIES CPLUSPLUS ON)
+set_source_files_properties(languages/swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
 # --- Python support
 
@@ -191,11 +191,11 @@ if (true)
     set(CMAKE_SWIG_FLAGS "-builtin")
 
     # Build module experimaestro
-    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} swig/python/xpm.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
+    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} languages/python/xpm.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
     if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
-        swig_add_module(experimaestro_python python swig/xpm.i)
+        swig_add_module(experimaestro_python python languages/swig/xpm.i)
     else()
-        swig_add_library(experimaestro_python LANGUAGE python SOURCES swig/xpm.i)
+        swig_add_library(experimaestro_python LANGUAGE python SOURCES languages/swig/xpm.i)
     endif()
 
     # Determine appropriate loader path
@@ -223,8 +223,8 @@ if (true)
 		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 		install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     endforeach()
-    configure_file(swig/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
-	install(FILES swig/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    configure_file(languages/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
+	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 	install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation)
 

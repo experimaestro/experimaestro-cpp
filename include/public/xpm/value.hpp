@@ -113,8 +113,7 @@ class Value {
 
   /** @} */
 
-  virtual std::array<unsigned char, DIGEST_LENGTH> digest() const;
-
+  NOSWIG(void updateDigest(Digest &) const);
 
   // Array methods (throw an exception if the value is not an array)
 

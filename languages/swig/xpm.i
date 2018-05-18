@@ -50,11 +50,11 @@ namespace xpm {
 
 
 #ifdef SWIGJAVA
-%include "java/common.i"
+%include "../java/common.i"
 #endif
 
 #ifdef SWIGPYTHON
-%include "python/common.i"
+%include "../python/common.i"
 #endif
 
 // Support for intxx_t
@@ -124,7 +124,7 @@ namespace xpm {
 %feature("director") xpm::Object;
 
 #ifdef SWIGPYTHON
-%include "python/xpm.i"
+%include "../python/xpm.i"
 #endif
 
 #ifdef SWIGJAVA

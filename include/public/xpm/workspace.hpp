@@ -279,9 +279,19 @@ public:
 
   /// Current workspace 
   static std::shared_ptr<Workspace> currentWorkspace();
+
+  /// Experiment
+  void experiment(std::string const & name);
+
+  /// Wait that all tasks are completed
+  static void waitUntilTaskCompleted();
+
 private:
   /// Working directory path
   Path _path;
+
+  /// Current experiment name
+  std::string _experiment;
 
   /// All the jobs
   std::unordered_map<Path, std::shared_ptr<Job>> _jobs;
@@ -295,6 +305,7 @@ private:
   /// SQL Lite
   std::unique_ptr<SQLite::Database> _db;
 };
+
 
 }
 

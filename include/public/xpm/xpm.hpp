@@ -290,6 +290,9 @@ class StructuredValue
   /// Get value
   Value & value() { return _value; }
 
+  /// Get value
+  NOSWIG(Value const & value() const { return _value; })
+
   /// Get resource
   inline std::shared_ptr<Resource> const & resource() const { return _resource; }
 
