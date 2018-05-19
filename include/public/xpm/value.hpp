@@ -94,16 +94,16 @@ class Value {
   Path getPath() const;
 
   /// Returns the string
-  virtual std::string asString();
+  virtual std::string asString() const;
 
   /// Returns the string
-  virtual bool asBoolean();
+  virtual bool asBoolean() const;
 
   /// Returns an integer
-  virtual long asInteger();
+  virtual long asInteger() const;
 
   /// Returns an integer
-  virtual double asReal();
+  virtual double asReal() const;
 
   /// Returns a path
   virtual Path asPath() const;

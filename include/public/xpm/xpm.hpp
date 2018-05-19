@@ -220,6 +220,24 @@ class StructuredValue
    */
   nlohmann::json toJson();
 
+  /// Returns the string
+  std::string asString() const;
+
+  /// Returns the string
+  bool asBoolean() const;
+
+  /// Returns an integer
+  long asInteger() const;
+
+  /// Returns an integer
+  double asReal() const;
+
+  /// Returns a path
+  Path asPath() const;
+
+  /// Returns as array
+  Value::Array asArray() const;
+
   /**
    *  Whether this element can be ignored for digest computation
    */

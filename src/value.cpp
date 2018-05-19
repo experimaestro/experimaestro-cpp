@@ -272,7 +272,7 @@ Value &Value::operator=(Value const &other) {
   return *this;
 }
 
-long Value::asInteger() {
+long Value::asInteger() const {
   switch (_scalarType) {
     case ValueType::NONE: 
     case ValueType::UNSET: 
@@ -295,7 +295,7 @@ long Value::asInteger() {
   }
 
 }
-double Value::asReal() {
+double Value::asReal() const {
   switch (_scalarType) {
     case ValueType::NONE:
     case ValueType::UNSET: 
@@ -338,7 +338,7 @@ Path Value::asPath() const {
 }
 
 
-bool Value::asBoolean() {
+bool Value::asBoolean() const {
   switch (_scalarType) {
     case ValueType::NONE:return false;
 
@@ -379,7 +379,7 @@ Value::Array Value::asArray() const {
 }
 
 
-std::string Value::asString() {
+std::string Value::asString() const {
   switch (_scalarType) {
     case ValueType::UNSET:
     case ValueType::NONE:

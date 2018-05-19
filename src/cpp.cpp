@@ -30,6 +30,14 @@ void currentRegister(ptr<Register> const &_register) {
   CURRENTREGISTER = _register;
 }
 
+void CppRegister::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) {
+
+}
+
+  /// Create object
+std::shared_ptr<Object> CppRegister::createObject(std::shared_ptr<StructuredValue> const & sv) {
+  return nullptr;
+}
 
 
 }

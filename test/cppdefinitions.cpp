@@ -65,14 +65,16 @@ XPM_SIMPLETASK("task.b1", TypeB1);
 
 TEST(CppInterface, missingArgument) {
   auto o = currentRegister()->build(R"({ "$type": "TypeA" })");
-  ASSERT_THROW(o->validate(true), xpm::argument_error);
+  ASSERT_THROW(o->validate(), xpm::argument_error);
 }
 
 TEST(CppInterface, basic) {
-  auto o = currentRegister()->build(
+  auto sv = currentRegister()->build(
       R"({ "$type": "TypeA", "name": "a name", "x": 1 })"
   );
-  o->validate(true);
+  sv->validate();
+
+  auto o = sv->object();
 
   TypeA &a = dynamic_cast<TypeA&>(*o);
   ASSERT_EQ(a.name, "a name");
@@ -82,12 +84,10 @@ TEST(CppInterface, basic) {
 TEST(CppInterface, composed) {
   auto o = currentRegister()->build(R"({ "$type": "TypeB1", "x": 1, "a": { "$type": "TypeA", "x": 1 } })");
 
-  EXPECT_PRED_FORMAT1(AssertType<TypeB1>, o.get());
-  auto & b1 = dynamic_cast<TypeB1&>(*o);
-  EXPECT_PRED_FORMAT1(AssertType<TypeA>, b1.a.get());
-
+  EXPECT_PRED_FORMAT1(AssertType<TypeB1>, o->object().get());
+  auto & b1 = dynamic_cast<TypeB1&>(*o->object());
   ASSERT_EQ(b1.a->x, 1);
 
-  o->validate(true);
+  o->validate();
 }
 

@@ -514,6 +514,57 @@ bool StructuredValue::get(StructuredValue::Flag flag) const {
   return (Flags)flag & _flags;
 }
 
+
+
+/// Returns the string
+std::string StructuredValue::asString() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asString();
+}
+
+/// Returns the string
+bool StructuredValue::asBoolean() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asBoolean();
+}
+
+/// Returns an integer
+long StructuredValue::asInteger() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asInteger();
+}
+
+/// Returns an integer
+double StructuredValue::asReal() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asReal();
+}
+
+/// Returns a path
+Path StructuredValue::asPath() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asPath();
+}
+
+/// Returns as array
+Value::Array StructuredValue::asArray() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asArray();
+}
+
+
 // ---
 // --- Task
 // ---
