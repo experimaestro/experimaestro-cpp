@@ -84,7 +84,7 @@ TEST(CppInterface, basic) {
 TEST(CppInterface, composed) {
   auto o = currentRegister()->build(R"({ "$type": "TypeB1", "x": 1, "a": { "$type": "TypeA", "x": 1 } })");
 
-  EXPECT_PRED_FORMAT1(AssertType<TypeB1>, o->object().get());
+  ASSERT_PRED_FORMAT1(AssertType<TypeB1>, o->object().get());
   auto & b1 = dynamic_cast<TypeB1&>(*o->object());
   ASSERT_EQ(b1.a->x, 1);
 
