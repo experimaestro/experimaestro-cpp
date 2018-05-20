@@ -11,10 +11,12 @@ find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
-find_package(YamlCPP REQUIRED)
+# find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
-
+option(YAML_CPP_BUILD_TESTS NO)
+option(YAML_CPP_BUILD_CONTRIB NO)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
 
 # ---
@@ -92,7 +94,7 @@ list(APPEND LINKED_LIBRARIES
     ${LIBWEBSOCKETS_LIBRARIES} 
     ${LIBSSH_LIBRARY} 
     ${CMAKE_THREAD_LIBS_INIT} 
-    ${LIBYAMLCPP_LIBRARY} 
+    yaml-cpp
     SQLiteCpp
     sqlite3
     )
