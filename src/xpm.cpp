@@ -89,6 +89,7 @@ std::string TypeName::localName() const {
 // ---
 
 Object::~Object() {}
+void Object::setValue(std::string const &name, std::shared_ptr<StructuredValue> const & value) {}
 
 void Object::run() {
   throw assertion_error("Object is not a task: cannot run it!");
@@ -256,6 +257,19 @@ ptr<StructuredValue> StructuredValue::set(const std::string &key, ptr<Structured
 
   auto it = _content.find(key);
   _content[key] = value;
+
+  // Set default / ignore
+  auto itA = type()->arguments().find(key);
+  if (itA != type()->arguments().end()) {
+    auto & argument = *itA->second;
+    if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+      LOGGER->debug("Value is default");
+      value->set(Flag::DEFAULT, true);
+    }
+    if (argument.ignore()) {
+      value->set(Flag::IGNORE, true);
+    }
+  }
 
   // And for the object
   setValue(key, value);
@@ -476,17 +490,11 @@ void StructuredValue::validate() {
         auto value = get(argument.name());
         LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
 
-        // If the value is default, add a flag
-        if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-          LOGGER->debug("Value is default");
-          value->set(Flag::DEFAULT, true);
-        } else {
-          // Check if the declared type corresponds to the value type
-          if (!entry.second->type()->accepts(value->type())) {
-            throw argument_error(
-                "Argument " + argument.name() + " type is  " + value->type()->toString() 
-                + ", but requested type was " + entry.second->type()->toString());
-          }
+        // Check if the declared type corresponds to the value type
+        if (!entry.second->type()->accepts(value->type())) {
+          throw argument_error(
+              "Argument " + argument.name() + " type is  " + value->type()->toString() 
+              + ", but requested type was " + entry.second->type()->toString());
         }
 
         LOGGER->debug("Validating {}...", argument.name());

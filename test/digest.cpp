@@ -5,6 +5,7 @@
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
 #include <gtest/gtest.h>
+#include <xpm/cpp.hpp>
 
 //using nlohmann::json;
 using namespace xpm;
@@ -30,16 +31,30 @@ TEST(Digest, subkeys) {
   EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 
+
 TEST(Digest, ignore) {
-  Register r;
-  auto v0 = r.build(R"({ "a": 1})");
-  auto v1 = r.build(R"({ "a": { "$value": 1 }, "b": { "$value": 2, "$ignore": true }})");
+  auto r = mkptr<CppRegister>();
+
+  SimpleCppTypeBuilder("ignore", r)
+    .argument<int>("a").required(true)
+    .argument<int>("b").required(true).ignore(true);
+
+  auto v0 = r->build(R"({ "a": 1, "$type": "ignore" })");
+  auto v1 = r->build(R"({ "a": { "$value": 1 }, "b": { "$value": 2 },  "$type": "ignore"})");
   EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 
+
+
+
 TEST(Digest, default) {
-  Register r;
-  auto v0 = r.build(R"({ "a": 1})");
-  auto v1 = r.build(R"({ "a": { "$value": 1 }, "b": { "$value": 2, "$default": true }})");
+  auto r = mkptr<CppRegister>();
+
+  SimpleCppTypeBuilder("default", r)
+    .argument<int>("a").required(true)
+    .argument<int>("b").required(true).defaultValue(2);
+
+  auto v0 = r->build(R"({ "a": 1, "$type": "default" })");
+  auto v1 = r->build(R"({ "a": { "$value": 1 }, "b": { "$value": 2 }, "$type": "default" })");
   EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }

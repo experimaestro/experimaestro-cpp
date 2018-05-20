@@ -5,6 +5,7 @@
 #ifndef EXPERIMAESTRO_COMMON_HPP
 #define EXPERIMAESTRO_COMMON_HPP
 
+#include <memory>
 #include <string>
 #include <exception>
 #include <iostream>

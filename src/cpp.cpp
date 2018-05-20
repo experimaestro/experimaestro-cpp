@@ -10,33 +10,37 @@ namespace xpm {
 ptr<CommandPath> EXECUTABLE_PATH = std::make_shared<CommandPath>(Path("."));
 
 namespace {
-  ptr<Register> CURRENTREGISTER;
+  ptr<CppRegister> CURRENTREGISTER;
   void init() {
     static bool initialized = false;
     if (!initialized) {
-      CURRENTREGISTER = std::make_shared<Register>();
+      CURRENTREGISTER = std::make_shared<CppRegister>();
 
       initialized = true;
     }
   }
 }
 
-ptr<Register> currentRegister() {
+ptr<CppRegister> currentRegister() {
   init();
   return CURRENTREGISTER;
 }
 
-void currentRegister(ptr<Register> const &_register) {
+void currentRegister(ptr<CppRegister> const &_register) {
   CURRENTREGISTER = _register;
 }
 
 void CppRegister::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) {
-
 }
 
-  /// Create object
+/// Create object
 std::shared_ptr<Object> CppRegister::createObject(std::shared_ptr<StructuredValue> const & sv) {
-  return nullptr;
+  auto it = constructors.find(sv->type());
+  if (it == constructors.end()) {
+    return mkptr<DefaultCppObject>();
+  }
+
+  return it->second();
 }
 
 

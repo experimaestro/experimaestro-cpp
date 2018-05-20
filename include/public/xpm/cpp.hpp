@@ -5,24 +5,40 @@
 #ifndef EXPERIMAESTRO_CPP_HPP
 #define EXPERIMAESTRO_CPP_HPP
 
-#include "common.hpp"
-#include "register.hpp"
-#include "value.hpp"
-#include "xpm.hpp"
+#include <map>
+
+#include <xpm/common.hpp>
+#include <xpm/register.hpp>
+#include <xpm/value.hpp>
+#include <xpm/xpm.hpp>
 
 namespace xpm {
 
+template<class T> struct CppType;
+
 /// Register for C++ projects
 class CppRegister : public Register {
+public:
   /// Run task
   virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) override;
 
   /// Create object
   virtual std::shared_ptr<Object> createObject(std::shared_ptr<StructuredValue> const & sv) override;
+
+  void addType(ptr<Type> const & type) {
+      Register::addType(type);
+  }
+
+  template<typename T> void addConstructor(ptr<CppType<T>> const & cppType) {
+      constructors[cppType->type] = [] { return mkptr<T>(); };
+  }
+private:
+  /// Maps types to constructors
+  std::map<ptr<Type>, std::function<ptr<Object>()>> constructors;
 };
 
-std::shared_ptr<Register> currentRegister();
-void currentRegister(std::shared_ptr<Register> const &_register);
+std::shared_ptr<CppRegister> currentRegister();
+void currentRegister(std::shared_ptr<CppRegister> const &_register);
 
 template <typename T> struct type_of {};
 
@@ -79,8 +95,7 @@ template <typename T> struct CppType {
 
   static std::shared_ptr<CppType<T>> SELF;
 
-  CppType(std::string const &name)
-      : type(std::make_shared<Type>(TypeName(name))) {}
+  CppType(std::shared_ptr<Type> const & type) : type(type) {}
 };
 template <typename T> std::shared_ptr<CppType<T>> CppType<T>::SELF;
 
@@ -103,54 +118,103 @@ XPM_SIMPLETYPE_OF(double, RealType);
 XPM_SIMPLETYPE_OF(std::shared_ptr<StructuredValue>, AnyType);
 XPM_SIMPLETYPE_OF(Path, PathType);
 
-template <typename T, typename Parent> struct CppTypeBuilder {
-  std::shared_ptr<CppType<T>> type;
+template<typename Self>
+struct BaseCppTypeBuilder {
   std::shared_ptr<Argument> _argument;
-  std::shared_ptr<Register> _register = currentRegister();
+  std::shared_ptr<CppRegister> _register = currentRegister();
+  std::shared_ptr<Type> type;
+
+  BaseCppTypeBuilder(std::string const &name, ptr<CppRegister> const &_register) {
+    if (_register) { this->_register = _register; }
+
+    type = mkptr<Type>(name);
+    _register->addType(type);
+  }
+
+  virtual ~BaseCppTypeBuilder() = default;
+
+
+  /// Implicit conversion to CppType
+  operator std::shared_ptr<Type>() { return type; }
+
+  template<typename U>
+  Self &argument(std::string const &name) {
+    _argument = mkptr<Argument>(name);
+    type->addArgument(_argument);
+    _argument->type(type_of<U>::value());
+    return dynamic_cast<Self&>(*this);
+  }
+
+  Self &required(bool r) {
+    _argument->required(r);
+    return dynamic_cast<Self&>(*this);
+  }
+
+  Self &generator(std::shared_ptr<Generator> const &g) {
+    _argument->generator(g);
+    return dynamic_cast<Self&>(*this);
+  }
+
+  Self &ignore(bool flag) {
+    _argument->ignore(flag);
+    return dynamic_cast<Self&>(*this);
+  }
+
+  template <typename U> Self &defaultValue(U const &v) {
+    _argument->defaultValue(std::make_shared<StructuredValue>(Value(v)));
+    return dynamic_cast<Self&>(*this);
+  }
+
+  Self &defaultJson(nlohmann::json const &j) {
+    _argument->defaultValue(std::make_shared<StructuredValue>(*_register, j));
+    return dynamic_cast<Self&>(*this);
+  }
+};
+
+struct SimpleCppTypeBuilder : public BaseCppTypeBuilder<SimpleCppTypeBuilder> {
+  SimpleCppTypeBuilder(std::string const &name, ptr<CppRegister> const &_register) :
+    BaseCppTypeBuilder(name, _register) {
+  }
+};
+
+template <typename T, typename Parent> 
+struct CppTypeBuilder : public BaseCppTypeBuilder<CppTypeBuilder<T,Parent>> {
 
   CppTypeBuilder(std::string const &name)
-      : type(std::make_shared<CppType<T>>(name)) {
-    // Add the type to the register
-    currentRegister()->addType(type->type);
-    CppType<T>::SELF = type;
+      : BaseCppTypeBuilder<CppTypeBuilder<T,Parent>>(name, currentRegister()) {
 
-    std::cerr << "Adding " << type->type->typeName().toString() << " to the register" << std::endl;
+   // Sets the CppType of this object 
+   CppType<T>::SELF = mkptr<CppType<T>>(this->type);
+   this->_register->addConstructor(CppType<T>::SELF);
 
-    if (!std::is_same<xpm::Object, Parent>::value) {
-      type->type->parentType(type_of<std::shared_ptr<Parent>>::value());
+   if (!std::is_same<xpm::Object, Parent>::value) {
+      this->type->parentType(type_of<std::shared_ptr<Parent>>::value());
     }
   }
 
   template <typename U>
   CppTypeBuilder &argument(std::string const &name, U T::*u) {
-    _argument = std::make_shared<Argument>(name);
-    type->type->addArgument(_argument);
-    type->_arguments[name] =
+    this->_argument = std::make_shared<Argument>(name);
+    this->type->addArgument(this->_argument);
+    CppType<T>::SELF->_arguments[name] =
         std::unique_ptr<ArgumentHolder<T>>(new TypedArgumentHolder<T, U>(u));
-    _argument->type(type_of<U>::value());
-    return *this;
-  }
-  CppTypeBuilder &required(bool r) {
-    _argument->required(r);
+    this->_argument->type(type_of<U>::value());
     return *this;
   }
 
-  CppTypeBuilder &generator(std::shared_ptr<Generator> const &g) {
-    _argument->generator(g);
-    return *this;
-  }
 
-  template <typename U> CppTypeBuilder &defaultValue(U const &v) {
-    _argument->defaultValue(std::make_shared<StructuredValue>(Value(v)));
-    return *this;
-  }
+  /// Implicit conversion to CppType
+  operator std::shared_ptr<CppType<T>>() { return CppType<T>::SELF; }
 
-  CppTypeBuilder &defaultJson(nlohmann::json const &j) {
-    _argument->defaultValue(std::make_shared<StructuredValue>(*_register, j));
-    return *this;
-  }
-  operator std::shared_ptr<CppType<T>>() { return type; }
 };
+
+class DefaultCppObject : public Object {
+public:
+  void setValue(std::string const &name,
+                ptr<StructuredValue> const &value) override {
+  }
+};
+
 
 template <typename T, typename Parent = Object>
 class CppObject : public Parent {
@@ -206,5 +270,9 @@ template <typename _Type, typename _Task> struct TaskBuilder {
       xpm::CppTypeBuilder<TYPE, PARENT>(NAME)
 
 #define XPM_TYPE(NAME, TYPE) XPM_SUBTYPE(NAME, TYPE, xpm::Object)
+
+#define DEFAULT_XPM_TYPE(TYPENAME, NAME) \
+    struct TYPENAME : public DefaultCppObject {}; \
+    XPM_TYPE(NAME, TYPENAME)
 
 #endif // PROJECT_CPP_HPP
