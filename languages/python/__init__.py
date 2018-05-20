@@ -222,10 +222,6 @@ class PythonRegister(Register):
             return key.__class__.__xpmtype__
         return None
 
-    def parse(self, arguments=None):
-        if arguments is None:
-            arguments = sys.argv[1:]
-        return super().parse(StringList(arguments))
 
     def runTask(self, task, sv):
         logger.info("Running %s", task)
@@ -237,6 +233,14 @@ class PythonRegister(Register):
         pyobject = type()
         pyobject._prepare()
         return pyobject.__xpm__
+
+    def parse(self, arguments=None, try_parse=False):
+        if arguments is None:
+            arguments = sys.argv[1:]
+        return super().parse(StringList(arguments), try_parse)
+
+    def try_parse(self, arguments=None):
+        return self.parse(arguments, True)
 
 register = PythonRegister()
 

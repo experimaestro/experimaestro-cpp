@@ -20,11 +20,10 @@ class Concat(object):
     def execute(self):
         print(self.name)
 
-if sys.argv[1] == "run":
-    # (1) Runs a specific task 
-    register.parse()
-else:
-    # (2) Configures the experiment
+# try_parse handles some XPM commands (e.g. run)
+# that are used to actually execute tasks
+if not register.try_parse():
+    # Configures the experiment
 
     # Get the parameters
     import argparse

@@ -107,7 +107,7 @@ ptr<Type> Register::getType(ptr<StructuredValue> const &object) {
   return object->type();
 }
 
-void Register::parse(std::vector<std::string> const &_args) {
+bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
   
   std::vector<std::string> args;
   for(size_t i = _args.size(); i > 0; --i) {
@@ -164,11 +164,15 @@ void Register::parse(std::vector<std::string> const &_args) {
   try {
     app.parse(const_cast<std::vector<std::string>&>(args));
   } catch(const CLI::ParseError &e) {                                                                                \
+    if (tryParse) {
+      return false;
+    }
     if (app.exit(e)) {
       throw exception();
     }                                                                                         
   }
 
+  return true;
  
 }
 

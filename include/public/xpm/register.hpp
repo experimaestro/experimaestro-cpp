@@ -33,8 +33,9 @@ class Register {
    *    <li><code>run <task-id> [task arguments...]</code> that runs a task</li>
    * </ul>
    * @param args
+   * @param tryParse If an error occurs, just return false (but not print any message)
    */
-  void parse(std::vector<std::string> const &args);
+  bool parse(std::vector<std::string> const &args, bool tryParse = false);
 
   /**
    * Parse command line

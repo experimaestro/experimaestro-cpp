@@ -8,6 +8,7 @@
 #include <chrono>
 #include <condition_variable>
 
+#define ASIO_STANDALONE
 #include <asio.hpp>
 #include <__xpm/common.hpp>
 
