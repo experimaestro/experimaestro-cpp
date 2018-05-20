@@ -163,7 +163,7 @@ Value::Value(Value const &other) : _scalarType(other._scalarType) {
 
 
 Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
-  switch(jsonValue) {
+  switch(jsonValue.type()) {
     case nlohmann::json::value_t::null:
     case nlohmann::json::value_t::discarded:
       _scalarType = ValueType::NONE;

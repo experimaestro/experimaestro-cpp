@@ -11,7 +11,6 @@ addons:
     packages:
       - swig3.0
       - doxygen
-      - libyaml-cpp-dev
       - libssh-dev
       - g++-7
 
