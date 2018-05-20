@@ -34,7 +34,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.1, mkdocs-material-2.7.0">
+      <meta name="generator" content="mkdocs-0.17.3, mkdocs-material-2.7.3">
     
     
       
@@ -42,7 +42,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/application.78aab2dc.css">
+      <link rel="stylesheet" href="../assets/stylesheets/application.8d40d89b.css">
       
         <link rel="stylesheet" href="../assets/stylesheets/application-palette.6079476c.css">
       
@@ -58,8 +58,6 @@
       
       <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     
-    
-      <link rel="stylesheet" href="../jquery-ui.min.css">
     
       <link rel="stylesheet" href="../xpm.css">
     
@@ -95,11 +93,11 @@
         
       </defs>
     </svg>
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#scheduler-installation" tabindex="1" class="md-skip">
+      <a href="#python" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -204,13 +202,16 @@
     <ul class="md-tabs__list">
       
         
-  <li class="md-tabs__item">
-    
-      <a href=".." title="Home" class="md-tabs__link">
-        Home
-      </a>
-    
-  </li>
+  
+  
+    <li class="md-tabs__item">
+      
+        <a href=".." title="Basics" class="md-tabs__link md-tabs__link--active">
+          Basics
+        </a>
+      
+    </li>
+  
 
       
         
@@ -218,7 +219,7 @@
   
     <li class="md-tabs__item">
       
-        <a href="../scheduler/" title="Scheduler" class="md-tabs__link md-tabs__link--active">
+        <a href="../scheduler/" title="Scheduler" class="md-tabs__link">
           Scheduler
         </a>
       
@@ -288,11 +289,70 @@
       
       
 
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" checked>
+    
+    <label class="md-nav__link" for="nav-1">
+      Basics
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-1">
+        Basics
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
 
   <li class="md-nav__item">
-    <a href=".." title="Home" class="md-nav__link">
-      Home
+    <a href=".." title="Basics" class="md-nav__link">
+      Basics
     </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../main concepts/" title="Main concepts" class="md-nav__link">
+      Main concepts
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+      
+    
+    
+    <a href="./" title="Installing" class="md-nav__link md-nav__link--active">
+      Installing
+    </a>
+    
+  </li>
+
+        
+      </ul>
+    </nav>
   </li>
 
     
@@ -300,12 +360,10 @@
       
       
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
     
     <label class="md-nav__link" for="nav-2">
       Scheduler
@@ -326,110 +384,6 @@
     <a href="../scheduler/" title="Home" class="md-nav__link">
       Home
     </a>
-  </li>
-
-        
-          
-          
-          
-
-  
-
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="toc">
-        Installing
-      </label>
-    
-    <a href="./" title="Installing" class="md-nav__link md-nav__link--active">
-      Installing
-    </a>
-    
-      
-<nav class="md-nav md-nav--secondary">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#requirements" title="Requirements" class="md-nav__link">
-    Requirements
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#python-3" title="Python 3" class="md-nav__link">
-    Python 3
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#java-8" title="Java (≥ 8)" class="md-nav__link">
-    Java (≥ 8)
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shell-completion" title="Shell completion" class="md-nav__link">
-    Shell completion
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#zsh" title="ZSH" class="md-nav__link">
-    ZSH
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" title="Configuration" class="md-nav__link">
-    Configuration
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#test-your-installation" title="Test your installation" class="md-nav__link">
-    Test your installation
-  </a>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -563,76 +517,6 @@
     
   
   
-    <label class="md-nav__title" for="toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#requirements" title="Requirements" class="md-nav__link">
-    Requirements
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#python-3" title="Python 3" class="md-nav__link">
-    Python 3
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#java-8" title="Java (≥ 8)" class="md-nav__link">
-    Java (≥ 8)
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shell-completion" title="Shell completion" class="md-nav__link">
-    Shell completion
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#zsh" title="ZSH" class="md-nav__link">
-    ZSH
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" title="Configuration" class="md-nav__link">
-    Configuration
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#test-your-installation" title="Test your installation" class="md-nav__link">
-    Test your installation
-  </a>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -646,90 +530,14 @@
                   <a href="https://github.com/bpiwowar/experimaestro/edit/master/docs/installing.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="scheduler-installation">Scheduler installation</h1>
-<h2 id="requirements">Requirements</h2>
-<p>Experimaestro is implemented using several languages and thus, you
-have to install multiple ecosystem with the right version.</p>
-<h3 id="python-3">Python 3</h3>
+                <h1 id="python">Python</h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Experimaestro is compatible with Python 3 only.</p>
+</div>
 <p>You need a working <code>python3</code> interpreter on your system along with <code>pip3</code>.</p>
 <p>To install required python's modules type:</p>
-<div class="codehilite"><pre><span></span>pip3 install -r server/scripts/requirements.txt
-</pre></div>
-
-<h3 id="java-8">Java (≥ 8)</h3>
-<p>You need a working <em>Java</em> installation (version ≥ 1.8) on your machine. <a href="https://gradle.org">Gradle</a> is
-used for building but is not a requirement.</p>
-<p>On linux or OS X:
-<div class="codehilite"><pre><span></span><span class="c1"># From the project&#39;s root directory.</span>
-./gradlew installDist
-</pre></div></p>
-<p>On Windows:
-<div class="codehilite"><pre><span></span>gradlew.bat installDist
-</pre></div></p>
-<p>This will build and install all the dependencies into <code>server/build/install/experimaestro-server</code>. The command <code>experimaestro</code> is located in <code>server/build/install/experimaestro-server/bin/experimaestro</code>.</p>
-<p>Note that on a Linux box if you are not root and the alternative link
-is not set to the proper version (you can inspect that using
-<code>update-alternatives --display java</code>), you won't have the permission
-to update the link manually using <code>update-alternatives --config java</code>.
-The work around is to set the environment variable <code>JAVA_HOME</code> when
-calling maven. For example:</p>
-<p>To locate the path of to set to <code>JAVA_HOME</code> you can do <code>locate jdk | less</code>.</p>
-<p>The server and clients are configured by a simple property file <code>settings.ini</code>, located in the <code>.experimaestro</code> (by default) file in the user's home directory.</p>
-<h2 id="shell-completion">Shell completion</h2>
-<p>To enable shell completion follow instructions in
-<a href="https://pypi.python.org/pypi/argcomplete">argcomplete</a> documentation.</p>
-<h3 id="zsh">ZSH</h3>
-<p>Add to <code>.zshrc</code>:</p>
-<div class="codehilite"><pre><span></span>  <span class="c1"># Register python completion</span>
-  <span class="k">if</span> <span class="nb">type</span> register-python-argcomplete <span class="p">&amp;</span>&gt; /dev/null
-  <span class="k">then</span>
-    <span class="nb">eval</span> <span class="s2">&quot;</span><span class="k">$(</span>register-python-argcomplete <span class="s1">&#39;experimaestro&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
-  <span class="k">fi</span>
-</pre></div>
-
-<ul>
-<li>Re-launch your shell: <code>exec zsh</code></li>
-</ul>
-<h2 id="configuration">Configuration</h2>
-<p>A configuration file must be stored in <code>$HOME/.experimaestro/settings.json</code></p>
-<div class="codehilite"><pre><span></span><span class="p">{</span>
-    <span class="nt">&quot;server&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;[name of the server]&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;port&quot;</span><span class="p">:</span> <span class="mi">12345</span><span class="p">,</span>
-        <span class="nt">&quot;database&quot;</span><span class="p">:</span> <span class="s2">&quot;[path to the database]&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;passwords&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="p">{</span>
-                <span class="nt">&quot;user&quot;</span><span class="p">:</span> <span class="s2">&quot;[username]&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;[plain text password]&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;roles&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;user&quot;</span> <span class="p">]</span>
-            <span class="p">}</span>
-        <span class="p">]</span>
-    <span class="p">},</span>
-
-    <span class="nt">&quot;hosts&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;local&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;port&quot;</span><span class="p">:</span> <span class="mi">12345</span><span class="p">,</span>
-            <span class="nt">&quot;username&quot;</span><span class="p">:</span> <span class="s2">&quot;XXXX&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;XXXX&quot;</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-<span class="p">}</span>
-</pre></div>
-
-<p>The <code>server</code> section contains settings for the experimaestro server, while
-the <code>hosts</code> section is used to access easily several experimaestro servers
-by giving them an ID (here <code>local</code>). You can several others.</p>
-<h2 id="test-your-installation">Test your installation</h2>
-<p>To test your installation is working properly you can try to start a
-server like this:</p>
-<div class="codehilite"><pre><span></span>experimaestro --verbose --debug start-server
-</pre></div>
-
-<p>You should get something like:</p>
-<div class="codehilite"><pre><span></span><span class="n">INFO</span><span class="o">:</span><span class="n">root</span><span class="o">:</span><span class="n">Starting</span> <span class="k">with</span> <span class="n">gradle</span>
-<span class="n">INFO</span><span class="o">:</span><span class="n">root</span><span class="o">:</span><span class="n">Waiting</span> <span class="k">for</span> <span class="n">server</span> <span class="n">to</span> <span class="n">start</span> <span class="o">(</span><span class="n">PID</span><span class="o">=</span><span class="mi">37851</span><span class="o">)...</span>
-<span class="n">INFO</span><span class="o">:</span><span class="n">root</span><span class="o">:</span><span class="n">Server</span> <span class="n">started</span><span class="o">...</span>
+<div class="codehilite"><pre><span></span>pip3 install experimaestro
 </pre></div>
                 
                   
@@ -737,6 +545,8 @@ server like this:</p>
               
               
                 
+
+
               
             </article>
           </div>
@@ -749,7 +559,7 @@ server like this:</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../scheduler/" title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../main concepts/" title="Main concepts" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -758,19 +568,19 @@ server like this:</p>
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Home
+                Main concepts
               </span>
             </div>
           </a>
         
         
-          <a href="../scheduler/connectors/" title="Connectors & Launchers" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../scheduler/" title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Connectors & Launchers
+                Home
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
@@ -800,11 +610,9 @@ server like this:</p>
       
     </div>
     
-      <script src="../assets/javascripts/application.8eb9be28.js"></script>
+      <script src="../assets/javascripts/application.b438e6c5.js"></script>
       
-      <script>app.initialize({version:"0.17.1",url:{base:".."}})</script>
-      
-        <script src="../jquery-ui.min.js"></script>
+      <script>app.initialize({version:"0.17.3",url:{base:".."}})</script>
       
         <script src="../xpm.js"></script>
       

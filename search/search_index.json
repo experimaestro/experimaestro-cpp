@@ -2,13 +2,28 @@
     "docs": [
         {
             "location": "/",
-            "text": "Introduction\n\n\nTired of bash, python, ... scripts to manage your experiments? Experimaestro manager\ngives you a systematic way to write and run experiments where parameters varies.\nThe goals of the experimaestro manager are to:\n\n\n\n\nDecompose experiments into a set of tasks\n\n\nStandardize the way to run experiments for easier reproduction of experimental results in computing science\n\n\nBuild a documentation for each task\n\n\nUses the scheduler to run jobs on various computational resources\n\n\nProvide multiple ways to write task descriptions. Currently, JavaScript and Python are supported\n\n\nManage data produced by the tasks\n\n\nAssociate tags to ran tasks\n\n\n\n\nExperimaestro is an experiment manager, and is composed of\n\n\n\n\nA \njob scheduler\n that handles dependencies between jobs and provides locking mechanisms\n   The job scheduler can be controlled via command line (\nexperimaestro\n script) or via the web (where\n   you can easily monitor jobs in real time)\n\n\nA \nmodular experiment description framework\n, that allows easy description of the various parts of experiments:\n\n\nExperiments are written in JavaScript or Python\n\n\nTasks describe the components that can be used\n\n\nComposition: tasks take as input json and output json\n\n\nTasks can be composed through the definition of an experimental plan\n\n\n\n\n\n\n\n\nBoth modules can be used independently even though they were designed to work together.\n\n\nExperimaestro is in a \nbeta\n state - which means that you might experience some bugs\nwhile using it; but as I use it on a daily basis, there number and importance is\ngoing down each day.\n\n\n\n\nMain concepts\n\n\nThe main concepts of experimaestro are\n\n\n\n\nAll messages between tasks are \nJSON\n objects. This is described in \nthis document\n.\n\n\nTypes and tasks are the unit on which experiments are built, and correspond roughly to either the execution of a long process, or to a configuration. Tasks can be composed in various ways to allow a compact representation of\n    experimental plans.  Tasks are described further \nthis document\n\n\nComputational resources, named \nconnectors\n, define a set of computers - how can a file be stored, how can a\n    command line be executed. More information can be found in this \ndocument\n.",
-            "title": "Home"
+            "text": "Tired to \nmanually\n manage your experiments? Experimaestro manager\ngives you a systematic way to write and run experiments where parameters varies.\n\n\nThe overall goals of the experimaestro manager are to:\n\n\n\n\nDecompose experiments into a set of parameterizable tasks\n\n\nSchedule tasks and handle dependencies between tasks\n\n\nAvoids to re-run the same task two times by computing unique task IDs dependending on the parameters\n\n\n\n\nDocumentation \n\n\nExperimaestro is in an \nalpha\n state.\n\n\nExample\n\n\nfrom\n \nexperimaestro\n \nimport\n \n*\n\n\n\n# An experimental parameter\n\n\n@TypeArgument\n(\n\"word\"\n,\n \ntype\n=\nstr\n,\n \nrequired\n=\nTrue\n,\n \nhelp\n=\n\"Word to generate\"\n)\n\n\n\n# Register this class as task (by default, with the same name as the type)\n\n\n@RegisterTask\n()\n\n\n\n# Register this class and gives it the type \"Hello\"\n\n\n@RegisterType\n(\n\"say\"\n)\n\n\nclass\n \nSay\n(\nobject\n):\n\n    \ndef\n \nexecute\n(\nself\n):\n\n        \nprint\n(\nself\n.\nword\n)\n\n\n\n@TypeArgument\n(\n\"first\"\n,\n \ntype\n=\nSay\n)\n\n\n@TypeArgument\n(\n\"second\"\n,\n \ntype\n=\nSay\n)\n\n\n@RegisterTask\n()\n\n\n@RegisterType\n(\n\"concat\"\n)\n\n\nclass\n \nConcat\n(\nobject\n):\n\n    \ndef\n \nexecute\n(\nself\n):\n\n        \nprint\n(\nself\n.\nname\n)\n\n\n\nif\n \nsys\n.\nargv\n[\n1\n]\n \n==\n \n\"run\"\n:\n\n    \n# (1) Runs a specific task \n\n    \nregister\n.\nparse\n()\n\n\nelse\n:\n\n    \n# (2) Configures the experiment\n\n\n    \n# Get the parameters\n\n    \nimport\n \nargparse\n\n    \nparser\n \n=\n \nargparse\n.\nArgumentParser\n()\n\n    \nparser\n.\nadd_argument\n(\n\"workdir\"\n,\n \ntype\n=\nstr\n,\n \nhelp\n=\n\"Working directory\"\n)\n\n    \nargs\n \n=\n \nparser\n.\nparse_args\n()\n\n\n    \n# Sets the working directory and the name of the experiment\n\n    \nexperiment\n(\nargs\n.\nworkdir\n,\n \n\"helloworld\"\n)\n\n\n    \n# Submit the tasks\n\n    \nhello\n \n=\n \nSay\n(\nword\n=\n\"hello\"\n)\n.\nsubmit\n()\n\n    \nworld\n \n=\n \nSay\n(\nword\n=\n\"world\"\n)\n.\nsubmit\n()\n\n\n    \n# Concat will depend on the two first tasks\n\n    \nConcat\n(\nfirst\n=\nhello\n,\n \nsecond\n=\nworld\n)\n.\nsubmit\n()",
+            "title": "Basics"
         },
         {
-            "location": "/#introduction",
-            "text": "Tired of bash, python, ... scripts to manage your experiments? Experimaestro manager\ngives you a systematic way to write and run experiments where parameters varies.\nThe goals of the experimaestro manager are to:   Decompose experiments into a set of tasks  Standardize the way to run experiments for easier reproduction of experimental results in computing science  Build a documentation for each task  Uses the scheduler to run jobs on various computational resources  Provide multiple ways to write task descriptions. Currently, JavaScript and Python are supported  Manage data produced by the tasks  Associate tags to ran tasks   Experimaestro is an experiment manager, and is composed of   A  job scheduler  that handles dependencies between jobs and provides locking mechanisms\n   The job scheduler can be controlled via command line ( experimaestro  script) or via the web (where\n   you can easily monitor jobs in real time)  A  modular experiment description framework , that allows easy description of the various parts of experiments:  Experiments are written in JavaScript or Python  Tasks describe the components that can be used  Composition: tasks take as input json and output json  Tasks can be composed through the definition of an experimental plan     Both modules can be used independently even though they were designed to work together.  Experimaestro is in a  beta  state - which means that you might experience some bugs\nwhile using it; but as I use it on a daily basis, there number and importance is\ngoing down each day.   Main concepts  The main concepts of experimaestro are   All messages between tasks are  JSON  objects. This is described in  this document .  Types and tasks are the unit on which experiments are built, and correspond roughly to either the execution of a long process, or to a configuration. Tasks can be composed in various ways to allow a compact representation of\n    experimental plans.  Tasks are described further  this document  Computational resources, named  connectors , define a set of computers - how can a file be stored, how can a\n    command line be executed. More information can be found in this  document .",
-            "title": "Introduction"
+            "location": "/#example",
+            "text": "from   experimaestro   import   *  # An experimental parameter  @TypeArgument ( \"word\" ,   type = str ,   required = True ,   help = \"Word to generate\" )  # Register this class as task (by default, with the same name as the type)  @RegisterTask ()  # Register this class and gives it the type \"Hello\"  @RegisterType ( \"say\" )  class   Say ( object ): \n     def   execute ( self ): \n         print ( self . word )  @TypeArgument ( \"first\" ,   type = Say )  @TypeArgument ( \"second\" ,   type = Say )  @RegisterTask ()  @RegisterType ( \"concat\" )  class   Concat ( object ): \n     def   execute ( self ): \n         print ( self . name )  if   sys . argv [ 1 ]   ==   \"run\" : \n     # (1) Runs a specific task  \n     register . parse ()  else : \n     # (2) Configures the experiment \n\n     # Get the parameters \n     import   argparse \n     parser   =   argparse . ArgumentParser () \n     parser . add_argument ( \"workdir\" ,   type = str ,   help = \"Working directory\" ) \n     args   =   parser . parse_args () \n\n     # Sets the working directory and the name of the experiment \n     experiment ( args . workdir ,   \"helloworld\" ) \n\n     # Submit the tasks \n     hello   =   Say ( word = \"hello\" ) . submit () \n     world   =   Say ( word = \"world\" ) . submit () \n\n     # Concat will depend on the two first tasks \n     Concat ( first = hello ,   second = world ) . submit ()",
+            "title": "Example"
+        },
+        {
+            "location": "/main concepts/",
+            "text": "Main concepts\n\n\nThe main concepts of experimaestro are\n\n\n\n\nExperimental pararameters are structured values, and can thus be nested. This is described in \nthis document\n.\n\n\nTypes and tasks are the unit on which experiments are built:\n\n\nType = configuration\n\n\nTask = a process to be executed\n\n\n\n\n\n\nTasks are composed by passing them as parameters to other tasks. Tasks are described further \nthis document\n\n\nComputational resources are defined by \nconnectors\n and \nlaunchers\n, define a set of computers - how can a file be stored, how can a command line be executed. More information can be found in this \ndocument\n.",
+            "title": "Main concepts"
+        },
+        {
+            "location": "/installing/",
+            "text": "Python\n\n\n\n\nWarning\n\n\nExperimaestro is compatible with Python 3 only.\n\n\n\n\nYou need a working \npython3\n interpreter on your system along with \npip3\n.\n\n\nTo install required python's modules type:\n\n\npip3 install experimaestro",
+            "title": "Installing"
+        },
+        {
+            "location": "/installing/#python",
+            "text": "Warning  Experimaestro is compatible with Python 3 only.   You need a working  python3  interpreter on your system along with  pip3 .  To install required python's modules type:  pip3 install experimaestro",
+            "title": "Python"
         },
         {
             "location": "/scheduler/",
@@ -44,51 +59,6 @@
             "location": "/scheduler/#xml-rpc",
             "text": "The Experimaestro server can be reached  through XML-RPC calls .",
             "title": "XML-RPC"
-        },
-        {
-            "location": "/installing/",
-            "text": "Scheduler installation\n\n\nRequirements\n\n\nExperimaestro is implemented using several languages and thus, you\nhave to install multiple ecosystem with the right version.\n\n\nPython 3\n\n\nYou need a working \npython3\n interpreter on your system along with \npip3\n.\n\n\nTo install required python's modules type:\n\n\npip3 install -r server/scripts/requirements.txt\n\n\n\n\nJava (\u2265 8)\n\n\nYou need a working \nJava\n installation (version \u2265 1.8) on your machine. \nGradle\n is\nused for building but is not a requirement.\n\n\nOn linux or OS X:\n\n# From the project's root directory.\n\n./gradlew installDist\n\n\n\nOn Windows:\n\ngradlew.bat installDist\n\n\n\nThis will build and install all the dependencies into \nserver/build/install/experimaestro-server\n. The command \nexperimaestro\n is located in \nserver/build/install/experimaestro-server/bin/experimaestro\n.\n\n\nNote that on a Linux box if you are not root and the alternative link\nis not set to the proper version (you can inspect that using\n\nupdate-alternatives --display java\n), you won't have the permission\nto update the link manually using \nupdate-alternatives --config java\n.\nThe work around is to set the environment variable \nJAVA_HOME\n when\ncalling maven. For example:\n\n\nTo locate the path of to set to \nJAVA_HOME\n you can do \nlocate jdk | less\n.\n\n\nThe server and clients are configured by a simple property file \nsettings.ini\n, located in the \n.experimaestro\n (by default) file in the user's home directory.\n\n\nShell completion\n\n\nTo enable shell completion follow instructions in\n\nargcomplete\n documentation.\n\n\nZSH\n\n\nAdd to \n.zshrc\n:\n\n\n  \n# Register python completion\n\n  \nif\n \ntype\n register-python-argcomplete \n&\n> /dev/null\n  \nthen\n\n    \neval\n \n\"\n$(\nregister-python-argcomplete \n'experimaestro'\n)\n\"\n\n  \nfi\n\n\n\n\n\n\n\nRe-launch your shell: \nexec zsh\n\n\n\n\nConfiguration\n\n\nA configuration file must be stored in \n$HOME/.experimaestro/settings.json\n\n\n{\n\n    \n\"server\"\n:\n \n{\n\n        \n\"name\"\n:\n \n\"[name of the server]\"\n,\n\n        \n\"port\"\n:\n \n12345\n,\n\n        \n\"database\"\n:\n \n\"[path to the database]\"\n,\n\n        \n\"passwords\"\n:\n \n[\n\n            \n{\n\n                \n\"user\"\n:\n \n\"[username]\"\n,\n\n                \n\"password\"\n:\n \n\"[plain text password]\"\n,\n\n                \n\"roles\"\n:\n \n[\n \n\"user\"\n \n]\n\n            \n}\n\n        \n]\n\n    \n},\n\n\n    \n\"hosts\"\n:\n \n{\n\n        \n\"local\"\n:\n \n{\n\n            \n\"host\"\n:\n \n\"localhost\"\n,\n\n            \n\"port\"\n:\n \n12345\n,\n\n            \n\"username\"\n:\n \n\"XXXX\"\n,\n\n            \n\"password\"\n:\n \n\"XXXX\"\n\n        \n}\n\n    \n},\n\n\n}\n\n\n\n\n\nThe \nserver\n section contains settings for the experimaestro server, while\nthe \nhosts\n section is used to access easily several experimaestro servers\nby giving them an ID (here \nlocal\n). You can several others.\n\n\nTest your installation\n\n\nTo test your installation is working properly you can try to start a\nserver like this:\n\n\nexperimaestro --verbose --debug start-server\n\n\n\n\nYou should get something like:\n\n\nINFO\n:\nroot\n:\nStarting\n \nwith\n \ngradle\n\n\nINFO\n:\nroot\n:\nWaiting\n \nfor\n \nserver\n \nto\n \nstart\n \n(\nPID\n=\n37851\n)...\n\n\nINFO\n:\nroot\n:\nServer\n \nstarted\n...",
-            "title": "Installing"
-        },
-        {
-            "location": "/installing/#scheduler-installation",
-            "text": "",
-            "title": "Scheduler installation"
-        },
-        {
-            "location": "/installing/#requirements",
-            "text": "Experimaestro is implemented using several languages and thus, you\nhave to install multiple ecosystem with the right version.",
-            "title": "Requirements"
-        },
-        {
-            "location": "/installing/#python-3",
-            "text": "You need a working  python3  interpreter on your system along with  pip3 .  To install required python's modules type:  pip3 install -r server/scripts/requirements.txt",
-            "title": "Python 3"
-        },
-        {
-            "location": "/installing/#java-8",
-            "text": "You need a working  Java  installation (version \u2265 1.8) on your machine.  Gradle  is\nused for building but is not a requirement.  On linux or OS X: # From the project's root directory. \n./gradlew installDist  On Windows: gradlew.bat installDist  This will build and install all the dependencies into  server/build/install/experimaestro-server . The command  experimaestro  is located in  server/build/install/experimaestro-server/bin/experimaestro .  Note that on a Linux box if you are not root and the alternative link\nis not set to the proper version (you can inspect that using update-alternatives --display java ), you won't have the permission\nto update the link manually using  update-alternatives --config java .\nThe work around is to set the environment variable  JAVA_HOME  when\ncalling maven. For example:  To locate the path of to set to  JAVA_HOME  you can do  locate jdk | less .  The server and clients are configured by a simple property file  settings.ini , located in the  .experimaestro  (by default) file in the user's home directory.",
-            "title": "Java (\u2265 8)"
-        },
-        {
-            "location": "/installing/#shell-completion",
-            "text": "To enable shell completion follow instructions in argcomplete  documentation.",
-            "title": "Shell completion"
-        },
-        {
-            "location": "/installing/#zsh",
-            "text": "Add to  .zshrc :     # Register python completion \n   if   type  register-python-argcomplete  & > /dev/null\n   then \n     eval   \" $( register-python-argcomplete  'experimaestro' ) \" \n   fi    Re-launch your shell:  exec zsh",
-            "title": "ZSH"
-        },
-        {
-            "location": "/installing/#configuration",
-            "text": "A configuration file must be stored in  $HOME/.experimaestro/settings.json  { \n     \"server\" :   { \n         \"name\" :   \"[name of the server]\" , \n         \"port\" :   12345 , \n         \"database\" :   \"[path to the database]\" , \n         \"passwords\" :   [ \n             { \n                 \"user\" :   \"[username]\" , \n                 \"password\" :   \"[plain text password]\" , \n                 \"roles\" :   [   \"user\"   ] \n             } \n         ] \n     }, \n\n     \"hosts\" :   { \n         \"local\" :   { \n             \"host\" :   \"localhost\" , \n             \"port\" :   12345 , \n             \"username\" :   \"XXXX\" , \n             \"password\" :   \"XXXX\" \n         } \n     },  }   The  server  section contains settings for the experimaestro server, while\nthe  hosts  section is used to access easily several experimaestro servers\nby giving them an ID (here  local ). You can several others.",
-            "title": "Configuration"
-        },
-        {
-            "location": "/installing/#test-your-installation",
-            "text": "To test your installation is working properly you can try to start a\nserver like this:  experimaestro --verbose --debug start-server  You should get something like:  INFO : root : Starting   with   gradle  INFO : root : Waiting   for   server   to   start   ( PID = 37851 )...  INFO : root : Server   started ...",
-            "title": "Test your installation"
         },
         {
             "location": "/scheduler/connectors/",
@@ -267,7 +237,7 @@
         },
         {
             "location": "/manager/python/",
-            "text": "Python types and tasks can be defined using annotations\n\n\nDefining a type\n\n\nfrom\n \nexperimaestro\n \nimport\n \nTypeArgument\n\n\n\n@TypeArgument\n(\n\"gamma\"\n,\n \ntype\n=\nfloat\n,\n \nrequired\n=\nFalse\n)\n\n\n@RegisterType\n(\n\"my.model\"\n)\n\n\nclass\n \nMyModel\n:\n \npass\n\n\n\n\n\nRunning\n\n\nimport\n \nexperimaestro\n \nas\n \nxpm\n\n\n\n# Put your definitions here:\n\n\n# - load a YAML\n\n\n# - import the definitions\n\n\n\nif\n \n__name__\n \n==\n \n\"__main__\"\n:\n\n    \nxpm\n.\nlogger\n.\nsetLevel\n(\nlogging\n.\nDEBUG\n)\n\n    \nxpm\n.\nsetLogLevel\n(\n\"xpm\"\n,\n \nxpm\n.\nLogLevel_DEBUG\n)\n\n    \nxpm\n.\nsetLogLevel\n(\n\"rpc\"\n,\n \nxpm\n.\nLogLevel_INFO\n)\n\n    \nxpm\n.\nregister\n.\nparse\n()",
+            "text": "Python types and tasks can be defined using annotations\n\n\nDefining a type\n\n\nfrom\n \nexperimaestro\n \nimport\n \nTypeArgument\n\n\n\n@TypeArgument\n(\n\"gamma\"\n,\n \ntype\n=\nfloat\n,\n \nrequired\n=\nFalse\n)\n\n\n@RegisterType\n(\n\"my.model\"\n)\n\n\nclass\n \nMyModel\n:\n \npass\n\n\n\n\n\nRunning\n\n\nimport\n \nexperimaestro\n \nas\n \nxpm\n\n\n\n# Put your definitions here: either load a YAML or import the definitions\n\n\n\nif\n \n__name__\n \n==\n \n\"__main__\"\n:\n\n    \nxpm\n.\nlogger\n.\nsetLevel\n(\nlogging\n.\nDEBUG\n)\n\n    \nxpm\n.\nsetLogLevel\n(\n\"xpm\"\n,\n \nxpm\n.\nLogLevel_DEBUG\n)\n\n    \nxpm\n.\nregister\n.\nparse\n()",
             "title": "Python"
         },
         {
@@ -277,7 +247,7 @@
         },
         {
             "location": "/manager/python/#running",
-            "text": "import   experimaestro   as   xpm  # Put your definitions here:  # - load a YAML  # - import the definitions  if   __name__   ==   \"__main__\" : \n     xpm . logger . setLevel ( logging . DEBUG ) \n     xpm . setLogLevel ( \"xpm\" ,   xpm . LogLevel_DEBUG ) \n     xpm . setLogLevel ( \"rpc\" ,   xpm . LogLevel_INFO ) \n     xpm . register . parse ()",
+            "text": "import   experimaestro   as   xpm  # Put your definitions here: either load a YAML or import the definitions  if   __name__   ==   \"__main__\" : \n     xpm . logger . setLevel ( logging . DEBUG ) \n     xpm . setLogLevel ( \"xpm\" ,   xpm . LogLevel_DEBUG ) \n     xpm . register . parse ()",
             "title": "Running"
         }
     ]
