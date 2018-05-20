@@ -3,7 +3,7 @@
 //
 
 #include <xpm/xpm.hpp>
-#include <xpm/value.hpp>
+#include <xpm/workspace.hpp>
 #include <gtest/gtest.h>
 
 //using nlohmann::json;
@@ -46,6 +46,9 @@ TEST(StructuredValue, notDefault) {
 TEST(StructuredValue, defaultNotSet) {
   auto object = TestType().create();
   object->validate();
+  Workspace ws;
+  GeneratorContext context(ws);
+  object->generate(context);
 
   EXPECT_TRUE(object->get("a")->equals(Value(1)));
   EXPECT_TRUE(object->get("a")->isDefault());

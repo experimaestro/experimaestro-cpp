@@ -372,9 +372,9 @@ void StructuredValue::configure(Workspace & ws) {
   seal();
 }
 
-void StructuredValue::createObjects(xpm::Register &xpmRegister) {
+ptr<Object> StructuredValue::createObjects(xpm::Register &xpmRegister) {
   // Don't create an object for values
-  if (_value.defined()) return;
+  if (_value.defined()) return nullptr;
 
   // Create for descendants
   for(auto &kv: _content) {
@@ -388,6 +388,8 @@ void StructuredValue::createObjects(xpm::Register &xpmRegister) {
        setValue(kv.first, kv.second);
      }
   }
+
+  return _object;
 }
 
 void StructuredValue::addDependencies(Job & job,  bool skipThis) {
@@ -484,7 +486,7 @@ void StructuredValue::validate() {
         if (argument.required()) {
           throw argument_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-          }
+        }
       } else {
         // Sets the value
         auto value = get(argument.name());
@@ -493,7 +495,7 @@ void StructuredValue::validate() {
         // Check if the declared type corresponds to the value type
         if (!entry.second->type()->accepts(value->type())) {
           throw argument_error(
-              "Argument " + argument.name() + " type is  " + value->type()->toString() 
+              "Argument '" + argument.name() + "' type is " + value->type()->toString() 
               + ", but requested type was " + entry.second->type()->toString());
         }
 
@@ -638,6 +640,10 @@ Argument &Argument::type(ptr<Type> const &type) {
 
 // ---- Type
 
+SimpleType::SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore)
+      : Type(tname, AnyType, true, canIgnore), _valueType(valueType) {}
+
+ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
 ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
 ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
@@ -645,11 +651,11 @@ ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRI
 ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
 ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
 
-ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
 
 
 Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
-    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {}
+    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {
+ }
 
 Type::~Type() {}
 
@@ -755,9 +761,10 @@ StructuredValue::Ptr Type::getProperty(std::string const &name) {
 
 
 bool Type::accepts(Type::Ptr const &other) const {
-  
   // Go up
-  for(auto current = other; current; current = current->_parent) {
+  if (_type == ANY_TYPE) return true;
+
+  for(auto current = other; current; current = current->parentType()) {
     if (current->_type == _type) return true;
   }
 

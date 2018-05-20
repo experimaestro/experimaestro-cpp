@@ -214,6 +214,9 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
   return lhs->_submissionTime > rhs->_submissionTime;
 }
 
+Workspace::Workspace() {
+}
+
 Workspace::Workspace(std::string const &path) : _path(path) {
   _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
 }

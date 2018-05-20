@@ -317,10 +317,10 @@ class StructuredValue
   /// Set resource
   inline void resource( std::shared_ptr<Resource> const & _resource) { this->_resource = _resource; }
 
- private:
   /// Create objects
-  void createObjects(xpm::Register &xpmRegister);
+  std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
+ private:
   /// Set flag
   void set(Flag flag, bool value);
 
@@ -584,8 +584,7 @@ class Type
 class SimpleType : public Type {
   ValueType _valueType;
  public:
-  SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false)
-      : Type(tname, nullptr, true, canIgnore), _valueType(valueType) {}
+  SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false);
   inline ValueType valueType() { return _valueType; }
 };
 

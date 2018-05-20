@@ -246,6 +246,9 @@ class Workspace
 #endif
 {
 public:
+  /// Creates a work space
+  Workspace();
+
   /// Creates a new work space with a given path
   Workspace(std::string const &path);
 

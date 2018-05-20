@@ -5,6 +5,7 @@
 #include <string>
 #include <typeindex>
 
+#include <xpm/workspace.hpp>
 #include <xpm/xpm.hpp>
 #include <gtest/gtest.h>
 #include <xpm/common.hpp>
@@ -42,7 +43,7 @@ struct TypeA : public CppObject<TypeA> {
 XPM_TYPE("TypeA", TypeA)
     .argument("name", &TypeA::name).required(true)
     .argument("x", &TypeA::x).defaultValue(1)
-    .argument("path", &TypeA::path).generator(std::make_shared<PathGenerator>());
+    .argument("path", &TypeA::path).generator(std::make_shared<PathGenerator>()).required(false);
 
 struct TypeB : public CppObject<TypeB> {
   std::shared_ptr<TypeA> a;
@@ -72,22 +73,30 @@ TEST(CppInterface, basic) {
   auto sv = currentRegister()->build(
       R"({ "$type": "TypeA", "name": "a name", "x": 1 })"
   );
+  Workspace ws;
+  GeneratorContext context(ws);
+  
+  sv->generate(context);
   sv->validate();
+  
+  auto o = sv->createObjects(*currentRegister());
 
-  auto o = sv->object();
-
-  TypeA &a = dynamic_cast<TypeA&>(*o);
-  ASSERT_EQ(a.name, "a name");
-  ASSERT_EQ(a.x, 1);
+  ASSERT_PRED_FORMAT1(AssertType<TypeA>, o.get());
+  TypeA *a = dynamic_cast<TypeA*>(o.get());
+  ASSERT_EQ(a->name, "a name");
+  ASSERT_EQ(a->x, 1);
 }
 
 TEST(CppInterface, composed) {
-  auto o = currentRegister()->build(R"({ "$type": "TypeB1", "x": 1, "a": { "$type": "TypeA", "x": 1 } })");
+  auto sv = currentRegister()->build(R"({ "$type": "TypeB1", "x": 1, "a": { 
+    "$type": "TypeA", "x": 1, "name": "name" } }
+  )");
+  auto o = sv->createObjects(*currentRegister());
+  sv->validate();
 
-  ASSERT_PRED_FORMAT1(AssertType<TypeB1>, o->object().get());
-  auto & b1 = dynamic_cast<TypeB1&>(*o->object());
+  ASSERT_PRED_FORMAT1(AssertType<TypeB1>, o.get());
+  auto & b1 = dynamic_cast<TypeB1&>(*o);
   ASSERT_EQ(b1.a->x, 1);
 
-  o->validate();
 }
 
