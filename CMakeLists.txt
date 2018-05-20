@@ -14,6 +14,7 @@ find_package(libssh REQUIRED)
 # find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
+set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
 option(YAML_CPP_BUILD_TESTS NO)
 option(YAML_CPP_BUILD_CONTRIB NO)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
@@ -22,6 +23,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
 # ---
 
 add_definitions("-Wall -Werror=return-type")
+
+# Enables PIC (position independent code)
 enable_testing()
 
 
@@ -32,6 +35,7 @@ set(PUBLIC_HEADERS
         include/public/xpm/task.hpp
         include/public/xpm/filesystem.hpp
         include/public/xpm/commandline.hpp
+        include/public/xpm/register.hpp
         include/public/xpm/workspace.hpp
         include/public/xpm/logging.hpp
         include/public/xpm/cpp.hpp 
