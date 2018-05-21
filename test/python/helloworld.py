@@ -18,7 +18,12 @@ class Say(object):
 @RegisterType("concat")
 class Concat(object):
     def execute(self):
-        print(self.name)
+        # We access the file where standard output was stored
+        with open(self.first._output()) as fp:
+            s = fp.read()
+        with open(self.second._output()) as fp:
+            s += " " + fp.read()
+        print(s)
 
 # try_parse handles some XPM commands (e.g. run)
 # that are used to actually execute tasks
