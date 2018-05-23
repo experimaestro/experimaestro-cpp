@@ -22,7 +22,6 @@ namespace xpm {
   struct Digest;
   class Workspace;
   class GeneratorContext;
-
 }
 
 #include <xpm/json.hpp>
@@ -312,10 +311,10 @@ class StructuredValue
   NOSWIG(Value const & value() const { return _value; })
 
   /// Get resource
-  inline std::shared_ptr<Resource> const & resource() const { return _resource; }
+  inline std::shared_ptr<Job> const & job() const { return _job; }
 
-  /// Set resource
-  inline void resource( std::shared_ptr<Resource> const & _resource) { this->_resource = _resource; }
+  /// Set job
+  inline void job( std::shared_ptr<Job> const & _job) { this->_job = _job; }
 
   /// Create objects
   std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
@@ -332,7 +331,7 @@ class StructuredValue
    * 
    * This field is set when the corresponding task is submitted
    */
-  std::shared_ptr<Resource> _resource;
+  std::shared_ptr<Job> _job;
 
   /// Associated object, if any
   std::shared_ptr<Object> _object;

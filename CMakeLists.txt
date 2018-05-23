@@ -18,7 +18,8 @@ set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
 option(YAML_CPP_BUILD_TESTS NO)
 option(YAML_CPP_BUILD_CONTRIB NO)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/efsw EXCLUDE_FROM_ALL)
 
 # ---
 
@@ -101,6 +102,7 @@ list(APPEND LINKED_LIBRARIES
     yaml-cpp
     SQLiteCpp
     sqlite3
+    efsw
     )
 message(STATUS "Linked libraries: ${LINKED_LIBRARIES}")
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
@@ -111,7 +113,6 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
 )
 include_directories(${INCLUDE_DIRECTORIES})
@@ -125,7 +126,7 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ext/efsw/include)
     set_target_properties(${xpmlib} PROPERTIES 
         CXX_STANDARD 11
         OUTPUT_NAME experimaestro)
@@ -277,4 +278,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

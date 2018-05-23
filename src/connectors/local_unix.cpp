@@ -1,20 +1,23 @@
 #ifndef _WIN32
 
-#include <xpm/connectors/local.hpp>
-#include <__xpm/common.hpp>
-
 // For Windows, see
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx
 
 #include <cstdlib>
+#include <dirent.h>
 #include <fcntl.h>
+#include <fstream>
 #include <mutex>
 #include <signal.h>
-#include <thread>
-#include <fstream>
-#include <unistd.h>
 #include <sys/stat.h>
-#include <sys/wait.h> // waitpid 
+#include <sys/wait.h> // waitpid
+#include <thread>
+#include <unistd.h>
+
+#include <efsw/efsw.hpp>
+
+#include <__xpm/common.hpp>
+#include <xpm/connectors/local.hpp>
 
 DEFINE_LOGGER("local");
 
@@ -33,9 +36,13 @@ struct FileDescriptor {
   FileDescriptor(FileDescriptor const &) = delete;
   FileDescriptor(FileDescriptor &&) = delete;
 
+  operator bool() const { return fd != -1; }
   FileDescriptor(int fd) : fd(fd) {}
 
-  ~FileDescriptor() { close(fd); }
+  ~FileDescriptor() {
+    if (fd != -1)
+      close(fd);
+  }
 };
 
 struct Pipe {
@@ -88,12 +95,11 @@ struct Pipe {
 
     case Redirection::FILE:
     case Redirection::NONE: {
-      auto path = redirect.type == Redirection::NONE
-                        ? "/dev/null"
-                        : redirect.path.c_str();
+      auto path = redirect.type == Redirection::NONE ? "/dev/null"
+                                                     : redirect.path.c_str();
       LOGGER->debug("Changing redirection for fd {} to path {}", tofd, path);
-      int fd = open(path,
-                    outputStream ?  O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
+      int fd = open(
+          path, outputStream ? O_WRONLY | O_TRUNC | O_CREAT : O_RDONLY, 0666);
       if (fd < 0)
         throw exception();
       dup2(fd, tofd);
@@ -124,12 +130,10 @@ class LocalProcess : public Process {
   int pid = -1;
 
 public:
-  ~LocalProcess() {
-    LOGGER->debug("Deleting LocalProcess", (void*)this);
-  }
+  ~LocalProcess() { LOGGER->debug("Deleting LocalProcess", (void *)this); }
   LocalProcess(LocalProcessBuilder &builder) {
     // Pipes for the different streams
-    LOGGER->debug("Creating LocalProcess", (void*)this);
+    LOGGER->debug("Creating LocalProcess", (void *)this);
     Pipe stdin_p(builder.stdin, false);
     Pipe stdout_p(builder.stdout, true);
     Pipe stderr_p(builder.stderr, true);
@@ -200,19 +204,19 @@ public:
     chdir(builder.workingDirectory.c_str());
 
     // Prepare the environment
-    char * envp[builder.environment.size() + 1];
+    char *envp[builder.environment.size() + 1];
     envp[builder.environment.size()] = nullptr;
     std::vector<std::string> envarray;
     for (auto const &entry : builder.environment) {
       envarray.push_back(entry.first + "=" + entry.second);
-      envp[envarray.size() - 1] = const_cast<char*>(envarray.back().c_str());
+      envp[envarray.size() - 1] = const_cast<char *>(envarray.back().c_str());
     }
 
     // Prepare the arguments
-    char * args[builder.command.size()];
+    char *args[builder.command.size()];
     args[builder.command.size() - 1] = nullptr;
     for (size_t i = 1; i < builder.command.size(); ++i) {
-      args[i] = const_cast<char*>(builder.command[i].c_str());
+      args[i] = const_cast<char *>(builder.command[i].c_str());
     }
 
     // Execute the command
@@ -220,9 +224,7 @@ public:
   }
 
   /// isRunning
-  virtual bool isRunning() override { 
-    return !closed; 
-  }
+  virtual bool isRunning() override { return !closed; }
 
   /// Exit code
   virtual int exitCode() override {
@@ -283,17 +285,16 @@ ptr<Process> LocalProcessBuilder::start() {
   return std::make_shared<LocalProcess>(*this);
 }
 
-
-void LocalConnector::setExecutable(Path const & path, bool flag) const {
+void LocalConnector::setExecutable(Path const &path, bool flag) const {
   if (chmod(path.localpath().c_str(), S_IRWXU) != 0) {
-    throw io_error(fmt::format("Could not chmod {} to be executable ({})",
-      path, strerror(errno)));
+    throw io_error(fmt::format("Could not chmod {} to be executable ({})", path,
+                               strerror(errno)));
   }
 }
 
-FileType LocalConnector::fileType(Path const & path) const {
-  struct stat s;   
-  if (stat (path.localpath().c_str(), &s) != 0)
+FileType LocalConnector::fileType(Path const &path) const {
+  struct stat s;
+  if (stat(path.localpath().c_str(), &s) != 0)
     return FileType::UNEXISTING;
 
   if (s.st_mode & S_IFDIR)
@@ -303,26 +304,88 @@ FileType LocalConnector::fileType(Path const & path) const {
     return FileType::FILE;
 
   return FileType::OTHER;
-
 }
 
-void LocalConnector::mkdir(Path const & path) const {
+void LocalConnector::mkdir(Path const &path) const {
   // Make directory
   if (::mkdir(path.localpath().c_str(), 0777) != 0) {
-    throw io_error(fmt::format("Could not create directory {} ({})",
-      path, strerror(errno))); 
-  } 
+    throw io_error(fmt::format("Could not create directory {} ({})", path,
+                               strerror(errno)));
+  }
 }
 
-void LocalConnector::touch(Path const &path) const {
+void LocalConnector::createFile(Path const &path, bool errorIfExists) const {
   std::ofstream out(path.localpath());
 }
 
-void LocalConnector::deleteTree(Path const &path, bool recursive) const {
-  NOT_IMPLEMENTED();
+struct UpdateListener : public efsw::FileWatchListener {
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool deleted = false;
+
+  void handleFileAction(efsw::WatchID watchid, const std::string &dir,
+                        const std::string &filename, efsw::Action action,
+                        std::string oldFilename = "") override {
+    if (action == efsw::Actions::Delete) {
+      std::lock_guard<std::mutex> lock(mutex);
+      deleted = true;
+      cv.notify_all();
+    }
+  }
+};
+
+std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
+  // Loop until the lock is taken
+  while (!FileDescriptor(open(path.localpath().c_str(), O_CREAT, S_IRWXU))) {
+    // Exit if the path does not exists
+    auto ft = fileType(path);
+    if (ft != FileType::FILE) {
+      throw io_error(fmt::format(
+          "Lock path {} already exists and is not a file", path.localpath()));
+    }
+
+    efsw::FileWatcher fileWatcher;
+    UpdateListener listener;
+    fileWatcher.addWatch(path.parent().localpath(), &listener, false);
+    std::unique_lock<std::mutex> lock(listener.mutex);
+    fileWatcher.watch();
+    listener.cv.wait(lock, [&] { return listener.deleted; });
+  }
+
+  return std::unique_ptr<Lock>(new FileLock(
+      const_cast<LocalConnector *>(this)->shared_from_this(), path));
 }
 
+void LocalConnector::deleteTree(Path const &path, bool recursive) const {
+  FileType ft = fileType(path);
+  if (ft != FileType::DIRECTORY) {
+    if (unlink(path.localpath().c_str()) != 0) {
+      throw io_error(
+          fmt::format("Could not remove {}: {}", path, strerror(errno)));
+    }
+  } else {
+    if (recursive) {
+      DIR *dir;
+      struct dirent *ent;
+      if ((dir = opendir(path.localpath().c_str())) != NULL) {
+        /* print all the files and directories within directory */
+        try {
+          while ((ent = readdir(dir)) != NULL) {
+            deleteTree(path / ent->d_name, recursive);
+          }
+        } catch (std::exception const &e) {
+          closedir(dir);
+          throw e;
+        }
+        closedir(dir);
+      } else {
+        throw io_error(fmt::format("Could not list the directory {}: {}", path,
+                                   strerror(errno)));
+      }
+    }
+  }
+}
 
-} // namespace
+} // namespace xpm
 
 #endif

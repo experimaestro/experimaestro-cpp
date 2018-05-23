@@ -24,15 +24,30 @@ static const int DIGEST_LENGTH = 20;
 /// Template 
 template <typename T> using ptr = std::shared_ptr<T>;
 
+/// Short function name to create new shared pointer
 template<class T, class... Args> 
 inline std::shared_ptr<T> mkptr(Args&&... args) { return std::make_shared<T>(std::forward<Args>(args)...); }
 
-/** Output */
+/// Base class for 
+class Outputable {
+protected:
+  /// Output using a stream
+  virtual void output(std::ostream &out) const;
+  friend inline std::ostream & operator<<(std::ostream & out, Outputable const & t) {
+    t.output(out);
+    return out;
+  }
+};
+
+/** Output a shared ptr by trying to dereferencing it */
 template<class T>
 std::ostream & operator<<(std::ostream & out, std::shared_ptr<T> const &t) {
   if (t) return out << *t;
   return out << "[null]";
 }
+
+
+
 
 /** Base exception */
 class exception : public std::exception {

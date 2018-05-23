@@ -9,9 +9,11 @@
 #include <queue>
 #include <unordered_map>
 #include <map>
+#include <unordered_set>
 #include <vector>
 #include <mutex>
 
+#include <xpm/json.hpp>
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
@@ -31,11 +33,7 @@ typedef std::uint64_t ResourceId;
 /**
  * A dependency between resources
  */
-class Dependency
-#ifndef SWIG
-: public std::enable_shared_from_this<Dependency>
-#endif
-{
+class Dependency : NOSWIG(std::enable_shared_from_this<Dependency>,) public Outputable {
 public:
   Dependency(std::shared_ptr<Resource> const & origin);
   virtual ~Dependency();
@@ -48,6 +46,10 @@ public:
 
   /// Check the status and update the dependent if needed
   void check();
+
+protected:
+  /// To string
+  virtual void output(std::ostream &out) const override;
 
 private:
   // The origin
@@ -63,14 +65,11 @@ private:
   std::mutex _mutex;
 
   friend class Resource;
+  friend class Workspace;
 };
 
 /// Base class for any resource
-class Resource 
-#ifndef SWIG
-: public std::enable_shared_from_this<Resource>
-#endif
-{
+class Resource : NOSWIG(public std::enable_shared_from_this<Resource>,) public Outputable {
 public:
   Resource();
   ~Resource();
@@ -84,8 +83,15 @@ public:
   void addDependent(std::shared_ptr<Dependency> const & dependency);
   void removeDependent(std::shared_ptr<Dependency> const & dependency);
 
-  // Create a simple dependency
+  /**
+   * Create a simple dependency from this resource
+   * 
+   * Subclasses might propose more specific dependency creation
+   */
   virtual std::shared_ptr<Dependency> createDependency() = 0;
+
+  /// Returns the resource as JSON (to include in job parameters)
+  virtual nlohmann::json toJson() const { return nullptr; }
 protected:
   /// Resource that depend on this one to be completed
   std::vector<std::weak_ptr<Dependency>> _dependents;
@@ -100,9 +106,9 @@ protected:
   virtual void dependencyChanged(Dependency & dependency, bool satisfied);
 
   friend class Dependency;
-  friend std::ostream & operator<<(std::ostream &, Resource const &);
-};
 
+  virtual void output(std::ostream &out) const override;
+};
 
 
 
@@ -157,15 +163,16 @@ enum struct JobState {
   /// For a job only: The job is currently running
   RUNNING,
 
-  /// The job is on hold
-  ON_HOLD,
-
-  /// The job ran but did not complete or the data was not generated
+  /**
+   * The job ran but did not complete, the data was not generated, or dependencies 
+   * failed to generate
+  */
   ERROR,
 
   /// Completed (for a job) or generated (for a data resource)
   DONE
 };
+std::ostream &operator<<(std::ostream & out, JobState const & state);
 
 /// Base class for jobs
 class Job : public Resource {
@@ -189,6 +196,8 @@ public:
 
   /// Get a dependency to this resource
   std::shared_ptr<Dependency> createDependency() override;
+
+  virtual nlohmann::json toJson() const override;
 
 protected:
   friend class Workspace;
@@ -240,11 +249,7 @@ struct JobPriorityComparator {
 /** 
  * Workspace tracking resources, jobs and scheduling
  */
-class Workspace 
-#ifndef SWIG
-: public std::enable_shared_from_this<Workspace>
-#endif
-{
+class Workspace NOSWIG(: public std::enable_shared_from_this<Workspace>) {
 public:
   /// Creates a work space
   Workspace();
@@ -261,7 +266,6 @@ public:
   /// Get an iterator for a key
   NOSWIG(std::map<std::string, std::string>::const_iterator find(std::string const &key) const;)
 
- public:
   /// Get the basepath
   Path const workdir() const;
 
@@ -289,6 +293,9 @@ public:
   /// Wait that all tasks are completed
   static void waitUntilTaskCompleted();
 
+  /// Notify that a job finished
+  void jobFinished(Job const &job);
+
 private:
   /// Working directory path
   Path _path;
@@ -298,6 +305,12 @@ private:
 
   /// All the jobs
   std::unordered_map<Path, std::shared_ptr<Job>> _jobs;
+
+  /// Count the number of waiting jobs
+  std::unordered_set<Job const *> waitingJobs;
+
+  /// List of active workspaces
+  static std::unordered_set<Workspace *> activeWorkspaces;
 
   /// The variables for this workspace
   std::map<std::string, std::string> _variables;

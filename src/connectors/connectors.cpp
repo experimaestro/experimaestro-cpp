@@ -5,6 +5,25 @@
 
 namespace xpm {
     
+Lock::~Lock() {}
+Lock::Lock() : _detached(false) {}
+
+void Lock::detachState(bool state) {
+  _detached = state;
+}
+
+FileLock::FileLock(std::shared_ptr<Connector> const & connector, Path const & path) :
+  _connector(connector), _path(path) {
+
+}
+
+FileLock::~FileLock() {
+  if (!detached()) {
+    _connector->deleteTree(_path);
+  }
+}
+
+
 Connector::~Connector() {}
 
 std::string Connector::resolve(Path const & path) const {

@@ -9,8 +9,37 @@
 namespace xpm {
 
 class ProcessBuilder;
+class Connector;
 
 enum struct FileType { UNEXISTING, FILE, DIRECTORY, PIPE, OTHER };
+
+/**
+ * Generic lock
+ * 
+ * Releases the lock when deleted (unless detached)
+ */
+class Lock {
+protected:
+  bool _detached;
+public:
+  Lock();
+  virtual ~Lock();
+
+  /// Set the detach state
+  void detachState(bool state);
+
+  /// Set the detach state
+  inline bool detached() const { return _detached; };
+};
+
+/// A lock represented by the presence of a file
+class FileLock : public Lock {
+  std::shared_ptr<Connector> _connector;
+  Path _path;
+public:
+  FileLock(std::shared_ptr<Connector> const & connector, Path const & path);
+  virtual ~FileLock();
+};
 
 
 /** Access to a host and command line process */
@@ -64,7 +93,12 @@ public:
   /**
    * Create a file
    */
-  virtual void touch(Path const &path) const = 0;
+  virtual void createFile(Path const &path, bool errorIfExists = false) const = 0;
+
+  /**
+   * Create a lock file
+   */
+  NOSWIG(virtual std::unique_ptr<Lock> lock(Path const &path) const = 0;)
 
   /**
    * Delete a file / directory

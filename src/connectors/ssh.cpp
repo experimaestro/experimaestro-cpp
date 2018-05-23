@@ -321,7 +321,7 @@ std::unique_ptr<std::istream> SSHConnector::istream(Path const &path) const {
   NOT_IMPLEMENTED();
 }
 
-void SSHConnector::touch(Path const &path) const {
+void SSHConnector::createFile(Path const &path, bool errorIfExists) const {
   NOT_IMPLEMENTED();
 }
 

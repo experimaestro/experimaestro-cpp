@@ -103,6 +103,9 @@ public:
     */
   friend bool operator==(Path const & lhs, Path const & rhs);
 
+  /** Composition */
+  Path operator/(std::string const & filename) const;
+
   template<typename OStream>
   friend OStream& operator<<(OStream& os, const Path & path) {
     return os << path.toString();

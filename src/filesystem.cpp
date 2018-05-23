@@ -49,6 +49,11 @@ Path::Path(std::string const &share, std::string const &path) : _share(share), _
   // TODO: perform some cleanup
 }
 
+Path Path::operator/(std::string const & filename) const {
+  return Path(*this, { filename });
+}
+
+
 
 Path Path::parent() const {
   unsigned long i = _path.rfind('/');

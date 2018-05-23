@@ -3,6 +3,10 @@
 #include <unordered_set>
 #include <fstream>
 #include <typeinfo>
+
+// Demangle
+#include <cxxabi.h>
+
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
@@ -33,10 +37,13 @@ const std::string KEY_TYPE = "$type";
 /// Task that generated it
 const std::string KEY_TASK = "$task";
 
+/// Job information
+const std::string KEY_JOB = "$job";
+
 /// Value
 const std::string KEY_VALUE = "$value";
 
-static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE};
+static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_JOB};
 
 const TypeName STRING_TYPE("string");
 const TypeName BOOLEAN_TYPE("boolean");
@@ -59,6 +66,18 @@ not_implemented_error::not_implemented_error(const std::string &message,
     "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
 
 
+template<typename T>
+std::string demangle(T const & t) {
+  int status;
+  char * demangled = abi::__cxa_demangle(typeid(t).name(),0,0,&status);
+  std::string r = demangled;
+  free(demangled);
+  return r;
+}
+
+void Outputable::output(std::ostream &out) const {
+  out << "Object of type " << demangle(this) << std::endl;
+}
 
 // ---
 // --- Type names
@@ -111,6 +130,12 @@ StructuredValue::StructuredValue(StructuredValue const &other) : _value(other._v
 }
 
 
+class DummyJob : public Job {
+public:
+  DummyJob(nlohmann::json const & j) : Job(Path((std::string)(j["locator"])), nullptr) {
+  }
+  virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
+};
 
 StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue) 
   : _flags(0) {
@@ -139,6 +164,8 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
             if (_type) _value = _value.cast(_type);
         } else if (it.key() == KEY_TYPE) {
           // ignore
+        } else if (it.key() == KEY_JOB) {
+          _job = mkptr<DummyJob>(it.value());
         } else if (it.key() == KEY_TASK) {
           _task = xpmRegister.getTask(it.value(), true);
         } else {
@@ -397,9 +424,9 @@ void StructuredValue::addDependencies(Job & job,  bool skipThis) {
   if (canIgnore())
     return;
 
-  if (_resource) {
-    LOGGER->info("Found dependency resource {}", _resource);
-    job.addDependency(_resource->createDependency());
+  if (_job) {
+    LOGGER->info("Found dependency resource {}", _job);
+    job.addDependency(_job->createDependency());
   } else {
     for (auto &entry: _content) {
       entry.second->addDependencies(job, false);

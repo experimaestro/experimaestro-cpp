@@ -4,7 +4,7 @@
 #include <xpm/launchers/launchers.hpp>
 #include <xpm/connectors/connectors.hpp>
 
-
+#include <spdlog/fmt/fmt.h>
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
 #include <SQLiteCpp/SQLiteCpp.h>
@@ -15,6 +15,7 @@ namespace xpm {
 
 // --- Dependency
 
+
 Dependency::Dependency(ptr<Resource> const & origin) : _origin(origin), _oldSatisfied(false) {}
 Dependency::~Dependency() {
   if (_origin) {
@@ -22,11 +23,16 @@ Dependency::~Dependency() {
   }
 }
 
+void Dependency::output(std::ostream &out) const {
+  out << fmt::format("Dep[{} -> {}]", _origin, _target);
+}
+
 void Dependency::target(ptr<Resource> const &resource) { _target = resource; }
 
 void Dependency::check() {
   std::unique_lock<std::mutex> lock(_mutex);
   bool s = satisfied();
+  LOGGER->info("Dependency {} is {}satisfied (was: {})", *this, s ? "" : "not ", _oldSatisfied);
   if (s != _oldSatisfied) {
     _target->dependencyChanged(*this, s);
   }
@@ -61,8 +67,8 @@ void Resource::dependencyChanged(Dependency &dependency,
       "A resource cannot handle a change in dependency directly");
 }
 
-std::ostream & operator<<(std::ostream &out, Resource const &r) {
-  return out << r._resourceId;
+void Resource::output(std::ostream &out) const {
+  out << _resourceId;
 }
 
 
@@ -101,15 +107,33 @@ public:
   virtual bool satisfied() override;  
 };
 
-JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {}
+JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {
+}
 
 bool JobDependency::satisfied() {
   return job->state() == JobState::DONE;
 }
 
 
+
+std::ostream &operator<<(std::ostream & out, JobState const & state) {
+  switch(state) {
+    case JobState::WAITING: return out << "WAITING";
+    case JobState::READY: return out << "READY";
+    case JobState::RUNNING: return out << "RUNNING";
+    case JobState::DONE: return out << "DONE";
+    case JobState::ERROR: return out << "ERROR";
+  }
+}
+
 Job::Job(Path const &locator, ptr<Launcher> const &launcher)
     : _locator(locator), _launcher(launcher), _unsatisfied(0) {}
+
+nlohmann::json Job::toJson() const  {
+  nlohmann::json j = {};
+  j["locator"] = _locator.toString();
+  return j;
+}
 
 JobState Job::state() const { return _state; }
 
@@ -122,6 +146,7 @@ void Job::dependencyChanged(Dependency &dependency, bool satisfied) {
   }
 
   if (_unsatisfied == 0) {
+    LOGGER->info("For job {}, # of unsatisfied jobs is ", *this, _unsatisfied);
     run();
   }
 }
@@ -168,9 +193,11 @@ void CommandLineJob::run() {
   Path directory = _locator.parent();
   _launcher->connector()->mkdirs(directory, true, false);
 
+  _launcher->connector()->lock(_locator.changeExtension("lock"));
+  
   scriptBuilder->command = _command;
   Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-  connector.touch(scriptBuilder->getStartLockPath(_locator));
+  connector.createFile(scriptBuilder->getStartLockPath(_locator));
   
   LOGGER->info("Starting job {}", _locator);
   processBuilder->environment = _launcher->environment();
@@ -184,16 +211,17 @@ void CommandLineJob::run() {
     // Wait for end of execution
     LOGGER->info("Waiting for job {} to finish", _locator);
     int exitCode = process->exitCode();
-    LOGGER->info("Job {} finished with exit code {}", _locator, exitCode);
     _state = exitCode == 0 ? JobState::DONE : JobState::ERROR;
+    LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, _state);
 
-  // TODO: unlock all dependencies
+    // TODO: unlock all dependencies
+    
+    // Notify workspace
+    _workspace->jobFinished(*this);
 
-    // Notify dependents if we exited clearly
-    if (exitCode == 0) {
-      for (auto &entry : this->_dependents) {
-        entry.lock()->check();
-      }
+    // Notify dependents 
+    for (auto &entry : this->_dependents) {
+      entry.lock()->check();
     }
 
   })
@@ -204,7 +232,14 @@ void CommandLineJob::run() {
 
 namespace {
   std::shared_ptr<Workspace> CURRENT_WORKSPACE;
+  
+  // Use to notify a changed in job status
+  std::mutex JOB_CHANGED_MUTEX;
+  std::condition_variable JOB_CHANGED;
 }
+
+
+std::unordered_set<Workspace *> Workspace::activeWorkspaces;
 
 bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
                                        ptr<Job> const &rhs) const {
@@ -214,15 +249,18 @@ bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
   return lhs->_submissionTime > rhs->_submissionTime;
 }
 
-Workspace::Workspace() {
+Workspace::Workspace() : Workspace("") {
 }
 
 Workspace::Workspace(std::string const &path) : _path(path) {
-  _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
+  if (!path.empty()) {
+    _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
+  }
+  activeWorkspaces.insert(this);
 }
 
 Workspace::~Workspace() {
-  LOGGER->info("Waiting that all tasks are completed");
+  activeWorkspaces.erase(this);
 }
 
 
@@ -236,6 +274,13 @@ void Workspace::submit(ptr<Job> const &job) {
     return;
   }
 
+  waitingJobs.insert(job.get());
+
+  // Register dependencies so that we are notified of changes
+  for(auto & dependency: job->_dependencies) {
+    dependency->_origin->addDependent(dependency);
+  }
+
   // TODO: get a new resource ID
 
   // Add job to list
@@ -247,6 +292,12 @@ void Workspace::submit(ptr<Job> const &job) {
   if (job->ready()) {
     job->run();
   }
+}
+
+void Workspace::jobFinished(Job const & job) {
+  std::lock_guard<std::mutex> lock(JOB_CHANGED_MUTEX);
+  waitingJobs.erase(&job);
+  JOB_CHANGED.notify_all();
 }
 
 void Workspace::current() {
@@ -302,9 +353,39 @@ void Workspace::experiment(std::string const & name) {
   _experiment = name;
 }
 
+namespace {
+  bool exitSignal = false;
+
+  void sigexitHandler(int) {
+    LOGGER->warn("Caught exit signal");
+    exitSignal = true;
+  }
+}
 
 void Workspace::waitUntilTaskCompleted() {
-  LOGGER->warn("Wait until completed not implemented...");
+  static bool signalHandler = false;
+  if (!signalHandler) {
+    signalHandler = true;
+    signal(SIGINT, &sigexitHandler);    
+    signal(SIGKILL, &sigexitHandler);    
+  }
+
+  // Go through all the workspaces
+  size_t count = 0;
+  do {
+    // Count the number of jobs
+    count = 0;
+    std::unique_lock<std::mutex> lock(JOB_CHANGED_MUTEX);
+    for(auto *ws: activeWorkspaces) {
+      count += ws->waitingJobs.size();
+    }
+
+    if (count > 0) {
+      LOGGER->info("Waiting for {} jobs to complete", count);
+      JOB_CHANGED.wait(lock);
+    }
+  } while (count > 0 && !exitSignal);
+ 
 }
 
 } // namespace xpm

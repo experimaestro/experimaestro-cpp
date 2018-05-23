@@ -152,16 +152,26 @@ namespace {
 
       out << "{";
       bool first = true;
+
+      auto comma = [&first,&out] {        
+        if (first) first = false;
+        else out << ',';
+      };
+
       if (conf->type()) {
         out << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
         first = false;
       }
 
+      if (conf->job()) {
+        comma();
+        out << "\"$job\": " <<  conf->job()->toJson() << std::endl;
+      }
+
       for (auto type = conf->type(); type; type = type->parentType()) {
         for (auto entry: type->arguments()) {
           Argument &argument = *entry.second;
-          if (first) first = false;
-          else out << ',';
+          comma();
           out << "\"" << entry.first << "\":";
           
           if (conf->hasKey(argument.name())) {

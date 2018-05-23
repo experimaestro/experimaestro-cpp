@@ -170,6 +170,11 @@ class PyObject:
         """Prepare object after creation"""
         pass
 
+    def _output(self):
+        print(self.__xpm__.configuration.resource())
+        # FIXME: implement _output
+        raise NotImplementedError()
+
 # Another way to submit if the method is overriden
 def submit(*args, **kwargs):
     PyObject.submit(*args, **kwargs)
@@ -446,7 +451,23 @@ launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
 set_launcher(launcher)
 
 
-# --- Wait for tasks
+# --- Handle signals
 
 import atexit
-atexit.register(Workspace.waitUntilTaskCompleted)
+import signal
+
+EXIT_MODE = False
+
+def handleKill():
+    EXIT_MODE = True
+    logging.warn("Received SIGINT or SIGTERM")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handleKill)
+signal.signal(signal.SIGTERM, handleKill)
+
+@atexit.register
+def handleExit():
+    logging.warn("Exiting")
+    Workspace.waitUntilTaskCompleted()
+
