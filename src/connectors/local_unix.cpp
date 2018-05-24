@@ -336,7 +336,7 @@ struct UpdateListener : public efsw::FileWatchListener {
 
 std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
   // Loop until the lock is taken
-  while (!FileDescriptor(open(path.localpath().c_str(), O_CREAT, S_IRWXU))) {
+  while (!FileDescriptor(open(path.localpath().c_str(), O_CREAT | O_EXCL, S_IRWXU))) {
     // Exit if the path does not exists
     auto ft = fileType(path);
     if (ft != FileType::FILE) {
