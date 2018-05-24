@@ -291,6 +291,9 @@ public:
   /// Get the basepath
   Path const workdir() const;
 
+  /// Get the jobs directory
+  Path const jobsdir() const;
+
   /// Sets a variable
   void set(std::string const &key, std::string const &value);
 

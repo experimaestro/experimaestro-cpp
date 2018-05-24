@@ -325,10 +325,11 @@ class AssociateType(RegisterType):
 class RegisterTask(RegisterType):
     """Register a task"""
 
-    def __init__(self, qname, scriptpath=None, pythonpath=None, description=None, associate=None):
+    def __init__(self, qname, scriptpath=None, pythonpath=None, prefix_args=[], description=None, associate=None):
         super().__init__(qname, description=description, associate=associate)
         self.pythonpath = sys.executable if pythonpath is None else pythonpath
         self.scriptpath = scriptpath
+        self.prefix_args = prefix_args
 
     def __call__(self, t):
         # Register the type
@@ -361,6 +362,8 @@ class RegisterTask(RegisterType):
         command = Command()
         command.add(CommandPath(op.realpath(self.pythonpath)))
         command.add(CommandPath(op.realpath(self.scriptpath)))
+        for arg in self.prefix_args:
+            command.add(CommandString(arg))
         command.add(CommandString("run"))
         command.add(CommandString(task.typeName().toString()))
         command.add(CommandParameters())

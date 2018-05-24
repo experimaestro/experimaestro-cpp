@@ -59,7 +59,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
     }
   });
 
-  auto job = std::make_shared<CommandLineJob>(svlocator->value().asPath(), launcher, _commandLine);
+  auto job = mkptr<CommandLineJob>(svlocator->value().asPath(), launcher, _commandLine);
   job->init();
   sv->job(job);
 

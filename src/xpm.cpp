@@ -849,7 +849,7 @@ nlohmann::json PathGenerator::toJson() const {
 }
 
 ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
-  Path p = context.workspace.workdir();
+  Path p = context.workspace.jobsdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
   if (ptr<Task> task = context.stack[0]->task()) {

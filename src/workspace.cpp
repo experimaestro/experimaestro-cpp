@@ -343,6 +343,10 @@ Path const Workspace::workdir() const {
   return _path;
 }
 
+Path const Workspace::jobsdir() const {
+  return _path / "jobs";
+}
+
 void Workspace::set(std::string const &key, std::string const &value) {
   _variables[key] = value;
 }
