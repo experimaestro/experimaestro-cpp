@@ -110,12 +110,19 @@ class XPMObject(Object):
         self.sv.object(self)
         self.sv.type(self.pyobject.__class__.__xpmtype__)
         self.setting = False
+        self.submitted = False
 
     def set(self, k, v):
         if self.setting: return
-        logger.info("Called set: %s, %s", k, v)
+
+        logger.debug("Called set: %s, %s", k, v)
         try:
             self.setting = True
+            # Check if the value corresponds to a task; if so,
+            # raise an exception if the task was not submitted
+            if isinstance(v, PyObject) and hasattr(v.__class__, "__xpmtask__"):
+                if not v.__xpm__.submitted:
+                    raise Exception("Task for argument '%s' was not submitted" % k)
             self.sv.set(k, structuredValue(v))
         finally:
             self.setting = False
@@ -161,10 +168,13 @@ class PyObject:
 
     def submit(self, *, workspace=None, launcher=None, send=SUBMIT_TASKS):
         """Submit this task"""
+        if self.__xpm__.submitted:
+            raise Exception("Task %s was already submitted" % self)
         if send:
             launcher = launcher or DEFAULT_LAUNCHER
-            logger.info("Submitting")
             self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.sv)
+
+        self.__xpm__.submitted = True
         return self
 
     def __setattr__(self, name, value):
@@ -311,25 +321,19 @@ class AssociateType(RegisterType):
         super().__init__(qname, description=description, associate=True)
 
 
-class RegisterTask():
-    """Register a task
-    
-    This annotation must be used after the class has been associated
-    with an XPM type, i.e.
 
-    ```
-    @RegisterTask(...)
-    @RegisterType(...)
-    class ...:
-        ...
-    ```
-    """
+class RegisterTask(RegisterType):
+    """Register a task"""
 
-    def __init__(self, scriptpath=None, pythonpath=None):
+    def __init__(self, qname, scriptpath=None, pythonpath=None, description=None, associate=None):
+        super().__init__(qname, description=description, associate=associate)
         self.pythonpath = sys.executable if pythonpath is None else pythonpath
         self.scriptpath = scriptpath
 
     def __call__(self, t):
+        # Register the type
+        t = super().__call__(t)
+        
         if not issubclass(t, PyObject):
             raise Exception("Only experimaestro objects (annotated with RegisterType or AssociateType) can be tasks")
 
@@ -478,6 +482,6 @@ signal.signal(signal.SIGTERM, handleKill)
 
 @atexit.register
 def handleExit():
-    logger.warn("Exiting")
+    logger.info("End of script: waiting for jobs to be completed")
     Workspace.waitUntilTaskCompleted()
 

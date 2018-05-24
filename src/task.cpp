@@ -44,9 +44,9 @@ void Task::submit(ptr<Workspace> const & _workspace,
   auto svlocator = getPathGenerator()->generate(GeneratorContext(*workspace, sv));
 
   // Validate and seal the task sv
-  LOGGER->info("Configuring task");
+  LOGGER->debug("Configuring task");
   sv->configure(*workspace);
-  LOGGER->info("Validating task");
+  LOGGER->debug("Validating task");
   sv->validate();
 
 
@@ -63,8 +63,8 @@ void Task::submit(ptr<Workspace> const & _workspace,
   job->init();
   sv->job(job);
 
-  LOGGER->info("Submitting job");
   workspace->submit(job);
+  LOGGER->info("Submitting job {} (id {})", job->locator(), job->getId());
 }
 
 void Task::commandline(ptr<CommandLine> const & command) {

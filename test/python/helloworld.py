@@ -1,21 +1,19 @@
 from experimaestro import *
+logging.basicConfig(level=logging.INFO, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
 
-# An experimental parameter
+# Register a class as a task: 
+# - There is one experimental parameter (word)
+# - the task identifier is "helloworld.say"
 @TypeArgument("word", type=str, required=True, help="Word to generate")
-
-# Register this class as task (by default, with the same name as the type)
-@RegisterTask()
-
-# Register this class and gives it the type "Hello"
-@RegisterType("say")
+@RegisterTask("helloworld.say")
 class Say(object):
     def execute(self):
-        print(self.word,)
+        print(self.word.upper(),)
 
+# Task concat
 @TypeArgument("first", type=Say)
 @TypeArgument("second", type=Say)
-@RegisterTask()
-@RegisterType("concat")
+@RegisterTask("helloworld.concat")
 class Concat(object):
     def execute(self):
         # We access the file where standard output was stored
