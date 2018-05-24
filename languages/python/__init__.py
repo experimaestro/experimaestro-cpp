@@ -72,7 +72,7 @@ def structuredValue(value):
 
     # It is a PyObject: get the associated configuration
     if isinstance(value, PyObject):
-        return value.__xpm__.configuration
+        return value.__xpm__.sv
 
     # A dictionary: transform
     if isinstance(value, dict):
@@ -101,40 +101,47 @@ def checknullsv(sv):
 
 class XPMObject(Object):
     """Holds XPM information for a PyObject"""
-    def __init__(self, pyobject):
+    def __init__(self, pyobject, sv=None):
         super().__init__()
         self.pyobject = pyobject
-        self.configuration = StructuredValue()
-        self.configuration.object(self)
-        self.configuration.type(self.pyobject.__class__.__xpmtype__)
+
+        self.sv = sv or StructuredValue()
+
+        self.sv.object(self)
+        self.sv.type(self.pyobject.__class__.__xpmtype__)
         self.setting = False
 
     def set(self, k, v):
-        logging.info("Called set: %s, %s", k, v)
+        if self.setting: return
+        logger.info("Called set: %s, %s", k, v)
         try:
             self.setting = True
-            self.configuration.set(k, structuredValue(v))
+            self.sv.set(k, structuredValue(v))
         finally:
             self.setting = False
 
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
-        if sv is None:
-            value = None
-            svtype = None
-        else:
-            svtype = sv.type()
-            object = sv.object()
-            if object:
-                value = object.pyobject
+        if self.setting: return
+        try:
+            self.setting = True
+            if sv is None:
+                value = None
+                svtype = None
             else:
-                value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
-    
-        # Set the value on the object if not setting otherwise
-        if not self.setting:
+                svtype = sv.type()
+                object = sv.object()
+                if object:
+                    value = object.pyobject
+                else:
+                    value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
+        
+            # Set the value on the object if not setting otherwise
             logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
-                     svtype, type(value), type(self.pyobject))
+                    svtype, type(value), type(self.pyobject))
             setattr(self.pyobject, key, value)
+        finally:
+            self.setting = False
     
     def run(self):
         self.pyobject.execute()
@@ -156,12 +163,14 @@ class PyObject:
         """Submit this task"""
         if send:
             launcher = launcher or DEFAULT_LAUNCHER
-            logging.info("Submitting")
-            self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.configuration)
+            logger.info("Submitting")
+            self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.sv)
         return self
 
     def __setattr__(self, name, value):
-        if Task.isRunning:
+        if not Task.isRunning:
+            # If task is not running, we update the structured
+            # value
             if name != "__xpm__":
                 self.__xpm__.set(name, value)
         super().__setattr__(name, value)
@@ -170,10 +179,10 @@ class PyObject:
         """Prepare object after creation"""
         pass
 
-    def _output(self):
-        print(self.__xpm__.configuration.resource())
-        # FIXME: implement _output
-        raise NotImplementedError()
+    def _stdout(self):
+        return self.__xpm__.sv.job().stdoutPath().localpath()
+    def _stderr(self):
+        return self.__xpm__.sv.job().stdoutPath().localpath()
 
 # Another way to submit if the method is overriden
 def submit(*args, **kwargs):
@@ -234,8 +243,9 @@ class PythonRegister(Register):
 
     def createObject(self, sv):
         type = self.registered.get(sv.type().typeName(), PyObject)
-        logger.info("Creating object for %s [%s]", sv, type)
-        pyobject = type()
+        logger.debug("Creating object for %s [%s]", sv, type)
+        pyobject = type.__new__(type)
+        pyobject.__xpm__ = XPMObject(pyobject, sv=sv)
         pyobject._prepare()
         return pyobject.__xpm__
 
@@ -460,7 +470,7 @@ EXIT_MODE = False
 
 def handleKill():
     EXIT_MODE = True
-    logging.warn("Received SIGINT or SIGTERM")
+    logger.warn("Received SIGINT or SIGTERM")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handleKill)
@@ -468,6 +478,6 @@ signal.signal(signal.SIGTERM, handleKill)
 
 @atexit.register
 def handleExit():
-    logging.warn("Exiting")
+    logger.warn("Exiting")
     Workspace.waitUntilTaskCompleted()
 

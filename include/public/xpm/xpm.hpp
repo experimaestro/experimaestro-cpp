@@ -169,11 +169,15 @@ class StructuredValue
   /// Constructs from value
   StructuredValue(Value const & v);
 
+  /// Construct from other (shallow copy)
+  StructuredValue(StructuredValue const &other) = delete;
+
+
   /// Move constructor
   StructuredValue(StructuredValue &&other) = default;
 
-  /// Construct from other (shallow copy)
-  StructuredValue(StructuredValue const &other);
+  /// Destructor
+  ~StructuredValue();
 
   /// Returns true if objects are equal
   bool equals(StructuredValue const &other) const;
@@ -310,16 +314,18 @@ class StructuredValue
   /// Get value
   NOSWIG(Value const & value() const { return _value; })
 
-  /// Get resource
-  inline std::shared_ptr<Job> const & job() const { return _job; }
+  /// Get generating job
+  std::shared_ptr<Job> const & job() const;
 
-  /// Set job
-  inline void job( std::shared_ptr<Job> const & _job) { this->_job = _job; }
+  /// Set generating job
+  void job( std::shared_ptr<Job> const & _job);
 
   /// Create objects
   std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
- private:
+
+private:
+
   /// Set flag
   void set(Flag flag, bool value);
 

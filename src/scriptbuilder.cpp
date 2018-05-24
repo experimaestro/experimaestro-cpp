@@ -27,24 +27,19 @@ std::string ShScriptBuilder::protect_quoted(std::string const &string) {
 
 ScriptBuilder::~ScriptBuilder() {}
 
-const Path ScriptBuilder::getDonePath(Path const &locator) {
-  return locator.changeExtension("done");
-}
-const Path ScriptBuilder::getStartLockPath(Path const &locator) {
-  return locator.changeExtension("lock.start");
-}
-
 ShScriptBuilder::ShScriptBuilder() : shPath("/bin/sh") {}
+
 
 Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path const &path,
                             Job const &job) {
   // First generate the run file
   Path directory = path.parent();
   Path scriptpath = directory.resolve({path.name() + ".sh"});
-  Path donepath = getDonePath(path);
-  Path exitcodepath = directory.resolve({path.name() + ".code"});
-  Path startlockPath = getStartLockPath(path);
-  Path pidFile = directory.resolve({path.name() + ".pid"});
+  Path donepath = job.pathTo(DONE_PATH);
+  Path startlockPath = job.pathTo(LOCK_START_PATH);
+  Path exitcodepath = job.pathTo(EXIT_CODE_PATH);
+   
+  Path pidFile = job.pathTo(PID_PATH);
 
   LOGGER->info("Writing script {}", scriptpath);
   std::unique_ptr<std::ostream> _out = connector.ostream(scriptpath);

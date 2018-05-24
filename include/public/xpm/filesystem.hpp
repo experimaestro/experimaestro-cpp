@@ -48,7 +48,7 @@ public:
   }
 
   /// Change extension
-  Path changeExtension(std::string const & extension) const;
+  Path withExtension(std::string const & extension) const;
 
   /// Returns a string representation of the path (that can be parsed)
   std::string toString() const;
@@ -114,9 +114,12 @@ public:
 
   bool operator==(Path const & lhs, Path const & rhs);
 
+  typedef std::function<Path(const Path &)> PathTransformer;
+
 }
 
 #ifndef SWIG
+
 namespace std {
   template<>
   struct hash<xpm::Path> {

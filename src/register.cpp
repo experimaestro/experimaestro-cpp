@@ -177,7 +177,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 }
 
 void Register::runTask(ptr<Task> const & task, ptr<StructuredValue> const & sv) {
-  auto object = createObject(sv);
+  auto object = sv->object();
   if (!object) {
     throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
   }

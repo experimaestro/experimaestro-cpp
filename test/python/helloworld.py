@@ -10,7 +10,7 @@ from experimaestro import *
 @RegisterType("say")
 class Say(object):
     def execute(self):
-        print(self.word)
+        print(self.word,)
 
 @TypeArgument("first", type=Say)
 @TypeArgument("second", type=Say)
@@ -19,10 +19,10 @@ class Say(object):
 class Concat(object):
     def execute(self):
         # We access the file where standard output was stored
-        with open(self.first._output()) as fp:
-            s = fp.read()
-        with open(self.second._output()) as fp:
-            s += " " + fp.read()
+        with open(self.first._stdout()) as fp:
+            s = fp.read().strip()
+        with open(self.second._stdout()) as fp:
+            s += " " + fp.read().strip()
         print(s)
 
 # try_parse handles some XPM commands (e.g. run)

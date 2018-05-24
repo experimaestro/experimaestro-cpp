@@ -75,12 +75,14 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     $result = xpm::python::getRealObject($1);
 }
 
-// Handles properly a nullptr
+// Handles properly a smart pointer
 %typemap(directorin) std::shared_ptr< xpm::StructuredValue > const & {
+    // Handles null smart pointer
     if (!$1) {
         $input = SWIG_Py_Void();
     } else {
-        $input = SWIG_NewPointerObj(%as_voidptr(&$1), $descriptor, %newpointer_flags);
+        std::shared_ptr< xpm::StructuredValue > * ptr = new std::shared_ptr< xpm::StructuredValue >($1);
+        $input = SWIG_NewPointerObj(%as_voidptr(ptr), $descriptor, SWIG_POINTER_OWN);
     }
 }
 

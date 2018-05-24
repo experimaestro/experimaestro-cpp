@@ -68,7 +68,7 @@ Path Path::parent() const {
   return *this;
 }
 
-Path Path::changeExtension(std::string const & extension) const {
+Path Path::withExtension(std::string const & extension) const {
   auto pos = _path.rfind("/");
   if (pos == std::string::npos) pos = 0;
   pos = _path.find('.', pos);

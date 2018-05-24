@@ -13,6 +13,14 @@ DEFINE_LOGGER("workspace");
 
 namespace xpm {
 
+
+PathTransformer EXIT_CODE_PATH = [](const Path &path) { return path.withExtension(".code"); };
+PathTransformer LOCK_PATH = [](const Path &path) { return path.withExtension(".lock"); };
+PathTransformer LOCK_START_PATH = [](const Path &path) { return path.withExtension(".lock.start"); };
+PathTransformer DONE_PATH = [](const Path &path) { return path.withExtension(".done"); };
+PathTransformer PID_PATH = [](const Path &path) { return path.withExtension(".pid"); };
+
+
 // --- Dependency
 
 
@@ -40,7 +48,10 @@ void Dependency::check() {
 
 // --- Resource
 
-Resource::Resource() {}
+Resource::Resource() {
+    static size_t RESOURCE_ID = 0;
+    _resourceId = ++RESOURCE_ID;
+}
 Resource::~Resource() {}
 void Resource::init() {}
 
@@ -129,6 +140,18 @@ std::ostream &operator<<(std::ostream & out, JobState const & state) {
 Job::Job(Path const &locator, ptr<Launcher> const &launcher)
     : _locator(locator), _launcher(launcher), _unsatisfied(0) {}
 
+Path Job::stdoutPath() const {
+  return _locator.withExtension("out");
+}
+
+Path Job::stderrPath() const {
+  return _locator.withExtension("err");
+}
+
+Path Job::pathTo(std::function<Path(Path const &)> f) const {
+  return f(_locator);
+}
+
 nlohmann::json Job::toJson() const  {
   nlohmann::json j = {};
   j["locator"] = _locator.toString();
@@ -146,7 +169,7 @@ void Job::dependencyChanged(Dependency &dependency, bool satisfied) {
   }
 
   if (_unsatisfied == 0) {
-    LOGGER->info("For job {}, # of unsatisfied jobs is ", *this, _unsatisfied);
+    LOGGER->info("Job {} is ready to run", *this);
     run();
   }
 }
@@ -159,13 +182,21 @@ void Job::addDependency(ptr<Dependency> const &dependency) {
 
   // Update the dependency (it is unsatisfied at the start)
   _unsatisfied += 1;
-  dependency->check();
 }
 
 ptr<Dependency> Job::createDependency() {
   return mkptr<JobDependency>(std::static_pointer_cast<Job>(shared_from_this()));
 }
 
+void Job::jobCompleted() {
+  // Notify workspace
+  _workspace->jobFinished(*this);
+
+  // Notify dependents 
+  for (auto &entry : this->_dependents) {
+    entry.lock()->check();
+  }
+}
 
 // --- Command line job
 
@@ -187,17 +218,25 @@ void CommandLineJob::run() {
   auto processBuilder = _launcher->processBuilder();
 
   auto & connector = *_launcher->connector();
+  auto const donePath = pathTo(DONE_PATH);
 
   // TODO: lock all dependencies
+
+  if (connector.fileType(donePath) == FileType::FILE) {
+    LOGGER->info("Job {} is already done", *this);
+    _state = JobState::DONE;
+    jobCompleted();
+    return;
+  }
 
   Path directory = _locator.parent();
   _launcher->connector()->mkdirs(directory, true, false);
 
-  _launcher->connector()->lock(_locator.changeExtension("lock"));
+  _launcher->connector()->lock(_locator.withExtension("lock"));
   
   scriptBuilder->command = _command;
   Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-  connector.createFile(scriptBuilder->getStartLockPath(_locator));
+  connector.createFile(pathTo(LOCK_START_PATH));
   
   LOGGER->info("Starting job {}", _locator);
   processBuilder->environment = _launcher->environment();
@@ -216,16 +255,9 @@ void CommandLineJob::run() {
 
     // TODO: unlock all dependencies
     
-    // Notify workspace
-    _workspace->jobFinished(*this);
+    this->jobCompleted();
 
-    // Notify dependents 
-    for (auto &entry : this->_dependents) {
-      entry.lock()->check();
-    }
-
-  })
-      .detach();
+  }).detach();
 }
 
 // -- Workspace
@@ -276,20 +308,19 @@ void Workspace::submit(ptr<Job> const &job) {
 
   waitingJobs.insert(job.get());
 
-  // Register dependencies so that we are notified of changes
-  for(auto & dependency: job->_dependencies) {
-    dependency->_origin->addDependent(dependency);
-  }
-
-  // TODO: get a new resource ID
-
   // Add job to list
   job->_submissionTime = std::time(nullptr);
   job->_workspace = shared_from_this();
   _jobs[job->locator()] = job;
 
+  // Register dependencies so that we are notified of changes
+  for(auto & dependency: job->_dependencies) {
+    dependency->_origin->addDependent(dependency);
+    dependency->check();
+  }
+
   // Check if ready
-  if (job->ready()) {
+  if (job->_dependencies.empty() && job->ready()) {
     job->run();
   }
 }

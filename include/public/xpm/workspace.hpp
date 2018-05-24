@@ -172,7 +172,17 @@ enum struct JobState {
   /// Completed (for a job) or generated (for a data resource)
   DONE
 };
+
+/// String representation of a job state
 std::ostream &operator<<(std::ostream & out, JobState const & state);
+
+
+extern PathTransformer EXIT_CODE_PATH;
+extern PathTransformer LOCK_PATH;
+extern PathTransformer LOCK_START_PATH;
+extern PathTransformer DONE_PATH;
+extern PathTransformer PID_PATH;
+
 
 /// Base class for jobs
 class Job : public Resource {
@@ -197,14 +207,26 @@ public:
   /// Get a dependency to this resource
   std::shared_ptr<Dependency> createDependency() override;
 
+  /// Get a JSON representation of this resource
   virtual nlohmann::json toJson() const override;
 
+  /// Get the path to the output stream
+  Path stdoutPath() const;
+
+  /// Get the path to the error stream
+  Path stderrPath() const;
+
+  /// Get the path to the lock start path
+  Path pathTo(std::function<Path(Path const &)> f) const;
 protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
 
   /// Signals a dependency change
   virtual void dependencyChanged(Dependency & dependency, bool satisfied) override;
+
+  /// Called when the job is completed
+  void jobCompleted();
 
   /// The workspace
   std::shared_ptr<Workspace> _workspace;

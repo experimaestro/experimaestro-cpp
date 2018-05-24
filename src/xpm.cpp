@@ -114,6 +114,8 @@ void Object::run() {
   throw assertion_error("Object is not a task: cannot run it!");
 }
 
+StructuredValue::~StructuredValue() {
+}
 StructuredValue::StructuredValue(Value const &v) : _flags(0) {
   _value = v;
   _type = v.type();
@@ -126,13 +128,9 @@ StructuredValue::StructuredValue(std::map<std::string, ptr<StructuredValue>> &ma
     : _flags(0), _content(map) {
 }
 
-StructuredValue::StructuredValue(StructuredValue const &other) : _value(other._value),  _flags(other._flags), _content(other._content) {
-}
-
-
 class DummyJob : public Job {
 public:
-  DummyJob(nlohmann::json const & j) : Job(Path((std::string)(j["locator"])), nullptr) {
+  DummyJob(nlohmann::json const & j) : Job(Path((std::string const &)(j["locator"])), nullptr) {
   }
   virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
 };
@@ -165,7 +163,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
-          _job = mkptr<DummyJob>(it.value());
+          job(mkptr<DummyJob>(it.value()));
         } else if (it.key() == KEY_TASK) {
           _task = xpmRegister.getTask(it.value(), true);
         } else {
@@ -212,7 +210,15 @@ json StructuredValue::toJson() {
 }
 
 ptr<StructuredValue> StructuredValue::copy() {
-  return std::make_shared<StructuredValue>(*this);
+  auto sv = mkptr<StructuredValue>();
+  sv->_job =_job;
+  sv->_object =_object;
+  sv->_task =_task;
+  sv->_value =_value;
+  sv->_flags =_flags;
+  sv->_content =_content;
+
+  return sv;
 }
 
 std::string StructuredValue::toJsonString() {
@@ -549,6 +555,15 @@ void StructuredValue::set(StructuredValue::Flag flag, bool value) {
 
 bool StructuredValue::get(StructuredValue::Flag flag) const {
   return (Flags)flag & _flags;
+}
+
+
+std::shared_ptr<Job> const & StructuredValue::job() const { 
+  return _job; 
+}
+
+void StructuredValue::job( std::shared_ptr<Job> const & _job) { 
+  this->_job = _job; 
 }
 
 
