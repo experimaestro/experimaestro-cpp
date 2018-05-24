@@ -15,10 +15,11 @@ find_package(libssh REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
 set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
-option(YAML_CPP_BUILD_TESTS NO)
-option(YAML_CPP_BUILD_CONTRIB NO)
+option(YAML_CPP_BUILD_TESTS OFF)
+option(YAML_CPP_BUILD_CONTRIB OFF)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp EXCLUDE_FROM_ALL)
+set(STATIC_LIB ON CACHE BOOL "Build EFSW as a static library" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/efsw EXCLUDE_FROM_ALL)
 
 # ---

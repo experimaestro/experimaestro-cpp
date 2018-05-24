@@ -46,9 +46,6 @@ void Task::submit(ptr<Workspace> const & _workspace,
   // Validate and seal the task sv
   LOGGER->debug("Configuring task");
   sv->configure(*workspace);
-  LOGGER->debug("Validating task");
-  sv->validate();
-
 
   // Get generated directory as locator
 

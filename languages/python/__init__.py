@@ -455,6 +455,8 @@ def experiment(path, name):
     :param path: The working directory for the experiment
     :param name: The name of the experiment
     """
+    if isinstance(path, PPath):
+        path = path.absolute()
     workspace = Workspace(str(path))
     workspace.current()
     workspace.experiment(name)

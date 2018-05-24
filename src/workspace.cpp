@@ -14,11 +14,11 @@ DEFINE_LOGGER("workspace");
 namespace xpm {
 
 
-PathTransformer EXIT_CODE_PATH = [](const Path &path) { return path.withExtension(".code"); };
-PathTransformer LOCK_PATH = [](const Path &path) { return path.withExtension(".lock"); };
-PathTransformer LOCK_START_PATH = [](const Path &path) { return path.withExtension(".lock.start"); };
-PathTransformer DONE_PATH = [](const Path &path) { return path.withExtension(".done"); };
-PathTransformer PID_PATH = [](const Path &path) { return path.withExtension(".pid"); };
+PathTransformer EXIT_CODE_PATH = [](const Path &path) { return path.withExtension("code"); };
+PathTransformer LOCK_PATH = [](const Path &path) { return path.withExtension("lock"); };
+PathTransformer LOCK_START_PATH = [](const Path &path) { return path.withExtension("lock.start"); };
+PathTransformer DONE_PATH = [](const Path &path) { return path.withExtension("done"); };
+PathTransformer PID_PATH = [](const Path &path) { return path.withExtension("pid"); };
 
 
 // --- Dependency
@@ -220,23 +220,31 @@ void CommandLineJob::run() {
   auto & connector = *_launcher->connector();
   auto const donePath = pathTo(DONE_PATH);
 
-  // TODO: lock all dependencies
+  // Check if already done
+  auto check = [&] {
+    if (connector.fileType(donePath) == FileType::FILE) {
+      LOGGER->info("Job {} is already done", *this);
+      _state = JobState::DONE;
+      jobCompleted();
+      return true;
+    }
+    return false;
+  };
 
-  if (connector.fileType(donePath) == FileType::FILE) {
-    LOGGER->info("Job {} is already done", *this);
-    _state = JobState::DONE;
-    jobCompleted();
-    return;
-  }
+  // check if done
+  if (check()) return;
 
+  // Lock the job and check done again (just in case)
   Path directory = _locator.parent();
   _launcher->connector()->mkdirs(directory, true, false);
 
-  _launcher->connector()->lock(_locator.withExtension("lock"));
+  auto lock = _launcher->connector()->lock(pathTo(LOCK_PATH));
+  if (check()) return;
   
+  // Now we can write the script
   scriptBuilder->command = _command;
   Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-  connector.createFile(pathTo(LOCK_START_PATH));
+  auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
   
   LOGGER->info("Starting job {}", _locator);
   processBuilder->environment = _launcher->environment();
@@ -246,6 +254,11 @@ void CommandLineJob::run() {
   processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
 
   ptr<Process> process = processBuilder->start();
+  
+  // Avoid to remove the locks ourselves
+  startlock->detachState(true);
+  lock->detachState(true);
+
   std::thread([this, process]() {
     // Wait for end of execution
     LOGGER->info("Waiting for job {} to finish", _locator);

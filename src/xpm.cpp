@@ -211,11 +211,12 @@ json StructuredValue::toJson() {
 
 ptr<StructuredValue> StructuredValue::copy() {
   auto sv = mkptr<StructuredValue>();
-  sv->_job =_job;
-  sv->_object =_object;
-  sv->_task =_task;
-  sv->_value =_value;
-  sv->_flags =_flags;
+  sv->_job = _job;
+  sv->_object = _object;
+  sv->_task = _task;
+  sv->_value = _value;
+  sv->_flags = _flags;
+  sv->_type = _type;
   sv->_content =_content;
 
   return sv;
