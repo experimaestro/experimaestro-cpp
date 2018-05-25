@@ -196,7 +196,7 @@ if (true)
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
 
-    set(CMAKE_SWIG_FLAGS "-builtin")
+    set(CMAKE_SWIG_FLAGS "-builtin;-threads")
 
     # Build module experimaestro
     set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} languages/python/xpm.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)

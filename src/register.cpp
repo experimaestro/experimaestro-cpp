@@ -125,6 +125,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 
   {
     auto _run = app.add_subcommand("run", "Run a given task");
+    _run->allow_extras();
     
     std::string taskName;
     _run->add_option("task", taskName, "Task name", true)->required();
