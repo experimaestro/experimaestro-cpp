@@ -222,6 +222,9 @@ protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
 
+  /// Set the current state
+  JobState state(JobState newState);
+
   /// Signals a dependency change
   virtual void dependencyChanged(Dependency & dependency, bool satisfied) override;
 
@@ -245,7 +248,7 @@ protected:
 
   /// Number of dependencies that are not satisifed
   size_t _unsatisfied;
-
+private:
   /// Resource state
   JobState _state;
 };

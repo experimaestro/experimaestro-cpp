@@ -31,6 +31,7 @@ std::ostream &operator<<(std::ostream &os, const Path &c);
 struct Digest {
   SHA_CTX context;
 
+
   Digest() {
     if (!SHA1_Init(&context)) {
       throw std::runtime_error("Error while initializing SHA-1");

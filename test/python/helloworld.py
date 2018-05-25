@@ -2,6 +2,8 @@
 
 from experimaestro import *
 logging.basicConfig(level=logging.INFO, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
+setLogLevel("xpm", LogLevel_DEBUG)
+setLogLevel("xpm.local", LogLevel_DEBUG)
 
 # Register a class as a task: 
 # - There is one experimental parameter (word)

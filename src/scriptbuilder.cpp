@@ -110,7 +110,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
 
   // Remove locks
   for (auto &file : lockFiles) {
-    out << " rm -f " << connector.resolve(file) << std::endl;
+    out << " rm -f " << connector.resolve(file, directory) << std::endl;
   }
 
   // Remove temporary files

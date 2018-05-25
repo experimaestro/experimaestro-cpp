@@ -1,3 +1,4 @@
+#include <csignal>
 #include <xpm/workspace.hpp>
 #include <xpm/commandline.hpp>
 
@@ -9,7 +10,7 @@
 #include <__xpm/scriptbuilder.hpp>
 #include <SQLiteCpp/SQLiteCpp.h>
 
-DEFINE_LOGGER("workspace");
+DEFINE_LOGGER("xpm.workspace");
 
 namespace xpm {
 
@@ -174,6 +175,12 @@ void Job::dependencyChanged(Dependency &dependency, bool satisfied) {
   }
 }
 
+JobState Job::state(JobState newState) {
+  JobState old = _state;
+  _state = newState;
+  return old;
+}
+
 void Job::addDependency(ptr<Dependency> const &dependency) {
   // Add the dependency
   _dependencies.push_back(dependency);
@@ -214,62 +221,69 @@ void CommandLineJob::init() {
 }
 
 void CommandLineJob::run() {
-  auto scriptBuilder = _launcher->scriptBuilder();
-  auto processBuilder = _launcher->processBuilder();
+  // Run uses a thread
+  std::thread([this]() {
+    std::unique_lock<std::mutex> jobLock(_mutex);
+    LOGGER->info("Running job {}...", *this);
 
-  auto & connector = *_launcher->connector();
-  auto const donePath = pathTo(DONE_PATH);
+    auto scriptBuilder = _launcher->scriptBuilder();
+    auto processBuilder = _launcher->processBuilder();
 
-  // Check if already done
-  auto check = [&] {
-    if (connector.fileType(donePath) == FileType::FILE) {
-      LOGGER->info("Job {} is already done", *this);
-      _state = JobState::DONE;
-      jobCompleted();
-      return true;
-    }
-    return false;
-  };
+    auto & connector = *_launcher->connector();
+    auto const donePath = pathTo(DONE_PATH);
 
-  // check if done
-  if (check()) return;
+    // Check if already done
+    auto check = [&] {
+      if (connector.fileType(donePath) == FileType::FILE) {
+        LOGGER->info("Job {} is already done", *this);
+        state(JobState::DONE);
+        jobCompleted();
+        return true;
+      }
+      return false;
+    };
 
-  // Lock the job and check done again (just in case)
-  Path directory = _locator.parent();
-  _launcher->connector()->mkdirs(directory, true, false);
+    // check if done
+    if (check()) return;
 
-  auto lock = _launcher->connector()->lock(pathTo(LOCK_PATH));
-  if (check()) return;
-  
-  // Now we can write the script
-  scriptBuilder->command = _command;
-  Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-  auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
-  
-  LOGGER->info("Starting job {}", _locator);
-  processBuilder->environment = _launcher->environment();
-  processBuilder->command.push_back(
-      _launcher->connector()->resolve(scriptPath));
-  processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
-  processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
+    // Lock the job and check done again (just in case)
+    LOGGER->debug("Making directories job {}...", _locator);
+    Path directory = _locator.parent();
+    _launcher->connector()->mkdirs(directory, true, false);
 
-  ptr<Process> process = processBuilder->start();
-  
-  // Avoid to remove the locks ourselves
-  startlock->detachState(true);
-  lock->detachState(true);
+    auto lockPath = pathTo(LOCK_PATH);
 
-  std::thread([this, process]() {
+    auto lock = _launcher->connector()->lock(lockPath);
+    if (check()) return;
+    
+    // Now we can write the script
+    scriptBuilder->command = _command;
+    scriptBuilder->lockFiles.push_back(lockPath);
+    Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
+    auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
+    
+    LOGGER->info("Starting job {}", _locator);
+    processBuilder->environment = _launcher->environment();
+    processBuilder->command.push_back(
+        _launcher->connector()->resolve(scriptPath));
+    processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
+    processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
+
+    ptr<Process> process = processBuilder->start();
+    state(JobState::RUNNING);
+    
+    // Avoid to remove the locks ourselves
+    startlock->detachState(true);
+    lock->detachState(true);
+
     // Wait for end of execution
     LOGGER->info("Waiting for job {} to finish", _locator);
     int exitCode = process->exitCode();
-    _state = exitCode == 0 ? JobState::DONE : JobState::ERROR;
-    LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, _state);
+    state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
+    LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
 
-    // TODO: unlock all dependencies
-    
-    this->jobCompleted();
-
+      
+      this->jobCompleted();
   }).detach();
 }
 
@@ -402,21 +416,15 @@ void Workspace::experiment(std::string const & name) {
 }
 
 namespace {
-  bool exitSignal = false;
-
+  bool exitSignal;
   void sigexitHandler(int) {
-    LOGGER->warn("Caught exit signal");
+    LOGGER->warn("Got SIGINT");
     exitSignal = true;
   }
 }
 
 void Workspace::waitUntilTaskCompleted() {
-  static bool signalHandler = false;
-  if (!signalHandler) {
-    signalHandler = true;
-    signal(SIGINT, &sigexitHandler);    
-    signal(SIGKILL, &sigexitHandler);    
-  }
+  std::signal(SIGINT, &sigexitHandler);
 
   // Go through all the workspaces
   size_t count = 0;

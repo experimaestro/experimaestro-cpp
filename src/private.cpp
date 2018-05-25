@@ -23,9 +23,6 @@ void initLogging() {
     // auto errsink = spdlog::sinks::stderr_sink_mt::instance();
     sink = std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>();
     sink->set_level(spdlog::level::debug);
-
-    // Sets some log levels
-    setLogLevel("rpc", LogLevel::WARN);
   }
 }
 
@@ -66,6 +63,7 @@ void setLogLevel(std::string const &loggername, LogLevel level) {
   initLogging();
 
   auto l = logger(loggername);
+  
   l->set_level(convert(level));
 }
 

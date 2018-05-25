@@ -484,6 +484,7 @@ def handleKill():
 
 signal.signal(signal.SIGINT, handleKill)
 signal.signal(signal.SIGTERM, handleKill)
+signal.signal(signal.SIGQUIT, handleKill)
 
 @atexit.register
 def handleExit():

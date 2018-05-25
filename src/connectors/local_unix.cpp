@@ -19,7 +19,7 @@
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
 
-DEFINE_LOGGER("local");
+DEFINE_LOGGER("xpm.local");
 
 namespace {
 // TODO: promote to parameter?
@@ -318,15 +318,19 @@ void LocalConnector::createFile(Path const &path, bool errorIfExists) const {
   std::ofstream out(path.localpath());
 }
 
-struct UpdateListener : public efsw::FileWatchListener {
+struct DeleteListener : public efsw::FileWatchListener {
   std::mutex mutex;
   std::condition_variable cv;
+  std::string filename; ///< Filename to watch
   bool deleted = false;
+
+  DeleteListener(std::string const & filename) : filename(filename) {}
 
   void handleFileAction(efsw::WatchID watchid, const std::string &dir,
                         const std::string &filename, efsw::Action action,
                         std::string oldFilename = "") override {
-    if (action == efsw::Actions::Delete) {
+    LOGGER->debug("Notification in directory {}: {}", dir, filename);
+    if (action == efsw::Actions::Delete && this->filename == filename) {
       std::lock_guard<std::mutex> lock(mutex);
       deleted = true;
       cv.notify_all();
@@ -336,7 +340,9 @@ struct UpdateListener : public efsw::FileWatchListener {
 
 std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
   // Loop until the lock is taken
+  LOGGER->debug("Trying to lock {}", path);
   while (!FileDescriptor(open(path.localpath().c_str(), O_CREAT | O_EXCL, S_IRWXU))) {
+    LOGGER->info("Waiting for lock file {}", path);
     // Exit if the path does not exists
     auto ft = fileType(path);
     if (ft != FileType::FILE) {
@@ -345,11 +351,17 @@ std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
     }
 
     efsw::FileWatcher fileWatcher;
-    UpdateListener listener;
-    fileWatcher.addWatch(path.parent().localpath(), &listener, false);
+    DeleteListener listener(path.name());
     std::unique_lock<std::mutex> lock(listener.mutex);
+    auto watchID = fileWatcher.addWatch(path.parent().localpath(), &listener, true);
+    if (watchID < 0) {
+      throw io_error("Could not setup a file watcher");
+    }
+
     fileWatcher.watch();
-    listener.cv.wait(lock, [&] { return listener.deleted; });
+    listener.cv.wait(lock, [&] { 
+      return listener.deleted; 
+    });
   }
 
   return std::unique_ptr<Lock>(new FileLock(
