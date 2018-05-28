@@ -1,0 +1,47 @@
+version: "2"
+
+services:
+  gate:
+    image: "bpiwowar/xpmtest"
+    depends_on:
+      - "mysql"
+      - "oarnode1"
+    networks:
+      - "back"
+    ports:
+      - "2200:22"
+    entrypoint: /root/run.sh
+    volumes:
+       - ./userdir:/home/testuser
+
+  oarnode1:
+    image: "bpiwowar/xpmtest"
+    networks:
+      - "back"
+    entrypoint: /root/start-oar-node.sh
+
+  mysql:
+    image: "mariadb:10.2"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: "wordpress_test"
+      MYSQL_ROOT_PASSWORD: ""
+    networks:
+      - "back"
+
+  # proxy:
+  #   image: "jwilder/nginx-proxy:alpine"
+  #   ports:
+  #     - "80:80"
+  #   networks:
+  #     front:
+  #       aliases:
+  #         - "${DOCKER_DEV_DOMAIN}"
+  #   volumes:
+  #     - "/var/run/docker.sock:/tmp/docker.sock:ro"
+
+networks:
+  back: {}
+
+# volumes:
+#   userdir: {}
