@@ -13,7 +13,7 @@ using namespace xpm;
 #define str(s) #s
 
 TEST(SSH, Basic) {
-    ssh_set_log_level(SSH_LOG_FUNCTIONS);
+    // ssh_set_log_level(SSH_LOG_FUNCTIONS);
     SSHConnector ssh("testuser@localhost:2200");
     std::string rsaPath = XPM_TEST_SOURCEDIR  "/docker/userdir/.ssh/id_rsa";
     LOGGER->info("Adding identify {}", rsaPath);

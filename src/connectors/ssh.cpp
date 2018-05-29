@@ -18,6 +18,8 @@
 #include <xpm/connectors/ssh.hpp>
 #include <xpm/launchers/launchers.hpp>
 
+DEFINE_LOGGER("ssh");
+
 namespace xpm {
 
 struct SFTPSession {
@@ -318,6 +320,11 @@ class sftpstreambuf : public std::basic_streambuf<cT, traits> {
     auto size = sizeof(typename traits::int_type) * offset;
     auto wsize = sftp_write(file, (void *)buffer.data(), size);
     offset = 0;
+    LOGGER->info("Wrote {} bytes to file ({})", wsize, size);
+    if (wsize < 0) {
+      throw io_error(fmt::format("Could not write in file: {}",
+                                 ssh_get_error(sftp.session)));
+    }
     return wsize == size;
   }
 
@@ -363,7 +370,7 @@ private:
 };
 
 std::unique_ptr<std::ostream> SSHConnector::ostream(Path const &path) const {
-  return std::unique_ptr<std::ostream>(new osftpstream<char>(_session, resolve(path), O_CREAT | O_TRUNC, S_IRUSR));
+  return std::unique_ptr<std::ostream>(new osftpstream<char>(_session, resolve(path), O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR));
 }
 
 std::unique_ptr<std::istream> SSHConnector::istream(Path const &path) const {
