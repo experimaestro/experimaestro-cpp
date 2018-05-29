@@ -2,9 +2,9 @@ version: "2"
 
 services:
   gate:
-    image: "bpiwowar/xpmtest"
+    build: .
     depends_on:
-      - "mysql"
+      - "postgres"
       - "oarnode1"
     networks:
       - "back"
@@ -13,21 +13,35 @@ services:
     entrypoint: /root/run.sh
     volumes:
        - ./userdir:/home/testuser
+    restart: always
 
   oarnode1:
-    image: "bpiwowar/xpmtest"
+    build: .
     networks:
       - "back"
     entrypoint: /root/start-oar-node.sh
+    restart: always
+    volumes:
+       - ./userdir:/home/testuser
 
-  mysql:
-    image: "mariadb:10.2"
+  # mysql:
+  #   image: "mariadb:10.3"
+  #   environment:
+  #     MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+  #     MYSQL_ROOT_PASSWORD: ""
+  #   restart: always
+  #   networks:
+  #     - "back"
+
+  postgres: 
+    image: "postgres"
+    restart: always
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: "wordpress_test"
-      MYSQL_ROOT_PASSWORD: ""
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
     networks:
       - "back"
+
 
   # proxy:
   #   image: "jwilder/nginx-proxy:alpine"

@@ -107,12 +107,17 @@ ptr<Type> Register::getType(ptr<StructuredValue> const &object) {
   return object->type();
 }
 
-bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
-  
+std::vector<std::string> reverse(std::vector<std::string> const &_args) {  
   std::vector<std::string> args;
   for(size_t i = _args.size(); i > 0; --i) {
     args.push_back(_args[i-1]);
   }
+  return args;
+}
+
+bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
+  
+  std::vector<std::string> args = reverse(_args);
 
   CLI::App app{"Experimaestro command line parser"};
   app.require_subcommand(1);
@@ -123,16 +128,27 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
     generate();
   });
 
+  std::set<std::string> taskNames;
   {
     auto _run = app.add_subcommand("run", "Run a given task");
-    _run->allow_extras();
+    _run->allow_extras(true);
     
-    std::string taskName;
-    _run->add_option("task", taskName, "Task name", true)->required();
 
     std::string paramFile;
-    _run->add_option("jsonfile", paramFile, "Parameter file in JSON format", true)
+    _run->add_option("--json", paramFile, "Parameter file in JSON format")
       ->check(CLI::ExistingFile)
+      ->required(false);
+
+    int argumentHelp = 0;
+    _run->add_flag("--arguments", argumentHelp, "Get help on task arguments");
+
+    std::string taskName;
+    for(auto task: _tasks) {
+      taskNames.insert(task.first.toString());
+    }
+        
+    std::string hello;
+    _run->add_set("task", taskName, taskNames, "Task name", true)
       ->required();
 
     _run->set_callback( [&](){
@@ -140,22 +156,50 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       auto task = this->getTask(TypeName(taskName));
       if (!task) {
         throw argument_error(taskName + " is not a task");
-
       }
 
-      std::ifstream stream(paramFile);
-      json j;
+      CLI::App taskApp{"Task arguments parser"};
+      int x;
+      for(auto const & arg : task->type()->arguments()) {
+        taskApp.add_option("--" + arg.first, x, arg.second->help())
+          ->each([&](std::string const &s) {
+            std::cerr <<"In each!\n";
+            taskApp.add_option("--yo", x);
+          });
+      }
+
+      auto taskArgs = reverse(_run->remaining());
       try {
-        j = json::parse(stream);
-      } catch (...) {
-        LOGGER->error("Error while parsing " + paramFile);
-        throw;
+        taskApp.parse(taskArgs);
+      } catch(const CLI::ParseError &e) {
+        if (taskApp.exit(e)) {
+          return ;
+        }    
       }
 
-      auto sv = std::make_shared<StructuredValue>(*this, j);
+      // Read the JSON file
+      ptr<StructuredValue> sv;
+      if (paramFile.empty()) {
+        sv = mkptr<StructuredValue>();
+        sv->type(task->type());
+      } else {
+        std::ifstream stream(paramFile);
+    
+        json j;
+        try {
+          j = json::parse(stream);
+        } catch (...) {
+          LOGGER->error("Error while parsing " + paramFile);
+          throw;
+        }
+
+        sv = std::make_shared<StructuredValue>(*this, j);
+      }
+
 
       // Run the task
       progress(-1);
+      sv->validate();
       sv->createObjects(*this);
       runTask(task, sv);
       return;
