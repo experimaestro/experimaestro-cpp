@@ -2,11 +2,13 @@
 // Created by Benjamin Piwowarski on 19/01/2017.
 //
 
+#include <string>
+#include <sstream>
+#include <regex>
+
 #include <libssh/callbacks.h>
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
-#include <string>
-#include <sstream>
 
 #include <spdlog/fmt/fmt.h>
 #include <sys/stat.h>
@@ -76,16 +78,34 @@ public:
     }
   }
 
-  operator ssh_session() { return session; }
+  operator ssh_session() { 
+    // Ensure we are connected
+    connect();
+    return session; 
+  }
 
   void setOption(enum ssh_options_e option, void const *x) {
     ::ssh_options_set(session, option, x);
   }
 
   void connect() {
-    auto rc = ssh_connect(session);
-    if (rc != SSH_OK) {
-      throw io_error("Error connecting" + std::string(ssh_get_error(session)));
+    if (!connected) {
+      auto rc = ssh_connect(session);
+      if (rc != SSH_OK) {
+        throw io_error("Error connecting" + std::string(ssh_get_error(session)));
+      }
+
+      rc = ssh_is_server_known(session);
+      if (rc != SSH_OK) {
+        ssh_disconnect(session);
+        throw io_error("Error connecting" + std::string(ssh_get_error(session)));
+      }
+
+      rc = ssh_userauth_publickey_auto(session, NULL, NULL);
+      if(rc != SSH_AUTH_SUCCESS) {
+        ssh_disconnect(session);
+        throw io_error("Error connecting" + std::string(ssh_get_error(session)));
+      }
     }
     connected = true;
   }
@@ -162,7 +182,7 @@ public:
   }
 
   void exec(std::string const & command) {
-    auto rc = channel_request_exec(channel, command.c_str());
+    auto rc = ssh_channel_request_exec(channel, command.c_str());
     if (rc != SSH_OK) {
       throw io_error(fmt::format("Cannot create request exec: {}", ssh_get_error(session)));
     }
@@ -231,7 +251,35 @@ template <class T, class U> std::shared_ptr<T> shared_this(U const *ptr) {
   return std::dynamic_pointer_cast<T>(const_cast<U *>(ptr)->shared_from_this());
 }
 
+
+SSHConnector::SSHConnector(std::string const &s) :
+  _session(mkptr<SSHSession>()) {
+    static const std::regex RE_SSHURI(R"((?:(\w+)@)?(\w+)(?::(\d+))?)");
+    std::cmatch m;
+    if (!std::regex_match (s.c_str(), m, RE_SSHURI)) {
+      throw argument_error("Cannot parse SSH URI " + s);
+    }
+
+    if (m[1].matched) {
+      _session->username(m[1].str());
+    }
+    _session->host(m[2].str());
+    if (m[3].matched) {
+      int port = std::atoi(m[3].str().c_str());
+      _session->port(port);
+    }
+}
+
 SSHConnector::~SSHConnector() {}
+
+SSHConnector & SSHConnector::addIdentity(std::string const & localpath) {
+  _session->setOption(SSH_OPTIONS_ADD_IDENTITY, localpath.c_str());
+  return *this;
+}
+
+std::unique_ptr<Lock> SSHConnector::lock(Path const &path) const {
+  NOT_IMPLEMENTED();
+}
 
 std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
   return std::make_shared<SSHProcessBuilder>(_session);
@@ -239,6 +287,7 @@ std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
 
 void SSHConnector::setExecutable(Path const &path, bool flag) const {
   std::string localpath = resolve(path);
+  _session->connect();
   SFTPSession sftp(*_session);
   sftp.chmod(localpath, S_IRWXU);
 }

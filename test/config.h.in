@@ -1,0 +1,1 @@
+#cmakedefine XPM_TEST_SOURCEDIR "@XPM_TEST_SOURCEDIR@"

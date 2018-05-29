@@ -15,6 +15,12 @@ namespace xpm {
   class SSHConnector : public Connector {
     std::shared_ptr<SSHSession> _session;
   public:
+    /// URI has the format [user@]hostname[:port]
+    SSHConnector(std::string const &uri);
+
+    /// Set identity key
+    SSHConnector & addIdentity(std::string const & localpath);
+
     ~SSHConnector();
     virtual std::shared_ptr<ProcessBuilder> processBuilder() const override;
     virtual void setExecutable(Path const & path, bool flag) const override;
@@ -23,6 +29,7 @@ namespace xpm {
     
     virtual void createFile(Path const &path, bool errorIfExists) const override;
     virtual void deleteTree(Path const &path, bool recursive=false) const override;
+    NOSWIG(virtual std::unique_ptr<Lock> lock(Path const &path) const override;)
 
     std::unique_ptr<std::ostream> ostream(Path const & path) const override;
     std::unique_ptr<std::istream> istream(Path const & path) const override;

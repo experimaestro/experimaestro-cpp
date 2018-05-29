@@ -17,11 +17,17 @@ add_executable(experimaestro-tests
         cppdefinitions.cpp
         digest.cpp 
         structuredvalues.cpp 
-        ssh.cpp
+        ssh-tests.cpp
 )
 
+set(XPM_TEST_SOURCEDIR "${CMAKE_CURRENT_SOURCE_DIR}")
+configure_file(config.h.in config.h)
+
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
-target_include_directories(experimaestro-tests PUBLIC ${CMAKE_BINARY_DIR}/external/googletest/include)
+target_include_directories(experimaestro-tests PUBLIC 
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${OPENSSL_INCLUDE_DIR} 
+        ${CMAKE_BINARY_DIR}/external/googletest/include)
 add_dependencies(experimaestro-tests googletest)
 set_property(TARGET experimaestro-tests PROPERTY CXX_STANDARD 11)
 

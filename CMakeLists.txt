@@ -98,7 +98,7 @@ find_package (Threads)
 list(APPEND LINKED_LIBRARIES 
     ${OPENSSL_LIBRARIES} 
     ${LIBWEBSOCKETS_LIBRARIES} 
-    ${LIBSSH_LIBRARY} 
+    ${LIBSSH_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT} 
     yaml-cpp
     SQLiteCpp
