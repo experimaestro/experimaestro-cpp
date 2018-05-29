@@ -2,9 +2,11 @@
 // Created by Benjamin Piwowarski on 19/01/2017.
 //
 
+#include <regex>
 #include <xpm/xpm.hpp>
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
+#include <yaml-cpp/yaml.h>
 #include <__xpm/common.hpp>
 
 typedef std::string stdstring;
@@ -68,7 +70,51 @@ Value Value::cast(Type::Ptr const &type) {
   throw std::out_of_range("Scalar type is not known (casting)");
 }
 
+Value Value::fromYAML(YAML::Node const &node) {
+  switch (node.Type()) {
+  case YAML::NodeType::Sequence: {
+    NOT_IMPLEMENTED();
+    // Array a;
+    // for(auto const & sn: node) {
+    // }
+    // break;
+  }
 
+  case YAML::NodeType::Null:
+    return NONE;
+
+  case YAML::NodeType::Scalar: {
+    std::string s = node.Scalar();
+    if (node.Tag() == "!") {
+      // A string
+      return s;
+    } else if (node.Tag() == "?") {
+      // boolean
+      if (s == "Y" || s == "true" || s == "Yes" || s == "ON")
+        return Value(true);
+      if (s == "N" || s == "false" || s == "No" || s == "OFF")
+        return Value(true);
+
+      // Integer
+      static const std::regex RE_INTEGER(R"(\d+)");
+      if (std::regex_match(s, RE_INTEGER)) {
+        return Value(std::atol(s.c_str()));
+      }
+
+      static const std::regex RE_FLOAT(
+          R"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)");
+      if (std::regex_match(s, RE_FLOAT)) {
+        return Value(std::atof(s.c_str()));
+      }
+
+      return s;
+    }
+  }
+
+  default:
+    throw argument_error("Cannot convert YAML to value: not a scalar");
+  }
+}
 
 Value::~Value() {
   switch (_scalarType) {
@@ -96,12 +142,14 @@ Value::Union::Union() {
 Value::Value() : _scalarType(ValueType::UNSET) {
 }
 
-Value::Value(Array const & array) {
-  
+Value::Value(Array const & array) : _scalarType(ValueType::ARRAY) {
+  // placement new
+  new(&_value.array) Array(array);
 }
 
 Value::Value(Array && array) {
-
+  // placement new
+  new(&_value.array) Array(std::move(array));
 }
 
 Value::Value(ValueType scalarType) : _scalarType(scalarType) {

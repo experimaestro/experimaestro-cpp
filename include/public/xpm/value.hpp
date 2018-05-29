@@ -13,6 +13,10 @@
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
+namespace YAML {
+  class Node;
+}
+
 namespace xpm {
 
 class Type;
@@ -52,6 +56,10 @@ class Value {
   Value(Path const &value);
 
   Value(std::string const &value);
+
+  /// Build from YAML node
+  static Value fromYAML(YAML::Node const &node);
+
   inline Value(char const *value) : Value(std::string(value)) {}
 
   Value(Array const & array);

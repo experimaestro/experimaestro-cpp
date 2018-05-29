@@ -115,6 +115,106 @@ std::vector<std::string> reverse(std::vector<std::string> const &_args) {
   return args;
 }
 
+namespace {
+void showArguments(ptr<StructuredValue> const & sv, Type const & type, std::string const & indent = "") {
+  for(auto const &x: type.arguments()) {
+    auto subtype =  x.second->type();
+    auto subSV = sv && sv->hasKey(x.first) ? sv->get(x.first) : nullptr;
+
+    if (subSV) {
+      auto svType = subSV->type();
+      if (!svType) throw assertion_error("internal error: type is not defined in showArguments");
+      if (!subtype->accepts(svType)) {
+        LOGGER->warn("For {}, type {} does not match requested type {}", x.first, svType->typeName().toString(), subtype->typeName().toString());
+      } else {
+        subtype = svType;
+      }
+
+    }
+
+    auto subtypeName = subtype->typeName().toString();
+    std::cout << indent << (indent.empty() ? "" : ".")  << x.first 
+      << " (" << subtypeName << ")\t" 
+      << x.second->help();
+    if (x.second->required()) std::cout << " REQUIRED";
+    if (subtype->predefined()) {
+      if (subSV && subSV->value().defined()) {
+        std::cout << " (value " << subSV->value().toJson() << ")";
+      } else if (x.second->defaultValue()) {
+        std::cout << " (default " << x.second->defaultValue()->value().toJson() << ")";
+      }
+      std::cout << std::endl;
+    } else {
+      std::cout << std::endl;
+      showArguments(subSV, *subtype, (indent.empty() ? "" : indent + ".") + x.first);
+    }
+  }
+}
+
+/// Merge values from YAML into a structured value
+void merge(Register & xpmRegister, ptr<StructuredValue> const &sv, YAML::Node const &node) {
+  switch (node.Type()) {
+
+  case YAML::NodeType::Sequence:
+  case YAML::NodeType::Scalar:
+  case YAML::NodeType::Null: {
+    auto value = Value::fromYAML(node);
+    sv->value(value);
+    break;
+  }
+
+  case YAML::NodeType::Map: {
+    // Set the type if specified
+    if (node.Tag()[0] == '!' && node.Tag().size() > 1) {
+      auto typeName = TypeName(node.Tag().substr(1));
+      auto type = xpmRegister.getType(typeName);
+      if (!type) {
+        LOGGER->warn("Undefined type {}", node.Tag());
+        type = mkptr<Type>(typeName);
+        type->placeholder(true);
+        xpmRegister.addType(type);
+      }
+      sv->type(type);
+    }
+
+    // Merge all entries
+    for (auto const &pair : node) {
+      auto fullkey = pair.first.as<std::string>();
+
+      // Find the structured value
+      ptr<StructuredValue> subsv = nullptr;
+      for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
+        next = fullkey.find(".", pos+1);
+        std::string key = fullkey.substr(pos, next-pos);
+
+        if (sv->hasKey(key)) {
+          subsv = sv->get(key);
+        } else {
+          // Create structured value
+          subsv = mkptr<StructuredValue>();
+
+          // Propagate types
+          auto const &arguments = sv->type()->arguments();
+          auto it = arguments.find(key);
+          if (it != arguments.end()) {
+            subsv->type(it->second->type());
+          }
+          sv->set(key, subsv);
+        }
+
+      }
+
+      merge(xpmRegister, subsv, pair.second); 
+
+    }
+    break;
+  }
+
+  default: throw argument_error("Cannot convert YAML to Value");
+  }
+}
+} // namespace
+
 bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
   
   std::vector<std::string> args = reverse(_args);
@@ -132,7 +232,6 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
   {
     auto _run = app.add_subcommand("run", "Run a given task");
     _run->allow_extras(true);
-    
 
     std::string paramFile;
     _run->add_option("--json", paramFile, "Parameter file in JSON format")
@@ -151,30 +250,14 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
     _run->add_set("task", taskName, taskNames, "Task name", true)
       ->required();
 
+    std::vector<std::string> yamlStrings;
+    _run->add_option("yaml", yamlStrings, "parameters in YAML format (with dotted names)");
+
     _run->set_callback( [&](){
       // Retrieve the task
       auto task = this->getTask(TypeName(taskName));
       if (!task) {
         throw argument_error(taskName + " is not a task");
-      }
-
-      CLI::App taskApp{"Task arguments parser"};
-      int x;
-      for(auto const & arg : task->type()->arguments()) {
-        taskApp.add_option("--" + arg.first, x, arg.second->help())
-          ->each([&](std::string const &s) {
-            std::cerr <<"In each!\n";
-            taskApp.add_option("--yo", x);
-          });
-      }
-
-      auto taskArgs = reverse(_run->remaining());
-      try {
-        taskApp.parse(taskArgs);
-      } catch(const CLI::ParseError &e) {
-        if (taskApp.exit(e)) {
-          return ;
-        }    
       }
 
       // Read the JSON file
@@ -196,13 +279,24 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         sv = std::make_shared<StructuredValue>(*this, j);
       }
 
+      // Parse YAML string
+      if (!yamlStrings.empty()) {
+        for(auto const &yamlString: yamlStrings) {
+          auto yaml = YAML::Load(yamlString);
+          merge(*this, sv, yaml);
+        }
+        sv->type(task->type());
+      }      
 
-      // Run the task
-      progress(-1);
-      sv->validate();
-      sv->createObjects(*this);
-      runTask(task, sv);
-      return;
+      if (argumentHelp) {
+        showArguments(sv, *sv->type());
+      } else {
+        // Run the task
+        progress(-1);
+        sv->validate();
+        sv->createObjects(*this);
+        runTask(task, sv);
+      }
     });
   }
 

@@ -311,6 +311,9 @@ class StructuredValue
   /// Get value
   Value & value() { return _value; }
 
+  /** Sets the value  */
+  void value(Value const &value);
+
   /// Get value
   NOSWIG(Value const & value() const { return _value; })
 

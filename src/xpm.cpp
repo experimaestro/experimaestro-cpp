@@ -125,7 +125,7 @@ StructuredValue::StructuredValue() : _flags(0), _type(AnyType) {
 }
 
 StructuredValue::StructuredValue(std::map<std::string, ptr<StructuredValue>> &map)
-    : _flags(0), _content(map) {
+    : _flags(0), _content(map), _type(AnyType) {
 }
 
 class DummyJob : public Job {
@@ -142,7 +142,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
     // --- Object
     case nlohmann::json::value_t::object: {
       // (1) Get the type of the object
-      ptr<Type> type;
+      ptr<Type> type = AnyType;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         _type = xpmRegister.getType(typeName);
@@ -177,6 +177,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
 
     default: {
       _value = Value(xpmRegister, jsonValue);
+      _type = _value.type();
     }
   }
 }
@@ -221,6 +222,7 @@ ptr<StructuredValue> StructuredValue::copy() {
 
   return sv;
 }
+
 
 std::string StructuredValue::toJsonString() {
   return toJson().dump();
@@ -269,12 +271,14 @@ std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
 };
 
 
+void StructuredValue::value(Value const &value) { 
+  _value = value; 
+  _type = value.type();
+}
 
 
 ptr<Type> StructuredValue::type() const {
-  if (_type) return _type;
-  if (_value.defined()) return _value.type();
-  return AnyType;
+  return _type;
 }
 
 bool StructuredValue::hasKey(std::string const &key) const {
