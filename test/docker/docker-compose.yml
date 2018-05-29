@@ -3,9 +3,9 @@ version: "2"
 services:
   gate:
     build: .
-    depends_on:
-      - "postgres"
-      - "oarnode1"
+    # depends_on:
+    #   - "postgres"
+    #   - "oarnode1"
     networks:
       - "back"
     ports:
@@ -15,14 +15,14 @@ services:
        - ./userdir:/home/testuser
     restart: always
 
-  oarnode1:
-    build: .
-    networks:
-      - "back"
-    entrypoint: /root/start-oar-node.sh
-    restart: always
-    volumes:
-       - ./userdir:/home/testuser
+  # oarnode1:
+  #   build: .
+  #   networks:
+  #     - "back"
+  #   entrypoint: /root/start-oar-node.sh
+  #   restart: always
+  #   volumes:
+  #      - ./userdir:/home/testuser
 
   # mysql:
   #   image: "mariadb:10.3"
@@ -33,14 +33,14 @@ services:
   #   networks:
   #     - "back"
 
-  postgres: 
-    image: "postgres"
-    restart: always
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-    networks:
-      - "back"
+  # postgres: 
+  #   image: "postgres"
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: admin
+  #     POSTGRES_PASSWORD: password
+  #   networks:
+  #     - "back"
 
 
   # proxy:

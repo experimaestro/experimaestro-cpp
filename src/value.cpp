@@ -53,7 +53,7 @@ bool Value::equals(Value const &b) const {
 Value Value::cast(Type::Ptr const &type) {
   auto *simpleType = dynamic_cast<SimpleType*>(type.get());
   if (!simpleType) {
-    throw std::runtime_error("Cannot value cast to " + type->toString());
+    throw std::runtime_error("Cannot cast value to " + type->toString());
   }
 
   switch (simpleType->valueType()) {

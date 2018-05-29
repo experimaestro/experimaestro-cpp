@@ -136,7 +136,7 @@ public:
 };
 
 StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue) 
-  : _flags(0) {
+  : _flags(0), _type(AnyType) {
   switch (jsonValue.type()) {
 
     // --- Object
@@ -159,7 +159,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
         if (it.key() == KEY_VALUE) {
             // Infer type from value
             _value = Value(xpmRegister, it.value());
-            if (_type) _value = _value.cast(_type);
+            _type = _value.type();
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
