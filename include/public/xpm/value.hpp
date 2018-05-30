@@ -60,6 +60,9 @@ class Value {
   /// Build from YAML node
   static Value fromYAML(YAML::Node const &node);
 
+  /// Build from string with type hint
+  static Value fromString(std::string const & string, std::shared_ptr<Type> const & hint);
+
   inline Value(char const *value) : Value(std::string(value)) {}
 
   Value(Array const & array);

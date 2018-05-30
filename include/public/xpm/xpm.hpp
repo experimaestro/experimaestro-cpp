@@ -561,6 +561,9 @@ class Type
   void setProperty(std::string const &name, StructuredValue::Ptr const &value);
   StructuredValue::Ptr getProperty(std::string const &name);
 
+  /** Is it a scalar */
+  virtual bool scalar() { return false; }
+
   /// Checks whether another type can be assigned as this type
   bool accepts(Type::Ptr const &other) const;
 
@@ -594,6 +597,7 @@ class SimpleType : public Type {
  public:
   SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false);
   inline ValueType valueType() { return _valueType; }
+  virtual bool scalar() override { return true; }
 };
 
 } // namespace xpm

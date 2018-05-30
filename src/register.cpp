@@ -151,6 +151,35 @@ void showArguments(ptr<StructuredValue> const & sv, Type const & type, std::stri
   }
 }
 
+/// Follow
+ptr<StructuredValue> getSubValue(ptr<StructuredValue> sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
+  ptr<StructuredValue> subsv = nullptr;
+  for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
+    next = fullkey.find(separator, pos+1);
+    std::string key = fullkey.substr(pos, next-pos);
+
+    if (sv->hasKey(key)) {
+      subsv = sv->get(key);
+    } else {
+      // Create structured value
+      subsv = mkptr<StructuredValue>();
+
+      // Propagate types
+      auto const &arguments = sv->type()->arguments();
+      auto it = arguments.find(key);
+      if (it != arguments.end()) {
+        subsv->type(it->second->type());
+      } else if (!lenient) {
+        throw argument_error("Cannot find " + fullkey);
+      }
+      sv->set(key, subsv);
+    }
+    sv = subsv;
+  }
+
+  return subsv;
+}
+
 /// Merge values from YAML into a structured value
 void merge(Register & xpmRegister, ptr<StructuredValue> const &sv, YAML::Node const &node) {
   switch (node.Type()) {
@@ -182,28 +211,7 @@ void merge(Register & xpmRegister, ptr<StructuredValue> const &sv, YAML::Node co
       auto fullkey = pair.first.as<std::string>();
 
       // Find the structured value
-      ptr<StructuredValue> subsv = nullptr;
-      for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
-        next = fullkey.find(".", pos+1);
-        std::string key = fullkey.substr(pos, next-pos);
-
-        if (sv->hasKey(key)) {
-          subsv = sv->get(key);
-        } else {
-          // Create structured value
-          subsv = mkptr<StructuredValue>();
-
-          // Propagate types
-          auto const &arguments = sv->type()->arguments();
-          auto it = arguments.find(key);
-          if (it != arguments.end()) {
-            subsv->type(it->second->type());
-          }
-          sv->set(key, subsv);
-        }
-
-      }
-
+      auto subsv = getSubValue(sv, fullkey, ".");
       merge(xpmRegister, subsv, pair.second); 
 
     }
@@ -234,8 +242,12 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
     _run->allow_extras(true);
 
     std::string paramFile;
-    _run->add_option("--json", paramFile, "Parameter file in JSON format")
+    _run->add_option("--json-file", paramFile, "Parameter file in JSON format")
       ->check(CLI::ExistingFile)
+      ->required(false);
+
+    std::vector<std::string> yamlStrings;
+    _run->add_option("--yaml", yamlStrings, "Parameters in YAML format")
       ->required(false);
 
     int argumentHelp = 0;
@@ -250,10 +262,14 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
     _run->add_set("task", taskName, taskNames, "Task name", true)
       ->required();
 
-    std::vector<std::string> yamlStrings;
-    _run->add_option("yaml", yamlStrings, "parameters in YAML format (with dotted names)");
+    std::vector<std::string> parameters;
+    _run->add_option("parameters", parameters, "task parameters");
 
     _run->set_callback( [&](){
+      if (parameters.size() % 2 != 0) {
+        throw argument_error("Parameters should be of the form [--path-name-of-argument argument value]*");
+      }
+
       // Retrieve the task
       auto task = this->getTask(TypeName(taskName));
       if (!task) {
@@ -286,8 +302,27 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
           merge(*this, sv, yaml);
         }
         sv->type(task->type());
-      }      
+      }
 
+      // Set arguments from     
+      for(size_t i = 0; i < parameters.size(); i += 2) {
+        if (parameters[i].substr(0,2) != "--") {
+          throw argument_error("Option '" + parameters[i] + "' does not begin by --");
+        }
+        auto subsv = getSubValue(sv, parameters[i].substr(2), "-");
+
+        if (subsv->type()->scalar()) {
+          subsv->value(Value::fromString(parameters[i+1], subsv->type()));
+        } else {
+          auto type = getType(parameters[i+1]);
+          if (!type) throw argument_error("Type " + parameters[i+1] + " does not exist");
+          subsv->type(type);
+        }
+      }
+
+      LOGGER->info("Structured value: {}", sv->toJson());
+
+      // Handle help flag
       if (argumentHelp) {
         showArguments(sv, *sv->type());
       } else {

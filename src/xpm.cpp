@@ -706,7 +706,6 @@ Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgno
 
 Type::~Type() {}
 
-
 void Type::addArgument(ptr<Argument> const &argument) {
   _arguments[argument->name()] = argument;
 }

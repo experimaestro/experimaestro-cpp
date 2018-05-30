@@ -70,6 +70,13 @@ Value Value::cast(Type::Ptr const &type) {
   throw std::out_of_range("Scalar type is not known (casting)");
 }
 
+namespace {
+  static const std::regex RE_INTEGER(R"(\d+)");
+  static const std::regex RE_REAL(
+      R"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)");
+
+}
+
 Value Value::fromYAML(YAML::Node const &node) {
   switch (node.Type()) {
   case YAML::NodeType::Sequence: {
@@ -93,17 +100,14 @@ Value Value::fromYAML(YAML::Node const &node) {
       if (s == "Y" || s == "true" || s == "Yes" || s == "ON")
         return Value(true);
       if (s == "N" || s == "false" || s == "No" || s == "OFF")
-        return Value(true);
+        return Value(false);
 
       // Integer
-      static const std::regex RE_INTEGER(R"(\d+)");
       if (std::regex_match(s, RE_INTEGER)) {
         return Value(std::atol(s.c_str()));
       }
 
-      static const std::regex RE_FLOAT(
-          R"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)");
-      if (std::regex_match(s, RE_FLOAT)) {
+      if (std::regex_match(s, RE_REAL)) {
         return Value(std::atof(s.c_str()));
       }
 
@@ -115,6 +119,43 @@ Value Value::fromYAML(YAML::Node const &node) {
     throw argument_error("Cannot convert YAML to value: not a scalar");
   }
 }
+
+Value Value::fromString(std::string const & s, ptr<Type> const & hint) {
+  // Just a string
+  if (hint == AnyType) {
+    return Value(s);
+  }
+
+  if (hint == PathType) {
+    return Value(Path(s));
+  }
+
+  if (hint == IntegerType) {
+    if (std::regex_match(s, RE_INTEGER)) {
+      return Value(std::atol(s.c_str()));
+    }
+    throw argument_error(s + " cannot be interpreted as an integer");
+  }
+
+  if (hint == BooleanType) {
+    if (s == "Y" || s == "true" || s == "Yes" || s == "ON")
+      return Value(true);
+    if (s == "N" || s == "false" || s == "No" || s == "OFF")
+      return Value(false);
+    throw argument_error(s + " cannot be interpreted as a boolean");
+  }
+
+  if (hint == RealType) {
+    if (std::regex_match(s, RE_REAL)) {
+      return Value(std::atof(s.c_str()));
+    }
+    throw argument_error(s + " cannot be interpreted as a real");
+  }
+
+
+  throw argument_error("Type " + hint->typeName().toString() + " is not a scalar type");
+}
+
 
 Value::~Value() {
   switch (_scalarType) {
