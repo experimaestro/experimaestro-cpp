@@ -103,7 +103,7 @@ public:
   /**
    * Delete a file / directory
    */
-  virtual void deleteTree(Path const &path, bool recursive=false) const = 0;
+  virtual void remove(Path const &path, bool recursive=false) const = 0;
 
 #ifndef SWIG
   /** Get an output stream */

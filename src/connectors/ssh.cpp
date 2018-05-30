@@ -140,6 +140,10 @@ public:
 // --- SSH process builder
 
 class SSHProcess : public Process {
+  ptr<SSHChannel> channel;
+
+  SSHProcess(ptr<SSHChannel> const & channel) : channel(channel) {}
+  
   /// isRunning
   virtual bool isRunning() override { NOT_IMPLEMENTED(); }
 
@@ -176,11 +180,11 @@ public:
       throw io_error(fmt::format("Cannot open the channel: {}", ssh_get_error(session)));
     }
  
-    rc = ssh_channel_request_shell(channel);
-    if (rc != SSH_OK) {
-      this->~SSHChannel();
-      throw io_error(fmt::format("Cannot create request a shell: {}", ssh_get_error(session)));
-    }
+    // rc = ssh_channel_request_shell(channel);
+    // if (rc != SSH_OK) {
+    //   this->~SSHChannel();
+    //   throw io_error(fmt::format("Cannot create request a shell: {}", ssh_get_error(session)));
+    // }
   }
 
   void exec(std::string const & command) {
@@ -240,7 +244,7 @@ public:
     redirect(oss, "2>", stderr);
 
     channel->exec(oss.str());
-    return std::make_shared<SSHProcess>();
+    return std::make_shared<SSHProcess>(channel);
   }
 };
 
@@ -254,54 +258,6 @@ template <class T, class U> std::shared_ptr<T> shared_this(U const *ptr) {
 }
 
 
-SSHConnector::SSHConnector(std::string const &s) :
-  _session(mkptr<SSHSession>()) {
-    static const std::regex RE_SSHURI(R"((?:(\w+)@)?(\w+)(?::(\d+))?)");
-    std::cmatch m;
-    if (!std::regex_match (s.c_str(), m, RE_SSHURI)) {
-      throw argument_error("Cannot parse SSH URI " + s);
-    }
-
-    if (m[1].matched) {
-      _session->username(m[1].str());
-    }
-    _session->host(m[2].str());
-    if (m[3].matched) {
-      int port = std::atoi(m[3].str().c_str());
-      _session->port(port);
-    }
-}
-
-SSHConnector::~SSHConnector() {}
-
-SSHConnector & SSHConnector::addIdentity(std::string const & localpath) {
-  _session->setOption(SSH_OPTIONS_ADD_IDENTITY, localpath.c_str());
-  return *this;
-}
-
-std::unique_ptr<Lock> SSHConnector::lock(Path const &path) const {
-  NOT_IMPLEMENTED();
-}
-
-std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
-  return std::make_shared<SSHProcessBuilder>(_session);
-}
-
-void SSHConnector::setExecutable(Path const &path, bool flag) const {
-  std::string localpath = resolve(path);
-  _session->connect();
-  SFTPSession sftp(*_session);
-  sftp.chmod(localpath, S_IRWXU);
-}
-
-void SSHConnector::mkdir(Path const &path) const {
-  std::string localpath = resolve(path);
-  SFTPSession sftp(*_session);
-  sftp.mkdir(localpath);
-}
-
-FileType SSHConnector::fileType(Path const &path) const { NOT_IMPLEMENTED(); }
-
 
 
 
@@ -310,17 +266,17 @@ FileType SSHConnector::fileType(Path const &path) const { NOT_IMPLEMENTED(); }
 
 template <class cT, class traits = std::char_traits<cT>>
 class sftpstreambuf : public std::basic_streambuf<cT, traits> {
-  std::array<typename traits::int_type, 1024> buffer;
+  std::array<typename traits::char_type, 1024> buffer;
   sftp_file file;
   size_t offset = 0;
   ptr<SSHSession> session;
   SFTPSession sftp;
 
   bool flush() {
-    auto size = sizeof(typename traits::int_type) * offset;
+    auto size = sizeof(typename traits::char_type) * offset;
     auto wsize = sftp_write(file, (void *)buffer.data(), size);
     offset = 0;
-    LOGGER->info("Wrote {} bytes to file ({})", wsize, size);
+    LOGGER->debug("Wrote {} bytes to file ({})", wsize, size);
     if (wsize < 0) {
       throw io_error(fmt::format("Could not write in file: {}",
                                  ssh_get_error(sftp.session)));
@@ -369,8 +325,61 @@ private:
   sftpstreambuf<cT, traits> m_sbuf;
 };
 
+// --- SSH Connector
+
+
+
+SSHConnector::SSHConnector(std::string const &s) :
+  _session(mkptr<SSHSession>()) {
+    static const std::regex RE_SSHURI(R"((?:(\w+)@)?(\w+)(?::(\d+))?)");
+    std::cmatch m;
+    if (!std::regex_match (s.c_str(), m, RE_SSHURI)) {
+      throw argument_error("Cannot parse SSH URI " + s);
+    }
+
+    if (m[1].matched) {
+      _session->username(m[1].str());
+    }
+    _session->host(m[2].str());
+    if (m[3].matched) {
+      int port = std::atoi(m[3].str().c_str());
+      _session->port(port);
+    }
+}
+
+SSHConnector::~SSHConnector() {}
+
+SSHConnector & SSHConnector::addIdentity(std::string const & localpath) {
+  _session->setOption(SSH_OPTIONS_ADD_IDENTITY, localpath.c_str());
+  return *this;
+}
+
+std::unique_ptr<Lock> SSHConnector::lock(Path const &path) const {
+  NOT_IMPLEMENTED();  
+}
+
+std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
+  return std::make_shared<SSHProcessBuilder>(_session);
+}
+
+void SSHConnector::setExecutable(Path const &path, bool flag) const {
+  std::string localpath = resolve(path);
+  _session->connect();
+  SFTPSession sftp(*_session);
+  sftp.chmod(localpath, S_IRWXU);
+}
+
+void SSHConnector::mkdir(Path const &path) const {
+  std::string localpath = resolve(path);
+  SFTPSession sftp(*_session);
+  sftp.mkdir(localpath);
+}
+
+FileType SSHConnector::fileType(Path const &path) const { NOT_IMPLEMENTED(); }
+
+
 std::unique_ptr<std::ostream> SSHConnector::ostream(Path const &path) const {
-  return std::unique_ptr<std::ostream>(new osftpstream<char>(_session, resolve(path), O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR));
+  return std::unique_ptr<std::ostream>(new osftpstream<char>(_session, resolve(path), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR));
 }
 
 std::unique_ptr<std::istream> SSHConnector::istream(Path const &path) const {
@@ -378,10 +387,13 @@ std::unique_ptr<std::istream> SSHConnector::istream(Path const &path) const {
 }
 
 void SSHConnector::createFile(Path const &path, bool errorIfExists) const {
-  NOT_IMPLEMENTED();
+  auto out = std::unique_ptr<std::ostream>(new osftpstream<char>(_session, resolve(path), O_CREAT, S_IRUSR | S_IWUSR));
 }
 
-void SSHConnector::deleteTree(Path const &path, bool recursive) const {
+void SSHConnector::remove(Path const &path, bool recursive) const {
+  std::string localpath = resolve(path);
+  SFTPSession sftp(*_session);
+
   NOT_IMPLEMENTED();
 }
 

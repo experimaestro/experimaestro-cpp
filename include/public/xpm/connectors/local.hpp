@@ -19,7 +19,7 @@ public:
   virtual FileType fileType(Path const & path) const override;
 
   virtual void createFile(Path const &path, bool errorIfExists = false) const override;
-  virtual void deleteTree(Path const &path, bool recursive=false) const override;
+  virtual void remove(Path const &path, bool recursive=false) const override;
   NOSWIG(virtual std::unique_ptr<Lock> lock(Path const &path) const override;)
 
   std::unique_ptr<std::ostream> ostream(Path const & path) const override;

@@ -19,7 +19,7 @@ FileLock::FileLock(std::shared_ptr<Connector> const & connector, Path const & pa
 
 FileLock::~FileLock() {
   if (!detached()) {
-    _connector->deleteTree(_path);
+    _connector->remove(_path);
   }
 }
 

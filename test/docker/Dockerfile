@@ -31,6 +31,7 @@ RUN sed -i -e 's/^DB_TYPE=.*/DB_TYPE="Pg"/' -e 's/^DB_PORT=.*/DB_PORT="5432"/'  
 COPY start-oar-node.sh /root
 COPY run.sh /root
 COPY oar.hosts /var/lib/oar
+COPY ssh_defaults /etc/default/ssh
 
 # Expose testuser volume
 VOLUME ["/home/testuser"]

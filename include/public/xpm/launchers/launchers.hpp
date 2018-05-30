@@ -60,10 +60,22 @@ public:
   virtual void kill(bool force) = 0;
 
   /**
-   *  Write to stdin
-   * @return true if the write succeeded, false otherwise
+   * Write to standard input
+   * @return The number of bytes written (or -1 if an error occurred)
    */
-  virtual bool writeStdin(std::string const & string) = 0;
+  virtual long write(void * s, long count) = 0;
+
+  /**
+   * Read standard output
+   * @return The number of bytes written (or -1 if an error occurred)
+   */
+  virtual long readOutput(void * s, long count) = 0;
+
+  /**
+   * Read standard output
+   * @return The number of bytes written (or -1 if an error occurred)
+   */
+  virtual long readError(void * s, long count) = 0;
 };
 
 /**

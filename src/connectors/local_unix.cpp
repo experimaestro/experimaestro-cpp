@@ -14,6 +14,7 @@
 #include <thread>
 #include <unistd.h>
 
+
 #include <efsw/efsw.hpp>
 
 #include <__xpm/common.hpp>
@@ -368,7 +369,7 @@ std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
       const_cast<LocalConnector *>(this)->shared_from_this(), path));
 }
 
-void LocalConnector::deleteTree(Path const &path, bool recursive) const {
+void LocalConnector::remove(Path const &path, bool recursive) const {
   FileType ft = fileType(path);
   if (ft != FileType::DIRECTORY) {
     if (unlink(path.localpath().c_str()) != 0) {
@@ -383,7 +384,11 @@ void LocalConnector::deleteTree(Path const &path, bool recursive) const {
         /* print all the files and directories within directory */
         try {
           while ((ent = readdir(dir)) != NULL) {
-            deleteTree(path / ent->d_name, recursive);
+            std::string name = ent->d_name;
+            if (name != "." && name != "..") {
+              LOGGER->debug("Recursive: removing path {}", path / name);
+              remove(path / name, recursive);
+            }
           }
         } catch (std::exception const &e) {
           closedir(dir);
@@ -395,6 +400,12 @@ void LocalConnector::deleteTree(Path const &path, bool recursive) const {
                                    strerror(errno)));
       }
     }
+
+    if (rmdir(path.localpath().c_str()) != 0) {
+      throw io_error(
+          fmt::format("Could not remove {}: {}", path, strerror(errno)));
+    }
+
   }
 }
 

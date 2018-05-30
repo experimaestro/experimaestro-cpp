@@ -21,6 +21,7 @@ add_executable(experimaestro-tests
 )
 
 set(XPM_TEST_SOURCEDIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(XPM_TEST_USERDIR "${CMAKE_CURRENT_SOURCE_DIR}/docker/userdir")
 configure_file(config.h.in config.h)
 
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
