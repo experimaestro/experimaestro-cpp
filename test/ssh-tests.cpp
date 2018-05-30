@@ -13,7 +13,6 @@
 DEFINE_LOGGER("ssh-tests");
 
 using namespace xpm;
-#define str(s) #s
 
 class SshTest : public ::testing::Test {
 protected:
@@ -23,6 +22,8 @@ protected:
 
   static void SetUpTestCase() {
     try {
+      ssh_set_log_level(SSH_LOG_FUNCTIONS);
+
       sshConnector = mkptr<SSHConnector>("testuser@localhost:2200");
       std::string rsaPath = XPM_TEST_USERDIR "/.ssh/id_rsa";
       sshConnector->addIdentity(rsaPath);
@@ -66,20 +67,43 @@ TEST_F(SshTest, OutputStream) {
   ASSERT_EQ(s, "Hello world");
 }
 
-TEST_F(SshTest, Lock) {
-  size_t x = 1;
-  auto lock = sshConnector->lock(remotepath / "lockfile.lock");
-  std::thread(
-      []() { auto lock = sshConnector->lock(remotepath / "lockfile.lock"); })
-      .detach();
+// TEST_F(SshTest, Lock) {
+//   size_t x = 1;
+//   auto lock = sshConnector->lock(remotepath / "lockfile.lock");
+//   std::thread(
+//       []() { auto lock = sshConnector->lock(remotepath / "lockfile.lock"); })
+//       .detach();
 
-  x += 1;
-}
+//   x += 1;
+// }
 
 TEST_F(SshTest, Process) {
   auto builder = sshConnector->processBuilder();
+  std::ostringstream ostr;
+  builder->stdout = Redirect::pipe([&ostr](const char *bytes, size_t n) {
+    ostr << std::string(bytes, n);
+  });
   builder->command.push_back("/bin/echo");
+  builder->command.push_back("-n");
   builder->command.push_back("hello");
-  ssh_set_log_level(SSH_LOG_FUNCTIONS);
   auto process = builder->start();
+
+  EXPECT_EQ(process->exitCode(), 0);
+  EXPECT_EQ(ostr.str(), "hello");
+}
+
+TEST_F(SshTest, ProcessStdin) {
+  auto builder = sshConnector->processBuilder();
+  std::ostringstream ostr;
+  builder->stdout = Redirect::pipe([&ostr](const char *bytes, size_t n) {
+    ostr << std::string(bytes, n);
+  });
+  builder->command.push_back("/bin/cat");
+  auto process = builder->start();
+
+  std::string hello = "hello";
+  process->write((void*)hello.c_str(), hello.size());
+  process->eof();
+  EXPECT_EQ(process->exitCode(), 0);
+  EXPECT_EQ(ostr.str(), hello);
 }

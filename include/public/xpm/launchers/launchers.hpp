@@ -66,16 +66,9 @@ public:
   virtual long write(void * s, long count) = 0;
 
   /**
-   * Read standard output
-   * @return The number of bytes written (or -1 if an error occurred)
+   * Closes standard in
    */
-  virtual long readOutput(void * s, long count) = 0;
-
-  /**
-   * Read standard output
-   * @return The number of bytes written (or -1 if an error occurred)
-   */
-  virtual long readError(void * s, long count) = 0;
+  virtual void eof() = 0;
 };
 
 /**

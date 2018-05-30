@@ -134,50 +134,23 @@ public:
   }
 };
 
-
-
-
-// --- SSH process builder
-
-class SSHProcess : public Process {
-  ptr<SSHChannel> channel;
-
-  SSHProcess(ptr<SSHChannel> const & channel) : channel(channel) {}
-  
-  /// isRunning
-  virtual bool isRunning() override { NOT_IMPLEMENTED(); }
-
-  /// Exit code
-  virtual int exitCode() override { NOT_IMPLEMENTED(); }
-
-  /// Kill
-  virtual void kill(bool force) override { NOT_IMPLEMENTED(); }
-
-  /**
-   * Write to stdin
-   * @return true if the write succeeded, false otherwise
-   */
-  virtual bool writeStdin(std::string const &string) override {
-    NOT_IMPLEMENTED();
-  }
-};
-
 class SSHChannel {
-  ssh_session session;
-
-public:
+  ptr<SSHSession> session;
   ssh_channel channel;
+public:
 
-  SSHChannel(ssh_session session) : session(session) {
-    channel = ssh_channel_new(session);
+  operator ssh_channel() { return channel; }
+
+  SSHChannel(ptr<SSHSession> const & session) : session(session) {
+    channel = ssh_channel_new(*session);
     if (channel == NULL) {
-      throw io_error(fmt::format("Cannot create the channel: {}", ssh_get_error(session)));
+      throw io_error(fmt::format("Cannot create the channel: {}", ssh_get_error(*session)));
     }
 
     auto rc = ssh_channel_open_session(channel);
     if (rc != SSH_OK) {
       ssh_channel_free(channel);
-      throw io_error(fmt::format("Cannot open the channel: {}", ssh_get_error(session)));
+      throw io_error(fmt::format("Cannot open the channel: {}", ssh_get_error(*session)));
     }
  
     // rc = ssh_channel_request_shell(channel);
@@ -188,18 +161,97 @@ public:
   }
 
   void exec(std::string const & command) {
+    LOGGER->info("Request exec on channel {}", (void*)channel);
+
     auto rc = ssh_channel_request_exec(channel, command.c_str());
     if (rc != SSH_OK) {
-      throw io_error(fmt::format("Cannot create request exec: {}", ssh_get_error(session)));
+      throw io_error(fmt::format("Cannot create request exec: {}", ssh_get_error(*session)));
     }
   }
 
   ~SSHChannel() {
+    LOGGER->info("Closing channel {}", (void*)channel);
     ssh_channel_close(channel);
     ssh_channel_send_eof(channel);
     ssh_channel_free(channel);
   }
 };
+
+
+// --- SSH process builder
+
+class SSHProcess : public Process {
+  ptr<SSHChannel> channel;
+  std::thread stdout_thread, stderr_thread;
+
+public:
+  SSHProcess(ProcessBuilder &builder, ptr<SSHChannel> const & channel) : channel(channel) {
+    auto readloop = [this](PipeFunction f, int is_stderr) {
+      std::array<char, 256> buffer;
+      ssize_t nbytes;
+      while ((nbytes = ssh_channel_read(*this->channel, buffer.__elems_, buffer.size(), is_stderr))) {
+        f(buffer.__elems_, static_cast<size_t>(nbytes));
+      }
+
+    };
+
+    if (builder.stdout.type == Redirection::PIPE) {
+      stdout_thread = std::thread([readloop, &builder]() { readloop(builder.stdout.function, 0); });
+    }
+    if (builder.stderr.type == Redirection::PIPE) {
+      stderr_thread = std::thread([readloop, &builder]() { readloop(builder.stderr.function, 1); });
+    } 
+  }
+
+  ~SSHProcess() {
+    kill(true);
+    wait();
+  }
+  
+  virtual long write(void * s, long count) override {
+    if (channel)
+      return ssh_channel_write(*channel, s, count);
+    return -1;
+  }
+
+  virtual void eof() override {
+    if (channel) {
+      LOGGER->info("Sending EOF for channel", (void*)*channel);
+      ssh_channel_send_eof(*channel);
+    }
+  }
+
+  /// isRunning
+  virtual bool isRunning() override { 
+    NOT_IMPLEMENTED(); 
+  }
+
+  /// Wait for stderr/stdout to finish
+  void wait() {
+    if (stdout_thread.joinable())
+      stdout_thread.join();
+    if (stderr_thread.joinable())
+      stderr_thread.join();
+  }
+
+  /// Exit code
+  virtual int exitCode() override { 
+    wait();
+    auto code = ssh_channel_get_exit_status(*channel);
+    LOGGER->info("Exit code is {}", code);
+    return code;
+  }
+
+  /// Kill
+  virtual void kill(bool force) override { 
+    channel = nullptr;
+  }
+
+
+
+};
+
+
 
 // ---- Process builder
 
@@ -225,7 +277,7 @@ public:
   }
 
   std::shared_ptr<Process> start() { 
-    auto channel = mkptr<SSHChannel>(*_session);
+    auto channel = mkptr<SSHChannel>(_session);
     std::ostringstream oss;
 
     // Set the environment (do not use SSH since they are filtered)
@@ -244,8 +296,11 @@ public:
     redirect(oss, "2>", stderr);
 
     channel->exec(oss.str());
-    return std::make_shared<SSHProcess>(channel);
+    auto process = std::make_shared<SSHProcess>(*this, channel);
+
+    return process;
   }
+
 };
 
 // --- SSH connector

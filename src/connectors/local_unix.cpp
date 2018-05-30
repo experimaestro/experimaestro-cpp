@@ -125,6 +125,8 @@ class LocalProcess : public Process {
   std::unique_ptr<FileDescriptor> stdin, stdout, stderr;
   std::mutex close_mutex;
   std::mutex stdin_mutex;
+  std::mutex stdout_mutex;
+  std::mutex stderr_mutex;
   std::thread stdout_thread, stderr_thread;
 
   bool closed = true;
@@ -186,7 +188,7 @@ public:
         auto buffer = std::unique_ptr<char[]>(new char[buffer_size]);
         ssize_t n;
         while ((n = read(stdout->fd, buffer.get(), buffer_size)) > 0)
-          builder.stdin.function(buffer.get(), static_cast<size_t>(n));
+          builder.stdout.function(buffer.get(), static_cast<size_t>(n));
       });
     }
 
@@ -195,7 +197,7 @@ public:
         auto buffer = std::unique_ptr<char[]>(new char[buffer_size]);
         ssize_t n;
         while ((n = read(stderr->fd, buffer.get(), buffer_size)) > 0)
-          builder.stdout.function(buffer.get(), static_cast<size_t>(n));
+          builder.stderr.function(buffer.get(), static_cast<size_t>(n));
       });
     }
   }
@@ -263,8 +265,7 @@ public:
     }
   }
 
-  /// Write to stdin
-  virtual bool writeStdin(std::string const &string) override {
+  virtual long write(void * s, long count) override {
     if (!stdin)
       throw std::invalid_argument("Can't write to an unopened stdin pipe. "
                                   "Please set open_stdin=true when "
@@ -272,14 +273,16 @@ public:
 
     std::lock_guard<std::mutex> lock(stdin_mutex);
     if (stdin->fd) {
-      if (::write(stdin->fd, string.c_str(), string.size()) >= 0) {
-        return true;
-      } else {
-        return false;
-      }
+      return ::write(stdin->fd, s, count);
     }
-    return false;
+    return -1;
   }
+
+  virtual void eof() {
+    stdin = nullptr;
+  }
+
+
 };
 
 ptr<Process> LocalProcessBuilder::start() {
