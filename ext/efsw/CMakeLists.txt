@@ -129,3 +129,7 @@ if (BUILD_TEST_APP)
     add_executable(efsw-test src/test/efsw-test.cpp)
     target_link_libraries(efsw-test efsw)
 endif()
+
+if (UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"))
+    set_target_properties(efsw PROPERTIES COMPILE_FLAGS "-fPIC")
+endif (UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"))
