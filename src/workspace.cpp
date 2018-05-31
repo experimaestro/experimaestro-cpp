@@ -1,4 +1,6 @@
 #include <csignal>
+#include <condition_variable>
+
 #include <xpm/workspace.hpp>
 #include <xpm/commandline.hpp>
 

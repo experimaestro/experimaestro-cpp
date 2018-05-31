@@ -3,6 +3,9 @@
 // For Windows, see
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682425(v=vs.85).aspx
 
+#include <condition_variable>
+#include <mutex>
+
 #include <cstdlib>
 #include <dirent.h>
 #include <fcntl.h>
