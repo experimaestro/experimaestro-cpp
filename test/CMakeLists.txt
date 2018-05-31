@@ -28,7 +28,8 @@ target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LI
 target_include_directories(experimaestro-tests PUBLIC 
         ${CMAKE_CURRENT_BINARY_DIR}
         ${OPENSSL_INCLUDE_DIR} 
-        ${CMAKE_BINARY_DIR}/external/googletest/include)
+        ${CMAKE_SOURCE_DIR}/ext/googletest/googletest/include
+)
 add_dependencies(experimaestro-tests googletest)
 set_property(TARGET experimaestro-tests PROPERTY CXX_STANDARD 11)
 
