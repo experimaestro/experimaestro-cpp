@@ -50,6 +50,14 @@ else (SQLITECPP_INCLUDE_DIR)
     _sqlitecpp_check_version()
   endif(SQLITECPP_INCLUDE_DIR)
 
+  # Position independent code
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+
+    add_compile_options("-fPIC")
+  endif()
+
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(SQLITECPP DEFAULT_MSG SQLITECPP_INCLUDE_DIR SQLITECPP_VERSION_OK)
 
