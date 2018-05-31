@@ -15,8 +15,14 @@ addons:
       - g++-7
 
 
-# Use faster container-based builds
-sudo: false
+before_install:
+  - cd test/docker
+  - docker-compose up -d
+
+sudo: required
+
+services:
+  -docker
 
 # Configuration
 branches:
