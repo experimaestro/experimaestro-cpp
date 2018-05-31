@@ -189,8 +189,8 @@ public:
     auto readloop = [this](PipeFunction f, int is_stderr) {
       std::array<char, 256> buffer;
       ssize_t nbytes;
-      while ((nbytes = ssh_channel_read(*this->channel, buffer.__elems_, buffer.size(), is_stderr))) {
-        f(buffer.__elems_, static_cast<size_t>(nbytes));
+      while ((nbytes = ssh_channel_read(*this->channel, buffer.data(), buffer.size(), is_stderr))) {
+        f(buffer.data(), static_cast<size_t>(nbytes));
       }
 
     };
