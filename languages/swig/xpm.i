@@ -84,8 +84,9 @@ namespace xpm {
 %shared_ptr(xpm::Object)
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::SimpleType)
+%shared_ptr(xpm::ArrayType)
 %shared_ptr(xpm::Task)
-%shared_ptr(xpm::StructuredValue)
+%shared_ptr(xpm::Parameters)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
@@ -123,6 +124,7 @@ namespace xpm {
 %feature("director") xpm::Register;
 %feature("director") xpm::Object;
 
+
 #ifdef SWIGPYTHON
 %include "../python/xpm.i"
 #endif
@@ -156,6 +158,7 @@ namespace xpm {
 // Template instanciation
 %template(StringList) std::vector<std::string>;
 %template(String2String) std::map<std::string, std::string>;
+%template(ValueArray) std::vector<std::shared_ptr<xpm::Parameters>>;
 
 %exception {
     try {

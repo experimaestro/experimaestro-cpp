@@ -20,10 +20,10 @@ template<class T> struct CppType;
 class CppRegister : public Register {
 public:
   /// Run task
-  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<StructuredValue> const & sv) override;
+  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Parameters> const & sv) override;
 
   /// Create object
-  virtual std::shared_ptr<Object> createObject(std::shared_ptr<StructuredValue> const & sv) override;
+  virtual std::shared_ptr<Object> createObject(std::shared_ptr<Parameters> const & sv) override;
 
   void addType(ptr<Type> const & type) {
       Register::addType(type);
@@ -43,30 +43,30 @@ void currentRegister(std::shared_ptr<CppRegister> const &_register);
 template <typename T> struct type_of {};
 
 template <typename T> struct ArgumentHolder {
-  virtual void setValue(T &self, xpm::StructuredValue::Ptr const &value) = 0;
+  virtual void setValue(T &self, xpm::Parameters::Ptr const &value) = 0;
 };
 
-inline void assignValue(StructuredValue::Ptr const &sv, std::string
+inline void assignValue(Parameters::Ptr const &sv, std::string
 &s) {
   s = sv->asString();
 }
-inline void assignValue(StructuredValue::Ptr const &sv, int &x) {
+inline void assignValue(Parameters::Ptr const &sv, int &x) {
   x = sv->asInteger();
 }
-inline void assignValue(StructuredValue::Ptr const &sv, long &x) {
+inline void assignValue(Parameters::Ptr const &sv, long &x) {
   x = sv->asInteger();
 }
-inline void assignValue(StructuredValue::Ptr const &sv, Path &s) {
+inline void assignValue(Parameters::Ptr const &sv, Path &s) {
   s = Path(sv->asString());
 }
-inline void assignValue(StructuredValue::Ptr const &sv, Value::Array &s) {
-  s = sv->asArray();
-}
+// inline void assignValue(Parameters::Ptr const &sv, Value::Array &s) {
+//   s = sv->asArray();
+// }
 
 
 /// Assigning another object
 template <typename T>
-inline void assignValue(xpm::StructuredValue::Ptr const &value,
+inline void assignValue(xpm::Parameters::Ptr const &value,
                         std::shared_ptr<T> &p) {
   p = std::dynamic_pointer_cast<T>(value->object());
   if (!p && value) {
@@ -83,7 +83,7 @@ struct TypedArgumentHolder : public ArgumentHolder<T> {
   TypedArgumentHolder(Value T::*valuePtr) : valuePtr(valuePtr) {}
 
   virtual void setValue(T &self,
-                        xpm::StructuredValue::Ptr const &value) override {
+                        xpm::Parameters::Ptr const &value) override {
     xpm::assignValue(value, (&self)->*valuePtr);
   }
 };
@@ -115,7 +115,7 @@ XPM_SIMPLETYPE_OF(long, IntegerType);
 XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
-XPM_SIMPLETYPE_OF(std::shared_ptr<StructuredValue>, AnyType);
+XPM_SIMPLETYPE_OF(std::shared_ptr<Parameters>, AnyType);
 XPM_SIMPLETYPE_OF(Path, PathType);
 
 template<typename Self>
@@ -161,12 +161,12 @@ struct BaseCppTypeBuilder {
   }
 
   template <typename U> Self &defaultValue(U const &v) {
-    _argument->defaultValue(std::make_shared<StructuredValue>(Value(v)));
+    _argument->defaultValue(std::make_shared<Parameters>(Value(v)));
     return dynamic_cast<Self&>(*this);
   }
 
   Self &defaultJson(nlohmann::json const &j) {
-    _argument->defaultValue(std::make_shared<StructuredValue>(*_register, j));
+    _argument->defaultValue(std::make_shared<Parameters>(*_register, j));
     return dynamic_cast<Self&>(*this);
   }
 };
@@ -211,20 +211,20 @@ struct CppTypeBuilder : public BaseCppTypeBuilder<CppTypeBuilder<T,Parent>> {
 class DefaultCppObject : public Object {
 public:
   void setValue(std::string const &name,
-                ptr<StructuredValue> const &value) override {
+                ptr<Parameters> const &value) override {
   }
 };
 
 
 template <typename T, typename Parent = Object>
 class CppObject : public Parent {
-  ptr<StructuredValue> _sv;
+  ptr<Parameters> _sv;
 public:
   static std::shared_ptr<CppType<T>> XPM_TYPE;
 
-  ptr<StructuredValue> value() { return _sv; }
+  ptr<Parameters> value() { return _sv; }
   void setValue(std::string const &name,
-                ptr<StructuredValue> const &value) override {
+                ptr<Parameters> const &value) override {
     auto it = XPM_TYPE->_arguments.find(name);
     if (it != XPM_TYPE->_arguments.end()) {
       T &t = dynamic_cast<T &>(*this);

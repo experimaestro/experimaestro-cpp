@@ -40,9 +40,8 @@ DEFAULT_LAUNCHER = None
 # --- From C++ types to Python
 
 
-def value2array(array):
+def parameters2array(array):
     """Converts an XPM array to a Python array"""
-    array = Array.cast(array)
     r = []
     for i in range(len(array)):
         sv = array[i]
@@ -53,21 +52,20 @@ def value2array(array):
 
 """Dictionary of converteres"""
 VALUECONVERTERS = {
-    str(BooleanType): lambda v: v.value().asBoolean(),
-    str(IntegerType): lambda v: v.value().asInteger(),
-    str(StringType): lambda v: v.value().asString(),
-    str(RealType): lambda v: v.value().asReal(),
-    str(PathType): lambda v: v.value().asPath(),
-    str(ArrayType): value2array
+    str(BooleanType): lambda v: v.asBoolean(),
+    str(IntegerType): lambda v: v.asInteger(),
+    str(StringType): lambda v: v.asString(),
+    str(RealType): lambda v: v.asReal(),
+    str(PathType): lambda v: v.asPath()
 }
 
 # --- From Python to C++ types
 
-def structuredValue(value):
+def parameters(value):
     """Transforms a Python value into a structured value"""
 
     # Simple case: it is already a configuration
-    if isinstance(value, StructuredValue):
+    if isinstance(value, Parameters):
         return value
 
     # It is a PyObject: get the associated configuration
@@ -80,14 +78,14 @@ def structuredValue(value):
 
     # A list
     if isinstance(value, list):
-        newvalue = Array()
+        newvalue = Value(ValueArray())
         for v in value:
-            newvalue.append(structuredValue(v))
+            newvalue.append(parameters(v))
 
-        return newvalue
+        return Parameters(newvalue)
 
     # For anything else, we try to convert it to a value
-    return StructuredValue(Value(value))
+    return Parameters(Value(value))
 
 def checknullsv(sv):
     """Returns either None or the sv"""
@@ -105,7 +103,7 @@ class XPMObject(Object):
         super().__init__()
         self.pyobject = pyobject
 
-        self.sv = sv or StructuredValue()
+        self.sv = sv or Parameters()
 
         self.sv.object(self)
         self.sv.type(self.pyobject.__class__.__xpmtype__)
@@ -123,7 +121,7 @@ class XPMObject(Object):
             if isinstance(v, PyObject) and hasattr(v.__class__, "__xpmtask__"):
                 if not v.__xpm__.submitted:
                     raise Exception("Task for argument '%s' was not submitted" % k)
-            self.sv.set(k, structuredValue(v))
+            self.sv.set(k, parameters(v))
         finally:
             self.setting = False
 
@@ -140,6 +138,8 @@ class XPMObject(Object):
                 object = sv.object()
                 if object:
                     value = object.pyobject
+                elif svtype.array():
+                    value = parameters2array(sv)
                 else:
                     value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
         
@@ -201,6 +201,18 @@ def submit(*args, **kwargs):
 # Defines a class property
 PyObject.__xpmtype__ = AnyType
 
+class TypeProxy: pass
+
+class ArrayOf(TypeProxy):
+    """Array of object"""
+    def __init__(self, cls):
+        self.cls = cls
+
+    def __call__(self, register):
+        type = register.getType(self.cls)
+        return ArrayType(type)
+
+
 
 class PythonRegister(Register):
     """The register contains a reference"""
@@ -240,6 +252,8 @@ class PythonRegister(Register):
         if key in self.builtins:
             return self.builtins[key]
 
+        if isinstance(key, TypeProxy):
+            return key(self)
         if isinstance(key, type):
             return getattr(key, "__xpmtype__", None)
         if isinstance(key, PyObject):
@@ -365,8 +379,9 @@ class RegisterTask(RegisterType):
         for arg in self.prefix_args:
             command.add(CommandString(arg))
         command.add(CommandString("run"))
-        command.add(CommandString(task.typeName().toString()))
+        command.add(CommandString("--json-file"))
         command.add(CommandParameters())
+        command.add(CommandString(task.typeName().toString()))
         commandLine = CommandLine()
         commandLine.add(command)
         task.commandline(commandLine)
@@ -406,7 +421,7 @@ class TypeArgument(AbstractArgument):
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:
-            self.argument.defaultValue(StructuredValue(Value(default)))
+            self.argument.defaultValue(Parameters(Value(default)))
 
 
 class PathArgument(AbstractArgument):

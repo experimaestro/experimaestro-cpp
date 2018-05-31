@@ -27,7 +27,7 @@ TypeName Task::typeName() const { return _type->typeName(); }
 
 void Task::submit(ptr<Workspace> const & _workspace,
   ptr<Launcher> const & _launcher,
-  ptr<StructuredValue> const & sv
+  ptr<Parameters> const & sv
 ) const {
   LOGGER->info("Preparing job");
 
@@ -56,7 +56,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
     }
   });
 
-  auto job = mkptr<CommandLineJob>(svlocator->value().asPath(), launcher, _commandLine);
+  auto job = mkptr<CommandLineJob>(svlocator->asPath(), launcher, _commandLine);
   job->init();
   sv->job(job);
 

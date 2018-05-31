@@ -20,7 +20,7 @@ namespace YAML {
 namespace xpm {
 
 class Type;
-class StructuredValue;
+class Parameters;
 class Register;
 
 enum class ValueType : int8_t {
@@ -44,7 +44,7 @@ enum class ValueType : int8_t {
  */
 class Value {
  public:
-  typedef std::vector<std::shared_ptr<StructuredValue>> Array;
+  typedef std::vector<std::shared_ptr<Parameters>> Array;
   typedef std::shared_ptr<Value> Ptr;
 
   Value();
@@ -76,7 +76,7 @@ class Value {
   Value &operator=(Value const &other);
 
   virtual ~Value();
-  // virtual std::shared_ptr<StructuredValue> copy();
+  // virtual std::shared_ptr<Parameters> copy();
 
   ValueType const scalarType() const;
   std::shared_ptr<Type> type() const;
@@ -129,13 +129,13 @@ class Value {
   // Array methods (throw an exception if the value is not an array)
 
   /// Add a new object to the array
-  void push_back(std::shared_ptr<StructuredValue> const &element);
+  void push_back(std::shared_ptr<Parameters> const &element);
 
   /// Returns the size of the array
   size_t size() const;
 
   /// Access to the new array
-  std::shared_ptr<StructuredValue> &operator[](const size_t index);
+  std::shared_ptr<Parameters> &operator[](const size_t index);
 
   /// A constant
   static const Value NONE;

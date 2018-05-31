@@ -73,7 +73,6 @@ Register::Register() {
   addType(StringType);
   addType(BooleanType);
   addType(PathType);
-  addType(ArrayType);
   addType(AnyType);
 }
 Register::~Register() {}
@@ -95,6 +94,13 @@ ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
 }
 
 ptr<Type> Register::getType(TypeName const &typeName) {
+  std::string _name = typeName.toString();
+  if (_name.size() > 2 && _name.substr(_name.size()-2) == "[]") {
+    TypeName cType(_name.substr(0, _name.size() - 2));
+    auto type = getType(cType);
+    return type ? mkptr<ArrayType>(type) : nullptr;
+  }
+
   auto it = _types.find(typeName);
   if (it != _types.end()) {
     return it->second;
@@ -103,7 +109,7 @@ ptr<Type> Register::getType(TypeName const &typeName) {
 }
 
 // Find a type given a type name
-ptr<Type> Register::getType(ptr<StructuredValue> const &object) {
+ptr<Type> Register::getType(ptr<Parameters> const &object) {
   return object->type();
 }
 
@@ -116,7 +122,7 @@ std::vector<std::string> reverse(std::vector<std::string> const &_args) {
 }
 
 namespace {
-void showArguments(ptr<StructuredValue> const & sv, Type const & type, std::string const & indent = "") {
+void showArguments(ptr<Parameters> const & sv, Type const & type, std::string const & indent = "") {
   for(auto const &x: type.arguments()) {
     auto subtype =  x.second->type();
     auto subSV = sv && sv->hasKey(x.first) ? sv->get(x.first) : nullptr;
@@ -138,10 +144,10 @@ void showArguments(ptr<StructuredValue> const & sv, Type const & type, std::stri
       << x.second->help();
     if (x.second->required()) std::cout << " REQUIRED";
     if (subtype->predefined()) {
-      if (subSV && subSV->value().defined()) {
-        std::cout << " (value " << subSV->value().toJson() << ")";
+      if (subSV && subSV->hasValue()) {
+        std::cout << " (value " << subSV->valueAsJson() << ")";
       } else if (x.second->defaultValue()) {
-        std::cout << " (default " << x.second->defaultValue()->value().toJson() << ")";
+        std::cout << " (default " << x.second->defaultValue()->valueAsJson() << ")";
       }
       std::cout << std::endl;
     } else {
@@ -152,8 +158,8 @@ void showArguments(ptr<StructuredValue> const & sv, Type const & type, std::stri
 }
 
 /// Follow
-ptr<StructuredValue> getSubValue(ptr<StructuredValue> sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
-  ptr<StructuredValue> subsv = nullptr;
+ptr<Parameters> getSubValue(ptr<Parameters> sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
+  ptr<Parameters> subsv = nullptr;
   for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
     next = fullkey.find(separator, pos+1);
     std::string key = fullkey.substr(pos, next-pos);
@@ -162,7 +168,7 @@ ptr<StructuredValue> getSubValue(ptr<StructuredValue> sv, std::string const & fu
       subsv = sv->get(key);
     } else {
       // Create structured value
-      subsv = mkptr<StructuredValue>();
+      subsv = mkptr<Parameters>();
 
       // Propagate types
       auto const &arguments = sv->type()->arguments();
@@ -181,14 +187,13 @@ ptr<StructuredValue> getSubValue(ptr<StructuredValue> sv, std::string const & fu
 }
 
 /// Merge values from YAML into a structured value
-void merge(Register & xpmRegister, ptr<StructuredValue> const &sv, YAML::Node const &node) {
+void merge(Register & xpmRegister, ptr<Parameters> const &sv, YAML::Node const &node) {
   switch (node.Type()) {
 
   case YAML::NodeType::Sequence:
   case YAML::NodeType::Scalar:
   case YAML::NodeType::Null: {
-    auto value = Value::fromYAML(node);
-    sv->value(value);
+    sv->set(node);
     break;
   }
 
@@ -277,9 +282,9 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       }
 
       // Read the JSON file
-      ptr<StructuredValue> sv;
+      ptr<Parameters> sv;
       if (paramFile.empty()) {
-        sv = mkptr<StructuredValue>();
+        sv = mkptr<Parameters>();
         sv->type(task->type());
       } else {
         std::ifstream stream(paramFile);
@@ -292,7 +297,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
           throw;
         }
 
-        sv = std::make_shared<StructuredValue>(*this, j);
+        sv = std::make_shared<Parameters>(*this, j);
       }
 
       // Parse YAML string
@@ -312,7 +317,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         auto subsv = getSubValue(sv, parameters[i].substr(2), "-");
 
         if (subsv->type()->scalar()) {
-          subsv->value(Value::fromString(parameters[i+1], subsv->type()));
+          subsv->set(parameters[i+1], true);
         } else {
           auto type = getType(parameters[i+1]);
           if (!type) throw argument_error("Type " + parameters[i+1] + " does not exist");
@@ -350,7 +355,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
  
 }
 
-void Register::runTask(ptr<Task> const & task, ptr<StructuredValue> const & sv) {
+void Register::runTask(ptr<Task> const & task, ptr<Parameters> const & sv) {
   auto object = sv->object();
   if (!object) {
     throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
@@ -364,7 +369,7 @@ void Register::runTask(ptr<Task> const & task, ptr<StructuredValue> const & sv) 
 }
 
   /// Create object
-ptr<Object> Register::createObject(ptr<StructuredValue> const & sv) {
+ptr<Object> Register::createObject(ptr<Parameters> const & sv) {
   return nullptr;
 }
 
@@ -393,8 +398,8 @@ void Register::generate() const {
   std::cout << "}" << std::endl;
 }
 
-ptr<StructuredValue> Register::build(std::string const &value) {
-  return std::make_shared<StructuredValue>(*this, json::parse(value));
+ptr<Parameters> Register::build(std::string const &value) {
+  return std::make_shared<Parameters>(*this, json::parse(value));
 }
 
 void Register::parse(int argc, const char **argv) {
@@ -450,7 +455,7 @@ void Register::load(nlohmann::json const &j) {
       }
       type->placeholder(false);
     } else {
-      _types[typeName] = type = std::make_shared<Type>(typeName);
+      _types[typeName] = type = mkptr<Type>(typeName);
     }
 
     if (e.count("description")) {
@@ -463,7 +468,7 @@ void Register::load(nlohmann::json const &j) {
       auto parentTypeIt = _types.find(parentTypeName);
       if (parentTypeIt == _types.end()) {
         LOGGER->debug("Creating placeholder type {} ", parentTypeName);
-        auto parentType = std::make_shared<Type>(parentTypeName);
+        auto parentType = mkptr<Type>(parentTypeName);
         type->parentType(parentType);
         parentType->placeholder(true);
         _types[parentTypeName] = parentType;
@@ -477,7 +482,7 @@ void Register::load(nlohmann::json const &j) {
     if (e.count("properties")) {
       auto properties = e["properties"];
       for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
-        auto object = std::make_shared<StructuredValue>(*this, it_prop.value());
+        auto object = std::make_shared<Parameters>(*this, it_prop.value());
         type->setProperty(it_prop.key(), object);
       }
     }
@@ -502,7 +507,7 @@ void Register::load(nlohmann::json const &j) {
 
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
-          a->defaultValue(std::make_shared<StructuredValue>(*this, value["default"]));
+          a->defaultValue(std::make_shared<Parameters>(*this, value["default"]));
         }
 
         if (value.count("generator")) {
@@ -513,7 +518,7 @@ void Register::load(nlohmann::json const &j) {
 
       auto valueType = getType(valueTypename);
       if (!valueType) {
-        addType(valueType = std::make_shared<Type>(valueTypename));
+        addType(valueType = mkptr<Type>(valueTypename));
         valueType->placeholder(true);
       }
       a->type(valueType);

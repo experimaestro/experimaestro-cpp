@@ -49,7 +49,6 @@ const TypeName STRING_TYPE("string");
 const TypeName BOOLEAN_TYPE("boolean");
 const TypeName INTEGER_TYPE("integer");
 const TypeName REAL_TYPE("real");
-const TypeName ARRAY_TYPE("array");
 const TypeName ANY_TYPE("any");
 const TypeName PATH_TYPE("path");
 const ptr<Object> NULL_OBJECT;
@@ -93,7 +92,7 @@ int TypeName::hash() const {
   return (int) std::hash<std::string>{}(name);
 }
 
-TypeName TypeName::call(std::string const &localname) const {
+TypeName TypeName::operator()(std::string const &localname) const {
   return TypeName(name + "." + localname);
 }
 
@@ -103,28 +102,33 @@ std::string TypeName::localName() const {
   return name.substr(i + 1);
 }
 
+TypeName TypeName::array() const {
+  return TypeName(name + "[]");
+}
+
+
 // ---
 // --- Structured value
 // ---
 
 Object::~Object() {}
-void Object::setValue(std::string const &name, std::shared_ptr<StructuredValue> const & value) {}
+void Object::setValue(std::string const &name, std::shared_ptr<Parameters> const & value) {}
 
 void Object::run() {
   throw assertion_error("Object is not a task: cannot run it!");
 }
 
-StructuredValue::~StructuredValue() {
+Parameters::~Parameters() {
 }
-StructuredValue::StructuredValue(Value const &v) : _flags(0) {
+Parameters::Parameters(Value const &v) : _flags(0) {
   _value = v;
   _type = v.type();
 } 
 
-StructuredValue::StructuredValue() : _flags(0), _type(AnyType) {
+Parameters::Parameters() : _flags(0), _type(AnyType) {
 }
 
-StructuredValue::StructuredValue(std::map<std::string, ptr<StructuredValue>> &map)
+Parameters::Parameters(std::map<std::string, ptr<Parameters>> &map)
     : _flags(0), _content(map), _type(AnyType) {
 }
 
@@ -135,19 +139,19 @@ public:
   virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
 };
 
-StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue) 
+Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue) 
   : _flags(0), _type(AnyType) {
   switch (jsonValue.type()) {
 
     // --- Object
     case nlohmann::json::value_t::object: {
-      // (1) Get the type of the object
+      // (1) First, get the type of the object
       ptr<Type> type = AnyType;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         _type = xpmRegister.getType(typeName);
         if (!_type) {
-          _type = std::make_shared<Type>(typeName);
+          _type = mkptr<Type>(typeName);
           _type->placeholder(true);
           xpmRegister.addType(_type);
           LOGGER->warn("Could not find type '{}' in registry: using undefined type", typeName);
@@ -159,7 +163,11 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
         if (it.key() == KEY_VALUE) {
             // Infer type from value
             _value = Value(xpmRegister, it.value());
-            _type = _value.type();
+            auto vtype = _value.type();
+            if (!_type->accepts(vtype)) {
+              throw argument_error(fmt::format("Incompatible types {} and {}", type->typeName().toString(), vtype->typeName().toString()));
+            }
+            _type = vtype;
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
@@ -167,7 +175,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
         } else if (it.key() == KEY_TASK) {
           _task = xpmRegister.getTask(it.value(), true);
         } else {
-          set(it.key(), std::make_shared<StructuredValue>(xpmRegister, it.value()));
+          set(it.key(), std::make_shared<Parameters>(xpmRegister, it.value()));
         }
       }
 
@@ -183,7 +191,7 @@ StructuredValue::StructuredValue(Register &xpmRegister, nlohmann::json const &js
 }
 
 // Convert to JSON
-json StructuredValue::toJson() {
+json Parameters::toJson() {
   // No content
   if (_content.empty() && !_task && !type() && !get(Flag::DEFAULT)) {
     return nullptr;
@@ -210,8 +218,8 @@ json StructuredValue::toJson() {
   return o;
 }
 
-ptr<StructuredValue> StructuredValue::copy() {
-  auto sv = mkptr<StructuredValue>();
+ptr<Parameters> Parameters::copy() {
+  auto sv = mkptr<Parameters>();
   sv->_job = _job;
   sv->_object = _object;
   sv->_task = _task;
@@ -224,11 +232,11 @@ ptr<StructuredValue> StructuredValue::copy() {
 }
 
 
-std::string StructuredValue::toJsonString() {
+std::string Parameters::toJsonString() {
   return toJson().dump();
 }
 
-void Digest::updateDigest(StructuredValue const & sv) {
+void Digest::updateDigest(Parameters const & sv) {
   updateDigest(sv.type()->typeName().toString());
 
   updateDigest("task");
@@ -238,11 +246,11 @@ void Digest::updateDigest(StructuredValue const & sv) {
     updateDigest(0);
   }
 
-  if (sv.value().defined()) {
+  if (sv.hasValue()) {
     // If there is a value, ignore the rest
     // of the structure
     updateDigest(0);
-    sv.value().updateDigest(*this);
+    sv._value.updateDigest(*this);
   } else {
     updateDigest(1);
     for (auto &item: sv._content) {
@@ -264,28 +272,82 @@ void Digest::updateDigest(StructuredValue const & sv) {
 }
 
 /// Internal digest function
-std::array<unsigned char, DIGEST_LENGTH> StructuredValue::digest() const {
+std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
   Digest d;
   d.updateDigest(*this);
   return d.get();
 };
 
-
-void StructuredValue::value(Value const &value) { 
-  _value = value; 
-  _type = value.type();
+ValueType Parameters::valueType() const {
+  return _value.scalarType();
 }
 
 
-ptr<Type> StructuredValue::type() const {
+nlohmann::json Parameters::valueAsJson() const {
+  return _value.toJson();
+}
+
+bool Parameters::hasValue() const {
+  return _value.defined();
+}
+
+void Parameters::set(YAML::Node const &node) {
+  _value = Value::fromYAML(node);
+  _type = _value.type();
+}
+
+
+void Parameters::set(bool value) {
+  _value = Value(value);
+  _type = _value.type();
+}
+
+void Parameters::set(long value) {
+  _value = Value(value);
+  _type = _value.type();
+}
+
+void Parameters::set(std::string const & value, bool typeHint) {
+  if (typeHint) {
+    _value = Value::fromString(value, _type);
+  } else {
+    _value = Value(value);
+  }
+  _type = _value.type();
+}
+
+void Parameters::set(std::vector<std::shared_ptr<Parameters>> const & value) {
+  _value = Value(value);
+  _type = _value.type();
+}
+
+std::shared_ptr<Parameters> Parameters::operator[](size_t index) {
+  return _value[index];
+}
+
+
+size_t Parameters::size() const {
+  // Avoids throwing an exception (SWIG work-around)
+  if (_type->array())
+    return _value.size();
+  LOGGER->warn("Parameters value is not an array");
+  return 0;
+}
+
+void Parameters::push_back(std::shared_ptr<Parameters> const & parameters) {
+  _value.push_back(parameters);
+  _type = Type::lca(_type, parameters->type());
+}
+
+ptr<Type> Parameters::type() const {
   return _type;
 }
 
-bool StructuredValue::hasKey(std::string const &key) const {
+bool Parameters::hasKey(std::string const &key) const {
   return _content.find(key) != _content.end();
 }
 
-ptr<StructuredValue> StructuredValue::set(const std::string &key, ptr<StructuredValue> const &value) {
+ptr<Parameters> Parameters::set(const std::string &key, ptr<Parameters> const &value) {
   if (get(Flag::SEALED)) {
     throw sealed_error();
   }
@@ -310,18 +372,18 @@ ptr<StructuredValue> StructuredValue::set(const std::string &key, ptr<Structured
   }
 
   // And for the object
-  setValue(key, value);
+  setObjectValue(key, value);
 
   return it == _content.end() ? nullptr : it->second;
 }
 
-ptr<StructuredValue> StructuredValue::get(const std::string &key) {
+ptr<Parameters> Parameters::get(const std::string &key) {
   auto value = _content.find(key);
   if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
 }
 
-void StructuredValue::seal() {
+void Parameters::seal() {
   if (get(Flag::SEALED)) return;
 
   for (auto &item: _content) {
@@ -331,19 +393,19 @@ void StructuredValue::seal() {
   set(Flag::SEALED, true);
 }
 
-bool StructuredValue::isSealed() const {
+bool Parameters::isSealed() const {
   return get(Flag::SEALED);
 }
 
-bool StructuredValue::isDefault() const {
+bool Parameters::isDefault() const {
   return get(Flag::DEFAULT);
 }
 
-bool StructuredValue::ignore() const {
+bool Parameters::ignore() const {
   return get(Flag::IGNORE);
 }
 
-bool StructuredValue::canIgnore() {
+bool Parameters::canIgnore() {
   // If the ignore flag is set
   if (ignore()) {
     return true;
@@ -361,7 +423,7 @@ bool StructuredValue::canIgnore() {
   return false;
 }
 
-std::string StructuredValue::uniqueIdentifier() const {
+std::string Parameters::uniqueIdentifier() const {
   // Compute the digest
   auto array = digest();
 
@@ -378,59 +440,69 @@ std::string StructuredValue::uniqueIdentifier() const {
   return s;
 }
 
-std::map<std::string, ptr<StructuredValue>> const &StructuredValue::content() {
+std::map<std::string, ptr<Parameters>> const &Parameters::content() {
   return _content;
 }
 
 /** Get type */
-void StructuredValue::type(ptr<Type> const &type) {
+void Parameters::type(ptr<Type> const &type) {
   _type = type;
 }
 
-void StructuredValue::object(ptr<Object> const &object) {
+void Parameters::object(ptr<Object> const &object) {
   _object = object;
 }
 
-ptr<Object> StructuredValue::object() {
+ptr<Object> Parameters::object() {
   return _object;
 }
 
-void StructuredValue::task(ptr<Task> const &task) {
+void Parameters::task(ptr<Task> const &task) {
   _task = task;
 }
 
-ptr<Task> StructuredValue::task() {
+ptr<Task> Parameters::task() {
   return _task;
 }
 
-void StructuredValue::configure(Workspace & ws) {
+void Parameters::configure(Workspace & ws) {
   GeneratorContext context(ws);
   generate(context);
   validate();
   seal();
 }
 
-ptr<Object> StructuredValue::createObjects(xpm::Register &xpmRegister) {
+ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
   // Don't create an object for values
-  if (_value.defined()) return nullptr;
+  if (_value.defined()) {
+    if (_value.scalarType() == ValueType::ARRAY) {
+      for(size_t i = 0; i < _value.size(); ++i) {
+        _value[i]->createObjects(xpmRegister);
+      }    
+    }
+  
+    return nullptr;
+  }
 
   // Create for descendants
   for(auto &kv: _content) {
     kv.second->createObjects(xpmRegister);
   }
 
+
   // Create for ourselves
   _object = xpmRegister.createObject(shared_from_this());
   if (_object) {
-     for(auto &kv: _content) {
-       setValue(kv.first, kv.second);
-     }
+    // Set the values
+    for(auto &kv: _content) {
+      setObjectValue(kv.first, kv.second);
+    }
   }
 
   return _object;
 }
 
-void StructuredValue::addDependencies(Job & job,  bool skipThis) {
+void Parameters::addDependencies(Job & job,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
@@ -445,7 +517,7 @@ void StructuredValue::addDependencies(Job & job,  bool skipThis) {
   }
 }
 
-bool StructuredValue::equals(StructuredValue const &other) const {
+bool Parameters::equals(Parameters const &other) const {
   if (_value.defined()) {
     return _value.equals(other._value);
   }
@@ -456,7 +528,7 @@ bool StructuredValue::equals(StructuredValue const &other) const {
   NOT_IMPLEMENTED();
 }
 
-void StructuredValue::generate(GeneratorContext & context) {
+void Parameters::generate(GeneratorContext & context) {
   if (auto A = context.enter(this)) {
     // Already generated
     if (get(Flag::GENERATED)) {
@@ -489,9 +561,9 @@ void StructuredValue::generate(GeneratorContext & context) {
             set(argument.name(), value);
           } else if (!argument.required()) {
             // Set value null
-            auto value = std::make_shared<StructuredValue>(Value::NONE);
+            auto value = std::make_shared<Parameters>(Value::NONE);
             value->set(Flag::DEFAULT, true);
-            setValue(argument.name(), nullptr);
+            setObjectValue(argument.name(), nullptr);
           }
         } else {
           // Generate sub-structures
@@ -504,7 +576,7 @@ void StructuredValue::generate(GeneratorContext & context) {
   }
 }
 
-void StructuredValue::validate() {
+void Parameters::validate() {
   if (get(Flag::VALIDATED)) return;
 
   if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
@@ -545,36 +617,36 @@ void StructuredValue::validate() {
   set(Flag::VALIDATED, true);
 }
 
-void StructuredValue::setValue(std::string const &name, ptr<StructuredValue> const &value) {
+void Parameters::setObjectValue(std::string const &name, ptr<Parameters> const &value) {
   if (_object) {
     _object->setValue(name, value);
   }
 }
 
-void StructuredValue::set(StructuredValue::Flag flag, bool value) {
+void Parameters::set(Parameters::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;
   else _flags &= ~((Flags)flag);
 
   assert(get(flag) == value);
 }
 
-bool StructuredValue::get(StructuredValue::Flag flag) const {
+bool Parameters::get(Parameters::Flag flag) const {
   return (Flags)flag & _flags;
 }
 
 
-std::shared_ptr<Job> const & StructuredValue::job() const { 
+std::shared_ptr<Job> const & Parameters::job() const { 
   return _job; 
 }
 
-void StructuredValue::job( std::shared_ptr<Job> const & _job) { 
+void Parameters::job( std::shared_ptr<Job> const & _job) { 
   this->_job = _job; 
 }
 
 
 
 /// Returns the string
-std::string StructuredValue::asString() const {
+std::string Parameters::asString() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -582,7 +654,7 @@ std::string StructuredValue::asString() const {
 }
 
 /// Returns the string
-bool StructuredValue::asBoolean() const {
+bool Parameters::asBoolean() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -590,7 +662,7 @@ bool StructuredValue::asBoolean() const {
 }
 
 /// Returns an integer
-long StructuredValue::asInteger() const {
+long Parameters::asInteger() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -598,7 +670,7 @@ long StructuredValue::asInteger() const {
 }
 
 /// Returns an integer
-double StructuredValue::asReal() const {
+double Parameters::asReal() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -606,19 +678,11 @@ double StructuredValue::asReal() const {
 }
 
 /// Returns a path
-Path StructuredValue::asPath() const {
+Path Parameters::asPath() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
   return _value.asPath();
-}
-
-/// Returns as array
-Value::Array StructuredValue::asArray() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asArray();
 }
 
 
@@ -664,12 +728,12 @@ Argument &Argument::help(const std::string &help) {
   return *this;
 }
 
-Argument &Argument::defaultValue(ptr<StructuredValue> const &defaultValue) {
+Argument &Argument::defaultValue(ptr<Parameters> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
 }
-ptr<StructuredValue> Argument::defaultValue() const { return _defaultValue; }
+ptr<Parameters> Argument::defaultValue() const { return _defaultValue; }
 
 ptr<Generator> Argument::generator() { return _generator; }
 ptr<Generator> const &Argument::generator() const { return _generator; }
@@ -690,19 +754,23 @@ Argument &Argument::type(ptr<Type> const &type) {
 SimpleType::SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore)
       : Type(tname, AnyType, true, canIgnore), _valueType(valueType) {}
 
-ptr<Type> AnyType = std::make_shared<Type>(ANY_TYPE, nullptr, true);
+ptr<Type> AnyType = Type::any();
+
+Type::Ptr const & Type::any() {
+  static auto ANY = mkptr<Type>(ANY_TYPE, nullptr, true);
+  return ANY;
+}
+
 ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
 ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
 ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
 ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
 ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
-ptr<Type> ArrayType = std::make_shared<Type>(ARRAY_TYPE, nullptr, true, false, true);
 
-
-
-Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgnore, bool isArray) :
-    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore), _isArray(isArray) {
+Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgnore) :
+    _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore) {
  }
+
 
 Type::~Type() {}
 
@@ -733,8 +801,6 @@ std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
 
 /// Predefined types
 bool Type::predefined() const { return _predefined; }
-
-bool Type::isArray() const { return _isArray; }
 
 std::string Type::toJson() const {
   json response = json::object();
@@ -795,39 +861,68 @@ int Type::hash() const {
 }
 
 
-void Type::setProperty(std::string const &name, StructuredValue::Ptr const &value) {
+void Type::setProperty(std::string const &name, Parameters::Ptr const &value) {
   _properties[name] = value;
 }
 
-StructuredValue::Ptr Type::getProperty(std::string const &name) {
+Parameters::Ptr Type::getProperty(std::string const &name) {
   auto it = _properties.find(name);
   if (it == _properties.end()) return nullptr;
   return it->second;
 }
 
+namespace {
+  bool same(Type const & a, Type const & b) {
+    return a.typeName() == b.typeName();
+  }
+}
 
 bool Type::accepts(Type::Ptr const &other) const {
   // Go up
   if (_type == ANY_TYPE) return true;
 
   for(auto current = other; current; current = current->parentType()) {
-    if (current->_type == _type) return true;
+    if (same(*current, *this)) return true;
   }
 
   return false;
+}
 
+Type::Ptr Type::lca(Type::Ptr const & a, Type::Ptr const & b) {
+  std::unordered_set<TypeName> set;
+
+  for(auto current = a; current; current = current->parentType()) {
+    if (same(*current, *b)) return a;
+    set.insert(current->typeName());
+  }
+
+  // Go up in b hierarchy
+  for(auto current = b; current; current = current->parentType()) {
+    if (set.find(current->typeName()) != set.end())
+      return current;
+  }
+
+  // Should not happen...
+  return AnyType;
+}
+
+ArrayType::ArrayType(Type::Ptr const & componentType) 
+  : Type(
+      componentType->typeName().array(), 
+      componentType->parentType() ? mkptr<ArrayType>(componentType->parentType()) : nullptr
+    ), _componentType(componentType) {
 }
 
 
 // ---- Generators
 
-GeneratorContext::GeneratorContext(Workspace & ws, ptr<StructuredValue> const &sv) : workspace(ws) {
+GeneratorContext::GeneratorContext(Workspace & ws, ptr<Parameters> const &sv) : workspace(ws) {
   stack.push_back(sv.get());
 }
 GeneratorContext::GeneratorContext(Workspace & ws) : workspace(ws) {
 }
 
-GeneratorLock::GeneratorLock(GeneratorContext * context, StructuredValue *sv) : context(context) {
+GeneratorLock::GeneratorLock(GeneratorContext * context, Parameters *sv) : context(context) {
   context->stack.push_back(sv);
 }
 
@@ -852,7 +947,7 @@ nlohmann::json PathGenerator::toJson() const {
   };
 }
 
-ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
+ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   Path p = context.workspace.jobsdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
@@ -865,7 +960,7 @@ ptr<StructuredValue> PathGenerator::generate(GeneratorContext const &context) {
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return std::make_shared<StructuredValue>(Value(p));
+  return std::make_shared<Parameters>(Value(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

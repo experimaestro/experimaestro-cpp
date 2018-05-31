@@ -16,7 +16,7 @@ add_executable(experimaestro-tests
         tests.cpp 
         cppdefinitions.cpp
         digest.cpp 
-        structuredvalues.cpp 
+        parameters-tests.cpp 
         ssh-tests.cpp
 )
 

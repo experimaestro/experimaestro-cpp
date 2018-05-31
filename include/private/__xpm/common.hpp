@@ -19,7 +19,7 @@ namespace xpm {
 
 std::shared_ptr<spdlog::logger> logger(std::string const &name);
 
-class StructuredValue;
+class Parameters;
 class TypeName;
 class Type;
 class Path;
@@ -54,7 +54,7 @@ struct Digest {
   }
 
 
-  void updateDigest(StructuredValue const &value);
+  void updateDigest(Parameters const &value);
 
   inline std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
     std::array<unsigned char, SHA_DIGEST_LENGTH> md;

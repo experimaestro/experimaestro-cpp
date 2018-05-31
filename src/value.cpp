@@ -262,7 +262,7 @@ Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
     case nlohmann::json::value_t::array: {
       new(&_value.array) ValueArray();
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        _value.array.push_back(std::make_shared<StructuredValue>(xpmRegister, *it));
+        _value.array.push_back(std::make_shared<Parameters>(xpmRegister, *it));
       }      
       _scalarType = ValueType::ARRAY;
       break;
@@ -323,8 +323,17 @@ ptr<Type> Value::type() const {
     case ValueType::STRING:
       return StringType;
 
-    case ValueType::ARRAY:
-      return ArrayType;
+    case ValueType::ARRAY: {
+      ptr<Type> type;
+      for(auto const &v: _value.array) {
+        if (!type) type = v->type();
+        else {
+          type = Type::lca(type, v->type());
+        }
+      }
+      
+      return mkptr<ArrayType>(type ? type : AnyType);
+    }
   }
 
       throw exception("unhanlded type for a Value");
@@ -399,7 +408,7 @@ double Value::asReal() const {
       if (_value.array.size() != 1)
         throw std::out_of_range("Cannot convert arrays which are not singleton");
       else
-        return _value.array[0]->value().asReal();
+        return _value.array[0]->asReal();
 
   }
   throw std::out_of_range("Scalar type is not known (converting to real)");
@@ -417,7 +426,7 @@ Path Value::asPath() const {
       if (_value.array.size() != 1)
         throw std::out_of_range("Cannot convert arrays which are not singleton");
       else
-        return _value.array[0]->value().asPath();
+        return _value.array[0]->asPath();
     case ValueType::PATH:
     case ValueType::STRING: return Path(_value.string);
       break;
@@ -461,7 +470,7 @@ Value::Array Value::asArray() const {
 
     default: {
       Value::Array array;
-      array.push_back(std::make_shared<StructuredValue>(*this));
+      array.push_back(std::make_shared<Parameters>(*this));
       return array;
     }
   }
@@ -487,7 +496,7 @@ std::string Value::asString() const {
       if (_value.array.size() != 1)
         throw std::out_of_range("Cannot convert arrays which are not singleton");
       else
-        return _value.array[0]->value().asString();
+        return _value.array[0]->asString();
 
     case ValueType::PATH:
     case ValueType::STRING: return _value.string;
@@ -592,7 +601,7 @@ std::string const &Value::getString() {
   return _value.string;
 }
 
-void Value::push_back(ptr<StructuredValue> const &element) {
+void Value::push_back(ptr<Parameters> const &element) {
   if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot push an element");
   _value.array.push_back(element);
 }
@@ -602,7 +611,7 @@ size_t Value::size() const {
   return _value.array.size();
 }
 
-ptr<StructuredValue> &Value::operator[](const size_t index) {
+ptr<Parameters> &Value::operator[](const size_t index) {
   if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get an element");
   return _value.array[index];
 }

@@ -20,7 +20,7 @@ namespace {
 
 Client *Client::DEFAULT_CLIENT = nullptr;
 
-ConfigurationStructuredValue::ConfigurationStructuredValue(std::string const &path) {
+ConfigurationParameters::ConfigurationParameters(std::string const &path) {
   std::string _path = path;
   if (path.empty()) {
     _path = std::string(std::getenv("HOME")) + "/.experimaestro/settings.json";
@@ -57,7 +57,7 @@ ConfigurationStructuredValue::ConfigurationStructuredValue(std::string const &pa
   }
 }
 
-HostConfiguration const& ConfigurationStructuredValue::defaultConfiguration() const {
+HostConfiguration const& ConfigurationParameters::defaultConfiguration() const {
   return configurations.find(defaultHost)->second;
 }
 
@@ -107,7 +107,7 @@ void Client::handler(nlohmann::json const &message) {
 Client &Client::defaultClient() {
   if (DEFAULT_CLIENT == nullptr) {
     // Try to connect
-    ConfigurationStructuredValue configuration;
+    ConfigurationParameters configuration;
     const auto conf = configuration.defaultConfiguration();
     std::string uri = "ws://" + conf.host + ":" + std::to_string(conf.port) + "/web-socket";
     LOGGER->info("Connecting to default client {}", uri);

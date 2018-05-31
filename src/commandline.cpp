@@ -120,17 +120,16 @@ void CommandContent::output(CommandContext &context, std::ostream & out) const {
 
 namespace {
   /// Generates the JSON that will be used to configure the task
-  void fill(CommandContext & context, std::ostream & out, ptr<StructuredValue> const & conf) {
-    if (conf->value().defined()) {
+  void fill(CommandContext & context, std::ostream & out, ptr<Parameters> const & conf) {
+    if (conf->hasValue()) {
       // The object has one value, just use this and discards the rest
-      switch(conf->value().scalarType()) {
+      switch(conf->valueType()) {
         case ValueType::ARRAY: {
-          auto & array = conf->value();
           out << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->typeName().toString() << "\",\""
               << xpm::KEY_VALUE << "\": [";
-          for(size_t i = 0; i < array.size(); ++i) {
+          for(size_t i = 0; i < conf->size(); ++i) {
             if (i > 0) out << ", ";
-            fill(context, out, array[i]);
+            fill(context, out, (*conf)[i]);
           }
           out << "]}";
           break;
@@ -139,12 +138,12 @@ namespace {
         case ValueType::PATH:
           out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
               << xpm::KEY_VALUE << "\": \"";
-          out << context.connector.resolve(conf->value().asPath());
+          out << context.connector.resolve(conf->asPath());
           out << "\"}";
           break;
 
         default:
-         out << conf->value().toJson();
+         out << conf->valueAsJson();
          break;
       }
     } else {
@@ -204,7 +203,7 @@ nlohmann::json CommandParameters::toJson() const {
   return { {"type", "parameters"} };
 }
 
-void CommandParameters::setValue(ptr<StructuredValue> const & value) {
+void CommandParameters::setValue(ptr<Parameters> const & value) {
   this->value = value;
 }
 

@@ -8,9 +8,10 @@
 
 %feature("python:slot", "tp_str",functype = "reprfunc") *::toString;
 %feature("python:slot", "tp_repr", functype = "reprfunc") *::toString;
-%feature("python:slot", "tp_call", functype = "ternarycallfunc") *::call;
 %feature("python:slot", "tp_hash", functype = "hashfunc") *::hash;
 %feature("python:slot", "tp_getattro", functype = "binaryfunc") *::__getattro__;
+
+%feature("python:slot", "sq_length", functype = "lenfunc") *::size;
 
 %rename(append) *::push_back;
 %rename(equals) *::operator==;
@@ -39,7 +40,10 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 /*%ignore xpm::Argument::type;*/
 
-%extend xpm::Value { %COLLECTION(std::shared_ptr<xpm::StructuredValue>) };
+%extend xpm::Parameters { 
+    %COLLECTION(std::shared_ptr<xpm::Parameters>) 
+
+};
 
 %{
 /** 
@@ -76,16 +80,15 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 }
 
 // Handles properly a smart pointer
-%typemap(directorin) std::shared_ptr< xpm::StructuredValue > const & {
+%typemap(directorin) std::shared_ptr< xpm::Parameters > const & {
     // Handles null smart pointer
     if (!$1) {
         $input = SWIG_Py_Void();
     } else {
-        std::shared_ptr< xpm::StructuredValue > * ptr = new std::shared_ptr< xpm::StructuredValue >($1);
+        std::shared_ptr< xpm::Parameters > * ptr = new std::shared_ptr< xpm::Parameters >($1);
         $input = SWIG_NewPointerObj(%as_voidptr(ptr), $descriptor, SWIG_POINTER_OWN);
     }
 }
-
 
 
 
@@ -97,17 +100,6 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 
 %{
     #include <xpm/common.hpp>
-
-      // FIXME: REMOVE
-   #include <cxxabi.h>
-   template<typename T>
-    std::string demangle(T * t) {
-      int status;
-    char * demangled = abi::__cxa_demangle(typeid(*t).name(),0,0,&status);
-    std::string r = demangled;
-    free(demangled);
-    return r;
-}
 
 
 %extend xpm::Object {

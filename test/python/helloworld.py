@@ -1,30 +1,30 @@
 # --- Task and types definitions
 
 from experimaestro import *
-logging.basicConfig(level=logging.INFO, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
+
+logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
 setLogLevel("xpm", LogLevel_DEBUG)
-setLogLevel("xpm.local", LogLevel_DEBUG)
 
 # Register a class as a task: 
 # - There is one experimental parameter (word)
 # - the task identifier is "helloworld.say"
 @TypeArgument("word", type=str, required=True, help="Word to generate")
-@RegisterTask("helloworld.say", prefix_args=["xpm"])
+@RegisterTask("helloworld.say", prefix_args=["xpm", "--"])
 class Say(object):
     def execute(self):
         print(self.word.upper(),)
 
 # Definition of the "concat" task
-@TypeArgument("first", type=Say)
-@TypeArgument("second", type=Say)
-@RegisterTask("helloworld.concat", prefix_args=["xpm"])
+@TypeArgument("strings", type=ArrayOf(Say))
+@RegisterTask("helloworld.concat", prefix_args=["xpm", "--"])
 class Concat(object):
     def execute(self):
         # We access the file where standard output was stored
-        with open(self.first._stdout()) as fp:
-            s = fp.read().strip()
-        with open(self.second._stdout()) as fp:
-            s += " " + fp.read().strip()
+        s = ""
+        for string in self.strings:
+            print(string)
+            with open(string._stdout()) as fp:
+                s += " " + fp.read().strip()
         print(s)
 
 
@@ -38,7 +38,7 @@ def xp(args):
     world = Say(word="world").submit()
 
     # Concat will depend on the two first tasks
-    Concat(first=hello, second=world).submit()
+    Concat(strings=[hello, world]).submit()
 
 
 # --- Parse the command line

@@ -10,7 +10,7 @@
 
 namespace xpm { 
   // Forward declarations
-  class StructuredValue;
+  class Parameters;
   class AbstractObjectHolder;
   class Type;
   class Object;
@@ -45,7 +45,6 @@ extern std::shared_ptr<Type> IntegerType;
 extern std::shared_ptr<Type> RealType;
 extern std::shared_ptr<Type> StringType;
 extern std::shared_ptr<Type> BooleanType;
-extern std::shared_ptr<Type> ArrayType;
 extern std::shared_ptr<Type> AnyType;
 extern std::shared_ptr<Type> PathType;
 extern const std::shared_ptr<Object> NULL_OBJECT;
@@ -72,9 +71,12 @@ class TypeName {
   */
   TypeName(std::string const &name);
 
-  TypeName call(std::string const &localname) const;
+  /** Returns a typename prefix by this */
+  TypeName operator()(std::string const &localname) const;
 
   std::string toString() const;
+
+  TypeName array() const;
 
   int hash() const;
 
@@ -93,7 +95,6 @@ extern const TypeName STRING_TYPE;
 extern const TypeName BOOLEAN_TYPE;
 extern const TypeName INTEGER_TYPE;
 extern const TypeName REAL_TYPE;
-extern const TypeName ARRAY_TYPE;
 extern const TypeName ANY_TYPE;
 extern const TypeName PATH_TYPE;
 SWIG_MUTABLE;
@@ -126,7 +127,7 @@ public:
   virtual ~Object();
 
   /** Sets a value in the native object */
-  virtual void setValue(std::string const &name, std::shared_ptr<StructuredValue> const & value) = 0;
+  virtual void setValue(std::string const &name, std::shared_ptr<Parameters> const & value) = 0;
 
   /** Run (if this is a task) */
   virtual void run();
@@ -142,54 +143,54 @@ public:
  * - a value (optional)
  * - an object
  */
-class StructuredValue
-#ifndef SWIG
-    : public std::enable_shared_from_this<StructuredValue>
-#endif
-{
+class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
  public:
   typedef uint8_t Flags;
   enum class Flag : Flags {
-    SEALED = 1, DEFAULT = 2, VALIDATED = 4, GENERATED = 8, IGNORE = 16
+    SEALED = 1, 
+    DEFAULT = 2, 
+    VALIDATED = 4, 
+    GENERATED = 8, //< 
+    IGNORE = 16 //< This structured value should be ignored
   };
 
-  typedef std::shared_ptr<StructuredValue> Ptr;
+  typedef std::shared_ptr<Parameters> Ptr;
 
   /// Default constructor
-  StructuredValue();
+  Parameters();
 
 #ifndef SWIG
   /// Constructor from JSON
-  StructuredValue(Register &xpmRegister, nlohmann::json const &jsonValue);
+  Parameters(Register &xpmRegister, nlohmann::json const &jsonValue);
 #endif
 
   /// Constructor from a map
-  StructuredValue(std::map<std::string, std::shared_ptr<StructuredValue>> &map);
+  Parameters(std::map<std::string, std::shared_ptr<Parameters>> &map);
 
   /// Constructs from value
-  StructuredValue(Value const & v);
+  Parameters(Value const & v);
 
   /// Construct from other (shallow copy)
-  StructuredValue(StructuredValue const &other) = delete;
+  Parameters(Parameters const &other) = delete;
 
 
   /// Move constructor
-  StructuredValue(StructuredValue &&other) = default;
+  Parameters(Parameters &&other) = default;
 
   /// Destructor
-  ~StructuredValue();
+  ~Parameters();
 
   /// Returns true if objects are equal
-  bool equals(StructuredValue const &other) const;
+  bool equals(Parameters const &other) const;
 
   /// Checks whether a key exists
   bool hasKey(std::string const &key) const;
 
   /// Get access to one value
-  std::shared_ptr<StructuredValue> set(const std::string &key, std::shared_ptr<StructuredValue> const &);
+  std::shared_ptr<Parameters> set(const std::string &key, std::shared_ptr<Parameters> const &);
 
   /// Get access to one value
-  std::shared_ptr<StructuredValue> get(const std::string &key);
+  std::shared_ptr<Parameters> get(const std::string &key);
 
   /// Seal the object
   void seal();
@@ -223,24 +224,6 @@ class StructuredValue
    */
   nlohmann::json toJson();
 
-  /// Returns the string
-  std::string asString() const;
-
-  /// Returns the string
-  bool asBoolean() const;
-
-  /// Returns an integer
-  long asInteger() const;
-
-  /// Returns an integer
-  double asReal() const;
-
-  /// Returns a path
-  Path asPath() const;
-
-  /// Returns as array
-  Value::Array asArray() const;
-
   /**
    *  Whether this element can be ignored for digest computation
    */
@@ -249,10 +232,8 @@ class StructuredValue
   /**
    * Retrieve content
    */
-  std::map<std::string, std::shared_ptr<StructuredValue>> const &content();
+  std::map<std::string, std::shared_ptr<Parameters>> const &content();
 
-  /** Sets a value  */
-  void setValue(std::string const &name, std::shared_ptr<StructuredValue> const &value);
 
   /** Sets the task */
   void task(std::shared_ptr<Task> const &task);
@@ -301,21 +282,12 @@ class StructuredValue
   /**
    * Copy the configuration
    */
-  std::shared_ptr<StructuredValue> copy();
+  std::shared_ptr<Parameters> copy();
 
   /**
    * Compute the a digest for this configuration
    */
   std::array<unsigned char, DIGEST_LENGTH> digest() const;
-
-  /// Get value
-  Value & value() { return _value; }
-
-  /** Sets the value  */
-  void value(Value const &value);
-
-  /// Get value
-  NOSWIG(Value const & value() const { return _value; })
 
   /// Get generating job
   std::shared_ptr<Job> const & job() const;
@@ -327,7 +299,50 @@ class StructuredValue
   std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
 
+
+  /// @defgroup Access to value
+  /// @{
+
+  /// Returns true if the value is defined
+  bool hasValue() const;
+
+  nlohmann::json valueAsJson() const;
+  ValueType valueType() const;
+
+  void set(bool value);
+  void set(long value);
+  void set(std::string const & value, bool typeHint = false);
+  void set(std::vector<std::shared_ptr<Parameters>> const & v);
+  void set(YAML::Node const &node);
+
+  /// Returns the size of the array
+  size_t size() const;
+  /// Append an element to the array
+  void push_back(std::shared_ptr<Parameters> const & parameters);
+
+  /// Append an element to the array
+  std::shared_ptr<Parameters> operator[](size_t index);
+
+  /// Returns the string
+  std::string asString() const;
+
+  /// Returns the string
+  bool asBoolean() const;
+
+  /// Returns an integer
+  long asInteger() const;
+
+  /// Returns an integer
+  double asReal() const;
+
+  /// Returns a path
+  Path asPath() const;
+
+  /// 
+
 private:
+  /** Sets a value for the associated object (if any)  */
+  void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
 
   /// Set flag
   void set(Flag flag, bool value);
@@ -355,7 +370,7 @@ private:
   Flags _flags;
 
   /// Sub-values (map is used for sorted keys, necessary to compute a stable unique identifier)
-  std::map<std::string, std::shared_ptr<StructuredValue>> _content;
+  std::map<std::string, std::shared_ptr<Parameters>> _content;
 
 
   friend class ObjectFactory;
@@ -376,19 +391,19 @@ private:
 #ifndef SWIG
 
 struct GeneratorLock {
-  GeneratorLock(GeneratorContext * context, StructuredValue * configuration);
+  GeneratorLock(GeneratorContext * context, Parameters * configuration);
   inline operator bool() { return true; }
   GeneratorContext * context;
 };
 
 class GeneratorContext {
 public:
-  std::vector<StructuredValue *> stack;
+  std::vector<Parameters *> stack;
   Workspace & workspace;
   
   GeneratorContext(Workspace & ws);
-  GeneratorContext(Workspace & ws, std::shared_ptr<StructuredValue> const &sv);
-  inline GeneratorLock enter(StructuredValue * configuration) {
+  GeneratorContext(Workspace & ws, std::shared_ptr<Parameters> const &sv);
+  inline GeneratorLock enter(Parameters * configuration) {
     return GeneratorLock(this, configuration);
   }
 };
@@ -399,7 +414,7 @@ public:
  */
 class Generator {
  public:
-  virtual std::shared_ptr<StructuredValue> generate(GeneratorContext const &context) = 0;
+  virtual std::shared_ptr<Parameters> generate(GeneratorContext const &context) = 0;
   virtual ~Generator() {}
 
   static std::shared_ptr<Generator> createFromJSON(nlohmann::json const &);
@@ -417,7 +432,7 @@ class PathGenerator : public Generator {
   PathGenerator(const char *s) : PathGenerator(std::string(s)) {}
   PathGenerator(std::string const & = "");
   PathGenerator(nlohmann::json const &);
-  virtual std::shared_ptr<StructuredValue> generate(GeneratorContext const &context);
+  virtual std::shared_ptr<Parameters> generate(GeneratorContext const &context);
   virtual nlohmann::json toJson() const;
 };
 
@@ -439,8 +454,8 @@ class Argument {
   Argument &ignore(bool required);
   bool ignore() const;
 
-  Argument &defaultValue(std::shared_ptr<StructuredValue> const &defaultValue);
-  std::shared_ptr<StructuredValue> defaultValue() const;
+  Argument &defaultValue(std::shared_ptr<Parameters> const &defaultValue);
+  std::shared_ptr<Parameters> defaultValue() const;
 
   std::shared_ptr<Generator> generator();
   std::shared_ptr<Generator> const &generator() const;
@@ -470,7 +485,7 @@ class Argument {
   bool _ignore;
 
   /// Default value
-  std::shared_ptr<StructuredValue> _defaultValue;
+  std::shared_ptr<Parameters> _defaultValue;
 
   /// A generator
   std::shared_ptr<Generator> _generator;
@@ -487,21 +502,13 @@ class Argument {
  * <li>A parent type</li>
  * </ul>
  */
-class Type
-#ifndef SWIG
-    : public std::enable_shared_from_this<Type>
-#endif
-{
+class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
   friend class Register;
  public:
   typedef std::shared_ptr<Type> Ptr;
-  /**
-   * Creates a new type
-   * @param type The typename
-   * @param _parent The parent type (or null pointer)
-   */
-  Type(TypeName const &type, std::shared_ptr<Type> _parent = nullptr,
-       bool predefined = false, bool canIgnore = false, bool isArray = false);
+  
+  /// Least common ancestor between two types
+  static Type::Ptr lca(Type::Ptr const & a, Type::Ptr const & b);
 
   /** Type destruction */
   virtual ~Type();
@@ -531,9 +538,6 @@ class Type
   /// Return the type
   std::string toString() const;
 
-  /// Is array
-  bool isArray() const;
-
   /// Returns hash code (only based on type name)
   int hash() const;
 
@@ -558,14 +562,29 @@ class Type
   void description(std::string const &description) { _description = description; }
 
   /** Set a property */
-  void setProperty(std::string const &name, StructuredValue::Ptr const &value);
-  StructuredValue::Ptr getProperty(std::string const &name);
+  void setProperty(std::string const &name, Parameters::Ptr const &value);
+  Parameters::Ptr getProperty(std::string const &name);
 
   /** Is it a scalar */
   virtual bool scalar() { return false; }
 
+  /** Is it an array */
+  virtual bool array() { return false; }
+
   /// Checks whether another type can be assigned as this type
   bool accepts(Type::Ptr const &other) const;
+
+
+  /// Base type for any type
+  static Type::Ptr const & any();
+
+  /**
+   * Creates a new type
+   * @param type The typename
+   * @param _parent The parent type (or null pointer)
+   */
+  Type(TypeName const &type, std::shared_ptr<Type> _parent = nullptr,
+       bool predefined = false, bool canIgnore = false);
 
  private:
   const TypeName _type;
@@ -583,13 +602,13 @@ class Type
    * Properties of this type.
    * They are useful to characterize a type when building experiments
    */
-  std::unordered_map<std::string, std::shared_ptr<StructuredValue>> _properties;
+  std::unordered_map<std::string, std::shared_ptr<Parameters>> _properties;
+
 
   std::string _description;
   bool _predefined;
   bool _canIgnore;
   bool _placeholder = false;
-  bool _isArray = false;
 };
 
 class SimpleType : public Type {
@@ -598,6 +617,13 @@ class SimpleType : public Type {
   SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false);
   inline ValueType valueType() { return _valueType; }
   virtual bool scalar() override { return true; }
+};
+
+class ArrayType : public Type {
+  Type::Ptr _componentType;
+public:
+  ArrayType(Type::Ptr const & componentType);
+  virtual bool array() override { return true; }
 };
 
 } // namespace xpm

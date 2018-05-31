@@ -20,11 +20,11 @@ struct HostConfiguration {
   std::string password;
 };
 
-class ConfigurationStructuredValue {
+class ConfigurationParameters {
   std::unordered_map<std::string, HostConfiguration> configurations;
   std::string defaultHost;
  public:
-  ConfigurationStructuredValue(std::string const &path = "");
+  ConfigurationParameters(std::string const &path = "");
   HostConfiguration const &defaultConfiguration() const;
 };
 

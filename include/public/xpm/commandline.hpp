@@ -15,7 +15,7 @@
 
 namespace xpm {
 
-class StructuredValue;
+class Parameters;
 class Job;
 struct CommandContext;
 class Workspace;
@@ -87,11 +87,11 @@ class CommandContent : public AbstractCommandComponent {
 
 /** Just a placeholder for the JSON parameter file path */
 class CommandParameters : public AbstractCommandComponent {
-  std::shared_ptr<StructuredValue> value;
+  std::shared_ptr<Parameters> value;
 public:
   CommandParameters();
   virtual ~CommandParameters();
-  void setValue(std::shared_ptr<StructuredValue> const & value);
+  void setValue(std::shared_ptr<Parameters> const & value);
   virtual void addDependencies(Job & job) override;
   virtual nlohmann::json toJson() const override;
   virtual void output(CommandContext & context, std::ostream & out) const override;
@@ -157,7 +157,7 @@ struct NamedPipeRedirections {
 struct CommandContext {
   Workspace & workspace;
   Connector const & connector;
-  std::shared_ptr<StructuredValue> parameters;
+  std::shared_ptr<Parameters> parameters;
   std::unordered_map<CommandPart const *, NamedPipeRedirections> namedPipeRedirectionsMap;
   Path folder;
   std::string name;
