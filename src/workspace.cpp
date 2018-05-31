@@ -139,6 +139,7 @@ std::ostream &operator<<(std::ostream & out, JobState const & state) {
     case JobState::DONE: return out << "DONE";
     case JobState::ERROR: return out << "ERROR";
   }
+  return out;
 }
 
 Job::Job(Path const &locator, ptr<Launcher> const &launcher)
