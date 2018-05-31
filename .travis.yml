@@ -22,7 +22,7 @@ before_install:
 sudo: required
 
 services:
-  -docker
+  - docker
 
 # Configuration
 branches:
