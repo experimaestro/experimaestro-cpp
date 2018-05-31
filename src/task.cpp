@@ -50,18 +50,13 @@ void Task::submit(ptr<Workspace> const & _workspace,
   // Get generated directory as locator
 
   // Set the command parameters
-  _commandLine->forEach([&sv](CommandPart & c) -> void {
-    if (auto cp = dynamic_cast<CommandParameters*>(&c)) {
-      cp->setValue(sv);
-    }
-  });
-
   auto job = mkptr<CommandLineJob>(svlocator->asPath(), launcher, _commandLine);
+  job->parameters(sv);
   job->init();
   sv->job(job);
 
   workspace->submit(job);
-  LOGGER->info("Submitting job {} (id {})", job->locator(), job->getId());
+  LOGGER->info("Submitting job {} (id {}) {}", job->locator(), job->getId(), sv->toJsonString());
 }
 
 void Task::commandline(ptr<CommandLine> const & command) {

@@ -24,6 +24,7 @@ namespace xpm {
 class Launcher;
 class Resource;
 class Workspace;
+class Parameters;
 class CommandLine;
 struct JobPriorityComparator;
 class CounterDependency;
@@ -183,7 +184,6 @@ extern PathTransformer LOCK_START_PATH;
 extern PathTransformer DONE_PATH;
 extern PathTransformer PID_PATH;
 
-
 /// Base class for jobs
 class Job : public Resource {
 public:
@@ -218,6 +218,7 @@ public:
 
   /// Get the path to the lock start path
   Path pathTo(std::function<Path(Path const &)> f) const;
+
 protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
@@ -261,8 +262,12 @@ public:
     std::shared_ptr<CommandLine> const & command);
   virtual void run() override;
   virtual void init() override;
+  /// Set the parameters
+  void parameters(std::shared_ptr<Parameters> const & parameters);
+  std::shared_ptr<Parameters> parameters();
 private:
   std::shared_ptr<CommandLine> _command;
+  std::shared_ptr<Parameters> _parameters;
 };
 
 /// Defines the priority between two jobs

@@ -2,6 +2,7 @@
 #include <xpm/workspace.hpp>
 #include <xpm/commandline.hpp>
 
+#include <xpm/xpm.hpp>
 #include <xpm/launchers/launchers.hpp>
 #include <xpm/connectors/connectors.hpp>
 
@@ -213,11 +214,16 @@ CommandLineJob::CommandLineJob(xpm::Path const &locator,
     : Job(locator, launcher), _command(command) {
 }
 
+void CommandLineJob::parameters(std::shared_ptr<Parameters> const & parameters) {
+  _parameters = parameters;
+}
+
+std::shared_ptr<Parameters> CommandLineJob::parameters() {
+  return _parameters;  
+}
+
 void CommandLineJob::init() {
-    // Adding dependencies
-  _command->forEach([&](CommandPart &c) -> void { 
-    c.addDependencies(*this); 
-  });
+  _parameters->addDependencies(*this, false);
 }
 
 void CommandLineJob::run() {

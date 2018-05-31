@@ -39,15 +39,22 @@ DEFAULT_LAUNCHER = None
 
 # --- From C++ types to Python
 
+def parameters2value(sv):
+    """Converts parameters into a Python object"""
+    svtype = sv.type()
+    object = sv.object()
+    
+    if object:
+        return object.pyobject
 
-def parameters2array(array):
-    """Converts an XPM array to a Python array"""
-    r = []
-    for i in range(len(array)):
-        sv = array[i]
-        v = VALUECONVERTERS.get(str(sv.type()), lambda v: v)(sv)
-        r.append(v)
-    return r
+    if svtype.array():
+        r = []
+        for i in range(len(sv)):
+            v = parameters2value(sv[i])
+            r.append(v)
+        return r
+
+    return VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
 
 
 """Dictionary of converteres"""
@@ -103,12 +110,21 @@ class XPMObject(Object):
         super().__init__()
         self.pyobject = pyobject
 
-        self.sv = sv or Parameters()
+        if sv is None:
+            self.sv = Parameters()
+        else:
+            self.sv = sv
 
         self.sv.object(self)
         self.sv.type(self.pyobject.__class__.__xpmtype__)
         self.setting = False
         self.submitted = False
+
+    @property
+    def job(self):
+        job = self.sv.job()
+        if job: return job
+        raise Exception("No job associated with parameters %s" % self.sv)
 
     def set(self, k, v):
         if self.setting: return
@@ -134,15 +150,9 @@ class XPMObject(Object):
                 value = None
                 svtype = None
             else:
+                value = parameters2value(sv)
                 svtype = sv.type()
-                object = sv.object()
-                if object:
-                    value = object.pyobject
-                elif svtype.array():
-                    value = parameters2array(sv)
-                else:
-                    value = VALUECONVERTERS.get(svtype.toString(), checknullsv)(sv)
-        
+
             # Set the value on the object if not setting otherwise
             logger.debug("Really setting %s to %s [%s => %s] on %s", key, value,
                     svtype, type(value), type(self.pyobject))
@@ -189,10 +199,11 @@ class PyObject:
         """Prepare object after creation"""
         pass
 
+    
     def _stdout(self):
-        return self.__xpm__.sv.job().stdoutPath().localpath()
+        return self.__xpm__.job.stdoutPath().localpath()
     def _stderr(self):
-        return self.__xpm__.sv.job().stdoutPath().localpath()
+        return self.__xpm__.job.stdoutPath().localpath()
 
 # Another way to submit if the method is overriden
 def submit(*args, **kwargs):

@@ -22,7 +22,6 @@ class Concat(object):
         # We access the file where standard output was stored
         s = ""
         for string in self.strings:
-            print(string)
             with open(string._stdout()) as fp:
                 s += " " + fp.read().strip()
         print(s)

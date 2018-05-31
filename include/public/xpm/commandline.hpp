@@ -23,7 +23,6 @@ class Workspace;
 /** Base class for all command related classes */
 class CommandPart NOSWIG(: public std::enable_shared_from_this<CommandPart>) {
 public:
-  virtual void addDependencies(Job & job);
   virtual void forEach(std::function<void(CommandPart &)> f);
   virtual void output(CommandContext & context, std::ostream & out) const = 0;
   virtual nlohmann::json toJson() const = 0;
@@ -87,12 +86,9 @@ class CommandContent : public AbstractCommandComponent {
 
 /** Just a placeholder for the JSON parameter file path */
 class CommandParameters : public AbstractCommandComponent {
-  std::shared_ptr<Parameters> value;
 public:
   CommandParameters();
   virtual ~CommandParameters();
-  void setValue(std::shared_ptr<Parameters> const & value);
-  virtual void addDependencies(Job & job) override;
   virtual nlohmann::json toJson() const override;
   virtual void output(CommandContext & context, std::ostream & out) const override;
 };

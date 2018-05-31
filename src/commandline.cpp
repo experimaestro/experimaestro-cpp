@@ -22,9 +22,6 @@ namespace xpm {
 
 // ---- Command part
 
-void CommandPart::addDependencies(Job & job) {
-}
-
 void CommandPart::forEach(std::function<void(CommandPart &)> f) {
   f(*this);
 }
@@ -189,7 +186,7 @@ namespace {
 void CommandParameters::output(CommandContext &context, std::ostream & out) const {
   auto path = context.getAuxiliaryFile("params", ".json");
   auto fileOut = context.connector.ostream(path);
-  fill(context, *fileOut, value);
+  fill(context, *fileOut, context.parameters);
   out << context.connector.resolve(path);
 }
 
@@ -201,16 +198,6 @@ CommandParameters::CommandParameters() {
 
 nlohmann::json CommandParameters::toJson() const {
   return { {"type", "parameters"} };
-}
-
-void CommandParameters::setValue(ptr<Parameters> const & value) {
-  this->value = value;
-}
-
-void CommandParameters::addDependencies(Job & job) {
-  if (!this->value) throw exception("Cannot set dependencies since value is null");
-
-  this->value->addDependencies(job, false);
 }
 
 
