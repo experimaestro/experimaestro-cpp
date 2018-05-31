@@ -38,4 +38,4 @@ script:
   - cd build
   - cmake --version
   - CC=gcc-7 CXX=g++-7 cmake ..
-  - make experimaestro-tests && test/experimaestro-tests
+  - make -k experimaestro-tests && test/experimaestro-tests
