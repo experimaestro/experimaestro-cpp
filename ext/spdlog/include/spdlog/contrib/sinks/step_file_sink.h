@@ -17,21 +17,23 @@
 //
 // Create a file logger which creates new files with a specified time step and fixed file size:
 //
-// std::shared_ptr<logger> step_logger_mt(const std::string &logger_name, const filename_t &filename, unsigned seconds = 60, const filename_t &tmp_ext = ".tmp", unsigned max_file_size = std::numeric_limits<unsigned>::max());
-// std::shared_ptr<logger> step_logger_st(const std::string &logger_name, const filename_t &filename, unsigned seconds = 60, const filename_t &tmp_ext = ".tmp", unsigned max_file_size = std::numeric_limits<unsigned>::max();;
+// std::shared_ptr<logger> step_logger_mt(const std::string &logger_name, const filename_t &filename, unsigned seconds = 60, const
+// filename_t &tmp_ext = ".tmp", unsigned max_file_size = std::numeric_limits<unsigned>::max(), bool delete_empty_files = true, const filename_t &file_header = ""); std::shared_ptr<logger>
+// step_logger_st(const std::string &logger_name, const filename_t &filename, unsigned seconds = 60, const filename_t &tmp_ext = ".tmp",
+// unsigned max_file_size = std::numeric_limits<unsigned>::max());
 
 // Example for spdlog_impl.h
 // Create a file logger that creates new files with a specified increment
 // inline std::shared_ptr<spdlog::logger> spdlog::step_logger_mt(
-//     const std::string &logger_name, const filename_t &filename_fmt, unsigned seconds, const filename_t &tmp_ext, unsigned max_file_size)
+//     const std::string &logger_name, const filename_t &filename_fmt, unsigned seconds, const filename_t &tmp_ext, unsigned max_file_size, bool delete_empty_files, const filename_t &file_header)
 // {
-//     return create<spdlog::sinks::step_file_sink_mt>(logger_name, filename_fmt, seconds, tmp_ext, max_file_size);
+//     return create<spdlog::sinks::step_file_sink_mt>(logger_name, filename_fmt, seconds, tmp_ext, max_file_size, delete_empty_files, file_header);
 // }
 
 // inline std::shared_ptr<spdlog::logger> spdlog::step_logger_st(
-//     const std::string &logger_name, const filename_t &filename_fmt, unsigned seconds, const filename_t &tmp_ext, unsigned max_file_size)
+//     const std::string &logger_name, const filename_t &filename_fmt, unsigned seconds, const filename_t &tmp_ext, unsigned max_file_size, bool delete_empty_files, const filename_t &file_header)
 // {
-//     return create<spdlog::sinks::step_file_sink_st>(logger_name, filename_fmt, seconds, tmp_ext, max_file_size);
+//     return create<spdlog::sinks::step_file_sink_st>(logger_name, filename_fmt, seconds, tmp_ext, max_file_size, delete_empty_files, file_header);
 // }
 
 namespace spdlog {
@@ -62,21 +64,30 @@ template<class Mutex, class FileNameCalc = default_step_file_name_calculator>
 class step_file_sink SPDLOG_FINAL : public base_sink<Mutex>
 {
 public:
-    step_file_sink(filename_t base_filename, unsigned step_seconds, filename_t tmp_ext, unsigned max_size)
+    step_file_sink(filename_t base_filename, unsigned step_seconds, filename_t tmp_ext, unsigned max_size, bool delete_empty_files, filename_t file_header)
         : _base_filename(std::move(base_filename))
         , _tmp_ext(std::move(tmp_ext))
         , _step_seconds(step_seconds)
         , _max_size(max_size)
+        , _delete_empty_files(delete_empty_files)
     {
         if (step_seconds == 0)
         {
             throw spdlog_ex("step_file_sink: Invalid time step in ctor");
         }
-        if (max_size == 0)
+
+        if (!file_header.empty())
+        {
+            pattern_formatter formatter_for_file_header("%v");
+            _file_header.raw << file_header;
+            formatter_for_file_header.format(_file_header);
+        }
+
+        if (max_size <= _file_header.formatted.size())
         {
             throw spdlog_ex("step_file_sink: Invalid max log size in ctor");
         }
-        
+
         _tp = _next_tp();
         std::tie(_current_filename, _ext) = FileNameCalc::calc_filename(_base_filename, _tmp_ext);
 
@@ -87,32 +98,55 @@ public:
 
         _file_helper.open(_current_filename);
         _current_size = _file_helper.size(); // expensive. called only once
+
+        if (!_current_size)
+        {
+            _current_size += _file_header.formatted.size();
+            if (_current_size) _file_helper.write(_file_header);
+        }
     }
-    
+
     ~step_file_sink()
     {
-        using details::os::filename_to_str;
-
-        filename_t src =_current_filename, target;
-        std::tie(target, std::ignore) = details::file_helper::split_by_extenstion(src);
-        target += _ext;
-        
-        details::os::rename(src, target);
+        try
+        {
+            close_current_file();
+        }
+        catch (...)
+        {
+        }
     }
 
 protected:
     void _sink_it(const details::log_msg &msg) override
     {
-        _current_size += msg.formatted.size();
-        if (std::chrono::system_clock::now() >= _tp || _current_size > _max_size)
-        {
-            close_current_file();
+        auto msg_size = msg.formatted.size();
 
-            std::tie(_current_filename, std::ignore) = FileNameCalc::calc_filename(_base_filename, _tmp_ext);
-            _file_helper.open(_current_filename);
+        if (std::chrono::system_clock::now() >= _tp || _current_size + msg_size > _max_size)
+        {
+            filename_t new_filename;
+            std::tie(new_filename, std::ignore) = FileNameCalc::calc_filename(_base_filename, _tmp_ext);
+            
+            bool change_occured = !details::file_helper::file_exists(new_filename);
+            if (change_occured) 
+            {
+                close_current_file();
+
+                _current_filename = std::move(new_filename);
+
+                _file_helper.open(_current_filename);
+            }
+
             _tp = _next_tp();
-            _current_size = msg.formatted.size();
+
+            if (change_occured)
+            {
+                _current_size = _file_header.formatted.size();
+                if (_current_size) _file_helper.write(_file_header);
+            }
         }
+
+        _current_size += msg_size;
         _file_helper.write(msg);
     }
 
@@ -131,13 +165,24 @@ private:
     {
         using details::os::filename_to_str;
 
-        filename_t src =_current_filename, target;
-        std::tie(target, std::ignore) = details::file_helper::split_by_extenstion(src);
+        // Delete empty files, if required
+        if (_delete_empty_files && _current_size <= _file_header.formatted.size())
+        {
+            if (details::os::remove(_current_filename) != 0)
+            {
+                throw spdlog_ex("step_file_sink: not remove " + filename_to_str(_current_filename), errno);
+            }
+
+            return;
+        }
+
+        filename_t target;
+        std::tie(target, std::ignore) = details::file_helper::split_by_extenstion(_current_filename);
         target += _ext;
 
-        if (details::file_helper::file_exists(src) && details::os::rename(src, target) != 0)
+        if (details::file_helper::file_exists(_current_filename) && details::os::rename(_current_filename, target) != 0)
         {
-            throw spdlog_ex("step_file_sink: failed renaming " + filename_to_str(src) + " to " + filename_to_str(target), errno);
+            throw spdlog_ex("step_file_sink: failed renaming " + filename_to_str(_current_filename) + " to " + filename_to_str(target), errno);
         }
     }
 
@@ -145,13 +190,15 @@ private:
     const filename_t _tmp_ext;
     const std::chrono::seconds _step_seconds;
     const unsigned _max_size;
+    const bool _delete_empty_files;
 
     std::chrono::system_clock::time_point _tp;
     filename_t _current_filename;
     filename_t _ext;
     unsigned _current_size;
-    
+
     details::file_helper _file_helper;
+    details::log_msg _file_header;
 };
 
 using step_file_sink_mt = step_file_sink<std::mutex>;
