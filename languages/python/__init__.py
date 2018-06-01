@@ -392,7 +392,7 @@ class RegisterTask(RegisterType):
         command.add(CommandString("run"))
         command.add(CommandString("--json-file"))
         command.add(CommandParameters())
-        command.add(CommandString(task.typeName().toString()))
+        command.add(CommandString(TypeName.toString(task.typeName())))
         commandLine = CommandLine()
         commandLine.add(command)
         task.commandline(commandLine)

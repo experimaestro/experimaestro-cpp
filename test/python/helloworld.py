@@ -5,18 +5,21 @@ from experimaestro import *
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
 setLogLevel("xpm", LogLevel_DEBUG)
 
+# Namespace
+hw = TypeName("helloworld")
+
 # Register a class as a task: 
 # - There is one experimental parameter (word)
-# - the task identifier is "helloworld.say"
+# - the task identifier is hw.say
 @TypeArgument("word", type=str, required=True, help="Word to generate")
-@RegisterTask("helloworld.say", prefix_args=["xpm", "--"])
+@RegisterTask(hw.say, prefix_args=["xpm", "--"])
 class Say(object):
     def execute(self):
         print(self.word.upper(),)
 
 # Definition of the "concat" task
 @TypeArgument("strings", type=ArrayOf(Say))
-@RegisterTask("helloworld.concat", prefix_args=["xpm", "--"])
+@RegisterTask(hw.concat, prefix_args=["xpm", "--"])
 class Concat(object):
     def execute(self):
         # We access the file where standard output was stored
