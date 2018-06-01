@@ -631,7 +631,7 @@ void Parameters::set(Parameters::Flag flag, bool value) {
 }
 
 bool Parameters::get(Parameters::Flag flag) const {
-  return (Flags)flag & _flags;
+  return ((Flags)flag) & _flags;
 }
 
 
