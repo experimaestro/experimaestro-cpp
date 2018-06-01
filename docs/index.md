@@ -19,6 +19,6 @@ Experimaestro is in an **alpha** state.
 ## Example
 
 ```
-{!./test/python/helloworld.py!}
+{!./languages/python/test/helloworld.py!}
 ```
 
