@@ -10,7 +10,7 @@ ExternalProject_Add(googletest
 )
 
 
-link_directories("${EXT_INSTALL_DIR}/lib")
+link_directories(${CMAKE_BINARY_DIR}/external/googletest.build)
 
 add_executable(experimaestro-tests 
         tests.cpp 
@@ -24,7 +24,6 @@ set(XPM_TEST_SOURCEDIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(XPM_TEST_USERDIR "${CMAKE_CURRENT_SOURCE_DIR}/docker/userdir")
 configure_file(config.h.in config.h)
 
-link_directories(${CMAKE_BINARY_DIR}/external/googletest.build)
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
 target_include_directories(experimaestro-tests PUBLIC 
         ${CMAKE_CURRENT_BINARY_DIR}
