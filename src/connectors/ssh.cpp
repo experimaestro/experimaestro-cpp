@@ -66,6 +66,10 @@ class SSHSession {
   bool connected;
 
 public:
+
+  /// SSH session mutex
+  std::mutex mutex;
+
   SSHSession() {
     static bool initialized = false;
     if (!initialized) {
@@ -135,13 +139,15 @@ public:
 };
 
 class SSHChannel {
-  ptr<SSHSession> session;
   ssh_channel channel;
 public:
+  ptr<SSHSession> session;
 
   operator ssh_channel() { return channel; }
 
   SSHChannel(ptr<SSHSession> const & session) : session(session) {
+    std::lock_guard<std::mutex> _lock(session->mutex);
+    
     channel = ssh_channel_new(*session);
     if (channel == NULL) {
       throw io_error(fmt::format("Cannot create the channel: {}", ssh_get_error(*session)));
@@ -158,6 +164,8 @@ public:
     //   this->~SSHChannel();
     //   throw io_error(fmt::format("Cannot create request a shell: {}", ssh_get_error(session)));
     // }
+    LOGGER->info("Opened channel {}", (void*)channel);
+
   }
 
   void exec(std::string const & command) {
@@ -172,7 +180,6 @@ public:
   ~SSHChannel() {
     LOGGER->info("Closing channel {}", (void*)channel);
     ssh_channel_close(channel);
-    ssh_channel_send_eof(channel);
     ssh_channel_free(channel);
   }
 };
@@ -189,10 +196,13 @@ public:
     auto readloop = [this](PipeFunction f, int is_stderr) {
       std::array<char, 256> buffer;
       ssize_t nbytes;
-      while ((nbytes = ssh_channel_read(*this->channel, buffer.data(), buffer.size(), is_stderr))) {
+      while (true) {
+        std::lock_guard<std::mutex> _lock(this->channel->session->mutex);
+        auto nbytes = ssh_channel_read_timeout(*this->channel, buffer.data(), buffer.size(), is_stderr, 100);
+        if (nbytes == SSH_AGAIN) continue;
+        if (nbytes == 0) break;
         f(buffer.data(), static_cast<size_t>(nbytes));
       }
-
     };
 
     if (builder.stdout.type == Redirection::PIPE) {
@@ -209,15 +219,20 @@ public:
   }
   
   virtual long write(void * s, long count) override {
-    if (channel)
+    if (channel) {
+      std::lock_guard<std::mutex> _lock(this->channel->session->mutex);
       return ssh_channel_write(*channel, s, count);
+    }
     return -1;
   }
 
   virtual void eof() override {
     if (channel) {
+      std::lock_guard<std::mutex> _lock(this->channel->session->mutex);
       LOGGER->info("Sending EOF for channel", (void*)*channel);
-      ssh_channel_send_eof(*channel);
+      if (ssh_channel_is_open(*channel)) {
+        ssh_channel_send_eof(*channel);
+      }
     }
   }
 
@@ -236,7 +251,10 @@ public:
 
   /// Exit code
   virtual int exitCode() override { 
+    eof();
     wait();
+
+    std::lock_guard<std::mutex> _lock(this->channel->session->mutex);
     auto code = ssh_channel_get_exit_status(*channel);
     LOGGER->info("Exit code is {}", code);
     return code;
