@@ -298,6 +298,8 @@ void CommandLineJob::run() {
 
 // -- Workspace
 
+std::unordered_set<Workspace *> Workspace::activeWorkspaces;
+
 namespace {
   std::shared_ptr<Workspace> CURRENT_WORKSPACE;
   
@@ -307,7 +309,6 @@ namespace {
 }
 
 
-std::unordered_set<Workspace *> Workspace::activeWorkspaces;
 
 bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
                                        ptr<Job> const &rhs) const {
@@ -452,5 +453,6 @@ void Workspace::waitUntilTaskCompleted() {
   } while (count > 0 && !exitSignal);
  
 }
+
 
 } // namespace xpm
