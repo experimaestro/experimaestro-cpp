@@ -158,6 +158,7 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
               try {
                 LOGGER->debug("Trying to cast {} to {}", vtype->typeName().toString(), _type->typeName().toString());
                 _value = _value.cast(_type);
+                vtype = _value.type();
               } catch(...) {
                 throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
                   vtype->typeName().toString(), _type->typeName().toString()));

@@ -217,9 +217,8 @@ Value::Value(std::string const &value) : _scalarType(ValueType::STRING) {
   new(&_value.string) std::string(value);
 }
 
-Value::Value(Path const &path) {
+Value::Value(Path const &path) : _scalarType(ValueType::PATH) {
   new(&_value.string) std::string(path.toString());
-  _scalarType = ValueType::PATH;
 }
 
 Value::Value(Value const &other) : _scalarType(other._scalarType) {
