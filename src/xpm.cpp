@@ -146,7 +146,6 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
     // --- Object
     case nlohmann::json::value_t::object: {
       // (1) First, get the type of the object
-      ptr<Type> type = AnyType;
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
         _type = xpmRegister.getType(typeName);
@@ -165,7 +164,13 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
             _value = Value(xpmRegister, it.value());
             auto vtype = _value.type();
             if (!_type->accepts(vtype)) {
-              throw argument_error(fmt::format("Incompatible types {} and {}", type->typeName().toString(), vtype->typeName().toString()));
+              try {
+                LOGGER->debug("Trying to cast {} to {}", vtype->typeName().toString(), _type->typeName().toString());
+                _value = _value.cast(_type);
+              } catch(...) {
+                throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
+                  vtype->typeName().toString(), _type->typeName().toString()));
+              }
             }
             _type = vtype;
         } else if (it.key() == KEY_TYPE) {

@@ -129,7 +129,7 @@ class XPMObject(Object):
     def set(self, k, v):
         if self.setting: return
 
-        logger.debug("Called set: %s, %s", k, v)
+        logger.debug("Called set: %s, %s (%s)", k, v, type(v))
         try:
             self.setting = True
             # Check if the value corresponds to a task; if so,
@@ -138,6 +138,9 @@ class XPMObject(Object):
                 if not v.__xpm__.submitted:
                     raise Exception("Task for argument '%s' was not submitted" % k)
             self.sv.set(k, parameters(v))
+        except:
+            logger.error("Error while setting %s", k)
+            raise
         finally:
             self.setting = False
 
