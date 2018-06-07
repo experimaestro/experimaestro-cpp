@@ -9,6 +9,7 @@
 #include <string>
 #include <exception>
 #include <iostream>
+#include <vector>
 
 #ifndef SWIG
   #define NOSWIG(...) __VA_ARGS__
@@ -73,6 +74,18 @@ class argument_error : public exception {
   argument_error(std::string const &message);
 };
 
+
+/** Thrown when a parameter value is invalid */
+class parameter_error : public exception {
+public:
+  parameter_error(std::string const &message);
+  parameter_error &addPath(std::string const &argument);
+  virtual const char *what() const noexcept override;
+private:
+  mutable std::string _fullmessage;
+  std::vector<std::string> _path;
+};
+
 /** Thrown when an argument cannot be converted to a given type */
 class cast_error : public exception {
  public:
@@ -96,6 +109,8 @@ class io_error : public exception {
  public:
   io_error(std::string const &message);
 };
+
+
 
 #define NOT_IMPLEMENTED() throw not_implemented_error(__func__, __FILE__, __LINE__)
 }

@@ -55,15 +55,6 @@ const ptr<Object> NULL_OBJECT;
 
 static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
 
-sealed_error::sealed_error() : exception("Object is sealed: cannot modify") {}
-argument_error::argument_error(const std::string &message) : exception(message) {}
-cast_error::cast_error(const std::string &message) : exception(message) {}
-assertion_error::assertion_error(const std::string &message) : exception(message) {}
-io_error::io_error(const std::string &message) : exception(message) {}
-not_implemented_error::not_implemented_error(const std::string &message,
-                                             const std::string &file, int line) : exception(
-    "Not implemented: " + message + ", file " + file + ":" + std::to_string(line)) {}
-
 
 template<typename T>
 std::string demangle(T const & t) {
@@ -609,13 +600,18 @@ void Parameters::validate() {
 
         // Check if the declared type corresponds to the value type
         if (!entry.second->type()->accepts(value->type())) {
-          throw argument_error(
-              "Argument '" + argument.name() + "' type is " + value->type()->toString() 
-              + ", but requested type was " + entry.second->type()->toString());
+          throw parameter_error(
+              "type is " + value->type()->toString() 
+              + ", but requested type was " + entry.second->type()->toString())
+              .addPath(argument.name());
         }
 
         LOGGER->debug("Validating {}...", argument.name());
-        value->validate();
+        try {
+          value->validate();
+        } catch(parameter_error &e) {
+          throw e.addPath(argument.name());
+        }
       }
     }
   }
