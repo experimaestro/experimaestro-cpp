@@ -96,9 +96,7 @@ def parameters(value):
 
 def checknullsv(sv):
     """Returns either None or the sv"""
-    if sv.value().scalarType() == ValueType_NONE:
-        return None
-    return sv
+    return None if sv.null() else sv
 
 
 
@@ -284,7 +282,6 @@ class PythonRegister(Register):
         logger.debug("Creating object for %s [%s]", sv, type)
         pyobject = type.__new__(type)
         pyobject.__xpm__ = XPMObject(pyobject, sv=sv)
-        pyobject._prepare()
         return pyobject.__xpm__
 
     def parse(self, arguments=None, try_parse=False):

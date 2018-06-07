@@ -306,6 +306,9 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
   /// Returns true if the value is defined
   bool hasValue() const;
 
+  /// Returns true if the value is defined and null
+  bool null() const;
+
   nlohmann::json valueAsJson() const;
   ValueType valueType() const;
 

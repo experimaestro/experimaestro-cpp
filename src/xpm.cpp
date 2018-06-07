@@ -153,18 +153,20 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
         if (it.key() == KEY_VALUE) {
             // Infer type from value
             _value = Value(xpmRegister, it.value());
-            auto vtype = _value.type();
-            if (!_type->accepts(vtype)) {
-              try {
-                LOGGER->debug("Trying to cast {} to {}", vtype->typeName().toString(), _type->typeName().toString());
-                _value = _value.cast(_type);
-                vtype = _value.type();
-              } catch(...) {
-                throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
-                  vtype->typeName().toString(), _type->typeName().toString()));
+            if (!_value.null()) {
+              auto vtype = _value.type();
+              if (!_type->accepts(vtype)) {
+                try {
+                  LOGGER->debug("Trying to cast {} to {}", vtype->typeName().toString(), _type->typeName().toString());
+                  _value = _value.cast(_type);
+                  vtype = _value.type();
+                } catch(...) {
+                  throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
+                    vtype->typeName().toString(), _type->typeName().toString()));
+                }
               }
+              _type = vtype;
             }
-            _type = vtype;
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
@@ -286,6 +288,10 @@ nlohmann::json Parameters::valueAsJson() const {
 
 bool Parameters::hasValue() const {
   return _value.defined();
+}
+
+bool Parameters::null() const {
+  return _value.null();
 }
 
 void Parameters::set(YAML::Node const &node) {
@@ -473,6 +479,7 @@ ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
   // Don't create an object for values
   if (_value.defined()) {
     if (_value.scalarType() == ValueType::ARRAY) {
+      LOGGER->debug("Creating objects for array {}", _type->typeName());
       for(size_t i = 0; i < _value.size(); ++i) {
         _value[i]->createObjects(xpmRegister);
       }    
@@ -492,6 +499,7 @@ ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
   if (_object) {
     // Set the values
     for(auto &kv: _content) {
+      LOGGER->debug("Setting value {}", kv.first);
       setObjectValue(kv.first, kv.second);
     }
   }
@@ -558,9 +566,10 @@ void Parameters::generate(GeneratorContext & context) {
             set(argument.name(), value);
           } else if (!argument.required()) {
             // Set value null
+            LOGGER->debug("Setting null value for {}...", argument.name());
             auto value = std::make_shared<Parameters>(Value::NONE);
             value->set(Flag::DEFAULT, true);
-            setObjectValue(argument.name(), nullptr);
+            set(argument.name(), value);
           }
         } else {
           // Generate sub-structures
@@ -587,8 +596,10 @@ void Parameters::validate() {
       auto &argument = *entry.second;
       LOGGER->debug("Looking at argument {}", argument.name());
 
-      if (_content.count(argument.name()) == 0) {
-        LOGGER->debug("No value provided...");
+      auto value = _content.count(argument.name()) ? get(argument.name()) : nullptr;
+
+      if (!value || value->null()) {
+        LOGGER->debug("No value provided for {}...", argument.name());
         // No value provided, and no generator
         if (argument.required()) {
           throw argument_error(
@@ -596,7 +607,6 @@ void Parameters::validate() {
         }
       } else {
         // Sets the value
-        auto value = get(argument.name());
         LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
 
         // Check if the declared type corresponds to the value type

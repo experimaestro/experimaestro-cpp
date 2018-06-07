@@ -571,6 +571,10 @@ bool Value::defined() const {
   return _scalarType != ValueType::UNSET;
 }
 
+bool Value::null() const {
+  return _scalarType == ValueType::NONE;
+}
+
 ValueType const Value::scalarType() const {
   return _scalarType;
 }

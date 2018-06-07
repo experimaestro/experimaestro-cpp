@@ -84,6 +84,9 @@ class Value {
   /** Is the value defined? */
   bool defined() const;
 
+  /** Is the value null? */
+  bool null() const;
+
 
   std::string const &getString();
 
