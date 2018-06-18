@@ -43,6 +43,7 @@ void currentRegister(std::shared_ptr<CppRegister> const &_register);
 template <typename T> struct type_of {};
 
 template <typename T> struct ArgumentHolder {
+  virtual ~ArgumentHolder() {}
   virtual void setValue(T &self, xpm::Parameters::Ptr const &value) = 0;
 };
 

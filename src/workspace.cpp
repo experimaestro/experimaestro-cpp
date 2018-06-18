@@ -24,9 +24,7 @@ PathTransformer LOCK_START_PATH = [](const Path &path) { return path.withExtensi
 PathTransformer DONE_PATH = [](const Path &path) { return path.withExtension("done"); };
 PathTransformer PID_PATH = [](const Path &path) { return path.withExtension("pid"); };
 
-
 // --- Dependency
-
 
 Dependency::Dependency(ptr<Resource> const & origin) : _origin(origin), _oldSatisfied(false) {}
 Dependency::~Dependency() {
@@ -90,6 +88,7 @@ void Resource::output(std::ostream &out) const {
 // --- Token
 
 CounterToken::CounterToken(uint32_t limit) : _limit(limit), _usedTokens(0) {}
+CounterToken::~CounterToken() {}
 void CounterToken::limit(uint32_t limit) { _limit = limit; }
 
 class CounterDependency : public Dependency {

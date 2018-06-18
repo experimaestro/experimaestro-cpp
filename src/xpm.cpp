@@ -127,6 +127,7 @@ class DummyJob : public Job {
 public:
   DummyJob(nlohmann::json const & j) : Job(Path((std::string const &)(j["locator"])), nullptr) {
   }
+  virtual ~DummyJob() {}
   virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
 };
 

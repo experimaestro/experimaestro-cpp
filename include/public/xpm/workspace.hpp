@@ -125,6 +125,7 @@ public:
 
   /// Initialize the token
   CounterToken(Value limit);
+  virtual ~CounterToken();
   
   /// Set the limit
   void limit(Value _limit);

@@ -18,6 +18,7 @@ add_executable(experimaestro-tests
         digest.cpp 
         parameters-tests.cpp 
         ssh-tests.cpp
+        scheduler-tests.cpp
 )
 
 set(XPM_TEST_SOURCEDIR "${CMAKE_CURRENT_SOURCE_DIR}")
