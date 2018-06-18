@@ -272,7 +272,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 
     _run->set_callback( [&](){
       if (parameters.size() % 2 != 0) {
-        throw argument_error("Parameters should be of the form [--path-name-of-argument argument value]*");
+        throw argument_error("Parameters should be of the form [--path-name-of-argument value]*");
       }
 
       // Retrieve the task
