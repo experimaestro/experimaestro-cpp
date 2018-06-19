@@ -109,6 +109,9 @@ void Object::run() {
   throw assertion_error("Object is not a task: cannot run it!");
 }
 
+void Object::init() {
+}
+
 Parameters::~Parameters() {
 }
 Parameters::Parameters(Value const &v) : _flags(0) {
@@ -504,6 +507,9 @@ ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
       setObjectValue(kv.first, kv.second);
     }
   }
+
+  // Perform further initialization
+  _object->init();
 
   return _object;
 }

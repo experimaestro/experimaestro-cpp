@@ -11,6 +11,8 @@
 #include <spdlog/fmt/fmt.h>
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
+
+#define SQLITE_THREADSAFE 1
 #include <SQLiteCpp/SQLiteCpp.h>
 
 DEFINE_LOGGER("xpm.workspace");

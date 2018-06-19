@@ -164,6 +164,9 @@ class XPMObject(Object):
     def run(self):
         self.pyobject.execute()
 
+    def init(self):
+        self.pyobject._init()
+
 class PyObject:
     """Base type for all objects in python interface"""
 
@@ -196,7 +199,7 @@ class PyObject:
                 self.__xpm__.set(name, value)
         super().__setattr__(name, value)
 
-    def _prepare(self):
+    def _init(self):
         """Prepare object after creation"""
         pass
 
@@ -224,6 +227,12 @@ class ArrayOf(TypeProxy):
         type = register.getType(self.cls)
         return ArrayType(type)
 
+class Choice(TypeProxy):
+    def __init__(self, *args):
+        self.choices = args
+
+    def __call__(self, register):
+        return cvar.StringType
 
 
 class PythonRegister(Register):
@@ -282,6 +291,7 @@ class PythonRegister(Register):
         logger.debug("Creating object for %s [%s]", sv, type)
         pyobject = type.__new__(type)
         pyobject.__xpm__ = XPMObject(pyobject, sv=sv)
+        logger.debug("Preparing object for %s", type)
         return pyobject.__xpm__
 
     def parse(self, arguments=None, try_parse=False):

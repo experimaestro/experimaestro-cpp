@@ -131,6 +131,9 @@ public:
 
   /** Run (if this is a task) */
   virtual void run();
+
+  /** Initialize the object */
+  virtual void init();
 };
 
 
