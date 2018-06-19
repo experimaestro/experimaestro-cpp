@@ -594,6 +594,17 @@ void Parameters::validate() {
 
   if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
 
+  // If array, validate the array
+  if (_value.scalarType() == ValueType::ARRAY) {
+    for(size_t i = 0, N = _value.size(); i < N; ++i) {
+      try {
+        _value[i]->validate();
+      } catch(parameter_error &e) {
+          throw e.addPath(fmt::format("[{}]", i));
+      }
+    }
+  }
+
   // Loop over the whole hierarchy
   for (auto type = _type; type; type = type->parentType()) {
     LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
@@ -609,7 +620,7 @@ void Parameters::validate() {
         LOGGER->debug("No value provided for {}...", argument.name());
         // No value provided, and no generator
         if (argument.required()) {
-          throw argument_error(
+          throw parameter_error(
               "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
         }
       } else {
