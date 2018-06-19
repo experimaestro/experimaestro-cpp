@@ -91,6 +91,10 @@ def parameters(value):
 
         return Parameters(newvalue)
 
+    # A path
+    if isinstance(value, pathlib.Path):
+        return Parameters(Value(Path(str(value.absolute()))))
+
     # For anything else, we try to convert it to a value
     return Parameters(Value(value))
 
