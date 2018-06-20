@@ -554,8 +554,15 @@ void Parameters::addDependencies(Job & job,  bool skipThis) {
     LOGGER->info("Found dependency resource {}", _job);
     job.addDependency(_job->createDependency());
   } else {
+    // Search in content
     for (auto &entry: _content) {
       entry.second->addDependencies(job, false);
+    }
+    // Search in array
+    if (_value.scalarType() == ValueType::ARRAY) {
+      for(size_t i = 0, N = _value.size(); i < N; ++i) {
+        _value[i]->addDependencies(job, false);
+      }
     }
   }
 }
