@@ -40,6 +40,10 @@ struct Progress {
 
   // Threshold for reporting something
   uint64_t threshold;
+
+  // Threshold for reporting something (on logging stream)
+  uint64_t logging_threshold;
+
   // No more than one update every 5 seconds for changes above the threshold
   std::chrono::milliseconds time_threshold =  std::chrono::seconds(5);
 
@@ -48,18 +52,26 @@ struct Progress {
   std::mutex mx;
   std::condition_variable cv;
 
-  Progress(double threshold = 0.01)  {
+  /// Converts a threshold in % (range 0-1) into our own scale
+  static ProgressType convertThreshold(double threshold) {
+    auto _threshold = ProgressType(threshold * std::numeric_limits<ProgressType>::max());
+    if (_threshold == 0) {
+      return 1;
+    }
+    return _threshold;
+  }
+
+  Progress(double threshold = 0.01, double logging_threshold = 0.05)  {
+    // Sets the thresholds
+    this->threshold = convertThreshold(threshold);
+    this->logging_threshold = convertThreshold(logging_threshold);
+
     const char *notification_url = getenv("XPM_NOTIFICATION_URL");
     if (!notification_url) {
       LOGGER->warn("XPM_NOTIFICATION_URL environment variable is not defined");
       return;
     }
 
-    // Sets the threshold
-    this->threshold = ProgressType(threshold * std::numeric_limits<ProgressType>::max());
-    if (this->threshold == 0) {
-      this->threshold = 1;
-    }
 
     std::regex re_http(R"(^http://([\w\d\.-]+):(\d+)(/.*)$)",
                        std::regex_constants::ECMAScript | std::regex_constants::icase);
@@ -98,6 +110,7 @@ struct Progress {
 
       // just outputs
       bool b = last_progress - progress > threshold;
+      bool logging_b = last_progress - progress > logging_threshold;
       last_progress = progress;
 
       float value = float(last_progress) / MAX_PROGRESS;
@@ -105,7 +118,11 @@ struct Progress {
         LOGGER->info("Progress: {} %", value * 100);
         return;
       } else {
-        LOGGER->debug("Notify progress {} [{}]...", value * 100, b);
+        if (logging_b) {
+          LOGGER->info("Progress: {} %", value * 100); 
+        } else {
+          LOGGER->debug("Notify progress {} [{}]...", value * 100, b);
+        }
       }
 
       notify(value);
@@ -141,8 +158,17 @@ struct Progress {
     // Sets the new progress
     progress = ProgressType(MAX_PROGRESS * percentage);
 
+    // Just log if no host to notify
+    if (hostname.empty()) {
+      if (last_progress - progress > logging_threshold) {
+        last_progress = progress;
+        float value = float(last_progress) / MAX_PROGRESS;
+        LOGGER->info("Progress: {:1f} %", value * 100); 
+      }
+    }
+
     // Notify the notifier thread
-    if (last_progress - progress > threshold) {
+    else if (last_progress - progress > threshold) {
       cv.notify_all();
     }
   }
