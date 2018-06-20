@@ -122,7 +122,7 @@ namespace {
       // The object has one value, just use this and discards the rest
       switch(conf->valueType()) {
         case ValueType::ARRAY: {
-          out << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->typeName().toString() << "\",\""
+          out << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->name().toString() << "\",\""
               << xpm::KEY_VALUE << "\": [";
           for(size_t i = 0; i < conf->size(); ++i) {
             if (i > 0) out << ", ";
@@ -133,7 +133,7 @@ namespace {
         }
 
         case ValueType::PATH:
-          out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->typeName().toString() << "\",\""
+          out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
               << xpm::KEY_VALUE << "\": \"";
           out << context.connector.resolve(conf->asPath());
           out << "\"}";
@@ -155,7 +155,7 @@ namespace {
       };
 
       if (conf->type()) {
-        out << "\"" << KEY_TYPE << "\": \"" << conf->type()->typeName() << "\"";
+        out << "\"" << KEY_TYPE << "\": \"" << conf->type()->name() << "\"";
         first = false;
       }
 

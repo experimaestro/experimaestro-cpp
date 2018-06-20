@@ -244,7 +244,7 @@ template <typename _Type, typename _Task> struct TaskBuilder {
                 "Task should be a subclass of type");
   TaskBuilder(std::string const &tname) {
     auto task =
-        std::make_shared<Task>(TypeName(tname), CppType<_Type>::SELF->type);
+        std::make_shared<Task>(Typename(tname), CppType<_Type>::SELF->type);
 
     auto commandLine = std::make_shared<CommandLine>();
     auto command = std::make_shared<Command>();

@@ -17,13 +17,13 @@ using nlohmann::json;
 
 bool Task::_running = false;
 
-Task::Task(TypeName const &typeName, ptr<Type> const &type) : _identifier(typeName), _type(type) {
+Task::Task(Typename const &typeName, ptr<Type> const &type) : _identifier(typeName), _type(type) {
 }
 
-Task::Task(ptr<Type> const &type) : _identifier(type->typeName()), _type(type) {
+Task::Task(ptr<Type> const &type) : _identifier(type->name()), _type(type) {
 }
 
-TypeName Task::typeName() const { return _type->typeName(); }
+Typename Task::name() const { return _type->name(); }
 
 void Task::submit(ptr<Workspace> const & _workspace,
   ptr<Launcher> const & _launcher,
@@ -63,19 +63,19 @@ void Task::commandline(ptr<CommandLine> const & command) {
   _commandLine = command;
 }
 
-TypeName const &Task::identifier() const {
+Typename const &Task::identifier() const {
   return _identifier;
 }
 
 std::string Task::toString() const {
-  return "Task '" + identifier().toString() + "' (output '" + typeName().toString() + "')";
+  return "Task '" + identifier().toString() + "' (output '" + name().toString() + "')";
 }
 
 
 nlohmann::json Task::toJson() {
   auto j = json::object();
   j["identifier"] = _identifier.toString();
-  j["type"] = _type->typeName().toString();
+  j["type"] = _type->name().toString();
   j["command"] = _commandLine->toJson();
   return j;
 }

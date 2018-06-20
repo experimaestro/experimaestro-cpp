@@ -62,41 +62,41 @@ SWIG_MUTABLE;
 /**
  * Qualified name
  */
-class TypeName {
+class Typename {
   std::string name;
  public:
   /** Creates a qualified name
   * @param ns the namespace
   * @param name the local name
   */
-  TypeName(std::string const &name);
+  Typename(std::string const &name);
 
   /** Returns a typename prefix by this */
-  TypeName operator()(std::string const &localname) const;
+  Typename operator()(std::string const &localname) const;
 
   std::string toString() const;
 
-  TypeName array() const;
+  Typename array() const;
 
   int hash() const;
 
   std::string localName() const;
 
-  bool operator==(TypeName const &other) const {
+  bool operator==(Typename const &other) const {
     return other.name == name;
   }
-  bool operator!=(TypeName const &other) const {
+  bool operator!=(Typename const &other) const {
     return other.name != name;
   }
 };
 
 SWIG_IMMUTABLE;
-extern const TypeName STRING_TYPE;
-extern const TypeName BOOLEAN_TYPE;
-extern const TypeName INTEGER_TYPE;
-extern const TypeName REAL_TYPE;
-extern const TypeName ANY_TYPE;
-extern const TypeName PATH_TYPE;
+extern const Typename STRING_TYPE;
+extern const Typename BOOLEAN_TYPE;
+extern const Typename INTEGER_TYPE;
+extern const Typename REAL_TYPE;
+extern const Typename ANY_TYPE;
+extern const Typename PATH_TYPE;
 SWIG_MUTABLE;
 
 }
@@ -105,8 +105,8 @@ SWIG_MUTABLE;
 namespace std {
 /** Hash of type name */
 template<>
-struct hash<xpm::TypeName> {
-  inline size_t operator()(xpm::TypeName const &typeName) const { return typeName.hash(); }
+struct hash<xpm::Typename> {
+  inline size_t operator()(xpm::Typename const &typeName) const { return typeName.hash(); }
 };
 }
 #endif
@@ -539,7 +539,7 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
   std::string toJson() const;
 
   /// Returns the type name
-  TypeName const &typeName() const;
+  Typename const &name() const;
 
   /// Return the type
   std::string toString() const;
@@ -589,11 +589,11 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
    * @param type The typename
    * @param _parent The parent type (or null pointer)
    */
-  Type(TypeName const &type, std::shared_ptr<Type> _parent = nullptr,
+  Type(Typename const &type, std::shared_ptr<Type> _parent = nullptr,
        bool predefined = false, bool canIgnore = false);
 
  private:
-  const TypeName _type;
+  const Typename _type;
   /**
    * Parent type
    */
@@ -620,7 +620,7 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
 class SimpleType : public Type {
   ValueType _valueType;
  public:
-  SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore = false);
+  SimpleType(Typename const &tname, ValueType valueType, bool canIgnore = false);
   inline ValueType valueType() { return _valueType; }
   virtual bool scalar() override { return true; }
 };
@@ -630,6 +630,7 @@ class ArrayType : public Type {
 public:
   ArrayType(Type::Ptr const & componentType);
   virtual bool array() override { return true; }
+  Type::Ptr componentType() { return _componentType; }
 };
 
 } // namespace xpm
@@ -639,7 +640,7 @@ namespace std {
 /** Hash of type */
 template<>
 struct hash<xpm::Type> {
-  inline size_t operator()(xpm::Type const &type) const { return type.typeName().hash(); }
+  inline size_t operator()(xpm::Type const &type) const { return type.name().hash(); }
 };
 }
 #endif

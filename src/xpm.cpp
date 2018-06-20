@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <fstream>
 #include <typeinfo>
+#include <unordered_set>
 
 // Demangle
 #include <cxxabi.h>
@@ -28,8 +29,38 @@ using nlohmann::json;
 //  return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 //}
 
+namespace {
+  typedef std::pair<xpm::Typename, xpm::Typename> TypenamePair;
+  typedef std::unordered_set<std::pair<xpm::Typename, xpm::Typename>> TypenamePairSet;
+}
+
+namespace std {
+  template<>
+  struct hash<TypenamePair> {
+    inline size_t operator()(TypenamePair const & pair) const { 
+      return pair.first.hash() + pair.second.hash(); 
+    }
+  };
+
+}
 
 namespace xpm {
+
+namespace {
+  bool same(Type const & a, Type const & b) {
+    return a.name() == b.name();
+  }
+  
+  TypenamePairSet const & castable_types() {
+    static std::unique_ptr<TypenamePairSet> TYPES;
+    if (!TYPES) {
+      TYPES = std::unique_ptr<TypenamePairSet>(new TypenamePairSet());
+      TYPES->insert(TypenamePair(RealType->name(), IntegerType->name()));
+      }
+    return *TYPES;
+  }
+}
+
 
 /// Type of the object
 const std::string KEY_TYPE = "$type";
@@ -45,15 +76,15 @@ const std::string KEY_VALUE = "$value";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_JOB};
 
-const TypeName STRING_TYPE("string");
-const TypeName BOOLEAN_TYPE("boolean");
-const TypeName INTEGER_TYPE("integer");
-const TypeName REAL_TYPE("real");
-const TypeName ANY_TYPE("any");
-const TypeName PATH_TYPE("path");
+const Typename STRING_TYPE("string");
+const Typename BOOLEAN_TYPE("boolean");
+const Typename INTEGER_TYPE("integer");
+const Typename REAL_TYPE("real");
+const Typename ANY_TYPE("any");
+const Typename PATH_TYPE("path");
 const ptr<Object> NULL_OBJECT;
 
-static const std::unordered_set<TypeName> IGNORED_TYPES = {PATH_TYPE};
+static const std::unordered_set<Typename> IGNORED_TYPES = {PATH_TYPE};
 
 
 template<typename T>
@@ -73,28 +104,28 @@ void Outputable::output(std::ostream &out) const {
 // --- Type names
 // ---
 
-TypeName::TypeName(std::string const &name) : name(name) {}
+Typename::Typename(std::string const &name) : name(name) {}
 
-std::string TypeName::toString() const {
+std::string Typename::toString() const {
   return name;
 }
 
-int TypeName::hash() const {
+int Typename::hash() const {
   return (int) std::hash<std::string>{}(name);
 }
 
-TypeName TypeName::operator()(std::string const &localname) const {
-  return TypeName(name + "." + localname);
+Typename Typename::operator()(std::string const &localname) const {
+  return Typename(name + "." + localname);
 }
 
-std::string TypeName::localName() const {
+std::string Typename::localName() const {
   const auto i = name.rfind(".");
   if (i == std::string::npos) return name;
   return name.substr(i + 1);
 }
 
-TypeName TypeName::array() const {
-  return TypeName(name + "[]");
+Typename Typename::array() const {
+  return Typename(name + "[]");
 }
 
 
@@ -142,7 +173,7 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
     case nlohmann::json::value_t::object: {
       // (1) First, get the type of the object
       if (jsonValue.count(KEY_TYPE) > 0) {
-        auto typeName = TypeName((std::string const &) jsonValue[KEY_TYPE]);
+        auto typeName = Typename((std::string const &) jsonValue[KEY_TYPE]);
         _type = xpmRegister.getType(typeName);
         if (!_type) {
           _type = mkptr<Type>(typeName);
@@ -161,12 +192,12 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
               auto vtype = _value.type();
               if (!_type->accepts(vtype)) {
                 try {
-                  LOGGER->debug("Trying to cast {} to {}", vtype->typeName().toString(), _type->typeName().toString());
+                  LOGGER->debug("Trying to cast {} to {}", vtype->name().toString(), _type->name().toString());
                   _value = _value.cast(_type);
                   vtype = _value.type();
                 } catch(...) {
                   throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
-                    vtype->typeName().toString(), _type->typeName().toString()));
+                    vtype->name().toString(), _type->name().toString()));
                 }
               }
               _type = vtype;
@@ -178,7 +209,7 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
         } else if (it.key() == KEY_TASK) {
           _task = xpmRegister.getTask(it.value(), true);
         } else {
-          set(it.key(), std::make_shared<Parameters>(xpmRegister, it.value()));
+          set(it.key(), mkptr<Parameters>(xpmRegister, it.value()));
         }
       }
 
@@ -207,7 +238,7 @@ json Parameters::toJson() {
   }
 
   if (_type) {
-    o[KEY_TYPE] = _type->typeName().toString();
+    o[KEY_TYPE] = _type->name().toString();
   }
 
   if (_task) {
@@ -240,7 +271,7 @@ std::string Parameters::toJsonString() {
 }
 
 void Digest::updateDigest(Parameters const & sv) {
-  updateDigest(sv.type()->typeName().toString());
+  updateDigest(sv.type()->name().toString());
 
   updateDigest("task");
   if (sv._task) {
@@ -483,7 +514,7 @@ ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
   // Don't create an object for values
   if (_value.defined()) {
     if (_value.scalarType() == ValueType::ARRAY) {
-      LOGGER->debug("Creating objects for array {}", _type->typeName());
+      LOGGER->debug("Creating objects for array {}", _type->name());
       for(size_t i = 0; i < _value.size(); ++i) {
         _value[i]->createObjects(xpmRegister);
       }    
@@ -574,7 +605,7 @@ void Parameters::generate(GeneratorContext & context) {
           } else if (!argument.required()) {
             // Set value null
             LOGGER->debug("Setting null value for {}...", argument.name());
-            auto value = std::make_shared<Parameters>(Value::NONE);
+            auto value = mkptr<Parameters>(Value::NONE);
             value->set(Flag::DEFAULT, true);
             set(argument.name(), value);
           }
@@ -607,7 +638,7 @@ void Parameters::validate() {
 
   // Loop over the whole hierarchy
   for (auto type = _type; type; type = type->parentType()) {
-    LOGGER->debug("Looking at type {} [{} arguments]", type->typeName(), type->arguments().size());
+    LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
 
     // Loop over all the arguments
     for (auto entry: type->arguments()) {
@@ -632,7 +663,7 @@ void Parameters::validate() {
           throw parameter_error(
               "type is " + value->type()->toString() 
               + ", but requested type was " + entry.second->type()->toString())
-              .addPath(argument.name());
+            .addPath(argument.name());
         }
 
         LOGGER->debug("Validating {}...", argument.name());
@@ -781,7 +812,7 @@ Argument &Argument::type(ptr<Type> const &type) {
 
 // ---- Type
 
-SimpleType::SimpleType(TypeName const &tname, ValueType valueType, bool canIgnore)
+SimpleType::SimpleType(Typename const &tname, ValueType valueType, bool canIgnore)
       : Type(tname, AnyType, true, canIgnore), _valueType(valueType) {}
 
 ptr<Type> AnyType = Type::any();
@@ -791,13 +822,13 @@ Type::Ptr const & Type::any() {
   return ANY;
 }
 
-ptr<Type> BooleanType = std::make_shared<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
-ptr<Type> IntegerType = std::make_shared<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
-ptr<Type> RealType = std::make_shared<SimpleType>(REAL_TYPE, ValueType::REAL);
-ptr<Type> StringType = std::make_shared<SimpleType>(STRING_TYPE, ValueType::STRING);
-ptr<Type> PathType = std::make_shared<SimpleType>(PATH_TYPE, ValueType::PATH, true);
+ptr<Type> BooleanType = mkptr<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
+ptr<Type> IntegerType = mkptr<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
+ptr<Type> RealType = mkptr<SimpleType>(REAL_TYPE, ValueType::REAL);
+ptr<Type> StringType = mkptr<SimpleType>(STRING_TYPE, ValueType::STRING);
+ptr<Type> PathType = mkptr<SimpleType>(PATH_TYPE, ValueType::PATH, true);
 
-Type::Type(TypeName const &type, ptr<Type> parent, bool predefined, bool canIgnore) :
+Type::Type(Typename const &type, ptr<Type> parent, bool predefined, bool canIgnore) :
     _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore) {
  }
 
@@ -824,7 +855,7 @@ Type::Ptr Type::parentType() {
   return _parent;
 }
 
-TypeName const &Type::typeName() const { return _type; }
+Typename const &Type::name() const { return _type; }
 
 /// Return the type
 std::string Type::toString() const { return "type(" + _type.toString() + ")"; }
@@ -858,9 +889,9 @@ std::string Type::toJson() const {
     }
 
     if (definition.empty()) {
-      definition = arg.type()->typeName().toString();
+      definition = arg.type()->name().toString();
     } else {
-      definition["type"] = arg.type()->typeName().toString();
+      definition["type"] = arg.type()->name().toString();
     }
     jsonArguments[entry.first] = definition;
   }
@@ -901,11 +932,6 @@ Parameters::Ptr Type::getProperty(std::string const &name) {
   return it->second;
 }
 
-namespace {
-  bool same(Type const & a, Type const & b) {
-    return a.typeName() == b.typeName();
-  }
-}
 
 bool Type::accepts(Type::Ptr const &other) const {
   // Go up
@@ -915,20 +941,21 @@ bool Type::accepts(Type::Ptr const &other) const {
     if (same(*current, *this)) return true;
   }
 
-  return false;
+  return castable_types().find(std::pair<Typename, Typename>(name(), other->name()))
+    != castable_types().end();
 }
 
 Type::Ptr Type::lca(Type::Ptr const & a, Type::Ptr const & b) {
-  std::unordered_set<TypeName> set;
+  std::unordered_set<Typename> set;
 
   for(auto current = a; current; current = current->parentType()) {
     if (same(*current, *b)) return a;
-    set.insert(current->typeName());
+    set.insert(current->name());
   }
 
   // Go up in b hierarchy
   for(auto current = b; current; current = current->parentType()) {
-    if (set.find(current->typeName()) != set.end())
+    if (set.find(current->name()) != set.end())
       return current;
   }
 
@@ -938,7 +965,7 @@ Type::Ptr Type::lca(Type::Ptr const & a, Type::Ptr const & b) {
 
 ArrayType::ArrayType(Type::Ptr const & componentType) 
   : Type(
-      componentType->typeName().array(), 
+      componentType->name().array(), 
       componentType->parentType() ? mkptr<ArrayType>(componentType->parentType()) : nullptr
     ), _componentType(componentType) {
 }
@@ -961,7 +988,7 @@ const std::string PathGenerator::TYPE = "path";
 ptr<Generator> Generator::createFromJSON(nlohmann::json const &j) {
   std::string type = j["type"];
   if (type == PathGenerator::TYPE) {
-    return std::make_shared<PathGenerator>(j);
+    return mkptr<PathGenerator>(j);
   }
 
   throw std::invalid_argument("Generator type " + type + " not recognized");
@@ -990,7 +1017,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return std::make_shared<Parameters>(Value(p));
+  return mkptr<Parameters>(Value(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

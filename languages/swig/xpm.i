@@ -42,7 +42,7 @@ namespace xpm {
 // Implicit conversions
 %implicitconv;
 %implicitconv xpm::Path;
-%implicit(xpm::TypeName, std::string);
+%implicit(xpm::Typename, std::string);
 #endif
 
 %include "std_string.i"

@@ -11,7 +11,7 @@ import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 import java.io.StringReader;
 import java.util.Map;
 
-import static net.bpiwowar.xpm.manager.TypeName.parse;
+import static net.bpiwowar.xpm.manager.Typename.parse;
 
 /**
  * Information about an input value

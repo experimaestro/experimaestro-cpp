@@ -6,7 +6,7 @@
 #include <xpm/xpm.hpp>
 
 namespace xpm {
-std::ostream &operator<<(std::ostream &os, const TypeName &c) {
+std::ostream &operator<<(std::ostream &os, const Typename &c) {
   return os << c.toString();
 }
 std::ostream &operator<<(std::ostream &os, const Type &c) {

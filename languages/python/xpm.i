@@ -90,7 +90,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     }
 }
 
-%extend xpm::TypeName {
+%extend xpm::Typename {
     PyObject * __getattro__(PyObject *name) {
         if (!PyUnicode_Check(name)) {
             PyErr_SetString(PyExc_AttributeError, "Attribute name is not a string");
@@ -101,8 +101,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         char *_key = (char*)PyUnicode_AsUTF8AndSize(name, &stringsize);
         std::string key(_key, stringsize);
 
-        auto ptr = new xpm::TypeName((*$self)(key));
-        return SWIG_InternalNewPointerObj(%as_voidptr(ptr), $descriptor(xpm::TypeName*), SWIG_POINTER_OWN);
+        auto ptr = new xpm::Typename((*$self)(key));
+        return SWIG_InternalNewPointerObj(%as_voidptr(ptr), $descriptor(xpm::Typename*), SWIG_POINTER_OWN);
     }
 }
 

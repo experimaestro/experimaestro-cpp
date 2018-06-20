@@ -1,7 +1,7 @@
 package net.bpiwowar.xpm.manager.tasks;
 
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.TypeName;
+import net.bpiwowar.xpm.manager.Typename;
 import net.bpiwowar.xpm.utils.introspection.ClassInfo;
 import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 
@@ -30,8 +30,8 @@ public class JavaTaskInformation extends TaskInformation {
         }
 
         namespaces.putAll(Constants.PREDEFINED_PREFIXES );
-        this.id = TypeName.parse(description.id(), namespaces);
-        this.output = TypeName.parse(description.output(), namespaces);
+        this.id = Typename.parse(description.id(), namespaces);
+        this.output = Typename.parse(description.output(), namespaces);
 
         try {
             for (FieldInfo field : classInfo.getDeclaredFields()) {

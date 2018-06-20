@@ -19,7 +19,7 @@ logger = logging.getLogger("xpm")
 class JSONEncoder(json.JSONEncoder):
     """A JSON encoder for Python objects"""
     def default(self, o):
-        if type(o) == TypeName:
+        if type(o) == Typename:
             return str(o)
 
         if isinstance(o, pathlib.PosixPath):
@@ -258,7 +258,7 @@ class PythonRegister(Register):
 
     def associateType(self, pythonType, xpmType):
         pythonType.__xpmtype__ = xpmType
-        self.registered[xpmType.typeName()] = pythonType
+        self.registered[xpmType.name()] = pythonType
 
     def addType(self, pythonType, typeName, parentType, description=None):
         xpmType = Type(typeName, parentType)
@@ -291,7 +291,7 @@ class PythonRegister(Register):
         sv.object().run()
 
     def createObject(self, sv):
-        type = self.registered.get(sv.type().typeName(), PyObject)
+        type = self.registered.get(sv.type().name(), PyObject)
         logger.debug("Creating object for %s [%s]", sv, type)
         pyobject = type.__new__(type)
         pyobject.__xpm__ = XPMObject(pyobject, sv=sv)
@@ -314,10 +314,10 @@ register = PythonRegister()
 class RegisterType:
     """Annotations for experimaestro types"""
     def __init__(self, qname, description=None, associate=False):
-        if type(qname) == TypeName:
+        if type(qname) == Typename:
             self.qname = qname
         else:
-            self.qname = TypeName(qname)
+            self.qname = Typename(qname)
         self.description = description
         self.associate = associate
 
@@ -406,7 +406,7 @@ class RegisterTask(RegisterType):
         command.add(CommandString("run"))
         command.add(CommandString("--json-file"))
         command.add(CommandParameters())
-        command.add(CommandString(TypeName.toString(task.typeName())))
+        command.add(CommandString(Typename.toString(task.name())))
         commandLine = CommandLine()
         commandLine.add(command)
         task.commandline(commandLine)

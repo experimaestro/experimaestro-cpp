@@ -78,14 +78,14 @@ Register::Register() {
 Register::~Register() {}
 
 void Register::addType(ptr<Type> const &type) {
-  _types[type->typeName()] = type;
+  _types[type->name()] = type;
 }
 
 void Register::addTask(ptr<Task> const &task) {
   _tasks[task->identifier()] = task;
 }
 
-ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
+ptr<Task> Register::getTask(Typename const &typeName, bool allowPlaceholder) {
   auto it = _tasks.find(typeName);
   if (it != _tasks.end()) {
     return it->second;
@@ -93,10 +93,10 @@ ptr<Task> Register::getTask(TypeName const &typeName, bool allowPlaceholder) {
   return nullptr;
 }
 
-ptr<Type> Register::getType(TypeName const &typeName) {
+ptr<Type> Register::getType(Typename const &typeName) {
   std::string _name = typeName.toString();
   if (_name.size() > 2 && _name.substr(_name.size()-2) == "[]") {
-    TypeName cType(_name.substr(0, _name.size() - 2));
+    Typename cType(_name.substr(0, _name.size() - 2));
     auto type = getType(cType);
     return type ? mkptr<ArrayType>(type) : nullptr;
   }
@@ -131,14 +131,14 @@ void showArguments(ptr<Parameters> const & sv, Type const & type, std::string co
       auto svType = subSV->type();
       if (!svType) throw assertion_error("internal error: type is not defined in showArguments");
       if (!subtype->accepts(svType)) {
-        LOGGER->warn("For {}, type {} does not match requested type {}", x.first, svType->typeName().toString(), subtype->typeName().toString());
+        LOGGER->warn("For {}, type {} does not match requested type {}", x.first, svType->name().toString(), subtype->name().toString());
       } else {
         subtype = svType;
       }
 
     }
 
-    auto subtypeName = subtype->typeName().toString();
+    auto subtypeName = subtype->name().toString();
     std::cout << indent << (indent.empty() ? "" : ".")  << x.first 
       << " (" << subtypeName << ")\t" 
       << x.second->help();
@@ -200,7 +200,7 @@ void merge(Register & xpmRegister, ptr<Parameters> const &sv, YAML::Node const &
   case YAML::NodeType::Map: {
     // Set the type if specified
     if (node.Tag()[0] == '!' && node.Tag().size() > 1) {
-      auto typeName = TypeName(node.Tag().substr(1));
+      auto typeName = Typename(node.Tag().substr(1));
       auto type = xpmRegister.getType(typeName);
       if (!type) {
         LOGGER->warn("Undefined type {}", node.Tag());
@@ -276,7 +276,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       }
 
       // Retrieve the task
-      auto task = this->getTask(TypeName(taskName));
+      auto task = this->getTask(Typename(taskName));
       if (!task) {
         throw argument_error(taskName + " is not a task");
       }
@@ -324,8 +324,6 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
           subsv->type(type);
         }
       }
-
-      LOGGER->info("Structured value: {}", sv->toJson());
 
       // Handle help flag
       if (argumentHelp) {
@@ -442,16 +440,16 @@ void Register::load(nlohmann::json const &j) {
   for (json::iterator it = types.begin(); it != types.end(); ++it) {
     auto const &e = it.value();
     assert(e.is_object());
-    const TypeName typeName = TypeName(it.key());
+    const Typename typeName = Typename(it.key());
     auto typeIt = _types.find(typeName);
     Type::Ptr type;
 
     // Search for the type
     if (typeIt != _types.end()) {
       type = typeIt->second;
-      LOGGER->debug("Using placeholder type {}", type->typeName().toString());
+      LOGGER->debug("Using placeholder type {}", type->name().toString());
       if (!type->placeholder()) {
-        throw std::runtime_error("Type " + type->typeName().toString() + " was already defined");
+        throw std::runtime_error("Type " + type->name().toString() + " was already defined");
       }
       type->placeholder(false);
     } else {
@@ -464,20 +462,20 @@ void Register::load(nlohmann::json const &j) {
 
     // Get the parent type
     if (e.count("parent")) {
-      auto parentTypeName = TypeName(e["parent"].get<std::string>());
-      auto parentTypeIt = _types.find(parentTypeName);
+      auto parentTypename = Typename(e["parent"].get<std::string>());
+      auto parentTypeIt = _types.find(parentTypename);
       if (parentTypeIt == _types.end()) {
-        LOGGER->debug("Creating placeholder type {} ", parentTypeName);
-        auto parentType = mkptr<Type>(parentTypeName);
+        LOGGER->debug("Creating placeholder type {} ", parentTypename);
+        auto parentType = mkptr<Type>(parentTypename);
         type->parentType(parentType);
         parentType->placeholder(true);
-        _types[parentTypeName] = parentType;
+        _types[parentTypename] = parentType;
       } else {
         type->parentType(parentTypeIt->second);
       }
     }
 
-    LOGGER->debug("Adding type {}", type->typeName());
+    LOGGER->debug("Adding type {}", type->name());
 
     if (e.count("properties")) {
       auto properties = e["properties"];
@@ -527,7 +525,7 @@ void Register::load(nlohmann::json const &j) {
       type->addArgument(a);
     }
 
-    _types[type->typeName()] = type;
+    _types[type->name()] = type;
   }
 
   auto tasks = j["tasks"];
@@ -535,11 +533,11 @@ void Register::load(nlohmann::json const &j) {
 
   for (json::iterator it = tasks.begin(); it != tasks.end(); ++it) {
     auto const &e = it.value();
-    TypeName identifier(it.key());
+    Typename identifier(it.key());
     if (!e.count("type")) {
       throw argument_error("No type for task " + identifier.toString());
     }
-    TypeName type(e["type"].get<std::string>());
+    Typename type(e["type"].get<std::string>());
     auto typePtr = getType(type);
 
     if (!e.count("command")) {

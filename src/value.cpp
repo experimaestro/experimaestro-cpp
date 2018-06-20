@@ -153,7 +153,7 @@ Value Value::fromString(std::string const & s, ptr<Type> const & hint) {
   }
 
 
-  throw argument_error("Type " + hint->typeName().toString() + " is not a scalar type");
+  throw argument_error("Type " + hint->name().toString() + " is not a scalar type");
 }
 
 

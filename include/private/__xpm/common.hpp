@@ -20,11 +20,11 @@ namespace xpm {
 std::shared_ptr<spdlog::logger> logger(std::string const &name);
 
 class Parameters;
-class TypeName;
+class Typename;
 class Type;
 class Path;
 
-std::ostream &operator<<(std::ostream &os, const TypeName &c);
+std::ostream &operator<<(std::ostream &os, const Typename &c);
 std::ostream &operator<<(std::ostream &os, const Type &c);
 std::ostream &operator<<(std::ostream &os, const Path &c);
 

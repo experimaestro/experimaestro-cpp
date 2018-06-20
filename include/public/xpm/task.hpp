@@ -23,7 +23,7 @@ class Task
    * @param taskIdentifier The task identifier
    * @param outputType The output type
    */
-  Task(TypeName const &taskIdentifier, std::shared_ptr<Type> const &outputType);
+  Task(Typename const &taskIdentifier, std::shared_ptr<Type> const &outputType);
 
   /**
    * Initialize a task with the same identifier as the type
@@ -42,7 +42,7 @@ class Task
               std::shared_ptr<Parameters> const & sv) const;
 
   /** Returns the type of this task */
-  TypeName typeName() const;
+  Typename name() const;
 
   /** Returns the type of this task */
   Type::Ptr type();
@@ -54,7 +54,7 @@ class Task
   void commandline(std::shared_ptr<CommandLine> const & command);
 
   /** Gets the task identifier */
-  TypeName const &identifier() const;
+  Typename const &identifier() const;
 
   /** Convert to JSON */
   nlohmann::json toJson();
@@ -67,7 +67,7 @@ class Task
 
  private:
   /// Task identifier
-  TypeName _identifier;
+  Typename _identifier;
 
   /// The type for this task
   std::shared_ptr<Type> _type;

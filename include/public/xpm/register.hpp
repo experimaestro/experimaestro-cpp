@@ -12,10 +12,10 @@ namespace xpm {
 /** Register for types */
 class Register {
   /// Maps typenames to types
-  std::unordered_map<TypeName, std::shared_ptr<Type>> _types;
+  std::unordered_map<Typename, std::shared_ptr<Type>> _types;
 
   /// Maps typenames to tasks
-  std::unordered_map<TypeName, std::shared_ptr<Task>> _tasks;
+  std::unordered_map<Typename, std::shared_ptr<Task>> _tasks;
 
  public:
   // Constructs a new register
@@ -50,13 +50,13 @@ class Register {
   void addTask(std::shared_ptr<Task> const &task);
 
   /// Find a type given a t ype name
-  std::shared_ptr<Task> getTask(TypeName const &typeName, bool allowPlaceholder = false);
+  std::shared_ptr<Task> getTask(Typename const &typeName, bool allowPlaceholder = false);
 
   /// Register a new type
   void addType(std::shared_ptr<Type> const &type);
 
   /// Find a type given a t ype name
-  std::shared_ptr<Type> getType(TypeName const &typeName);
+  std::shared_ptr<Type> getType(Typename const &typeName);
 
   /// Find a type given a t ype name
   std::shared_ptr<Type> getType(std::shared_ptr<Parameters> const &object);
@@ -65,11 +65,11 @@ class Register {
   std::shared_ptr<Parameters> build(std::string const &value);
 
   /// Get types
-  std::unordered_map<TypeName, std::shared_ptr<Type>> &getTypes() { 
+  std::unordered_map<Typename, std::shared_ptr<Type>> &getTypes() { 
     return _types;
   };
 
-  std::unordered_map<TypeName, std::shared_ptr<Task>> &getTasks() { 
+  std::unordered_map<Typename, std::shared_ptr<Task>> &getTasks() { 
     return _tasks;
   };
 
