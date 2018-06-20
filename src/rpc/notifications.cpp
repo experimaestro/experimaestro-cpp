@@ -27,6 +27,7 @@ struct Progress {
 
   std::atomic<ProgressType> progress;
   ProgressType last_progress = 0;
+  ProgressType last_logging_progress = 0;
 
   // TCP-IP related parameters
   std::string hostname;
@@ -105,25 +106,16 @@ struct Progress {
 
       // Wait for a maximum of time_threshold - or if enough progress has been made
       cv.wait_for(lk, time_threshold,  [&] {
-        return last_progress - progress > threshold;
+        return progress - last_progress > threshold;
       });
 
       // just outputs
-      bool b = last_progress - progress > threshold;
-      bool logging_b = last_progress - progress > logging_threshold;
+      bool b = progress - last_progress > threshold;
+      bool logging_b = progress - last_progress > logging_threshold;
       last_progress = progress;
 
       float value = float(last_progress) / MAX_PROGRESS;
-      if (hostname.empty()) {
-        LOGGER->info("Progress: {} %", value * 100);
-        return;
-      } else {
-        if (logging_b) {
-          LOGGER->info("Progress: {} %", value * 100); 
-        } else {
-          LOGGER->debug("Notify progress {} [{}]...", value * 100, b);
-        }
-      }
+      LOGGER->debug("Notify progress {} [{}]...", value * 100, b);
 
       notify(value);
 
@@ -158,19 +150,19 @@ struct Progress {
     // Sets the new progress
     progress = ProgressType(MAX_PROGRESS * percentage);
 
-    // Just log if no host to notify
-    if (hostname.empty()) {
-      if (last_progress - progress > logging_threshold) {
-        last_progress = progress;
-        float value = float(last_progress) / MAX_PROGRESS;
-        LOGGER->info("Progress: {:1f} %", value * 100); 
-      }
-    }
 
     // Notify the notifier thread
-    else if (last_progress - progress > threshold) {
+    if (progress - last_progress > threshold) {
       cv.notify_all();
     }
+
+    // Just log if no host to notify
+    if ((progress - last_logging_progress) > logging_threshold) {
+      last_logging_progress = progress;
+      float value = float(progress) / MAX_PROGRESS;
+      LOGGER->info("Progress: {:.2f} %", value * 100); 
+    }
+
   }
 };
 }
