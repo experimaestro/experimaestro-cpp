@@ -19,6 +19,14 @@ DEFINE_LOGGER("xpm.workspace");
 
 namespace xpm {
 
+std::ostream & operator<<(std::ostream &out, DependencyStatus s) {
+  switch(s) {
+    case DependencyStatus::OK: return out << "OK";
+    case DependencyStatus::WAIT: return out << "WAIT";
+    case DependencyStatus::FAIL: return out << "FAIL";
+  }
+  return out << "?";
+}
 
 PathTransformer EXIT_CODE_PATH = [](const Path &path) { return path.withExtension("code"); };
 PathTransformer LOCK_PATH = [](const Path &path) { return path.withExtension("lock"); };
@@ -28,7 +36,8 @@ PathTransformer PID_PATH = [](const Path &path) { return path.withExtension("pid
 
 // --- Dependency
 
-Dependency::Dependency(ptr<Resource> const & origin) : _origin(origin), _oldSatisfied(false) {}
+Dependency::Dependency(ptr<Resource> const & origin) : 
+  _origin(origin), _oldStatus(DependencyStatus::WAIT) {}
 Dependency::~Dependency() {
   if (_origin) {
     _origin->removeDependent(shared_from_this());
@@ -43,10 +52,10 @@ void Dependency::target(ptr<Resource> const &resource) { _target = resource; }
 
 void Dependency::check() {
   std::unique_lock<std::mutex> lock(_mutex);
-  bool s = satisfied();
-  LOGGER->info("Dependency {} is {}satisfied (was: {})", *this, s ? "" : "not ", _oldSatisfied);
-  if (s != _oldSatisfied) {
-    _target->dependencyChanged(*this, s);
+  DependencyStatus s = status();
+  LOGGER->info("Dependency {} is {} (was: {})", *this, s, _oldStatus);
+  if (s != _oldStatus) {
+    _target->dependencyChanged(*this, _oldStatus, s);
   }
 }
 
@@ -77,7 +86,7 @@ void Resource::removeDependent(ptr<Dependency> const & dependency) {
 
 
 void Resource::dependencyChanged(Dependency &dependency,
-                                    bool satisfied) {
+                                DependencyStatus from, DependencyStatus to) {
   throw assertion_error(
       "A resource cannot handle a change in dependency directly");
 }
@@ -98,8 +107,9 @@ public:
   CounterDependency(ptr<CounterToken> const & counter, CounterToken::Value value) 
     : Dependency(counter), _counter(counter), _value(value) {}
 
-  virtual bool satisfied() {
-    return _counter->_usedTokens + _value <= _counter->_limit;
+  virtual DependencyStatus status() const override {
+    return _counter->_usedTokens + _value <= _counter->_limit ? 
+      DependencyStatus::OK : DependencyStatus::WAIT;
   }
 private:
   ptr<CounterToken> _counter;
@@ -120,14 +130,19 @@ class JobDependency : public Dependency {
   ptr<Job> job;
 public:
   JobDependency(ptr<Job> const & job);
-  virtual bool satisfied() override;  
+  virtual DependencyStatus status() const override;  
 };
 
 JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {
 }
 
-bool JobDependency::satisfied() {
-  return job->state() == JobState::DONE;
+DependencyStatus JobDependency::status() const {
+  switch(job->state()) {
+    case JobState::ERROR: return DependencyStatus::FAIL;
+    case JobState::DONE: return DependencyStatus::OK;
+    default: return DependencyStatus::WAIT;
+  }
+  return DependencyStatus::WAIT;
 }
 
 
@@ -168,10 +183,17 @@ JobState Job::state() const { return _state; }
 
 bool Job::ready() const { return _unsatisfied == 0; }
 
-void Job::dependencyChanged(Dependency &dependency, bool satisfied) {
+void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, DependencyStatus to) {
+  static auto value = [](DependencyStatus s) { return s == DependencyStatus::OK ? 1 : -1; };
   {
     std::unique_lock<std::mutex> lock(_mutex);
-    _unsatisfied += satisfied ? -1 : 1;
+    _unsatisfied -= value(to) - value(from);
+  }
+
+  if (to == DependencyStatus::FAIL) {
+    // Job completed
+    jobCompleted();
+    return;
   }
 
   if (_unsatisfied == 0) {

@@ -31,6 +31,15 @@ class CounterDependency;
 
 typedef std::uint64_t ResourceId;
 
+enum class DependencyStatus {
+  /// Dependency might be satisfied in the future 
+  WAIT,
+  /// Dependency is satisfied
+  OK,
+  /// Dependency won't be satifisfied (parent job failed)
+  FAIL
+};
+
 /**
  * A dependency between resources
  */
@@ -42,8 +51,8 @@ public:
   /// Sets the dependent
   void target(std::shared_ptr<Resource> const & resource);
 
-  /// Is the dependency satisfied?
-  virtual bool satisfied() = 0;
+  /// Get the current dependency status
+  virtual DependencyStatus status() const = 0;
 
   /// Check the status and update the dependent if needed
   void check();
@@ -60,7 +69,7 @@ private:
   std::shared_ptr<Resource> _target;
 
   /// Old satisfaction status
-  bool _oldSatisfied;
+  DependencyStatus _oldStatus;
   
   /// Resource mutex
   std::mutex _mutex;
@@ -104,7 +113,8 @@ protected:
   ResourceId _resourceId;
 
   /// Signals a change in a dependency
-  virtual void dependencyChanged(Dependency & dependency, bool satisfied);
+  virtual void dependencyChanged(Dependency & dependency, 
+    DependencyStatus from, DependencyStatus to);
 
   friend class Dependency;
 
@@ -228,7 +238,8 @@ protected:
   JobState state(JobState newState);
 
   /// Signals a dependency change
-  virtual void dependencyChanged(Dependency & dependency, bool satisfied) override;
+  virtual void dependencyChanged(Dependency & dependency, 
+    DependencyStatus from, DependencyStatus to) override;
 
   /// Called when the job is completed
   void jobCompleted();
