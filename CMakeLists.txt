@@ -129,7 +129,7 @@ foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
     target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ext/efsw/include)
     set_target_properties(${xpmlib} PROPERTIES 
-        CXX_STANDARD 11
+        CXX_STANDARD 14
         OUTPUT_NAME experimaestro)
 
 endforeach()

@@ -511,37 +511,23 @@ void Parameters::configure(Workspace & ws) {
 }
 
 ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
-  // Don't create an object for values
-  if (_value.defined()) {
-    if (_value.scalarType() == ValueType::ARRAY) {
-      LOGGER->debug("Creating objects for array {}", _type->name());
-      for(size_t i = 0; i < _value.size(); ++i) {
-        _value[i]->createObjects(xpmRegister);
-      }    
-    }
-  
-    return nullptr;
-  }
-
-  // Create for descendants
-  for(auto &kv: _content) {
-    kv.second->createObjects(xpmRegister);
-  }
-
+  // Create sub-objects
+  foreachChild([&](ptr<Parameters> const &p) { p->createObjects(xpmRegister); });
 
   // Create for ourselves
-  _object = xpmRegister.createObject(shared_from_this());
-  if (_object) {
-    // Set the values
-    for(auto &kv: _content) {
-      LOGGER->debug("Setting value {}", kv.first);
-      setObjectValue(kv.first, kv.second);
+  if (!_value.defined()) {
+    _object = xpmRegister.createObject(shared_from_this());
+    if (_object) {
+      // Set the values
+      for(auto &kv: _content) {
+        LOGGER->debug("Setting value {}", kv.first);
+        setObjectValue(kv.first, kv.second);
+      }
     }
+
+    // Perform further initialization
+    _object->init();
   }
-
-  // Perform further initialization
-  _object->init();
-
   return _object;
 }
 
@@ -554,16 +540,7 @@ void Parameters::addDependencies(Job & job,  bool skipThis) {
     LOGGER->info("Found dependency resource {}", _job);
     job.addDependency(_job->createDependency());
   } else {
-    // Search in content
-    for (auto &entry: _content) {
-      entry.second->addDependencies(job, false);
-    }
-    // Search in array
-    if (_value.scalarType() == ValueType::ARRAY) {
-      for(size_t i = 0, N = _value.size(); i < N; ++i) {
-        _value[i]->addDependencies(job, false);
-      }
-    }
+    foreachChild([&](auto p) { p->addDependencies(job, false); });
   }
 }
 
@@ -578,7 +555,7 @@ bool Parameters::equals(Parameters const &other) const {
   NOT_IMPLEMENTED();
 }
 
-void Parameters::generate(GeneratorContext & context) {
+void Parameters::generate(GeneratorContext &context) {
   if (auto A = context.enter(this)) {
     // Already generated
     if (get(Flag::GENERATED)) {
@@ -593,16 +570,21 @@ void Parameters::generate(GeneratorContext & context) {
 
     // (2) Generate values
     LOGGER->debug("Generating values...");
+
+    // ... generate children
+    foreachChild([&](auto p) { p->generate(context); });
+
+    // ... for missing arguments
     for (auto type = _type; type; type = type->parentType()) {
-      for (auto entry: type->arguments()) {
+      for (auto entry : type->arguments()) {
         Argument &argument = *entry.second;
         auto generator = argument.generator();
 
         if (!hasKey(argument.name())) {
           if (generator) {
-          auto generated = generator->generate(context);
-          LOGGER->debug("Generating value for {}", argument.name());
-          set(argument.name(), generated);
+            auto generated = generator->generate(context);
+            LOGGER->debug("Generating value for {}", argument.name());
+            set(argument.name(), generated);
           } else if (argument.defaultValue()) {
             LOGGER->debug("Setting default value for {}...", argument.name());
             auto value = argument.defaultValue()->copy();
@@ -616,14 +598,11 @@ void Parameters::generate(GeneratorContext & context) {
             value->set(Flag::DEFAULT, true);
             set(argument.name(), value);
           }
-        } else {
-          // Generate sub-structures
-          _content[argument.name()]->generate(context);
+        }
       }
     }
-    
-      set(Flag::GENERATED, true);
-    }
+
+    set(Flag::GENERATED, true);
   }
 }
 
@@ -700,6 +679,21 @@ void Parameters::set(Parameters::Flag flag, bool value) {
 
 bool Parameters::get(Parameters::Flag flag) const {
   return ((Flags)flag) & _flags;
+}
+
+void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
+  if (_value.defined()) {
+    if (_value.scalarType() == ValueType::ARRAY) {
+      for(size_t i = 0; i < _value.size(); ++i) {
+        f(_value[i]);
+      }    
+    }
+  }
+
+  for(auto &kv: _content) {
+    f(kv.second);
+  }
+
 }
 
 

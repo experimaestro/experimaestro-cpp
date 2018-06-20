@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 namespace xpm { 
   // Forward declarations
@@ -344,8 +345,6 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
   /// Returns a path
   Path asPath() const;
 
-  /// 
-
 private:
   /** Sets a value for the associated object (if any)  */
   void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
@@ -355,6 +354,9 @@ private:
 
   /// Get flag
   bool get(Flag flag) const;
+
+  /// For each child callback
+  void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f);
 
   /**
    * Resource identifier.

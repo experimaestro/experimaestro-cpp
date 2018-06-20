@@ -281,7 +281,7 @@ public:
     return -1;
   }
 
-  virtual void eof() {
+  virtual void eof() override {
     stdin = nullptr;
   }
 
