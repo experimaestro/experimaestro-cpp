@@ -184,7 +184,7 @@ JobState Job::state() const { return _state; }
 bool Job::ready() const { return _unsatisfied == 0; }
 
 void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, DependencyStatus to) {
-  static auto value = [](DependencyStatus s) { return s == DependencyStatus::OK ? 1 : -1; };
+  static auto value = [](DependencyStatus s) { return s == DependencyStatus::OK ? 1 : 0; };
   {
     std::unique_lock<std::mutex> lock(_mutex);
     _unsatisfied -= value(to) - value(from);
@@ -470,7 +470,7 @@ void Workspace::waitUntilTaskCompleted() {
     }
 
     if (count > 0) {
-      LOGGER->info("Waiting for {} jobs to complete", count);
+      LOGGER->info("Waiting for {} job(s) to complete", count);
       JOB_CHANGED.wait(lock);
     }
   } while (count > 0 && !exitSignal);
