@@ -43,7 +43,7 @@ enum class DependencyStatus {
 /**
  * A dependency between resources
  */
-class Dependency : NOSWIG(std::enable_shared_from_this<Dependency>,) public Outputable {
+class Dependency : NOSWIG(public std::enable_shared_from_this<Dependency>,) public Outputable {
 public:
   Dependency(std::shared_ptr<Resource> const & origin);
   virtual ~Dependency();

@@ -130,6 +130,7 @@ class JobDependency : public Dependency {
   ptr<Job> job;
 public:
   JobDependency(ptr<Job> const & job);
+  virtual ~JobDependency() {}
   virtual DependencyStatus status() const override;  
 };
 
