@@ -327,6 +327,8 @@ void AbstractCommand::output(CommandContext & context, std::ostream & out) const
 
 // --- Command
 
+Command::~Command() {}
+
 void Command::add(ptr<AbstractCommandComponent> const & component) {
   components.push_back(component);
 }
@@ -389,8 +391,9 @@ nlohmann::json Command::toJson() const {
 // --- Command line
 
 CommandLine::CommandLine() {
-
 }
+
+CommandLine::~CommandLine() {}
 
 void CommandLine::add(ptr<Command> const & command) {
   commands.push_back(command);

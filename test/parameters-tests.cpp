@@ -11,7 +11,7 @@ using namespace xpm;
 
 struct TestType {
   std::shared_ptr<Type> type;
-  TestType() : type(std::make_shared<Type>(TypeName("test"))) {
+  TestType() : type(std::make_shared<Type>(Typename("test"))) {
     auto a = std::make_shared<Argument>("a");
     a->defaultValue(mkptr<Parameters>(Value(1l)));
     type->addArgument(a);

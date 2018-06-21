@@ -113,6 +113,7 @@ protected:
 class Command : public AbstractCommand {
   std::vector<std::shared_ptr<AbstractCommandComponent>> components;
  public:
+  virtual ~Command();
   void add(std::shared_ptr<AbstractCommandComponent> const & component);
   void output(CommandContext & context, std::ostream & out) const override;
   
@@ -130,6 +131,7 @@ class CommandLine : public AbstractCommand {
   std::vector<std::shared_ptr<AbstractCommand>> commands;
  public:
   CommandLine();
+  ~CommandLine();
 
   void add(std::shared_ptr<Command> const & command);
   nlohmann::json toJson() const override;

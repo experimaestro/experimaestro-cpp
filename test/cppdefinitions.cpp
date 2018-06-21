@@ -66,7 +66,7 @@ XPM_SIMPLETASK("task.b1", TypeB1);
 
 TEST(CppInterface, missingArgument) {
   auto o = currentRegister()->build(R"({ "$type": "TypeA" })");
-  ASSERT_THROW(o->validate(), xpm::argument_error);
+  ASSERT_THROW(o->validate(), xpm::parameter_error);
 }
 
 TEST(CppInterface, basic) {
