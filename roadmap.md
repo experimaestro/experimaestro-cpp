@@ -12,13 +12,11 @@ The goal is to be able to launch experiments without running a server first.
 - [x] Implement launchers (`Launcher`, `LocalhostLauncher`)
 - [x] Implement scheduler (`Scheduler`): just monitors
 - [ ] Implement database to store information
+- [ ] Add tags
 
 ### Medium term: external
 
-- [ ] SSH file system (`SSHConnector`, `SSHProcessBuilder`)
+- [x] SSH file system (`SSHConnector`, `SSHProcessBuilder`)
 - [ ] OAR launcher (OARLauncher)
-
-### Longer term: web services
-
+- [ ] Basic RPC server for global settings (e.g. token)
 - [ ] Implement basic tools to manage
-- [ ] Implement basic websocket / web server
