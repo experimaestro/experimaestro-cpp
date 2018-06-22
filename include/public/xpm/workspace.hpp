@@ -272,6 +272,7 @@ public:
   CommandLineJob(Path const & locator, 
     std::shared_ptr<Launcher> const & launcher,
     std::shared_ptr<CommandLine> const & command);
+  virtual ~CommandLineJob() = default;
   virtual void run() override;
   virtual void init() override;
   /// Set the parameters
