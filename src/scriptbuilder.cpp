@@ -77,7 +77,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   // Use pipefail for fine grained analysis of errors in commands
   out << "set -o pipefail" << std::endl << std::endl;
 
-  out << "echo $? > \"" << protect_quoted(connector.resolve(pidFile)) << "\""
+  out << "echo $$ > \"" << protect_quoted(connector.resolve(pidFile)) << "\""
       << std::endl
       << std::endl;
 
