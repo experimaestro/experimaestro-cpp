@@ -434,7 +434,7 @@ class AbstractArgument:
 class TypeArgument(AbstractArgument):
     """Defines an argument for an experimaestro type"""
     def __init__(self, name, type=None, default=None, required=None,
-                 help=None, ignore=False):
+                 help=None, ignored=False):
         xpmtype = register.getType(type)
         logger.debug("Registering type argument %s [%s -> %s]", name, type,
                       xpmtype)
@@ -442,7 +442,7 @@ class TypeArgument(AbstractArgument):
         if default is not None and required is not None and required:
             raise Exception("Argument is required but default value is given")
 
-        self.argument.ignore = ignore
+        self.argument.ignored = ignored
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:

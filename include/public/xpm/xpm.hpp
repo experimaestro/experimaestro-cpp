@@ -459,8 +459,8 @@ class Argument {
   Argument &required(bool required);
   bool required() const;
 
-  Argument &ignore(bool required);
-  bool ignore() const;
+  Argument &ignored(bool required);
+  bool ignored() const;
 
   Argument &defaultValue(std::shared_ptr<Parameters> const &defaultValue);
   std::shared_ptr<Parameters> defaultValue() const;
@@ -490,7 +490,7 @@ class Argument {
   bool _required;
 
   /// Ignore
-  bool _ignore;
+  bool _ignored;
 
   /// Default value
   std::shared_ptr<Parameters> _defaultValue;

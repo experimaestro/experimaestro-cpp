@@ -157,7 +157,7 @@ struct BaseCppTypeBuilder {
   }
 
   Self &ignore(bool flag) {
-    _argument->ignore(flag);
+    _argument->ignored(flag);
     return dynamic_cast<Self&>(*this);
   }
 

@@ -131,7 +131,7 @@ class CommandLine : public AbstractCommand {
   std::vector<std::shared_ptr<AbstractCommand>> commands;
  public:
   CommandLine();
-  ~CommandLine();
+  virtual ~CommandLine();
 
   void add(std::shared_ptr<Command> const & command);
   nlohmann::json toJson() const override;

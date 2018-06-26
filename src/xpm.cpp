@@ -404,7 +404,7 @@ ptr<Parameters> Parameters::set(const std::string &key, ptr<Parameters> const &v
       LOGGER->debug("Value is default");
       value->set(Flag::DEFAULT, true);
     }
-    if (argument.ignore()) {
+    if (argument.ignored()) {
       value->set(Flag::IGNORE, true);
     }
   }
@@ -589,7 +589,7 @@ void Parameters::generate(GeneratorContext &context) {
             LOGGER->debug("Setting default value for {}...", argument.name());
             auto value = argument.defaultValue()->copy();
             value->set(Flag::DEFAULT, true);
-            value->set(Flag::IGNORE, argument.ignore());
+            value->set(Flag::IGNORE, argument.ignored());
             set(argument.name(), value);
           } else if (!argument.required()) {
             // Set value null
@@ -753,7 +753,7 @@ Path Parameters::asPath() const {
 // ---
 
 
-Argument::Argument(std::string const &name) : _name(name), _required(true), _generator(nullptr) {
+Argument::Argument(std::string const &name) : _name(name), _required(true), _ignored(false), _generator(nullptr) {
 }
 
 Argument::Argument() : Argument("") {
@@ -774,10 +774,10 @@ Argument &Argument::required(bool required) {
   return *this;
 }
 
-bool Argument::ignore() const { return _ignore; }
+bool Argument::ignored() const { return _ignored; }
 
-Argument &Argument::ignore(bool ignore) {
-  _ignore = ignore;
+Argument &Argument::ignored(bool ignored) {
+  _ignored = ignored;
   return *this;
 }
 

@@ -22,8 +22,8 @@
 %ignore xpm::Argument::required;
 
 // Attributes
-%attribute(xpm::Argument, bool, ignore, ignore, ignore);
-%ignore xpm::Argument::ignore;
+%attribute(xpm::Argument, bool, ignored, ignored, ignored);
+%ignore xpm::Argument::ignored;
 
 /*%attributeval(xpm::Argument, std::shared_ptr<xpm::Object>, Object, defaultValue, defaultValue)
 %ignore xpm::Argument::defaultValue;
