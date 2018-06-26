@@ -56,7 +56,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
   sv->job(job);
 
   workspace->submit(job);
-  LOGGER->info("Submitting job {} (id {}) {}", job->locator(), job->getId(), sv->toJsonString());
+  LOGGER->debug("Submitting job {} (id {}) {}", job->locator(), job->getId(), sv->toJsonString());
 }
 
 void Task::commandline(ptr<CommandLine> const & command) {
