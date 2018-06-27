@@ -117,16 +117,9 @@ void Object::init() {
 
 Parameters::~Parameters() {
 }
-Parameters::Parameters(Value const &v) : _flags(0) {
-  _value = v;
-  _type = v.type();
-} 
+
 
 Parameters::Parameters() : _flags(0), _type(AnyType) {
-}
-
-Parameters::Parameters(std::map<std::string, ptr<Parameters>> &map)
-    : _flags(0), _content(map), _type(AnyType) {
 }
 
 class DummyJob : public Job {
@@ -137,12 +130,15 @@ public:
   virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
 };
 
-Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue) 
-  : _flags(0), _type(AnyType) {
+std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::json const &jsonValue) {
+
   switch (jsonValue.type()) {
 
     // --- Object
     case nlohmann::json::value_t::object: {
+      std::shared_ptr<Parameters> p;
+      std::shared_ptr<Type> _type;
+
       // (1) First, get the type of the object
       if (jsonValue.count(KEY_TYPE) > 0) {
         auto typeName = Typename((std::string const &) jsonValue[KEY_TYPE]);
@@ -158,124 +154,72 @@ Parameters::Parameters(Register &xpmRegister, nlohmann::json const &jsonValue)
       // (2) Fill from JSON
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         if (it.key() == KEY_VALUE) {
-            // Infer type from value
-            _value = Value(xpmRegister, it.value());
-            if (!_value.null()) {
-              auto vtype = _value.type();
-              if (!_type->accepts(vtype)) {
-                try {
-                  LOGGER->debug("Trying to cast {} to {}", vtype->name().toString(), _type->name().toString());
-                  _value = _value.cast(_type);
-                  vtype = _value.type();
-                } catch(...) {
-                  throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
-                    vtype->name().toString(), _type->name().toString()));
-                }
+          if (p) throw argument_error("Value cannot be something else");
+
+          // Infer type from value
+          auto value = Value(it.value());
+          ptr<Type> vtype;
+          if (!value.null()) {
+            vtype = value.type();
+            if (!_type->accepts(vtype)) {
+              try {
+                LOGGER->debug("Trying to cast {} to {}", vtype->name().toString(), _type->name().toString());
+                value = value.cast(_type);
+                vtype = value.type();
+              } catch(...) {
+                throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
+                  vtype->name().toString(), _type->name().toString()));
               }
-              _type = vtype;
             }
+          } else {
+            vtype = _type;
+          }
+          p = mkptr<ScalarParameters>(value);
+          p->_type = vtype;
+          
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
           job(mkptr<DummyJob>(it.value()));
         } else if (it.key() == KEY_TASK) {
-          _task = xpmRegister.getTask(it.value(), true);
+          if (!p) p = mkptr<MapParameters>();
+          p->_type = _type;
+          std::dynamic_pointer_cast<MapParameters>(p)->_task = xpmRegister.getTask(it.value(), true);
         } else {
-          set(it.key(), mkptr<Parameters>(xpmRegister, it.value()));
+          if (!p) p = mkptr<MapParameters>();
+          p->_type = _type;
+          std::dynamic_pointer_cast<MapParameters>(p)->set(it.key(), Parameters::create(xpmRegister, it.value()));
         }
       }
 
       LOGGER->debug("Got an object of type {}", _type ? _type->toString() : "?");
-      break;
+      return p ? p : mkptr<MapParameters>();
     }
 
-    default: {
-      _value = Value(xpmRegister, jsonValue);
-      _type = _value.type();
-    }
+    default: break;
   }
+    
+  return mkptr<ScalarParameters>(Value(jsonValue));
 }
 
 // Convert to JSON
-json Parameters::toJson() {
-  // No content
-  if (_content.empty() && !_task && !type() && !get(Flag::DEFAULT)) {
-    return nullptr;
-  }
-
-  // We have some values
-  json o = json::object();
-  for (auto const &entry: _content) {
-    o[entry.first] = entry.second->toJson();
-  }
-
+json Parameters::toJson() const {
+  nlohmann::json o = {};
+  
   if (_type) {
     o[KEY_TYPE] = _type->name().toString();
-  }
-
-  if (_task) {
-    o[KEY_TASK] = _task->identifier().toString();
-  }
-
-  if (_value.defined()) {
-    o[KEY_VALUE] = _value.toJson();
   }
 
   return o;
 }
 
-ptr<Parameters> Parameters::copy() {
-  auto sv = mkptr<Parameters>();
-  sv->_job = _job;
-  sv->_object = _object;
-  sv->_task = _task;
-  sv->_value = _value;
-  sv->_flags = _flags;
-  sv->_type = _type;
-  sv->_content =_content;
 
-  return sv;
-}
 
 
 std::string Parameters::toJsonString() {
   return toJson().dump();
 }
 
-void Digest::updateDigest(Parameters const & sv) {
-  updateDigest(sv.type()->name().toString());
-
-  updateDigest("task");
-  if (sv._task) {
-    updateDigest(sv._task->identifier().toString());
-  } else {
-    updateDigest(0);
-  }
-
-  if (sv.hasValue()) {
-    // If there is a value, ignore the rest
-    // of the structure
-    updateDigest(0);
-    sv._value.updateDigest(*this);
-  } else {
-    updateDigest(1);
-    for (auto &item: sv._content) {
-      auto const &key = item.first;
-
-      if (item.second->canIgnore()) {
-        // Remove keys that can be ignored (e.g. paths)
-        continue;
-      }
-
-      // Update digest with key
-      updateDigest(key);
-
-      // Update digest with *value digest* (this allows digest caching)
-      updateDigest(item.second->digest());
-    }
-  }
-
-}
 
 /// Internal digest function
 std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
@@ -284,121 +228,17 @@ std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
   return d.get();
 };
 
-ValueType Parameters::valueType() const {
-  return _value.scalarType();
-}
 
-
-nlohmann::json Parameters::valueAsJson() const {
-  return _value.toJson();
-}
-
-bool Parameters::hasValue() const {
-  return _value.defined();
-}
-
-bool Parameters::null() const {
-  return _value.null();
-}
-
-void Parameters::set(YAML::Node const &node) {
-  _value = Value::fromYAML(node);
-  _type = _value.type();
-}
-
-
-void Parameters::set(bool value) {
-  _value = Value(value);
-  _type = _value.type();
-}
-
-void Parameters::set(long value) {
-  _value = Value(value);
-  _type = _value.type();
-}
-
-void Parameters::set(std::string const & value, bool typeHint) {
-  if (typeHint) {
-    _value = Value::fromString(value, _type);
-  } else {
-    _value = Value(value);
-  }
-  _type = _value.type();
-}
-
-void Parameters::set(std::vector<std::shared_ptr<Parameters>> const & value) {
-  _value = Value(value);
-  _type = _value.type();
-}
-
-std::shared_ptr<Parameters> Parameters::operator[](size_t index) {
-  return _value[index];
-}
-
-
-size_t Parameters::size() const {
-  // Avoids throwing an exception (SWIG work-around)
-  if (_type->array())
-    return _value.size();
-  LOGGER->warn("Parameters value is not an array");
-  return 0;
-}
-
-void Parameters::push_back(std::shared_ptr<Parameters> const & parameters) {
-  _value.push_back(parameters);
-  _type = Type::lca(_type, parameters->type());
-}
 
 ptr<Type> Parameters::type() const {
   return _type;
 }
 
-bool Parameters::hasKey(std::string const &key) const {
-  return _content.find(key) != _content.end();
-}
-
-ptr<Parameters> Parameters::set(const std::string &key, ptr<Parameters> const &value) {
-  if (get(Flag::SEALED)) {
-    throw sealed_error();
-  }
-
-  if (RESTRICTED_KEYS.count(key) > 0)
-    throw argument_error("Cannot access directly to " + key);
-
-  auto it = _content.find(key);
-  _content[key] = value;
-
-  // Set default / ignore
-  auto itA = type()->arguments().find(key);
-  if (itA != type()->arguments().end()) {
-    auto & argument = *itA->second;
-    if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-      LOGGER->debug("Value is default");
-      value->set(Flag::DEFAULT, true);
-    }
-    if (argument.ignored()) {
-      value->set(Flag::IGNORE, true);
-    }
-  }
-
-  // And for the object
-  setObjectValue(key, value);
-
-  return it == _content.end() ? nullptr : it->second;
-}
-
-ptr<Parameters> Parameters::get(const std::string &key) {
-  auto value = _content.find(key);
-  if (value == _content.end()) throw std::out_of_range(key + " is not defined for object");
-  return value->second;
-}
 
 void Parameters::seal() {
   if (get(Flag::SEALED)) return;
 
-  for (auto &item: _content) {
-    item.second->seal();
-  }
+  foreachChild([](auto &child) { child->seal(); });
 
   set(Flag::SEALED, true);
 }
@@ -450,29 +290,9 @@ std::string Parameters::uniqueIdentifier() const {
   return s;
 }
 
-std::map<std::string, ptr<Parameters>> const &Parameters::content() {
-  return _content;
-}
-
 /** Get type */
 void Parameters::type(ptr<Type> const &type) {
   _type = type;
-}
-
-void Parameters::object(ptr<Object> const &object) {
-  _object = object;
-}
-
-ptr<Object> Parameters::object() {
-  return _object;
-}
-
-void Parameters::task(ptr<Task> const &task) {
-  _task = task;
-}
-
-ptr<Task> Parameters::task() {
-  return _task;
 }
 
 void Parameters::configure(Workspace & ws) {
@@ -486,21 +306,7 @@ ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
   // Create sub-objects
   foreachChild([&](ptr<Parameters> const &p) { p->createObjects(xpmRegister); });
 
-  // Create for ourselves
-  if (!_value.defined()) {
-    _object = xpmRegister.createObject(shared_from_this());
-    if (_object) {
-      // Set the values
-      for(auto &kv: _content) {
-        LOGGER->debug("Setting value {}", kv.first);
-        setObjectValue(kv.first, kv.second);
-      }
-    }
-
-    // Perform further initialization
-    _object->init();
-  }
-  return _object;
+  return nullptr;
 }
 
 void Parameters::addDependencies(Job & job,  bool skipThis) {
@@ -516,16 +322,7 @@ void Parameters::addDependencies(Job & job,  bool skipThis) {
   }
 }
 
-bool Parameters::equals(Parameters const &other) const {
-  if (_value.defined()) {
-    return _value.equals(other._value);
-  }
-
-  if (other._value.defined()) return false;
-
-  // TODO: implement for deeper structures
-  NOT_IMPLEMENTED();
-}
+void Parameters::_generate(GeneratorContext &context) {}
 
 void Parameters::generate(GeneratorContext &context) {
   if (auto A = context.enter(this)) {
@@ -540,106 +337,63 @@ void Parameters::generate(GeneratorContext &context) {
       throw exception("Cannot generate values within a sealed object");
     }
 
-    // (2) Generate values
-    LOGGER->debug("Generating values...");
-
     // ... generate children
     foreachChild([&](auto p) { p->generate(context); });
 
-    // ... for missing arguments
-    for (auto type = _type; type; type = type->parentType()) {
-      for (auto entry : type->arguments()) {
-        Argument &argument = *entry.second;
-        auto generator = argument.generator();
-
-        if (!hasKey(argument.name())) {
-          if (generator) {
-            auto generated = generator->generate(context);
-            LOGGER->debug("Generating value for {}", argument.name());
-            set(argument.name(), generated);
-          } else if (argument.defaultValue()) {
-            LOGGER->debug("Setting default value for {}...", argument.name());
-            auto value = argument.defaultValue()->copy();
-            value->set(Flag::DEFAULT, true);
-            value->set(Flag::IGNORE, argument.ignored());
-            set(argument.name(), value);
-          } else if (!argument.required()) {
-            // Set value null
-            LOGGER->debug("Setting null value for {}...", argument.name());
-            auto value = mkptr<Parameters>(Value::NONE);
-            value->set(Flag::DEFAULT, true);
-            set(argument.name(), value);
-          }
-        }
-      }
-    }
+    // and self
+    _generate(context);
 
     set(Flag::GENERATED, true);
   }
 }
 
-void Parameters::validate() {
+void Parameters::_validate() {
   if (get(Flag::VALIDATED)) return;
 
-  if (!get(Flag::SEALED)) set(Flag::VALIDATED, false);
+  if (auto this_ = dynamic_cast<ArrayParameters*>(this)) {
+   
+  } else if (auto this_ = dynamic_cast<MapParameters*>(this)) {
+    // Loop over the whole hierarchy
+    for (auto type = _type; type; type = type->parentType()) {
+      LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
 
-  // If array, validate the array
-  if (_value.scalarType() == ValueType::ARRAY) {
-    for(size_t i = 0, N = _value.size(); i < N; ++i) {
-      try {
-        _value[i]->validate();
-      } catch(parameter_error &e) {
-          throw e.addPath(fmt::format("[{}]", i));
-      }
-    }
-  }
+      // Loop over all the arguments
+      for (auto entry: type->arguments()) {
+        auto &argument = *entry.second;
+        LOGGER->debug("Looking at argument {}", argument.name());
 
-  // Loop over the whole hierarchy
-  for (auto type = _type; type; type = type->parentType()) {
-    LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
+        auto value = _map.count(argument.name()) ? get(argument.name()) : nullptr;
 
-    // Loop over all the arguments
-    for (auto entry: type->arguments()) {
-      auto &argument = *entry.second;
-      LOGGER->debug("Looking at argument {}", argument.name());
+        if (!value || value->null()) {
+          LOGGER->debug("No value provided for {}...", argument.name());
+          // No value provided, and no generator
+          if (argument.required()) {
+            throw parameter_error(
+                "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
+          }
+        } else {
+          // Sets the value
+          LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
 
-      auto value = _content.count(argument.name()) ? get(argument.name()) : nullptr;
+          // Check if the declared type corresponds to the value type
+          if (!entry.second->type()->accepts(value->type())) {
+            throw parameter_error(
+                "type is " + value->type()->toString() 
+                + ", but requested type was " + entry.second->type()->toString())
+              .addPath(argument.name());
+          }
 
-      if (!value || value->null()) {
-        LOGGER->debug("No value provided for {}...", argument.name());
-        // No value provided, and no generator
-        if (argument.required()) {
-          throw parameter_error(
-              "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-        }
-      } else {
-        // Sets the value
-        LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
-
-        // Check if the declared type corresponds to the value type
-        if (!entry.second->type()->accepts(value->type())) {
-          throw parameter_error(
-              "type is " + value->type()->toString() 
-              + ", but requested type was " + entry.second->type()->toString())
-            .addPath(argument.name());
-        }
-
-        LOGGER->debug("Validating {}...", argument.name());
-        try {
-          value->validate();
-        } catch(parameter_error &e) {
-          throw e.addPath(argument.name());
+          LOGGER->debug("Validating {}...", argument.name());
+          try {
+            value->validate();
+          } catch(parameter_error &e) {
+            throw e.addPath(argument.name());
+          }
         }
       }
-    }
+    } 
   }
   set(Flag::VALIDATED, true);
-}
-
-void Parameters::setObjectValue(std::string const &name, ptr<Parameters> const &value) {
-  if (_object) {
-    _object->setValue(name, value);
-  }
 }
 
 void Parameters::set(Parameters::Flag flag, bool value) {
@@ -653,71 +407,318 @@ bool Parameters::get(Parameters::Flag flag) const {
   return ((Flags)flag) & _flags;
 }
 
-void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
-  if (_value.defined()) {
-    if (_value.scalarType() == ValueType::ARRAY) {
-      for(size_t i = 0; i < _value.size(); ++i) {
-        f(_value[i]);
-      }    
+
+void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {}
+
+//
+// --- Array parameters
+//
+
+void ArrayParameters::updateDigest(Digest & digest) const {
+  digest.updateDigest(ParametersTypes::ARRAY);
+}
+
+ // If array, validate the array
+void ArrayParameters::_validate() {
+  for(size_t i = 0, N = size(); i < N; ++i) {
+    try {
+      (*this)[i]->validate();
+    } catch(parameter_error &e) {
+        throw e.addPath(fmt::format("[{}]", i));
+    }
+  }
+}
+
+
+void ArrayParameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
+  for(auto p: _array) {
+    f(p);
+  }
+}
+
+std::shared_ptr<Parameters> ArrayParameters::operator[](size_t index) {
+  return _array[index];
+}
+
+
+size_t ArrayParameters::size() const {
+  return _array.size();
+}
+
+void ArrayParameters::push_back(std::shared_ptr<Parameters> const & parameters) {
+  _array.push_back(parameters);
+  _type = Type::lca(_type, parameters->type());
+}
+
+bool ArrayParameters::equals(Parameters const & other) const {
+  auto other_ = dynamic_cast<ArrayParameters const *>(&other);
+  if (!other_) return false;
+
+  if (_array.size() != other_->_array.size()) 
+    return false;
+
+  for(size_t i = 0; i < size(); ++i) {
+    if (!_array[i]->equals(*other_->_array[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void ArrayParameters::outputJson(std::ostream &out, CommandContext & context) const {
+  out << "{\"" << xpm::KEY_TYPE << "\":\"" << type()->name().toString() << "\",\""
+      << xpm::KEY_VALUE << "\": [";
+  for(size_t i = 0; i < size(); ++i) {
+    if (i > 0) out << ", ";
+    fill(context, out, (*conf)[i]);
+  }
+  out << "]}";
+}
+
+nlohmann::json ArrayParameters::toJson() const {
+  auto j = nlohmann::json::array();
+  for(auto p: _array) {
+    j.push_back(p->toJson());
+  }
+  return j;
+}
+
+std::shared_ptr<Parameters> ArrayParameters::copy() {
+  auto sv = mkptr<ArrayParameters>();
+  for(auto p: _array) {
+    sv->_array.push_back(p->copy());
+  }
+  return sv;
+}
+
+//
+// --- Map parameters
+//
+
+ptr<Parameters> MapParameters::copy() {
+  auto sv = mkptr<MapParameters>();
+  sv->_job = _job;
+  sv->_object = _object;
+  sv->_task = _task;
+  sv->_flags = _flags;
+  sv->_type = _type;
+  sv->_map =_map;
+
+  return sv;
+}
+
+  
+ptr<Parameters> MapParameters::get(const std::string &key) {
+  auto value = _map.find(key);
+  if (value == _map.end()) throw std::out_of_range(key + " is not defined for object");
+  return value->second;
+}
+
+void MapParameters::_generate(GeneratorContext &context) {
+  // ... for missing arguments
+  for (auto type = _type; type; type = type->parentType()) {
+    for (auto entry : type->arguments()) {
+      Argument &argument = *entry.second;
+      auto generator = argument.generator();
+
+      if (!hasKey(argument.name())) {
+        if (generator) {
+          auto generated = generator->generate(context);
+          LOGGER->debug("Generating value for {}", argument.name());
+          set(argument.name(), generated);
+        } else if (argument.defaultValue()) {
+          LOGGER->debug("Setting default value for {}...", argument.name());
+          auto value = argument.defaultValue()->copy();
+          value->set(Flag::DEFAULT, true);
+          value->set(Flag::IGNORE, argument.ignored());
+          set(argument.name(), value);
+        } else if (!argument.required()) {
+          // Set value null
+          LOGGER->debug("Setting null value for {}...", argument.name());
+          auto value = mkptr<Parameters>(Value::NONE);
+          value->set(Flag::DEFAULT, true);
+          set(argument.name(), value);
+        }
+      }
+    }
+  }
+}
+
+
+void MapParameters::outputJson(std::ostream &out, CommandContext & context) const {
+  out << "{";
+  bool first = true;
+
+  auto comma = [&first,&out] {        
+    if (first) first = false;
+    else out << ',';
+  };
+
+  if (type()) {
+    out << "\"" << KEY_TYPE << "\": \"" << type()->name() << "\"";
+    first = false;
+  }
+
+  if (job()) {
+    comma();
+    out << "\"$job\": " <<  job()->toJson() << std::endl;
+  }
+
+  for (auto type = type(); type; type = type->parentType()) {
+    for (auto entry: type->arguments()) {
+      Argument &argument = *entry.second;
+      comma();
+      out << "\"" << entry.first << "\":";
+      
+      if (hasKey(argument.name())) {
+        fill(context, out, get(argument.name()));
+      } else {
+        out << "null";
+      }
     }
   }
 
-  for(auto &kv: _content) {
-    f(kv.second);
+  out << "}"; 
+}
+    
+
+nlohmann::json MapParameters::toJson() const {
+    // No content
+    if (_map.empty() && !_task && !type() && !get(Flag::DEFAULT)) {
+        return nullptr;
+    }
+    
+    // We have some values
+    json o = json::object();
+    for (auto const &entry: _map) {
+        o[entry.first] = entry.second->toJson();
+    }
+    
+    if (_type) {
+        o[KEY_TYPE] = _type->name().toString();
+    }
+    
+    if (_task) {
+        o[KEY_TASK] = _task->identifier().toString();
+    }
+    
+    return o;
+}
+  
+void MapParameters::updateDigest(Digest & sv) const {
+  digest.updateDigest(type()->name().toString());
+
+  if (_task) {
+    digest.updateDigest(_task->identifier().toString());
+  } else {
+    digest.updateDigest(0);
+  }
+
+  for (auto &item: _map) {
+    auto const &key = item.first;
+
+    if (item.second->canIgnore()) {
+      // Remove keys that can be ignored (e.g. paths)
+      continue;
+    }
+
+    // Update digest with key
+    digest.updateDigest(key);
+
+    // Update digest with *value digest* (this allows digest caching)
+    digest.updateDigest(item.second->digest());
   }
 
 }
 
+std::shared_ptr<Object> MapParameters::createObjects(xpm::Register &xpmRegister) {
+  _object = xpmRegister.createObject(shared_from_this());
+  if (_object) {
+    // Set the values
+    for(auto &kv: _map) {
+      LOGGER->debug("Setting value {}", kv.first);
+      setObjectValue(kv.first, kv.second);
+    }
+  }
+  
+  // Perform further initialization
+  _object->init();
+  return _object;
+}
 
-std::shared_ptr<Job> const & Parameters::job() const { 
+
+void MapParameters::setObjectValue(std::string const &name, ptr<Parameters> const &value) {
+  if (_object) {
+    _object->setValue(name, value);
+  }
+}
+
+void MapParameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
+  for(auto &kv: _map) {
+    f(kv.second);
+  }
+}
+
+std::shared_ptr<Job> const & MapParameters::job() const { 
   return _job; 
 }
 
-void Parameters::job( std::shared_ptr<Job> const & _job) { 
+void MapParameters::job( std::shared_ptr<Job> const & _job) { 
   this->_job = _job; 
 }
 
-
-
-/// Returns the string
-std::string Parameters::asString() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asString();
+bool MapParameters::hasKey(std::string const &key) const {
+  return _map.find(key) != _map.end();
 }
 
-/// Returns the string
-bool Parameters::asBoolean() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asBoolean();
+
+void MapParameters::object(ptr<Object> const &object) {
+  _object = object;
 }
 
-/// Returns an integer
-long Parameters::asInteger() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asInteger();
+ptr<Object> MapParameters::object() {
+  return _object;
 }
 
-/// Returns an integer
-double Parameters::asReal() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asReal();
+void MapParameters::task(ptr<Task> const &task) {
+  _task = task;
 }
 
-/// Returns a path
-Path Parameters::asPath() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asPath();
+ptr<Task> MapParameters::task() {
+  return _task;
 }
+
+
+ptr<Parameters> MapParameters::set(const std::string &key, ptr<Parameters> const &value) {
+  if (get(Flag::SEALED)) {
+    throw sealed_error();
+  }
+
+  if (RESTRICTED_KEYS.count(key) > 0)
+    throw argument_error("Cannot access directly to " + key);
+
+  auto it = _map.find(key);
+  _map[key] = value;
+
+  // Set default / ignore
+  auto itA = type()->arguments().find(key);
+  if (itA != type()->arguments().end()) {
+    auto & argument = *itA->second;
+    if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
+      LOGGER->debug("Value is default");
+      value->set(Flag::DEFAULT, true);
+    }
+    if (argument.ignored()) {
+      value->set(Flag::IGNORE, true);
+    }
+  }
+
+  // And for the object
+  setObjectValue(key, value);
+
+  return it == _map.end() ? nullptr : it->second;
+}
+
 
 
 // ---

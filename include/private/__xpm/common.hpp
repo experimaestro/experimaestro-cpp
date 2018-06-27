@@ -54,8 +54,6 @@ struct Digest {
   }
 
 
-  void updateDigest(Parameters const &value);
-
   inline std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
     std::array<unsigned char, SHA_DIGEST_LENGTH> md;
     if (!SHA1_Final(md.data(), &context)) {

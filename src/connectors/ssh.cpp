@@ -195,7 +195,7 @@ public:
   SSHProcess(ProcessBuilder &builder, ptr<SSHChannel> const & channel) : channel(channel) {
     auto readloop = [this](PipeFunction f, int is_stderr) {
       std::array<char, 256> buffer;
-      ssize_t nbytes;
+      //ssize_t nbytes;
       while (true) {
         std::lock_guard<std::mutex> _lock(this->channel->session->mutex);
         auto nbytes = ssh_channel_read_timeout(*this->channel, buffer.data(), buffer.size(), is_stderr, 100);

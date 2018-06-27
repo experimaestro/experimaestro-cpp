@@ -48,18 +48,17 @@ template <typename T> struct ArgumentHolder {
   virtual void setValue(T &self, xpm::Parameters::Ptr const &value) = 0;
 };
 
-inline void assignValue(Parameters::Ptr const &sv, std::string
-&s) {
-  s = sv->asString();
+inline void assignValue(Parameters::Ptr const &sv, std::string &s) {
+    s = std::dynamic_pointer_cast<ScalarParameters>(sv)->asString();
 }
 inline void assignValue(Parameters::Ptr const &sv, int &x) {
-  x = sv->asInteger();
+  x = std::dynamic_pointer_cast<ScalarParameters>(sv)->asInteger();
 }
 inline void assignValue(Parameters::Ptr const &sv, long &x) {
-  x = sv->asInteger();
+  x = std::dynamic_pointer_cast<ScalarParameters>(sv)->asInteger();
 }
 inline void assignValue(Parameters::Ptr const &sv, Path &s) {
-  s = Path(sv->asString());
+  s = std::dynamic_pointer_cast<ScalarParameters>(sv)->asPath();
 }
 // inline void assignValue(Parameters::Ptr const &sv, Value::Array &s) {
 //   s = sv->asArray();
@@ -70,7 +69,7 @@ inline void assignValue(Parameters::Ptr const &sv, Path &s) {
 template <typename T>
 inline void assignValue(xpm::Parameters::Ptr const &value,
                         std::shared_ptr<T> &p) {
-  p = std::dynamic_pointer_cast<T>(value->object());
+    p = std::dynamic_pointer_cast<T>(std::dynamic_pointer_cast<MapParameters>(value)->object());
   if (!p && value) {
     throw xpm::argument_error(std::string("Expected ") +
                               type_of<std::shared_ptr<T>>::value()->toString() +

@@ -27,10 +27,13 @@ Typename Task::name() const { return _type->name(); }
 
 void Task::submit(ptr<Workspace> const & _workspace,
   ptr<Launcher> const & _launcher,
-  ptr<Parameters> const & sv
+  ptr<Parameters> const & _sv
 ) const {
   LOGGER->info("Preparing job");
 
+  auto sv = std::dynamic_pointer_cast<MapParameters>(_sv);
+  if (!sv) throw argument_error("Parameters are not a map");
+    
   // Set task
   sv->task(const_cast<Task*>(this)->shared_from_this());
 
@@ -50,7 +53,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
   // Get generated directory as locator
 
   // Set the command parameters
-  auto job = mkptr<CommandLineJob>(svlocator->asPath(), launcher, _commandLine);
+  auto job = mkptr<CommandLineJob>(std::dynamic_pointer_cast<ScalarParameters>(svlocator)->asPath(), launcher, _commandLine);
   job->parameters(sv);
   job->init();
   sv->job(job);

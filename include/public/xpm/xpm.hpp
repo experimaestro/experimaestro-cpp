@@ -1,4 +1,3 @@
-
 #ifndef EXPERIMAESTRO_XPM_HPP
 #define EXPERIMAESTRO_XPM_HPP
 
@@ -8,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <cstdint>
 
 namespace xpm { 
   // Forward declarations
@@ -23,13 +23,18 @@ namespace xpm {
   struct Digest;
   class Workspace;
   class GeneratorContext;
+  struct CommandContext;
 }
 
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
-#include <xpm/value.hpp>
 
 namespace xpm {
+
+/// Useful for digest and type
+enum class ParametersTypes : uint8_t {
+  MAP = 0, ARRAY = 1, SCALAR = 2
+};
 
 // ---
 // --- Structured values
@@ -55,7 +60,7 @@ public:
 
 
 /**
- * Experimaestro configuration structure.
+ * Parameters.
  * 
  * A configuration can have:
  * 
@@ -64,7 +69,7 @@ public:
  * - an object
  */
 class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
- public:
+public:
   typedef uint8_t Flags;
   enum class Flag : Flags {
     SEALED = 1, 
@@ -81,36 +86,14 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
 
 #ifndef SWIG
   /// Constructor from JSON
-  Parameters(Register &xpmRegister, nlohmann::json const &jsonValue);
+  std::shared_ptr<Parameters> create(Register &xpmRegister, nlohmann::json const &jsonValue);
 #endif
 
-  /// Constructor from a map
-  Parameters(std::map<std::string, std::shared_ptr<Parameters>> &map);
-
-  /// Constructs from value
-  Parameters(Value const & v);
-
-  /// Construct from other (shallow copy)
-  Parameters(Parameters const &other) = delete;
-
-
-  /// Move constructor
-  Parameters(Parameters &&other) = default;
-
   /// Destructor
-  ~Parameters();
+  virtual ~Parameters();
 
   /// Returns true if objects are equal
-  bool equals(Parameters const &other) const;
-
-  /// Checks whether a key exists
-  bool hasKey(std::string const &key) const;
-
-  /// Get access to one value
-  std::shared_ptr<Parameters> set(const std::string &key, std::shared_ptr<Parameters> const &);
-
-  /// Get access to one value
-  std::shared_ptr<Parameters> get(const std::string &key);
+  virtual bool equals(Parameters const &other) const;
 
   /// Seal the object
   void seal();
@@ -140,32 +123,14 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
 
   /**
    * Converts to JSON
-   * @return
    */
-  nlohmann::json toJson();
+  virtual nlohmann::json toJson() const;
 
   /**
    *  Whether this element can be ignored for digest computation
    */
   bool canIgnore();
 
-  /**
-   * Retrieve content
-   */
-  std::map<std::string, std::shared_ptr<Parameters>> const &content();
-
-
-  /** Sets the task */
-  void task(std::shared_ptr<Task> const &task);
-
-  /** Sets the object */
-  void object(std::shared_ptr<Object> const &object);
-
-  /** Sets the object */
-  std::shared_ptr<Object> object();
-
-  /** Sets the task */
-  std::shared_ptr<Task> task();
 
   /**
    * Add dependencies to a given job
@@ -202,7 +167,7 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
   /**
    * Copy the configuration
    */
-  std::shared_ptr<Parameters> copy();
+  virtual std::shared_ptr<Parameters> copy() = 0;
 
   /**
    * Compute the a digest for this configuration
@@ -216,54 +181,17 @@ class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
   void job( std::shared_ptr<Job> const & _job);
 
   /// Create objects
-  std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
+  virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
+  /// Output JSON
+  virtual void outputJson(std::ostream &out, CommandContext & context) const = 0;
 
+protected:
+  /// For each child callback
+  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f);
 
-  /// @defgroup Access to value
-  /// @{
-
-  /// Returns true if the value is defined
-  bool hasValue() const;
-
-  /// Returns true if the value is defined and null
-  bool null() const;
-
-  nlohmann::json valueAsJson() const;
-  ValueType valueType() const;
-
-  void set(bool value);
-  void set(long value);
-  void set(std::string const & value, bool typeHint = false);
-  void set(std::vector<std::shared_ptr<Parameters>> const & v);
-  void set(YAML::Node const &node);
-
-  /// Returns the size of the array
-  size_t size() const;
-  /// Append an element to the array
-  void push_back(std::shared_ptr<Parameters> const & parameters);
-
-  /// Append an element to the array
-  std::shared_ptr<Parameters> operator[](size_t index);
-
-  /// Returns the string
-  std::string asString() const;
-
-  /// Returns the string
-  bool asBoolean() const;
-
-  /// Returns an integer
-  long asInteger() const;
-
-  /// Returns an integer
-  double asReal() const;
-
-  /// Returns a path
-  Path asPath() const;
-
-private:
-  /** Sets a value for the associated object (if any)  */
-  void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
+  /// Update digest
+  virtual void updateDigest(Digest & digest) const;
 
   /// Set flag
   void set(Flag flag, bool value);
@@ -271,13 +199,72 @@ private:
   /// Get flag
   bool get(Flag flag) const;
 
-  /// For each child callback
-  void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f);
+  /// Validate this map
+  virtual void _validate();
+
+  /// Generate
+  virtual void _generate(GeneratorContext &context);
+
+  /// Whether this value is sealed or not
+  Flags _flags;
+
+  friend class ObjectFactory;
+  friend struct Helper;
+  friend class Task;
+  friend struct Digest;
+  friend class Register;
+
+  /// Type of the object
+  std::shared_ptr<Type> _type;
+};
+
+class MapParameters : public Parameters {
+public:
+  /** Sets the task */
+  void task(std::shared_ptr<Task> const &task);
+
+  /** Sets the object */
+  void object(std::shared_ptr<Object> const &object);
+
+  /** Sets the object */
+  std::shared_ptr<Object> object();
+
+  /** Sets the task */
+  std::shared_ptr<Task> task();
+
+
+  /// Checks whether a key exists
+  bool hasKey(std::string const &key) const;
+
+  /// Set one value (if map)
+  std::shared_ptr<Parameters> set(const std::string &key, std::shared_ptr<Parameters> const &);
+
+  /// Get access to one value (if map)
+  std::shared_ptr<Parameters> get(const std::string &key);
+
+  /// Access to the array
+  std::shared_ptr<Parameters> &operator[](const size_t index);
+
+  virtual bool equals(Parameters const &other) const override;
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+
+  virtual nlohmann::json toJson() const override;
+
+  virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister) override;
+  virtual void updateDigest(Digest & digest) const override;
+  virtual std::shared_ptr<Parameters> copy() override;
+
+protected:
+  virtual void _validate() override;
+  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) override;
+  virtual void _generate(GeneratorContext &context) override;
+
+private:
+  /** Sets a value for the associated object (if any)  */
+  void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
 
   /**
-   * Resource identifier.
-   * 
-   * This field is set when the corresponding task is submitted
+   * Job associated with this map
    */
   std::shared_ptr<Job> _job;
 
@@ -287,25 +274,36 @@ private:
   /// Associated task, if any
   std::shared_ptr<Task> _task;
 
-  /// The associated value
-  Value _value;
-
-  /// Whether this value is sealed or not
-  Flags _flags;
-
-  /// Sub-values (map is used for sorted keys, necessary to compute a stable unique identifier)
-  std::map<std::string, std::shared_ptr<Parameters>> _content;
-
-
-  friend class ObjectFactory;
-  friend struct Helper;
-  friend class Task;
-  friend struct Digest;
-  friend class Register;
- protected:
-  /// Type of the object
-  std::shared_ptr<Type> _type;
+  /// The content
+  std::map<std::string, std::shared_ptr<Parameters>> _map;
+  friend class Parameters;
 };
+
+class ArrayParameters : public Parameters {
+public:
+  /// Returns the size of the array or the map
+  size_t size() const;
+
+  /// Append an element to the array
+  void push_back(std::shared_ptr<Parameters> const & parameters);
+
+  /// Get an element of the array
+  std::shared_ptr<Parameters> operator[](size_t index);
+
+  virtual bool equals(Parameters const &other) const override;
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+  virtual nlohmann::json toJson() const override;
+  virtual void updateDigest(Digest & digest) const override;
+  virtual std::shared_ptr<Parameters> copy() override;
+protected:
+  virtual void _validate() override;
+  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) override;
+
+private:
+  std::vector<std::shared_ptr<Parameters>> _array;
+  friend class Parameters;
+};
+
 
 
 // ---
@@ -429,6 +427,7 @@ class Argument {
  */
 void progress(float percentage);
 
-}
+
+} // endns: xpm
 
 #endif // EXPERIMAESTRO_XPM_HPP

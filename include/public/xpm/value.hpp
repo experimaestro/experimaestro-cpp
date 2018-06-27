@@ -9,6 +9,7 @@
 #include <memory>
 #include <cstdint>
 
+#include <xpm/xpm.hpp>
 #include <xpm/json.hpp>
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
@@ -35,8 +36,7 @@ enum class ValueType : int8_t {
   REAL, 
   STRING, 
   PATH, 
-  BOOLEAN, 
-  ARRAY
+  BOOLEAN
 };
 
 
@@ -45,7 +45,6 @@ enum class ValueType : int8_t {
  */
 class Value {
  public:
-  typedef std::vector<std::shared_ptr<Parameters>> Array;
   typedef std::shared_ptr<Value> Ptr;
 
   Value();
@@ -66,11 +65,8 @@ class Value {
 
   inline Value(char const *value) : Value(std::string(value)) {}
 
-  Value(Array const & array);
-  Value(Array && array);
-
 #ifndef SWIG
-  Value(Register & xpmRegister, nlohmann::json const &jsonValue);
+  Value(nlohmann::json const &jsonValue);
 #endif
 
   Value(Value const &other);
@@ -123,23 +119,9 @@ class Value {
   /// Returns a path
   virtual Path asPath() const;
 
-  /// Returns as array
-  virtual Array asArray() const;
-
   /** @} */
 
   NOSWIG(void updateDigest(Digest &) const);
-
-  // Array methods (throw an exception if the value is not an array)
-
-  /// Add a new object to the array
-  void push_back(std::shared_ptr<Parameters> const &element);
-
-  /// Returns the size of the array
-  size_t size() const;
-
-  /// Access to the new array
-  std::shared_ptr<Parameters> &operator[](const size_t index);
 
   /// A constant
   static const Value NONE;
@@ -157,7 +139,6 @@ private:
     bool boolean;
 
     std::string string;
-    Array array;
 
     ~Union();
     Union();
@@ -169,6 +150,58 @@ inline bool operator==(Value const &a, Value const &b) {
   return a.equals(b);
 }
 
-}
+
+/// TODO: Fuse this with Value
+class ScalarParameters : public Parameters {
+public:
+  /// Constructs from value
+  ScalarParameters(Value const & v);
+
+  /// Returns the string
+  std::string asString() const;
+
+  /// Returns the string
+  bool asBoolean() const;
+
+  /// Returns an integer
+  long asInteger() const;
+
+  /// Returns an integer
+  double asReal() const;
+
+  /// Returns a path
+  Path asPath() const;
+
+  void set(bool value);
+  void set(long value);
+  void set(std::string const & value, bool typeHint = false);
+  void set(YAML::Node const &node);
+
+  /// Returns true if the value is defined
+  bool hasValue() const;
+
+  /// Returns true if the value is defined and null
+  bool null() const;
+
+  nlohmann::json toJson() const override;
+  ValueType valueType() const;
+
+  virtual bool equals(Parameters const &other) const override;
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+  virtual void updateDigest(Digest & digest) const override;
+  
+  virtual std::shared_ptr<Parameters> copy() override;
+
+private:
+  /// The associated value
+  Value _value;
+
+  friend class Parameters;
+};
+
+
+
+
+} // endns: xpm
 
 #endif //ANCHOR_JUDGES_VALUE_HPP

@@ -116,78 +116,10 @@ void CommandContent::output(CommandContext &context, std::ostream & out) const {
 // --- CommandParameters
 
 
-namespace {
-  /// Generates the JSON that will be used to configure the task
-  void fill(CommandContext & context, std::ostream & out, ptr<Parameters> const & conf) {
-    if (conf->hasValue()) {
-      // The object has one value, just use this and discards the rest
-      switch(conf->valueType()) {
-        case ValueType::ARRAY: {
-          out << "{\"" << xpm::KEY_TYPE << "\":\"" << conf->type()->name().toString() << "\",\""
-              << xpm::KEY_VALUE << "\": [";
-          for(size_t i = 0; i < conf->size(); ++i) {
-            if (i > 0) out << ", ";
-            fill(context, out, (*conf)[i]);
-          }
-          out << "]}";
-          break;
-        }
-
-        case ValueType::PATH:
-          out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
-              << xpm::KEY_VALUE << "\": \"";
-          out << context.connector.resolve(conf->asPath());
-          out << "\"}";
-          break;
-
-        default:
-         out << conf->valueAsJson();
-         break;
-      }
-    } else {
-      // No simple value: output the structure
-
-      out << "{";
-      bool first = true;
-
-      auto comma = [&first,&out] {        
-        if (first) first = false;
-        else out << ',';
-      };
-
-      if (conf->type()) {
-        out << "\"" << KEY_TYPE << "\": \"" << conf->type()->name() << "\"";
-        first = false;
-      }
-
-      if (conf->job()) {
-        comma();
-        out << "\"$job\": " <<  conf->job()->toJson() << std::endl;
-      }
-
-      for (auto type = conf->type(); type; type = type->parentType()) {
-        for (auto entry: type->arguments()) {
-          Argument &argument = *entry.second;
-          comma();
-          out << "\"" << entry.first << "\":";
-          
-          if (conf->hasKey(argument.name())) {
-            fill(context, out, conf->get(argument.name()));
-          } else {
-            out << "null";
-          }
-        }
-      }
-
-      out << "}";
-    }
-  }
-} // end unnamed ns
-
 void CommandParameters::output(CommandContext &context, std::ostream & out) const {
   auto path = context.getAuxiliaryFile("params", ".json");
   auto fileOut = context.connector.ostream(path);
-  fill(context, *fileOut, context.parameters);
+  context.parameters->outputJson(*fileOut, context);
   out << context.connector.resolve(path);
 }
 

@@ -9,13 +9,13 @@
 #include <xpm/common.hpp>
 #include <yaml-cpp/yaml.h>
 #include <__xpm/common.hpp>
+#include <xpm/connectors/connectors.hpp>
+#include <xpm/commandline.hpp>
 
 typedef std::string stdstring;
 using nlohmann::json;
 
 namespace xpm {
-
-typedef Value::Array ValueArray;
 
 const Value Value::NONE(ValueType::NONE);
 
@@ -31,15 +31,6 @@ bool Value::equals(Value const &b) const {
 
     case ValueType::BOOLEAN:return _value.boolean == b._value.boolean;
     
-    case ValueType::ARRAY: {
-      if (_value.array.size() != b._value.array.size()) 
-        return false;
-      for(size_t i = 0; i < _value.array.size(); ++i) {
-        if (!_value.array[i]->equals(*b._value.array[i]))
-          return false;
-      }
-      return true;
-    }
 
     case ValueType::NONE:
       return true;
@@ -63,7 +54,6 @@ Value Value::cast(Type::Ptr const &type) {
     case ValueType::INTEGER: return Value(this->asInteger());
     case ValueType::BOOLEAN: return Value(this->asBoolean());
     case ValueType::REAL: return Value(this->asReal());
-    case ValueType::ARRAY: return Value(this->asArray());
     case ValueType::NONE: return *this; // no change
     case ValueType::UNSET:throw std::runtime_error("cast: unset has no type");
   }
@@ -163,9 +153,6 @@ Value::~Value() {
     case ValueType::STRING: 
       _value.string.~stdstring();
       break;
-    case ValueType::ARRAY: 
-      _value.array.~ValueArray();
-      break;
     default:
       // Do nothing for other values
       break;
@@ -182,16 +169,6 @@ Value::Union::Union() {
 }
 
 Value::Value() : _scalarType(ValueType::UNSET) {
-}
-
-Value::Value(Array const & array) : _scalarType(ValueType::ARRAY) {
-  // placement new
-  new(&_value.array) Array(array);
-}
-
-Value::Value(Array && array) {
-  // placement new
-  new(&_value.array) Array(std::move(array));
 }
 
 Value::Value(ValueType scalarType) : _scalarType(scalarType) {
@@ -243,30 +220,17 @@ Value::Value(Value const &other) : _scalarType(other._scalarType) {
       new(&_value.string) std::string(other._value.string);
       break;
 
-    case ValueType::ARRAY:
-
-      break;
     default:throw std::out_of_range("Scalar type is not known (copying)");
   }
 }
 
 
-Value::Value(Register & xpmRegister, nlohmann::json const &jsonValue) {
+Value::Value(nlohmann::json const &jsonValue) {
   switch(jsonValue.type()) {
     case nlohmann::json::value_t::null:
     case nlohmann::json::value_t::discarded:
       _scalarType = ValueType::NONE;
       break;
-
-
-    case nlohmann::json::value_t::array: {
-      new(&_value.array) ValueArray();
-      for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
-        _value.array.push_back(std::make_shared<Parameters>(xpmRegister, *it));
-      }      
-      _scalarType = ValueType::ARRAY;
-      break;
-    }
 
     case nlohmann::json::value_t::string:
       new(&_value.string) std::string();
@@ -323,20 +287,19 @@ ptr<Type> Value::type() const {
     case ValueType::STRING:
       return StringType;
 
-    case ValueType::ARRAY: {
-      ptr<Type> type;
-      for(auto const &v: _value.array) {
-        if (!type) type = v->type();
-        else {
-          type = Type::lca(type, v->type());
-        }
-      }
-      
-      return mkptr<ArrayType>(type ? type : AnyType);
-    }
+    // case ValueType::ARRAY: {
+    //   ptr<Type> type;
+    //   for(auto const &v: _value.array) {
+    //     if (!type) type = v->type();
+    //     else {
+    //       type = Type::lca(type, v->type());
+    //     }
+    //   }      
+    // return mkptr<ArrayType>(type ? type : AnyType);
+    // }
   }
 
-      throw exception("unhanlded type for a Value");
+  throw exception("unhanlded type for a Value");
 }
 
 
@@ -357,10 +320,6 @@ Value &Value::operator=(Value const &other) {
 
     case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
       break;
-
-    case ValueType::ARRAY:
-        new(&_value.array) Value::Array(other._value.array);
-        break;
 
     case ValueType::PATH:
     case ValueType::STRING:new(&_value.string) std::string(other._value.string);
@@ -404,12 +363,6 @@ double Value::asReal() const {
     case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
     case ValueType::PATH:
     case ValueType::STRING: return !_value.string.empty();
-    case ValueType::ARRAY: 
-      if (_value.array.size() != 1)
-        throw std::out_of_range("Cannot convert arrays which are not singleton");
-      else
-        return _value.array[0]->asReal();
-
   }
   throw std::out_of_range("Scalar type is not known (converting to real)");
 }
@@ -422,11 +375,6 @@ Path Value::asPath() const {
     case ValueType::BOOLEAN:
     case ValueType::UNSET:
       throw cast_error("Cannot convert value into path");
-    case ValueType::ARRAY:
-      if (_value.array.size() != 1)
-        throw std::out_of_range("Cannot convert arrays which are not singleton");
-      else
-        return _value.array[0]->asPath();
     case ValueType::PATH:
     case ValueType::STRING: return Path(_value.string);
       break;
@@ -449,9 +397,6 @@ bool Value::asBoolean() const {
     case ValueType::BOOLEAN: return _value.boolean;
       break;
 
-    case ValueType::ARRAY:
-      return !_value.array.empty();
-
     case ValueType::PATH:
     case ValueType::STRING: return !_value.string.empty();
       break;
@@ -459,23 +404,6 @@ bool Value::asBoolean() const {
     default:throw std::out_of_range("Scalar type is not known (converting to boolean)");
   }
 }
-
-Value::Array Value::asArray() const {
-  switch (_scalarType) {
-    case ValueType::NONE:
-      return Value::Array();
-
-    case ValueType::ARRAY: 
-      return _value.array;
-
-    default: {
-      Value::Array array;
-      array.push_back(std::make_shared<Parameters>(*this));
-      return array;
-    }
-  }
-}
-
 
 std::string Value::asString() const {
   switch (_scalarType) {
@@ -491,12 +419,6 @@ std::string Value::asString() const {
 
     case ValueType::BOOLEAN: return std::to_string(_value.boolean);
       break;
-
-    case ValueType::ARRAY:
-      if (_value.array.size() != 1)
-        throw std::out_of_range("Cannot convert arrays which are not singleton");
-      else
-        return _value.array[0]->asString();
 
     case ValueType::PATH:
     case ValueType::STRING: return _value.string;
@@ -519,14 +441,6 @@ json Value::toJson() const {
     case ValueType::BOOLEAN:return json(_value.boolean);
 
     case ValueType::PATH: return json {{KEY_VALUE, _value.string}, {KEY_TYPE, PATH_TYPE.toString()}};
-
-    case ValueType::ARRAY: {
-      nlohmann::json array = {};
-      for(auto const &v: _value.array) {
-          array.push_back(v->toJson());
-      }
-      return array;
-    }
 
     case ValueType::UNSET:throw std::runtime_error("to json: unset has no type");
   }
@@ -560,11 +474,11 @@ void Value::updateDigest(Digest &d) const {
       d.updateDigest(_value.string);
       break;
 
-    case ValueType::ARRAY:
-      d.updateDigest(_value.array.size());
-      for(auto const & element : _value.array) {
-        d.updateDigest(*element);
-      }
+    // case ValueType::ARRAY:
+    //   d.updateDigest(_value.array.size());
+    //   for(auto const & element : _value.array) {
+    //     d.updateDigest(*element);
+    //   }
   }
 }
 
@@ -605,19 +519,130 @@ std::string const &Value::getString() {
   return _value.string;
 }
 
-void Value::push_back(ptr<Parameters> const &element) {
-  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot push an element");
-  _value.array.push_back(element);
+
+
+//
+// --- Scalar parameters
+
+ScalarParameters::ScalarParameters(Value const &v) {
+  _value = v;
+  _type = v.type();
+} 
+
+
+/// Returns the string
+std::string ScalarParameters::asString() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asString();
 }
 
-size_t Value::size() const {
-  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get the size");
-  return _value.array.size();
+/// Returns the string
+bool ScalarParameters::asBoolean() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asBoolean();
 }
 
-ptr<Parameters> &Value::operator[](const size_t index) {
-  if (_scalarType != ValueType::ARRAY) throw std::runtime_error("Value is not an array: cannot get an element");
-  return _value.array[index];
+/// Returns an integer
+long ScalarParameters::asInteger() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asInteger();
 }
+
+/// Returns an integer
+double ScalarParameters::asReal() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asReal();
+}
+
+/// Returns a path
+Path ScalarParameters::asPath() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asPath();
+}
+
+ValueType ScalarParameters::valueType() const {
+  return _value.scalarType();
+}
+
+
+nlohmann::json ScalarParameters::toJson() const {
+  return _value.toJson();
+}
+
+bool ScalarParameters::hasValue() const {
+  return _value.defined();
+}
+
+bool ScalarParameters::null() const {
+  return _value.null();
+}
+
+void ScalarParameters::set(YAML::Node const &node) {
+  _value = Value::fromYAML(node);
+  _type = _value.type();
+}
+
+
+void ScalarParameters::set(bool value) {
+  _value = Value(value);
+  _type = _value.type();
+}
+
+void ScalarParameters::set(long value) {
+  _value = Value(value);
+  _type = _value.type();
+}
+
+void ScalarParameters::set(std::string const & value, bool typeHint) {
+  if (typeHint) {
+    _value = Value::fromString(value, _type);
+  } else {
+    _value = Value(value);
+  }
+  _type = _value.type();
+}
+
+bool ScalarParameters::equals(Parameters const &other) const {
+  auto other_ = dynamic_cast<ScalarParameters const *>(&other);
+  if (!other_) return false;
+  return _value.equals(other_->_value);
+}
+
+void ScalarParameters::outputJson(std::ostream &out, CommandContext & context) const {
+  switch(_value.scalarType()) {
+    case ValueType::PATH:
+      out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
+          << xpm::KEY_VALUE << "\": \"";
+      out << context.connector.resolve(asPath());
+      out << "\"}";
+      break;
+
+    default:
+      out << toJson();
+      break;
+  }
+}
+
+void ScalarParameters::updateDigest(Digest & digest) const {
+  _value.updateDigest(digest);
+}
+
+std::shared_ptr<Parameters> ScalarParameters::copy() {
+  auto sv = mkptr<ScalarParameters>(_value);
+  sv->_flags = _flags;
+  return sv;
+}
+
+
 
 }
