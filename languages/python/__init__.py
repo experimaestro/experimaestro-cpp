@@ -42,7 +42,7 @@ DEFAULT_LAUNCHER = None
 def parameters2value(sv):
     """Converts parameters into a Python object"""
     svtype = sv.type()
-    object = sv.object()
+    object = sv.asMap().object() if sv.isMap() else None
     
     if object:
         return object.pyobject
@@ -59,11 +59,11 @@ def parameters2value(sv):
 
 """Dictionary of converteres"""
 VALUECONVERTERS = {
-    str(BooleanType): lambda v: v.asBoolean(),
-    str(IntegerType): lambda v: v.asInteger(),
-    str(StringType): lambda v: v.asString(),
-    str(RealType): lambda v: v.asReal(),
-    str(PathType): lambda v: v.asPath()
+    str(BooleanType): lambda v: v.asScalar().asBoolean(),
+    str(IntegerType): lambda v: v.asScalar().asInteger(),
+    str(StringType): lambda v: v.asScalar().asString(),
+    str(RealType): lambda v: v.asScalar().asReal(),
+    str(PathType): lambda v: v.asScalar().asPath()
 }
 
 # --- From Python to C++ types
@@ -85,18 +85,18 @@ def parameters(value):
 
     # A list
     if isinstance(value, list):
-        newvalue = Value(ValueArray())
+        newvalue = ArrayParameters()
         for v in value:
             newvalue.append(parameters(v))
 
-        return Parameters(newvalue)
+        return newvalue
 
     # A path
     if isinstance(value, pathlib.Path):
         return Parameters(Value(Path(str(value.absolute()))))
 
     # For anything else, we try to convert it to a value
-    return Parameters(Value(value))
+    return ScalarParameters(Value(value))
 
 def checknullsv(sv):
     """Returns either None or the sv"""
@@ -113,9 +113,9 @@ class XPMObject(Object):
         self.pyobject = pyobject
 
         if sv is None:
-            self.sv = Parameters()
+            self.sv = MapParameters()
         else:
-            self.sv = sv
+            self.sv = sv.asMap()
 
         self.sv.object(self)
         self.sv.type(self.pyobject.__class__.__xpmtype__)
@@ -288,7 +288,7 @@ class PythonRegister(Register):
 
     def runTask(self, task, sv):
         logger.info("Running %s", task)
-        sv.object().run()
+        sv.asMap().object().run()
 
     def createObject(self, sv):
         type = self.registered.get(sv.type().name(), PyObject)

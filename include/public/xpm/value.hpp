@@ -192,6 +192,7 @@ public:
   virtual void updateDigest(Digest & digest) const override;
   
   virtual std::shared_ptr<Parameters> copy() override;
+  virtual std::shared_ptr<Type> type() const override;
 
 private:
   /// The associated value

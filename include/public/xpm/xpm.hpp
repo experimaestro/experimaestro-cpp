@@ -154,10 +154,7 @@ public:
   void generate(GeneratorContext & context);
 
   /** Get type */
-  std::shared_ptr<Type> type() const;
-
-  /** Get type */
-  void type(std::shared_ptr<Type> const &type);
+  virtual std::shared_ptr<Type> type() const = 0;
 
   /** Configure the object (used when submitting a job)
    * <ol>
@@ -185,15 +182,15 @@ public:
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const = 0);
 
   /// Convert to map or throw an exception
-  MapParameters & asMap();
+  std::shared_ptr<MapParameters> asMap();
   bool isMap() const;
   
   /// Convert to array  or throw an exception
-  ArrayParameters & asArray();
+  std::shared_ptr<ArrayParameters> asArray();
   bool isArray() const;
   
   /// Convert to scalar or throw an exception
-  ScalarParameters & asScalar();
+  std::shared_ptr<ScalarParameters> asScalar();
   bool isScalar() const;
   
 
@@ -225,14 +222,12 @@ protected:
   friend struct Digest;
   friend class Register;
 
-  /// Type of the object
-  std::shared_ptr<Type> _type;
-
   friend class MapParameters;
 };
 
 class MapParameters : public Parameters {
 public:
+  MapParameters();
   virtual ~MapParameters();
 
   /** Sets the task */
@@ -257,8 +252,9 @@ public:
   /// Get access to one value (if map)
   std::shared_ptr<Parameters> get(const std::string &key);
 
-  /// Access to the array
-  std::shared_ptr<Parameters> &operator[](const size_t index);
+  /** Set type */
+  void type(std::shared_ptr<Type> const &type);
+  virtual std::shared_ptr<Type> type() const override;
 
   virtual bool equals(Parameters const &other) const override;
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
@@ -285,6 +281,9 @@ private:
   /** Sets a value for the associated object (if any)  */
   void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
 
+  /// Type of the object
+  std::shared_ptr<Type> _type;
+
   /**
    * Job associated with this map
    */
@@ -303,6 +302,7 @@ private:
 
 class ArrayParameters : public Parameters {
 public:
+  ArrayParameters();
   virtual ~ArrayParameters();
 
   /// Returns the size of the array or the map
@@ -319,11 +319,16 @@ public:
   virtual nlohmann::json toJson() const override;
   virtual void updateDigest(Digest & digest) const override;
   virtual std::shared_ptr<Parameters> copy() override;
+  virtual std::shared_ptr<Type> type() const override;
+
 protected:
   virtual void _validate() override;
   virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) override;
 
 private:
+  /// Type of the object
+  std::shared_ptr<Type> _type;
+
   std::vector<std::shared_ptr<Parameters>> _array;
   friend class Parameters;
 };

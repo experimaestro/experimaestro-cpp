@@ -220,7 +220,7 @@ void merge(Register & xpmRegister, MapParameters &sv, YAML::Node const &node) {
 
       // Find the structured value
       auto subsv = getSubValue(sv, fullkey, ".");
-      merge(xpmRegister, subsv->asMap(), pair.second);
+      merge(xpmRegister, *subsv->asMap(), pair.second);
 
     }
     break;
@@ -321,12 +321,12 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         auto subsv = getSubValue(*sv, parameters[i].substr(2), "-");
 
         if (subsv->type()->scalar()) {
-          //subsv->asMap().set(parameters[i+1], true);
+          //subsv->asMap()->set(parameters[i+1], true);
           NOT_IMPLEMENTED(); // FIXME: re-implement
         } else {
           auto type = getType(parameters[i+1]);
           if (!type) throw argument_error("Type " + parameters[i+1] + " does not exist");
-          subsv->type(type);
+          subsv->asMap()->type(type);
         }
       }
 
@@ -359,7 +359,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 }
 
 void Register::runTask(ptr<Task> const & task, ptr<Parameters> const & sv) {
-  auto object = sv->asMap().object();
+  auto object = sv->asMap()->object();
   if (!object) {
     throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
   }

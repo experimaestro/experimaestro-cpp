@@ -69,6 +69,26 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
          return SWIG_Py_Void();
       }
       
+    PyObject * getRealParameters(std::shared_ptr<xpm::Parameters> const &p) {
+        if (!p) return SWIG_Py_Void();
+
+        if (auto mp = std::dynamic_pointer_cast<xpm::MapParameters>(p)) {
+            auto smartresult = new std::shared_ptr<xpm::MapParameters>(mp);
+            return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__MapParameters_t, SWIG_POINTER_OWN);
+        }
+        if (auto ap = std::dynamic_pointer_cast<xpm::ArrayParameters>(p)) {
+            auto smartresult = new std::shared_ptr<xpm::ArrayParameters>(ap);
+            return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__ArrayParameters_t, SWIG_POINTER_OWN);
+        }
+        if (auto sp = std::dynamic_pointer_cast<xpm::ScalarParameters>(p)) {
+            auto smartresult = new std::shared_ptr<xpm::ScalarParameters>(sp);
+            return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__ScalarParameters_t, SWIG_POINTER_OWN);
+        }
+
+        auto smartresult = new std::shared_ptr<xpm::Parameters>(p);
+        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Parameters_t, SWIG_POINTER_OWN);
+    }
+
    }} // Ends xpm::python
 %}
 
@@ -76,6 +96,12 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 %typemap(out) std::shared_ptr<xpm::Object> {
     // Retrieving Python object (and not the director)
     $result = xpm::python::getRealObject($1);
+}
+
+// Get the real object for a shared_ptr of an object
+%typemap(out) std::shared_ptr<xpm::Parameters> {
+    // Retrieving Python object (and not the director)
+    $result = xpm::python::getRealParameters($1);
 }
 
 // Handles properly a smart pointer

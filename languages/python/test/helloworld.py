@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(
 setLogLevel("xpm", LogLevel_DEBUG)
 
 # Namespace
-hw = TypeName("helloworld")
+hw = Typename("helloworld")
 
 # Register a class as a task: 
 # - There is one experimental parameter (word)

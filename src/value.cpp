@@ -526,7 +526,6 @@ std::string const &Value::getString() {
 
 ScalarParameters::ScalarParameters(Value const &v) {
   _value = v;
-  _type = v.type();
 } 
 
 
@@ -589,27 +588,23 @@ bool ScalarParameters::null() const {
 
 void ScalarParameters::set(YAML::Node const &node) {
   _value = Value::fromYAML(node);
-  _type = _value.type();
 }
 
 
 void ScalarParameters::set(bool value) {
   _value = Value(value);
-  _type = _value.type();
 }
 
 void ScalarParameters::set(long value) {
   _value = Value(value);
-  _type = _value.type();
+}
+
+std::shared_ptr<Type> ScalarParameters::type() const {
+  return _value.type();
 }
 
 void ScalarParameters::set(std::string const & value, bool typeHint) {
-  if (typeHint) {
-    _value = Value::fromString(value, _type);
-  } else {
-    _value = Value(value);
-  }
-  _type = _value.type();
+  _value = Value(value);
 }
 
 bool ScalarParameters::equals(Parameters const &other) const {

@@ -119,7 +119,7 @@ Parameters::~Parameters() {
 }
 
 
-Parameters::Parameters() : _flags(0), _type(AnyType) {
+Parameters::Parameters() : _flags(0) {
 }
 
 class DummyJob : public Job {
@@ -165,7 +165,6 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
               try {
                 LOGGER->debug("Trying to cast {} to {}", vtype->name().toString(), _type->name().toString());
                 value = value.cast(_type);
-                vtype = value.type();
               } catch(...) {
                 throw argument_error(fmt::format("Incompatible types: {} (given) cannot be converted to {} (expected)", 
                   vtype->name().toString(), _type->name().toString()));
@@ -175,21 +174,20 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
             vtype = _type;
           }
           p = mkptr<ScalarParameters>(value);
-          p->_type = vtype;
           
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
           if (!p) p = mkptr<MapParameters>();
-          p->asMap().job(mkptr<DummyJob>(it.value()));
+          p->asMap()->job(mkptr<DummyJob>(it.value()));
         } else if (it.key() == KEY_TASK) {
           if (!p) p = mkptr<MapParameters>();
-          p->_type = _type;
+          p->asMap()->_type = _type;
           std::dynamic_pointer_cast<MapParameters>(p)->_task = xpmRegister.getTask(it.value(), true);
         } else {
           if (!p) p = mkptr<MapParameters>();
-          p->_type = _type;
-          p->asMap().set(it.key(), Parameters::create(xpmRegister, it.value()));
+          p->asMap()->_type = _type;
+          p->asMap()->set(it.key(), Parameters::create(xpmRegister, it.value()));
         }
       }
 
@@ -207,8 +205,8 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
 json Parameters::toJson() const {
   nlohmann::json o = {};
   
-  if (_type) {
-    o[KEY_TYPE] = _type->name().toString();
+  if (type()->name() != AnyType->name()) {
+    o[KEY_TYPE] = type()->name().toString();
   }
 
   return o;
@@ -228,12 +226,6 @@ std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
   this->updateDigest(d);
   return d.get();
 };
-
-
-
-ptr<Type> Parameters::type() const {
-  return _type;
-}
 
 
 void Parameters::seal() {
@@ -291,11 +283,6 @@ std::string Parameters::uniqueIdentifier() const {
   return s;
 }
 
-/** Get type */
-void Parameters::type(ptr<Type> const &type) {
-  _type = type;
-}
-
 void Parameters::configure(Workspace & ws) {
   GeneratorContext context(ws);
   generate(context);
@@ -343,22 +330,22 @@ void Parameters::generate(GeneratorContext &context) {
   }
 }
 
-MapParameters & Parameters::asMap() {
-  auto p = dynamic_cast<MapParameters*>(this);
+ptr<MapParameters> Parameters::asMap() {
+  auto p = std::dynamic_pointer_cast<MapParameters>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Map");
-  return *p;
+  return p;
 }
 
-ArrayParameters & Parameters::asArray() {
-  auto p = dynamic_cast<ArrayParameters*>(this);
+ptr<ArrayParameters> Parameters::asArray() {
+  auto p = std::dynamic_pointer_cast<ArrayParameters>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Array");
-  return *p;
+  return p;
 }
 
-ScalarParameters & Parameters::asScalar() {
-  auto p = dynamic_cast<ScalarParameters*>(this);
+ptr<ScalarParameters> Parameters::asScalar() {
+  auto p = std::dynamic_pointer_cast<ScalarParameters>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Scalar");
-  return *p;
+  return p;
 }
 
 bool Parameters::isMap() const {
@@ -401,6 +388,9 @@ void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> con
 // --- Array parameters
 //
 
+
+ArrayParameters::ArrayParameters() : _type(mkptr<ArrayType>(AnyType)) {}
+
 ArrayParameters::~ArrayParameters() {}
 
 void ArrayParameters::updateDigest(Digest & digest) const {
@@ -432,6 +422,10 @@ std::shared_ptr<Parameters> ArrayParameters::operator[](size_t index) {
 
 size_t ArrayParameters::size() const {
   return _array.size();
+}
+
+ptr<Type> ArrayParameters::type() const {
+  return _type;
 }
 
 void ArrayParameters::push_back(std::shared_ptr<Parameters> const & parameters) {
@@ -484,7 +478,15 @@ std::shared_ptr<Parameters> ArrayParameters::copy() {
 // --- Map parameters
 //
 
+MapParameters::MapParameters() : _type(AnyType) {}
 MapParameters::~MapParameters() {}
+
+ptr<Type> MapParameters::type() const {
+  return _type;
+}
+void MapParameters::type(ptr<Type> const & type) {
+  _type = type;
+}
 
 ptr<Parameters> MapParameters::copy() {
   auto sv = mkptr<MapParameters>();
@@ -531,7 +533,7 @@ void MapParameters::_validate() {
       
       auto value = _map.count(argument.name()) ? get(argument.name()) : nullptr;
       
-      if (!value || (value->isScalar() && value->asScalar().null())) {
+      if (!value || (value->isScalar() && value->asScalar()->null())) {
         LOGGER->debug("No value provided for {}...", argument.name());
         // No value provided, and no generator
         if (argument.required()) {
@@ -869,7 +871,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   Path p = context.workspace.jobsdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
-  if (ptr<Task> task = context.stack[0]->asMap().task()) {
+  if (ptr<Task> task = context.stack[0]->asMap()->task()) {
     p = Path(p, {task->identifier().toString()});
   }
 
