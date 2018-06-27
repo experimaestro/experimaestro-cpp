@@ -180,7 +180,8 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
-          job(mkptr<DummyJob>(it.value()));
+          if (!p) p = mkptr<MapParameters>();
+          p->asMap().job(mkptr<DummyJob>(it.value()));
         } else if (it.key() == KEY_TASK) {
           if (!p) p = mkptr<MapParameters>();
           p->_type = _type;
@@ -188,7 +189,7 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
         } else {
           if (!p) p = mkptr<MapParameters>();
           p->_type = _type;
-          std::dynamic_pointer_cast<MapParameters>(p)->set(it.key(), Parameters::create(xpmRegister, it.value()));
+          p->asMap().set(it.key(), Parameters::create(xpmRegister, it.value()));
         }
       }
 
@@ -224,7 +225,7 @@ std::string Parameters::toJsonString() {
 /// Internal digest function
 std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
   Digest d;
-  d.updateDigest(*this);
+  this->updateDigest(d);
   return d.get();
 };
 
@@ -314,12 +315,7 @@ void Parameters::addDependencies(Job & job,  bool skipThis) {
   if (canIgnore())
     return;
 
-  if (_job) {
-    LOGGER->info("Found dependency resource {}", _job);
-    job.addDependency(_job->createDependency());
-  } else {
-    foreachChild([&](auto p) { p->addDependencies(job, false); });
-  }
+  foreachChild([&](auto p) { p->addDependencies(job, false); });
 }
 
 void Parameters::_generate(GeneratorContext &context) {}
@@ -347,53 +343,44 @@ void Parameters::generate(GeneratorContext &context) {
   }
 }
 
-void Parameters::_validate() {
+MapParameters & Parameters::asMap() {
+  auto p = dynamic_cast<MapParameters*>(this);
+  if (!p) throw argument_error("Cannot cast to Map");
+  return *p;
+}
+
+ArrayParameters & Parameters::asArray() {
+  auto p = dynamic_cast<ArrayParameters*>(this);
+  if (!p) throw argument_error("Cannot cast to Array");
+  return *p;
+}
+
+ScalarParameters & Parameters::asScalar() {
+  auto p = dynamic_cast<ScalarParameters*>(this);
+  if (!p) throw argument_error("Cannot cast to Scalar");
+  return *p;
+}
+
+bool Parameters::isMap() const {
+  return dynamic_cast<MapParameters const *>(this) != nullptr;
+}
+
+bool Parameters::isArray() const {
+  return dynamic_cast<ArrayParameters const *>(this) != nullptr;
+}
+
+bool Parameters::isScalar() const {
+  return dynamic_cast<ScalarParameters const *>(this) != nullptr;
+}
+
+
+void Parameters::validate() {
   if (get(Flag::VALIDATED)) return;
-
-  if (auto this_ = dynamic_cast<ArrayParameters*>(this)) {
-   
-  } else if (auto this_ = dynamic_cast<MapParameters*>(this)) {
-    // Loop over the whole hierarchy
-    for (auto type = _type; type; type = type->parentType()) {
-      LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
-
-      // Loop over all the arguments
-      for (auto entry: type->arguments()) {
-        auto &argument = *entry.second;
-        LOGGER->debug("Looking at argument {}", argument.name());
-
-        auto value = _map.count(argument.name()) ? get(argument.name()) : nullptr;
-
-        if (!value || value->null()) {
-          LOGGER->debug("No value provided for {}...", argument.name());
-          // No value provided, and no generator
-          if (argument.required()) {
-            throw parameter_error(
-                "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
-          }
-        } else {
-          // Sets the value
-          LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
-
-          // Check if the declared type corresponds to the value type
-          if (!entry.second->type()->accepts(value->type())) {
-            throw parameter_error(
-                "type is " + value->type()->toString() 
-                + ", but requested type was " + entry.second->type()->toString())
-              .addPath(argument.name());
-          }
-
-          LOGGER->debug("Validating {}...", argument.name());
-          try {
-            value->validate();
-          } catch(parameter_error &e) {
-            throw e.addPath(argument.name());
-          }
-        }
-      }
-    } 
-  }
+  _validate();
   set(Flag::VALIDATED, true);
+}
+
+void Parameters::_validate() {
 }
 
 void Parameters::set(Parameters::Flag flag, bool value) {
@@ -413,6 +400,8 @@ void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> con
 //
 // --- Array parameters
 //
+
+ArrayParameters::~ArrayParameters() {}
 
 void ArrayParameters::updateDigest(Digest & digest) const {
   digest.updateDigest(ParametersTypes::ARRAY);
@@ -470,7 +459,7 @@ void ArrayParameters::outputJson(std::ostream &out, CommandContext & context) co
       << xpm::KEY_VALUE << "\": [";
   for(size_t i = 0; i < size(); ++i) {
     if (i > 0) out << ", ";
-    fill(context, out, (*conf)[i]);
+    _array[i]->outputJson(out, context);
   }
   out << "]}";
 }
@@ -495,6 +484,8 @@ std::shared_ptr<Parameters> ArrayParameters::copy() {
 // --- Map parameters
 //
 
+MapParameters::~MapParameters() {}
+
 ptr<Parameters> MapParameters::copy() {
   auto sv = mkptr<MapParameters>();
   sv->_job = _job;
@@ -507,11 +498,67 @@ ptr<Parameters> MapParameters::copy() {
   return sv;
 }
 
+bool MapParameters::equals(Parameters const &other) const {
+  NOT_IMPLEMENTED();
+}
+
+  
+void MapParameters::addDependencies(Job & job,  bool skipThis) {
+  if (_job) {
+    LOGGER->info("Found dependency resource {}", _job);
+    job.addDependency(_job->createDependency());
+  } else {
+    foreachChild([&](auto p) { p->addDependencies(job, false); });
+  }
+}
+
   
 ptr<Parameters> MapParameters::get(const std::string &key) {
   auto value = _map.find(key);
   if (value == _map.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
+}
+
+void MapParameters::_validate() {
+  // Loop over the whole hierarchy
+  for (auto type = _type; type; type = type->parentType()) {
+    LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
+    
+    // Loop over all the arguments
+    for (auto entry: type->arguments()) {
+      auto &argument = *entry.second;
+      LOGGER->debug("Looking at argument {}", argument.name());
+      
+      auto value = _map.count(argument.name()) ? get(argument.name()) : nullptr;
+      
+      if (!value || (value->isScalar() && value->asScalar().null())) {
+        LOGGER->debug("No value provided for {}...", argument.name());
+        // No value provided, and no generator
+        if (argument.required()) {
+          throw parameter_error(
+                                "Argument " + argument.name() + " was required but not given for " + this->type()->toString());
+        }
+      } else {
+        // Sets the value
+        LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
+        
+        // Check if the declared type corresponds to the value type
+        if (!entry.second->type()->accepts(value->type())) {
+          throw parameter_error(
+                                "type is " + value->type()->toString()
+                                + ", but requested type was " + entry.second->type()->toString())
+          .addPath(argument.name());
+        }
+        
+        LOGGER->debug("Validating {}...", argument.name());
+        try {
+          value->validate();
+        } catch(parameter_error &e) {
+          throw e.addPath(argument.name());
+        }
+      }
+    }
+  }
 }
 
 void MapParameters::_generate(GeneratorContext &context) {
@@ -535,8 +582,8 @@ void MapParameters::_generate(GeneratorContext &context) {
         } else if (!argument.required()) {
           // Set value null
           LOGGER->debug("Setting null value for {}...", argument.name());
-          auto value = mkptr<Parameters>(Value::NONE);
-          value->set(Flag::DEFAULT, true);
+          auto value = mkptr<ScalarParameters>(Value::NONE);
+          value->Parameters::set(Flag::DEFAULT, true);
           set(argument.name(), value);
         }
       }
@@ -564,14 +611,14 @@ void MapParameters::outputJson(std::ostream &out, CommandContext & context) cons
     out << "\"$job\": " <<  job()->toJson() << std::endl;
   }
 
-  for (auto type = type(); type; type = type->parentType()) {
+  for (auto type = this->type(); type; type = type->parentType()) {
     for (auto entry: type->arguments()) {
       Argument &argument = *entry.second;
       comma();
       out << "\"" << entry.first << "\":";
       
       if (hasKey(argument.name())) {
-        fill(context, out, get(argument.name()));
+        const_cast<MapParameters*>(this)->get(argument.name())->outputJson(out, context);
       } else {
         out << "null";
       }
@@ -584,7 +631,7 @@ void MapParameters::outputJson(std::ostream &out, CommandContext & context) cons
 
 nlohmann::json MapParameters::toJson() const {
     // No content
-    if (_map.empty() && !_task && !type() && !get(Flag::DEFAULT)) {
+  if (_map.empty() && !_task && !type() && !Parameters::get(Flag::DEFAULT)) {
         return nullptr;
     }
     
@@ -605,7 +652,7 @@ nlohmann::json MapParameters::toJson() const {
     return o;
 }
   
-void MapParameters::updateDigest(Digest & sv) const {
+void MapParameters::updateDigest(Digest & digest) const {
   digest.updateDigest(type()->name().toString());
 
   if (_task) {
@@ -690,7 +737,7 @@ ptr<Task> MapParameters::task() {
 
 
 ptr<Parameters> MapParameters::set(const std::string &key, ptr<Parameters> const &value) {
-  if (get(Flag::SEALED)) {
+  if (Parameters::get(Flag::SEALED)) {
     throw sealed_error();
   }
 
@@ -822,7 +869,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   Path p = context.workspace.jobsdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
-  if (ptr<Task> task = context.stack[0]->task()) {
+  if (ptr<Task> task = context.stack[0]->asMap().task()) {
     p = Path(p, {task->identifier().toString()});
   }
 
@@ -831,7 +878,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return mkptr<Parameters>(Value(p));
+  return mkptr<ScalarParameters>(Value(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

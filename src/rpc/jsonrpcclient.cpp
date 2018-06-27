@@ -95,7 +95,7 @@ class _JSONRPCClient {
   }
 
   _JSONRPCClient(std::string const &uri, std::string const &username, std::string const &password, bool debug)
-      : uri(uri), debug(debug), connected(WAITING) {
+      : uri(uri), connected(WAITING), debug(debug) {
     _thread = std::thread([&] {
       start(username, password);
     });

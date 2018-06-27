@@ -154,6 +154,7 @@ inline bool operator==(Value const &a, Value const &b) {
 /// TODO: Fuse this with Value
 class ScalarParameters : public Parameters {
 public:
+  virtual ~ScalarParameters() = default;
   /// Constructs from value
   ScalarParameters(Value const & v);
 
@@ -187,7 +188,7 @@ public:
   ValueType valueType() const;
 
   virtual bool equals(Parameters const &other) const override;
-  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
   virtual void updateDigest(Digest & digest) const override;
   
   virtual std::shared_ptr<Parameters> copy() override;

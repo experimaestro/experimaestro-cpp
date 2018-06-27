@@ -24,6 +24,10 @@ namespace xpm {
   class Workspace;
   class GeneratorContext;
   struct CommandContext;
+
+  class ScalarParameters;
+  class MapParameters;
+  class ArrayParameters;
 }
 
 #include <xpm/json.hpp>
@@ -86,14 +90,14 @@ public:
 
 #ifndef SWIG
   /// Constructor from JSON
-  std::shared_ptr<Parameters> create(Register &xpmRegister, nlohmann::json const &jsonValue);
+  static std::shared_ptr<Parameters> create(Register &xpmRegister, nlohmann::json const &jsonValue);
 #endif
 
   /// Destructor
   virtual ~Parameters();
 
   /// Returns true if objects are equal
-  virtual bool equals(Parameters const &other) const;
+  virtual bool equals(Parameters const &other) const = 0;
 
   /// Seal the object
   void seal();
@@ -137,7 +141,7 @@ public:
    * @param job Job for which the dependencies have to be added
    * @param skipThis True if skipping this object
    */
-  void addDependencies(Job & job, bool skipThis);
+  virtual void addDependencies(Job & job, bool skipThis);
 
   /**
    * Validate values
@@ -174,24 +178,31 @@ public:
    */
   std::array<unsigned char, DIGEST_LENGTH> digest() const;
 
-  /// Get generating job
-  std::shared_ptr<Job> const & job() const;
-
-  /// Set generating job
-  void job( std::shared_ptr<Job> const & _job);
-
   /// Create objects
   virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
   /// Output JSON
-  virtual void outputJson(std::ostream &out, CommandContext & context) const = 0;
+  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const = 0);
+
+  /// Convert to map or throw an exception
+  MapParameters & asMap();
+  bool isMap() const;
+  
+  /// Convert to array  or throw an exception
+  ArrayParameters & asArray();
+  bool isArray() const;
+  
+  /// Convert to scalar or throw an exception
+  ScalarParameters & asScalar();
+  bool isScalar() const;
+  
 
 protected:
   /// For each child callback
   virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f);
 
   /// Update digest
-  virtual void updateDigest(Digest & digest) const;
+  virtual void updateDigest(Digest & digest) const = 0;
 
   /// Set flag
   void set(Flag flag, bool value);
@@ -216,10 +227,14 @@ protected:
 
   /// Type of the object
   std::shared_ptr<Type> _type;
+
+  friend class MapParameters;
 };
 
 class MapParameters : public Parameters {
 public:
+  virtual ~MapParameters();
+
   /** Sets the task */
   void task(std::shared_ptr<Task> const &task);
 
@@ -246,13 +261,20 @@ public:
   std::shared_ptr<Parameters> &operator[](const size_t index);
 
   virtual bool equals(Parameters const &other) const override;
-  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
 
   virtual nlohmann::json toJson() const override;
 
   virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister) override;
   virtual void updateDigest(Digest & digest) const override;
   virtual std::shared_ptr<Parameters> copy() override;
+  virtual void addDependencies(Job & job, bool skipThis) override;
+  
+  /// Get generating job
+  std::shared_ptr<Job> const & job() const;
+
+  /// Set generating job
+  void job( std::shared_ptr<Job> const & _job);
 
 protected:
   virtual void _validate() override;
@@ -281,6 +303,8 @@ private:
 
 class ArrayParameters : public Parameters {
 public:
+  virtual ~ArrayParameters();
+
   /// Returns the size of the array or the map
   size_t size() const;
 
@@ -291,7 +315,7 @@ public:
   std::shared_ptr<Parameters> operator[](size_t index);
 
   virtual bool equals(Parameters const &other) const override;
-  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
+  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
   virtual nlohmann::json toJson() const override;
   virtual void updateDigest(Digest & digest) const override;
   virtual std::shared_ptr<Parameters> copy() override;

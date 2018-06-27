@@ -122,10 +122,11 @@ std::vector<std::string> reverse(std::vector<std::string> const &_args) {
 }
 
 namespace {
-void showArguments(ptr<Parameters> const & sv, Type const & type, std::string const & indent = "") {
+void showArguments(ptr<Parameters> const & _sv, Type const & type, std::string const & indent = "") {
+  auto sv = std::dynamic_pointer_cast<MapParameters>(_sv);
   for(auto const &x: type.arguments()) {
     auto subtype =  x.second->type();
-    auto subSV = sv && sv->hasKey(x.first) ? sv->get(x.first) : nullptr;
+    auto subSV = sv && sv->hasKey(x.first) ? std::dynamic_pointer_cast<MapParameters>(sv->get(x.first)) : nullptr;
 
     if (subSV) {
       auto svType = subSV->type();
@@ -144,10 +145,10 @@ void showArguments(ptr<Parameters> const & sv, Type const & type, std::string co
       << x.second->help();
     if (x.second->required()) std::cout << " REQUIRED";
     if (subtype->predefined()) {
-      if (subSV && subSV->hasValue()) {
-        std::cout << " (value " << subSV->valueAsJson() << ")";
+      if (subSV) {
+        std::cout << " (value " << subSV->toJson() << ")";
       } else if (x.second->defaultValue()) {
-        std::cout << " (default " << x.second->defaultValue()->valueAsJson() << ")";
+        std::cout << " (default " << x.second->defaultValue()->toJson() << ")";
       }
       std::cout << std::endl;
     } else {
@@ -158,17 +159,18 @@ void showArguments(ptr<Parameters> const & sv, Type const & type, std::string co
 }
 
 /// Follow
-ptr<Parameters> getSubValue(ptr<Parameters> sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
-  ptr<Parameters> subsv = nullptr;
+ptr<Parameters> getSubValue(MapParameters & _sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
+  auto sv = &_sv;
+  ptr<MapParameters> subsv = nullptr;
   for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
     next = fullkey.find(separator, pos+1);
     std::string key = fullkey.substr(pos, next-pos);
 
     if (sv->hasKey(key)) {
-      subsv = sv->get(key);
+      subsv = std::dynamic_pointer_cast<MapParameters>(sv->get(key));
     } else {
       // Create structured value
-      subsv = mkptr<Parameters>();
+      subsv = mkptr<MapParameters>();
 
       // Propagate types
       auto const &arguments = sv->type()->arguments();
@@ -180,20 +182,21 @@ ptr<Parameters> getSubValue(ptr<Parameters> sv, std::string const & fullkey, std
       }
       sv->set(key, subsv);
     }
-    sv = subsv;
+    sv = subsv.get();
   }
 
   return subsv;
 }
 
 /// Merge values from YAML into a structured value
-void merge(Register & xpmRegister, ptr<Parameters> const &sv, YAML::Node const &node) {
+void merge(Register & xpmRegister, MapParameters &sv, YAML::Node const &node) {
   switch (node.Type()) {
 
   case YAML::NodeType::Sequence:
   case YAML::NodeType::Scalar:
   case YAML::NodeType::Null: {
-    sv->set(node);
+//    sv->set(node);
+    NOT_IMPLEMENTED(); // FIXME
     break;
   }
 
@@ -208,7 +211,7 @@ void merge(Register & xpmRegister, ptr<Parameters> const &sv, YAML::Node const &
         type->placeholder(true);
         xpmRegister.addType(type);
       }
-      sv->type(type);
+      sv.type(type);
     }
 
     // Merge all entries
@@ -217,7 +220,7 @@ void merge(Register & xpmRegister, ptr<Parameters> const &sv, YAML::Node const &
 
       // Find the structured value
       auto subsv = getSubValue(sv, fullkey, ".");
-      merge(xpmRegister, subsv, pair.second); 
+      merge(xpmRegister, subsv->asMap(), pair.second);
 
     }
     break;
@@ -282,9 +285,9 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       }
 
       // Read the JSON file
-      ptr<Parameters> sv;
+      ptr<MapParameters> sv;
       if (paramFile.empty()) {
-        sv = mkptr<Parameters>();
+        sv = mkptr<MapParameters>();
         sv->type(task->type());
       } else {
         std::ifstream stream(paramFile);
@@ -297,14 +300,15 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
           throw;
         }
 
-        sv = std::make_shared<Parameters>(*this, j);
+        sv = std::dynamic_pointer_cast<MapParameters>(Parameters::create(*this, j));
+        
       }
 
       // Parse YAML string
       if (!yamlStrings.empty()) {
         for(auto const &yamlString: yamlStrings) {
           auto yaml = YAML::Load(yamlString);
-          merge(*this, sv, yaml);
+          merge(*this, *sv, yaml);
         }
         sv->type(task->type());
       }
@@ -314,10 +318,11 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         if (parameters[i].substr(0,2) != "--") {
           throw argument_error("Option '" + parameters[i] + "' does not begin by --");
         }
-        auto subsv = getSubValue(sv, parameters[i].substr(2), "-");
+        auto subsv = getSubValue(*sv, parameters[i].substr(2), "-");
 
         if (subsv->type()->scalar()) {
-          subsv->set(parameters[i+1], true);
+          //subsv->asMap().set(parameters[i+1], true);
+          NOT_IMPLEMENTED(); // FIXME: re-implement
         } else {
           auto type = getType(parameters[i+1]);
           if (!type) throw argument_error("Type " + parameters[i+1] + " does not exist");
@@ -354,7 +359,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 }
 
 void Register::runTask(ptr<Task> const & task, ptr<Parameters> const & sv) {
-  auto object = sv->object();
+  auto object = sv->asMap().object();
   if (!object) {
     throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
   }
@@ -397,7 +402,7 @@ void Register::generate() const {
 }
 
 ptr<Parameters> Register::build(std::string const &value) {
-  return std::make_shared<Parameters>(*this, json::parse(value));
+  return Parameters::create(*this, json::parse(value));
 }
 
 void Register::parse(int argc, const char **argv) {
@@ -480,7 +485,7 @@ void Register::load(nlohmann::json const &j) {
     if (e.count("properties")) {
       auto properties = e["properties"];
       for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
-        auto object = std::make_shared<Parameters>(*this, it_prop.value());
+        auto object = Parameters::create(*this, it_prop.value());
         type->setProperty(it_prop.key(), object);
       }
     }
@@ -505,7 +510,7 @@ void Register::load(nlohmann::json const &j) {
 
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
-          a->defaultValue(std::make_shared<Parameters>(*this, value["default"]));
+          a->defaultValue(Parameters::create(*this, value["default"]));
         }
 
         if (value.count("generator")) {

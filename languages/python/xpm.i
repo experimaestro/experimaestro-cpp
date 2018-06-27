@@ -40,9 +40,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 /*%attribute(xpm::Argument, Type, type, type, type)*/
 /*%ignore xpm::Argument::type;*/
 
-%extend xpm::Parameters { 
+%extend xpm::ArrayParameters { 
     %COLLECTION(std::shared_ptr<xpm::Parameters>) 
-
 };
 
 %{
