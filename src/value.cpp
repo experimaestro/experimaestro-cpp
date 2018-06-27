@@ -4,6 +4,7 @@
 
 #include <regex>
 #include <xpm/xpm.hpp>
+#include <xpm/type.hpp>
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
 #include <yaml-cpp/yaml.h>

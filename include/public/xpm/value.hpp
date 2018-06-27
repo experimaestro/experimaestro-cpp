@@ -19,6 +19,7 @@ namespace YAML {
 
 namespace xpm {
 
+struct Digest;
 class Type;
 class Parameters;
 class Register;

@@ -31,17 +31,18 @@ enable_testing()
 
 
 set(PUBLIC_HEADERS
-        include/public/xpm/json.hpp
-        include/public/xpm/xpm.hpp
-        include/public/xpm/value.hpp
-        include/public/xpm/task.hpp
-        include/public/xpm/filesystem.hpp
         include/public/xpm/commandline.hpp
-        include/public/xpm/register.hpp
-        include/public/xpm/workspace.hpp
-        include/public/xpm/logging.hpp
         include/public/xpm/cpp.hpp 
-
+        include/public/xpm/filesystem.hpp
+        include/public/xpm/json.hpp
+        include/public/xpm/logging.hpp
+        include/public/xpm/register.hpp
+        include/public/xpm/task.hpp
+        include/public/xpm/type.hpp 
+        include/public/xpm/value.hpp
+        include/public/xpm/workspace.hpp
+        include/public/xpm/xpm.hpp
+        
         include/public/xpm/connectors/connectors.hpp
         include/public/xpm/connectors/ssh.hpp
         include/public/xpm/connectors/local.hpp
@@ -77,6 +78,7 @@ set(SOURCES
         src/jsonserialization.cpp
         src/value.cpp
         src/scriptbuilder.cpp
+        src/type.cpp
 
         # Launchers
         src/launchers/launchers.cpp 

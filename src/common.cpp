@@ -6,12 +6,7 @@
 #include <xpm/xpm.hpp>
 
 namespace xpm {
-std::ostream &operator<<(std::ostream &os, const Typename &c) {
-  return os << c.toString();
-}
-std::ostream &operator<<(std::ostream &os, const Type &c) {
-  return os << c.toString();
-}
+
 
 sealed_error::sealed_error() : exception("Object is sealed: cannot modify") {}
 argument_error::argument_error(const std::string &message) : exception(message) {}

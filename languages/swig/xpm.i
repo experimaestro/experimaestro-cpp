@@ -141,6 +141,7 @@ namespace xpm {
 %include <xpm/filesystem.hpp>
 %include <xpm/value.hpp>
 %include <xpm/xpm.hpp>
+%include <xpm/type.hpp>
 %include <xpm/task.hpp>
 %include <xpm/register.hpp>
 %include <xpm/logging.hpp>

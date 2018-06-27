@@ -2,6 +2,7 @@
 #define EXPERIMAESTRO_REGISTER_HPP
 
 #include <xpm/xpm.hpp>
+#include <xpm/type.hpp>
 #include <xpm/task.hpp>
 
 namespace YAML {

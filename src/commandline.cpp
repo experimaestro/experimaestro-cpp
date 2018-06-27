@@ -10,6 +10,7 @@
 #include <xpm/value.hpp>
 #include <xpm/common.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/type.hpp>
 
 #include <xpm/connectors/connectors.hpp>
 

@@ -11,6 +11,7 @@
 #include <xpm/register.hpp>
 #include <xpm/value.hpp>
 #include <xpm/xpm.hpp>
+#include <xpm/type.hpp>
 
 namespace xpm {
 

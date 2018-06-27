@@ -3,6 +3,7 @@
 //
 
 #include <xpm/xpm.hpp>
+#include <xpm/type.hpp>
 #include <xpm/workspace.hpp>
 #include <gtest/gtest.h>
 
