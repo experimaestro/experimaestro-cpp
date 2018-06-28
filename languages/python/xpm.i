@@ -46,38 +46,25 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 
 %define YOOO $descriptor(xpm::MapValue) %enddef
 
-%{
-/** 
- * Returns the wrapped python object rather than the director object.
- * This is useful since an XPM object might be subclassed
-*/
-
-   namespace xpm { namespace python {
-
-      PyObject * getRealObject(std::shared_ptr<xpm::Object> const &object) {
-         if (object) {
-            // This is a Director object
-            if (Swig::Director * d = SWIG_DIRECTOR_CAST(object.get())) {
-               Py_INCREF(d->swig_get_self());
-               return d->swig_get_self();
-            }
-
-            std::shared_ptr< xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>(object);
-            return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_xpm__Object_t, SWIG_POINTER_OWN);
-         }
-
-
-         // Returns None
-         return SWIG_Py_Void();
-      }
-      
-
-   }} // Ends xpm::python
-%}
 
 // Get the real object for a shared_ptr of an object
 %typemap(out) std::shared_ptr<xpm::Object> {
     // Retrieving Python object (and not the director)
+    if ($1) {
+        // This is a Director object
+        if (Swig::Director * d = SWIG_DIRECTOR_CAST($1.get())) {
+            Py_INCREF(d->swig_get_self());
+            return d->swig_get_self();
+        }
+
+        std::shared_ptr< xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>($1);
+        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::Object>), SWIG_POINTER_OWN);
+    }
+
+
+    // Returns None
+    return SWIG_Py_Void();
+
     $result = xpm::python::getRealObject($1);
 }
 
