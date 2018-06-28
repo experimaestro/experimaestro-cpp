@@ -68,17 +68,17 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         $result = SWIG_Py_Void();
     } else if (auto mp = std::dynamic_pointer_cast<xpm::MapValue>($1)) {
         auto smartresult = new std::shared_ptr<xpm::MapValue>(mp);
-        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::MapValue>), SWIG_POINTER_OWN);
+        $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::MapValue> &), SWIG_POINTER_OWN);
     } else if (auto ap = std::dynamic_pointer_cast<xpm::ArrayValue>($1)) {
         auto smartresult = new std::shared_ptr<xpm::ArrayValue>(ap);
-        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::MapParameters>), SWIG_POINTER_OWN);
+        $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::MapParameters> &), SWIG_POINTER_OWN);
     } else if (auto sp = std::dynamic_pointer_cast<xpm::ScalarValue>($1)) {
         auto smartresult = new std::shared_ptr<xpm::ScalarValue>(sp);
-        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::MapValue>), SWIG_POINTER_OWN);
+        $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::ScalarValue> &), SWIG_POINTER_OWN);
     } else {
-        auto smartresult = new std::shared_ptr<xpm::Value>($1);
-        $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::Parameters>), SWIG_POINTER_OWN);
+        throw xpm::assertion_error("Could not recognize value type...");
     }
+      
 }
 
 

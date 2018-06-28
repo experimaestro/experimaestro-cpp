@@ -159,7 +159,7 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
         p = mkptr<ScalarValue>(Scalar());
       } else if (_type->array()) {
         auto _p = mkptr<ArrayValue>();
-        _p->_type = _type;
+        _p->_ctype = dynamic_cast<ArrayType&>(*_type).componentType();
         p = _p;
       } else {
         // Otherwise, this is a map
@@ -209,6 +209,15 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
 
       LOGGER->debug("Got a value of type {}", _type ? _type->toString() : "?");
       return p;
+    }
+
+    case nlohmann::json::value_t::array: {
+      std::cerr << "Got an array!\n";
+      auto array = mkptr<ArrayValue>();
+      for(auto child: jsonValue) {
+        array->push_back(create(xpmRegister, child));
+      }
+      return array;
     }
 
     default: break;
@@ -418,7 +427,7 @@ void Value::retrieveTags(std::map<std::string, Scalar> &tags) const {
 //
 
 
-ArrayValue::ArrayValue() : _type(mkptr<ArrayType>(AnyType)) {}
+ArrayValue::ArrayValue() : _ctype(AnyType) {}
 
 ArrayValue::~ArrayValue() {}
 
@@ -454,12 +463,12 @@ size_t ArrayValue::size() const {
 }
 
 ptr<Type> ArrayValue::type() const {
-  return _type;
+  return mkptr<ArrayType>(_ctype);
 }
 
-void ArrayValue::push_back(std::shared_ptr<Value> const & parameters) {
-  _array.push_back(parameters);
-  _type = Type::lca(_type, parameters->type());
+void ArrayValue::push_back(std::shared_ptr<Value> const & value) {
+  _ctype = _array.empty() ? value->type() : Type::lca(_ctype, value->type());
+  _array.push_back(value);
 }
 
 bool ArrayValue::equals(Value const & other) const {
@@ -478,13 +487,12 @@ bool ArrayValue::equals(Value const & other) const {
 }
 
 void ArrayValue::outputJson(std::ostream &out, CommandContext & context) const {
-  out << "{\"" << xpm::KEY_TYPE << "\":\"" << type()->name().toString() << "\",\""
-      << xpm::KEY_VALUE << "\": [";
+  out << "[";
   for(size_t i = 0; i < size(); ++i) {
     if (i > 0) out << ", ";
     _array[i]->outputJson(out, context);
   }
-  out << "]}";
+  out << "]";
 }
 
 nlohmann::json ArrayValue::toJson() const {
@@ -639,7 +647,7 @@ void MapValue::outputJson(std::ostream &out, CommandContext & context) const {
 
   if (job()) {
     comma();
-    out << "\"$job\": " <<  job()->toJson() << std::endl;
+    out << "\"" << KEY_JOB << "\": " <<  job()->toJson();
   }
 
   for (auto type = this->type(); type; type = type->parentType()) {

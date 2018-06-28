@@ -40,7 +40,7 @@ DEFAULT_LAUNCHER = None
 # --- From C++ types to Python
 
 def value2python(sv):
-    """Converts parameters into a Python object"""
+    """Converts a value into a Python object"""
     svtype = sv.type()
     object = sv.asMap().object() if sv.isMap() else None
     
@@ -48,6 +48,7 @@ def value2python(sv):
         return object.pyobject
 
     if svtype.array():
+        sv  = sv.asArray()
         r = []
         for i in range(len(sv)):
             v = value2python(sv[i])
@@ -68,9 +69,8 @@ VALUECONVERTERS = {
 
 # --- From Python to C++ types
 
-def parameters(value):
+def python2value(value):
     """Transforms a Python value into a structured value"""
-
     # Simple case: it is already a configuration
     if isinstance(value, Value):
         return value
@@ -81,26 +81,28 @@ def parameters(value):
 
     # A dictionary: transform
     if isinstance(value, dict):
-        return register.build(JSON_ENCODER.encode(value))
+        v = register.build(JSON_ENCODER.encode(value))
+        print(v, type(v))
+        return v
 
     # A list
     if isinstance(value, list):
         newvalue = ArrayValue()
         for v in value:
-            newvalue.append(parameters(v))
+            newvalue.append(python2value(v))
 
         return newvalue
 
     # A path
     if isinstance(value, pathlib.Path):
-        return Value(Scalar(Path(str(value.absolute()))))
+        return ScalarValue(Path(str(value.absolute())))
 
     # For anything else, we try to convert it to a value
     return ScalarValue(Scalar(value))
 
 def checknullsv(sv):
     """Returns either None or the sv"""
-    return None if sv.null() else sv
+    return None if sv.isScalar() and sv.asScalar().null() else sv
 
 
 
@@ -126,7 +128,7 @@ class XPMObject(Object):
     def job(self):
         job = self.sv.job()
         if job: return job
-        raise Exception("No job associated with parameters %s" % self.sv)
+        raise Exception("No job associated with python2value %s" % self.sv)
 
     def set(self, k, v):
         if self.setting: return
@@ -139,7 +141,8 @@ class XPMObject(Object):
             if isinstance(v, PyObject) and hasattr(v.__class__, "__xpmtask__"):
                 if not v.__xpm__.submitted:
                     raise Exception("Task for argument '%s' was not submitted" % k)
-            self.sv.set(k, parameters(v))
+            pv = python2value(v)
+            self.sv.set(k, pv)
         except:
             logger.error("Error while setting %s", k)
             raise
@@ -446,7 +449,7 @@ class TypeArgument(AbstractArgument):
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:
-            self.argument.defaultValue(Value(Scalar(default)))
+            self.argument.defaultValue(python2value(default))
 
 
 class PathArgument(AbstractArgument):

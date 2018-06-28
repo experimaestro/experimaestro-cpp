@@ -82,14 +82,18 @@ namespace xpm {
 %include "documentation.i"
 
 %shared_ptr(xpm::Object)
+
 %shared_ptr(xpm::Type)
 %shared_ptr(xpm::SimpleType)
 %shared_ptr(xpm::ArrayType)
+
 %shared_ptr(xpm::Task)
+
 %shared_ptr(xpm::Value)
 %shared_ptr(xpm::ArrayValue)
 %shared_ptr(xpm::MapValue)
 %shared_ptr(xpm::ScalarValue)
+
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)

@@ -332,8 +332,8 @@ protected:
   virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) override;
 
 private:
-  /// Type of the object
-  std::shared_ptr<Type> _type;
+  /// Type of elements of the array
+  std::shared_ptr<Type> _ctype;
 
   std::vector<std::shared_ptr<Value>> _array;
   friend class Value;
