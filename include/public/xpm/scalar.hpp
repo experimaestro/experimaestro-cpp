@@ -56,6 +56,8 @@ class Scalar {
 
   Scalar(std::string const &value);
 
+  std::string toString() const;
+
   /// Build from YAML node
   static Scalar fromYAML(YAML::Node const &node);
 

@@ -300,6 +300,11 @@ ptr<Type> Scalar::type() const {
   throw exception("unhanlded type for a Scalar");
 }
 
+std::string Scalar::toString() const {
+  if (!defined()) return "";
+  return asString();
+}
+
 
 Scalar &Scalar::operator=(Scalar const &other) {
   this->~Scalar();

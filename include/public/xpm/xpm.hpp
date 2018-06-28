@@ -344,6 +344,15 @@ private:
 /// A scalar value
 class ScalarValue : public Value {
 public:
+  ScalarValue();
+  ScalarValue(long value);
+  ScalarValue(std::string const &value);
+  ScalarValue(Path const &value);
+  ScalarValue(bool value);
+  ScalarValue(double value);
+
+  std::string toString() const;
+
   virtual ~ScalarValue() = default;
   /// Constructs from value
   ScalarValue(Scalar const & v);

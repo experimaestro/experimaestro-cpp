@@ -807,8 +807,37 @@ ptr<Value> MapValue::set(const std::string &key, ptr<Value> const &value) {
 //
 // --- Scalar parameters
 
+
+ScalarValue::ScalarValue() {
+}
+
+ScalarValue::ScalarValue(long value) {
+  _value = Scalar(value);
+}
+
+ScalarValue::ScalarValue(std::string const &value) {
+  _value = Scalar(value);
+}
+
+ScalarValue::ScalarValue(Path const &value) {
+  _value = Scalar(value);
+}
+
+ScalarValue::ScalarValue(bool value) {
+  _value = Scalar(value);
+}
+
+ScalarValue::ScalarValue(double value) {
+  _value = Scalar(value);
+}
+
+
 ScalarValue::ScalarValue(Scalar const &v) {
   _value = v;
+} 
+
+std::string ScalarValue::toString() const{
+  return _value.asString();
 } 
 
 

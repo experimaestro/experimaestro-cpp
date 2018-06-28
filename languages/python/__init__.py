@@ -39,7 +39,7 @@ DEFAULT_LAUNCHER = None
 
 # --- From C++ types to Python
 
-def parameters2value(sv):
+def value2python(sv):
     """Converts parameters into a Python object"""
     svtype = sv.type()
     object = sv.asMap().object() if sv.isMap() else None
@@ -50,7 +50,7 @@ def parameters2value(sv):
     if svtype.array():
         r = []
         for i in range(len(sv)):
-            v = parameters2value(sv[i])
+            v = value2python(sv[i])
             r.append(v)
         return r
 
@@ -155,7 +155,7 @@ class XPMObject(Object):
                 value = None
                 svtype = None
             else:
-                value = parameters2value(sv)
+                value = value2python(sv)
                 svtype = sv.type()
 
             # Set the value on the object if not setting otherwise

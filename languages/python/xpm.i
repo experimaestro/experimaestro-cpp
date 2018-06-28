@@ -44,7 +44,6 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     %COLLECTION(std::shared_ptr<xpm::Value>) 
 };
 
-
 // Get the real object for a shared_ptr of an object
 %typemap(out) std::shared_ptr<xpm::Object> {
     // Retrieving Python object (and not the director)
@@ -60,7 +59,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     } else {
         // Returns None
         $result = SWIG_Py_Void();
-    }
+    } 
 }
 
 // Get the real object for a shared_ptr of a value
@@ -80,8 +79,8 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         auto smartresult = new std::shared_ptr<xpm::Value>($1);
         $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::Parameters>), SWIG_POINTER_OWN);
     }
-
 }
+
 
 // Handles properly a smart pointer
 %typemap(directorin) std::shared_ptr< xpm::Value > const & {
