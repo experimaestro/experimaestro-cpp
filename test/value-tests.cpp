@@ -2,10 +2,12 @@
 // Created by Benjamin Piwowarski on 13/12/2016.
 //
 
+#include <gtest/gtest.h>
+
 #include <xpm/xpm.hpp>
 #include <xpm/type.hpp>
 #include <xpm/workspace.hpp>
-#include <gtest/gtest.h>
+#include <xpm/cpp.hpp>
 
 //using nlohmann::json;
 using namespace xpm;
@@ -24,6 +26,14 @@ struct TestType {
     return ptr;
   }
 };
+
+
+
+TEST(Value, scalarParse) {
+  auto r = mkptr<CppRegister>();
+  EXPECT_THROW(r->build(R"({ "$value": 5, "shouldnotbehere": 2 })"), xpm::argument_error);
+}
+
 
 TEST(Value, defaultSet) {
   auto object = TestType().create();
