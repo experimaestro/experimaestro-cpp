@@ -14,8 +14,8 @@
 %nspace xpm::Generator;
 %nspace xpm::LogLevel;
 %nspace xpm::TypeName;
-%nspace xpm::Value;
-%nspace xpm::ValueType;
+%nspace xpm::Scalar;
+%nspace xpm::ScalarType;
 %nspace xpm::optional;
 
 %nspace xpm::AbstractCommandComponent;

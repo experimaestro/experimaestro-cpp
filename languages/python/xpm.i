@@ -150,7 +150,7 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     void __setitem__(std::string const & key, std::map<std::string, std::shared_ptr<xpm::Object>> &value) {
         (*($self))[key] = std::make_shared<xpm::Object>(value);
     }
-    void __setitem__(std::string const & key, Value const &value) {
+    void __setitem__(std::string const & key, Scalar const &value) {
         (*($self))[key] = std::make_shared<xpm::Object>(value);
     }*/
 
@@ -183,26 +183,26 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
 
     PyObject *call() {
         // If we have a value, just return it
-        if (auto valuePtr = dynamic_cast<xpm::Value*>($self)) {
+        if (auto valuePtr = dynamic_cast<xpm::Scalar*>($self)) {
             switch(valuePtr->scalarType()) {
-                case xpm::ValueType::BOOLEAN:
+                case xpm::ScalarType::BOOLEAN:
                     if (valuePtr->asBoolean()) { Py_RETURN_TRUE; } else { Py_RETURN_FALSE; }
 
-                case xpm::ValueType::NONE:
+                case xpm::ScalarType::NONE:
                     return SWIG_Py_Void();
 
-                case xpm::ValueType::PATH: {
+                case xpm::ScalarType::PATH: {
                     auto pathPtr = new xpm::Path($self->asPath());
                     return SWIG_InternalNewPointerObj(pathPtr, $descriptor(xpm::Path*), SWIG_POINTER_OWN );
                 }
 
-                case xpm::ValueType::STRING:
+                case xpm::ScalarType::STRING:
                     return PyUnicode_FromString($self->asString().c_str());
 
-                case xpm::ValueType::INTEGER:
+                case xpm::ScalarType::INTEGER:
                     return PyLong_FromLong($self->asInteger());
 
-                case xpm::ValueType::REAL:
+                case xpm::ScalarType::REAL:
                     return PyFloat_FromDouble($self->asReal());
             }
         }

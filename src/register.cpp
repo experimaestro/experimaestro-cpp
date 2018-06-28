@@ -226,7 +226,7 @@ void merge(Register & xpmRegister, MapParameters &sv, YAML::Node const &node) {
     break;
   }
 
-  default: throw argument_error("Cannot convert YAML to Value");
+  default: throw argument_error("Cannot convert YAML to Scalar");
   }
 }
 } // namespace

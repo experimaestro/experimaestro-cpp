@@ -25,8 +25,8 @@ class Type;
 class Parameters;
 class Register;
 
-enum class ValueType : int8_t {
-  /* Value not set */
+enum class ScalarType : int8_t {
+  /* Scalar not set */
   UNSET, 
 
   /* Set to None */
@@ -43,39 +43,39 @@ enum class ValueType : int8_t {
 /**
  * A value
  */
-class Value {
+class Scalar {
  public:
-  typedef std::shared_ptr<Value> Ptr;
+  typedef std::shared_ptr<Scalar> Ptr;
 
-  Value();
-  Value(double value);
-  Value(bool value);
-  Value(int value);
-  Value(long value);
+  Scalar();
+  Scalar(double value);
+  Scalar(bool value);
+  Scalar(int value);
+  Scalar(long value);
   
-  Value(Path const &value);
+  Scalar(Path const &value);
 
-  Value(std::string const &value);
+  Scalar(std::string const &value);
 
   /// Build from YAML node
-  static Value fromYAML(YAML::Node const &node);
+  static Scalar fromYAML(YAML::Node const &node);
 
   /// Build from string with type hint
-  static Value fromString(std::string const & string, std::shared_ptr<Type> const & hint);
+  static Scalar fromString(std::string const & string, std::shared_ptr<Type> const & hint);
 
-  inline Value(char const *value) : Value(std::string(value)) {}
+  inline Scalar(char const *value) : Scalar(std::string(value)) {}
 
 #ifndef SWIG
-  Value(nlohmann::json const &jsonValue);
+  Scalar(nlohmann::json const &jsonValue);
 #endif
 
-  Value(Value const &other);
-  Value &operator=(Value const &other);
+  Scalar(Scalar const &other);
+  Scalar &operator=(Scalar const &other);
 
-  virtual ~Value();
+  virtual ~Scalar();
   // virtual std::shared_ptr<Parameters> copy();
 
-  ValueType const scalarType() const;
+  ScalarType const scalarType() const;
   std::shared_ptr<Type> type() const;
 
   /** Is the value defined? */
@@ -89,10 +89,10 @@ class Value {
 
   virtual nlohmann::json toJson() const;
 
-  virtual bool equals(Value const &) const;
+  virtual bool equals(Scalar const &) const;
 
   /// Cast to other simple type
-  Value cast(std::shared_ptr<Type> const &type);
+  Scalar cast(std::shared_ptr<Type> const &type);
 
   /** @defgroup content Access to value content
    *  @{
@@ -124,14 +124,14 @@ class Value {
   NOSWIG(void updateDigest(Digest &) const);
 
   /// A constant
-  static const Value NONE;
+  static const Scalar NONE;
   
  protected:
   friend struct Helper;
 
 private:
     /// Initialize with a given type (internal use only)
-    Value(ValueType vt);
+    Scalar(ScalarType vt);
 
     union Union {
     long integer;
@@ -143,20 +143,20 @@ private:
     ~Union();
     Union();
   } _value;
-  ValueType _scalarType;
+  ScalarType _scalarType;
 };
 
-inline bool operator==(Value const &a, Value const &b) {
+inline bool operator==(Scalar const &a, Scalar const &b) {
   return a.equals(b);
 }
 
 
-/// TODO: Fuse this with Value
+/// TODO: Fuse this with Scalar
 class ScalarParameters : public Parameters {
 public:
   virtual ~ScalarParameters() = default;
   /// Constructs from value
-  ScalarParameters(Value const & v);
+  ScalarParameters(Scalar const & v);
 
   /// Returns the string
   std::string asString() const;
@@ -185,7 +185,7 @@ public:
   bool null() const;
 
   nlohmann::json toJson() const override;
-  ValueType valueType() const;
+  ScalarType valueType() const;
 
   virtual bool equals(Parameters const &other) const override;
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
@@ -196,7 +196,7 @@ public:
 
 private:
   /// The associated value
-  Value _value;
+  Scalar _value;
 
   friend class Parameters;
 };

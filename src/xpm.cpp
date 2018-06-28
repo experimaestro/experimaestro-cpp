@@ -44,7 +44,7 @@ const std::string KEY_TASK = "$task";
 /// Job information
 const std::string KEY_JOB = "$job";
 
-/// Value
+/// Scalar
 const std::string KEY_VALUE = "$value";
 
 static const auto RESTRICTED_KEYS = std::unordered_set<std::string> {KEY_TYPE, KEY_TASK, KEY_VALUE, KEY_JOB};
@@ -154,10 +154,10 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
       // (2) Fill from JSON
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         if (it.key() == KEY_VALUE) {
-          if (p) throw argument_error("Value cannot be something else");
+          if (p) throw argument_error("Scalar cannot be something else");
 
           // Infer type from value
-          auto value = Value(it.value());
+          auto value = Scalar(it.value());
           ptr<Type> vtype;
           if (!value.null()) {
             vtype = value.type();
@@ -198,7 +198,7 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
     default: break;
   }
     
-  return mkptr<ScalarParameters>(Value(jsonValue));
+  return mkptr<ScalarParameters>(Scalar(jsonValue));
 }
 
 // Convert to JSON
@@ -584,7 +584,7 @@ void MapParameters::_generate(GeneratorContext &context) {
         } else if (!argument.required()) {
           // Set value null
           LOGGER->debug("Setting null value for {}...", argument.name());
-          auto value = mkptr<ScalarParameters>(Value::NONE);
+          auto value = mkptr<ScalarParameters>(Scalar::NONE);
           value->Parameters::set(Flag::DEFAULT, true);
           set(argument.name(), value);
         }
@@ -754,7 +754,7 @@ ptr<Parameters> MapParameters::set(const std::string &key, ptr<Parameters> const
   if (itA != type()->arguments().end()) {
     auto & argument = *itA->second;
     if (argument.defaultValue() && argument.defaultValue()->equals(*value)) {
-      LOGGER->debug("Value is default");
+      LOGGER->debug("Scalar is default");
       value->set(Flag::DEFAULT, true);
     }
     if (argument.ignored()) {
@@ -880,7 +880,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return mkptr<ScalarParameters>(Value(p));
+  return mkptr<ScalarParameters>(Scalar(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

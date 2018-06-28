@@ -60,7 +60,7 @@ inline void assignValue(Parameters::Ptr const &sv, long &x) {
 inline void assignValue(Parameters::Ptr const &sv, Path &s) {
   s = std::dynamic_pointer_cast<ScalarParameters>(sv)->asPath();
 }
-// inline void assignValue(Parameters::Ptr const &sv, Value::Array &s) {
+// inline void assignValue(Parameters::Ptr const &sv, Scalar::Array &s) {
 //   s = sv->asArray();
 // }
 
@@ -77,11 +77,11 @@ inline void assignValue(xpm::Parameters::Ptr const &value,
   }
 }
 
-template <typename T, typename Value>
+template <typename T, typename Scalar>
 struct TypedArgumentHolder : public ArgumentHolder<T> {
-  Value T::*valuePtr;
+  Scalar T::*valuePtr;
 
-  TypedArgumentHolder(Value T::*valuePtr) : valuePtr(valuePtr) {}
+  TypedArgumentHolder(Scalar T::*valuePtr) : valuePtr(valuePtr) {}
 
   virtual void setValue(T &self,
                         xpm::Parameters::Ptr const &value) override {
@@ -162,7 +162,7 @@ struct BaseCppTypeBuilder {
   }
 
   template <typename U> Self &defaultValue(U const &v) {
-    _argument->defaultValue(std::make_shared<ScalarParameters>(Value(v)));
+    _argument->defaultValue(std::make_shared<ScalarParameters>(Scalar(v)));
     return dynamic_cast<Self&>(*this);
   }
 

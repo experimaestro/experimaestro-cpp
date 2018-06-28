@@ -215,10 +215,10 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
 };
 
 class SimpleType : public Type {
-  ValueType _valueType;
+  ScalarType _valueType;
  public:
-  SimpleType(Typename const &tname, ValueType valueType, bool canIgnore = false);
-  inline ValueType valueType() { return _valueType; }
+  SimpleType(Typename const &tname, ScalarType valueType, bool canIgnore = false);
+  inline ScalarType valueType() { return _valueType; }
   virtual bool scalar() override { return true; }
 };
 

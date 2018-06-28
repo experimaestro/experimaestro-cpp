@@ -17,45 +17,45 @@ using nlohmann::json;
 
 namespace xpm {
 
-const Value Value::NONE(ValueType::NONE);
+const Scalar Scalar::NONE(ScalarType::NONE);
 
-bool Value::equals(Value const &b) const {
+bool Scalar::equals(Scalar const &b) const {
   if (scalarType() != b._scalarType) return false;
   switch (_scalarType) {
-    case ValueType::PATH:
-    case ValueType::STRING:return _value.string == b._value.string;
+    case ScalarType::PATH:
+    case ScalarType::STRING:return _value.string == b._value.string;
 
-    case ValueType::INTEGER:return _value.integer == b._value.integer;
+    case ScalarType::INTEGER:return _value.integer == b._value.integer;
 
-    case ValueType::REAL:return _value.real == b._value.real;
+    case ScalarType::REAL:return _value.real == b._value.real;
 
-    case ValueType::BOOLEAN:return _value.boolean == b._value.boolean;
+    case ScalarType::BOOLEAN:return _value.boolean == b._value.boolean;
     
 
-    case ValueType::NONE:
+    case ScalarType::NONE:
       return true;
 
-    case ValueType::UNSET:
+    case ScalarType::UNSET:
       throw std::runtime_error("equals: unset has no type");
   }
 
   throw std::out_of_range("Scalar type is not known (comparing)");
 }
 
-Value Value::cast(Type::Ptr const &type) {
+Scalar Scalar::cast(Type::Ptr const &type) {
   auto *simpleType = dynamic_cast<SimpleType*>(type.get());
   if (!simpleType) {
     throw std::runtime_error("Cannot cast value to " + type->toString());
   }
 
   switch (simpleType->valueType()) {
-    case ValueType::PATH: return Value(this->asPath());
-    case ValueType::STRING: return Value(this->asString());
-    case ValueType::INTEGER: return Value(this->asInteger());
-    case ValueType::BOOLEAN: return Value(this->asBoolean());
-    case ValueType::REAL: return Value(this->asReal());
-    case ValueType::NONE: return *this; // no change
-    case ValueType::UNSET:throw std::runtime_error("cast: unset has no type");
+    case ScalarType::PATH: return Scalar(this->asPath());
+    case ScalarType::STRING: return Scalar(this->asString());
+    case ScalarType::INTEGER: return Scalar(this->asInteger());
+    case ScalarType::BOOLEAN: return Scalar(this->asBoolean());
+    case ScalarType::REAL: return Scalar(this->asReal());
+    case ScalarType::NONE: return *this; // no change
+    case ScalarType::UNSET:throw std::runtime_error("cast: unset has no type");
   }
 
   throw std::out_of_range("Scalar type is not known (casting)");
@@ -68,7 +68,7 @@ namespace {
 
 }
 
-Value Value::fromYAML(YAML::Node const &node) {
+Scalar Scalar::fromYAML(YAML::Node const &node) {
   switch (node.Type()) {
   case YAML::NodeType::Sequence: {
     NOT_IMPLEMENTED();
@@ -89,17 +89,17 @@ Value Value::fromYAML(YAML::Node const &node) {
     } else if (node.Tag() == "?") {
       // boolean
       if (s == "Y" || s == "true" || s == "Yes" || s == "ON")
-        return Value(true);
+        return Scalar(true);
       if (s == "N" || s == "false" || s == "No" || s == "OFF")
-        return Value(false);
+        return Scalar(false);
 
       // Integer
       if (std::regex_match(s, RE_INTEGER)) {
-        return Value(std::atol(s.c_str()));
+        return Scalar(std::atol(s.c_str()));
       }
 
       if (std::regex_match(s, RE_REAL)) {
-        return Value(std::atof(s.c_str()));
+        return Scalar(std::atof(s.c_str()));
       }
 
       return s;
@@ -111,34 +111,34 @@ Value Value::fromYAML(YAML::Node const &node) {
   }
 }
 
-Value Value::fromString(std::string const & s, ptr<Type> const & hint) {
+Scalar Scalar::fromString(std::string const & s, ptr<Type> const & hint) {
   // Just a string
   if (hint == AnyType) {
-    return Value(s);
+    return Scalar(s);
   }
 
   if (hint == PathType) {
-    return Value(Path(s));
+    return Scalar(Path(s));
   }
 
   if (hint == IntegerType) {
     if (std::regex_match(s, RE_INTEGER)) {
-      return Value(std::atol(s.c_str()));
+      return Scalar(std::atol(s.c_str()));
     }
     throw argument_error(s + " cannot be interpreted as an integer");
   }
 
   if (hint == BooleanType) {
     if (s == "Y" || s == "true" || s == "Yes" || s == "ON")
-      return Value(true);
+      return Scalar(true);
     if (s == "N" || s == "false" || s == "No" || s == "OFF")
-      return Value(false);
+      return Scalar(false);
     throw argument_error(s + " cannot be interpreted as a boolean");
   }
 
   if (hint == RealType) {
     if (std::regex_match(s, RE_REAL)) {
-      return Value(std::atof(s.c_str()));
+      return Scalar(std::atof(s.c_str()));
     }
     throw argument_error(s + " cannot be interpreted as a real");
   }
@@ -148,75 +148,75 @@ Value Value::fromString(std::string const & s, ptr<Type> const & hint) {
 }
 
 
-Value::~Value() {
+Scalar::~Scalar() {
   switch (_scalarType) {
-    case ValueType::STRING: 
+    case ScalarType::STRING: 
       _value.string.~stdstring();
       break;
     default:
       // Do nothing for other values
       break;
   }
-  _scalarType = ValueType::UNSET;
+  _scalarType = ScalarType::UNSET;
 }
 
-Value::Union::~Union() {
+Scalar::Union::~Union() {
   // Does nothing: handled by Scalar
 }
 
-Value::Union::Union() {
+Scalar::Union::Union() {
   // Does nothing: handled by Scalar
 }
 
-Value::Value() : _scalarType(ValueType::UNSET) {
+Scalar::Scalar() : _scalarType(ScalarType::UNSET) {
 }
 
-Value::Value(ValueType scalarType) : _scalarType(scalarType) {
+Scalar::Scalar(ScalarType scalarType) : _scalarType(scalarType) {
 }
 
-Value::Value(double value) : _scalarType(ValueType::REAL) {
+Scalar::Scalar(double value) : _scalarType(ScalarType::REAL) {
   _value.real = value;
 }
 
-Value::Value(long value) : _scalarType(ValueType::INTEGER) {
+Scalar::Scalar(long value) : _scalarType(ScalarType::INTEGER) {
   _value.integer = value;
 }
 
-Value::Value(int value) : _scalarType(ValueType::INTEGER) {
+Scalar::Scalar(int value) : _scalarType(ScalarType::INTEGER) {
   _value.integer = value;
 }
 
-Value::Value(bool value) : _scalarType(ValueType::BOOLEAN) {
+Scalar::Scalar(bool value) : _scalarType(ScalarType::BOOLEAN) {
   _value.boolean = value;
 }
 
-Value::Value(std::string const &value) : _scalarType(ValueType::STRING) {
+Scalar::Scalar(std::string const &value) : _scalarType(ScalarType::STRING) {
   // placement new
   new(&_value.string) std::string(value);
 }
 
-Value::Value(Path const &path) : _scalarType(ValueType::PATH) {
+Scalar::Scalar(Path const &path) : _scalarType(ScalarType::PATH) {
   new(&_value.string) std::string(path.toString());
 }
 
-Value::Value(Value const &other) : _scalarType(other._scalarType) {
+Scalar::Scalar(Scalar const &other) : _scalarType(other._scalarType) {
   switch (_scalarType) {
-    case ValueType::NONE:break;
+    case ScalarType::NONE:break;
 
-    case ValueType::REAL:
+    case ScalarType::REAL:
     _value.real = other._value.real;
       break;
 
-    case ValueType::INTEGER:
+    case ScalarType::INTEGER:
       _value.integer = other._value.integer;
       break;
 
-    case ValueType::BOOLEAN:
+    case ScalarType::BOOLEAN:
       _value.boolean = other._value.boolean;
       break;
 
-    case ValueType::PATH:
-    case ValueType::STRING:
+    case ScalarType::PATH:
+    case ScalarType::STRING:
       new(&_value.string) std::string(other._value.string);
       break;
 
@@ -225,69 +225,69 @@ Value::Value(Value const &other) : _scalarType(other._scalarType) {
 }
 
 
-Value::Value(nlohmann::json const &jsonValue) {
+Scalar::Scalar(nlohmann::json const &jsonValue) {
   switch(jsonValue.type()) {
     case nlohmann::json::value_t::null:
     case nlohmann::json::value_t::discarded:
-      _scalarType = ValueType::NONE;
+      _scalarType = ScalarType::NONE;
       break;
 
     case nlohmann::json::value_t::string:
       new(&_value.string) std::string();
       _value.string = jsonValue;
-      _scalarType = ValueType::STRING;
+      _scalarType = ScalarType::STRING;
       break;
 
     case nlohmann::json::value_t::boolean:
       _value.boolean = jsonValue;
-      _scalarType = ValueType::BOOLEAN;
+      _scalarType = ScalarType::BOOLEAN;
       break;
 
     case nlohmann::json::value_t::number_integer:
     case nlohmann::json::value_t::number_unsigned:
       _value.integer = jsonValue;
-      _scalarType = ValueType::INTEGER;
+      _scalarType = ScalarType::INTEGER;
       break;
 
     case nlohmann::json::value_t::number_float:{
       // Try first as integer
       if (std::trunc((double)jsonValue) == (double)jsonValue) {
         _value.integer = jsonValue;
-        _scalarType = ValueType::INTEGER;
+        _scalarType = ScalarType::INTEGER;
       } else {
         _value.real = jsonValue;
-        _scalarType = ValueType::REAL;
+        _scalarType = ScalarType::REAL;
       }
       break;
     }
 
     default:
-      throw exception("unhanlded JSON type for a Value");
+      throw exception("unhanlded JSON type for a Scalar");
   }
 }
 
-ptr<Type> Value::type() const {
+ptr<Type> Scalar::type() const {
   switch (_scalarType) {
-    case ValueType::NONE:
-    case ValueType::UNSET:
+    case ScalarType::NONE:
+    case ScalarType::UNSET:
       return AnyType;
 
-    case ValueType::REAL:
+    case ScalarType::REAL:
       return RealType;
 
-    case ValueType::INTEGER:
+    case ScalarType::INTEGER:
       return IntegerType;
 
-    case ValueType::BOOLEAN:
+    case ScalarType::BOOLEAN:
       return BooleanType;
 
-    case ValueType::PATH:
+    case ScalarType::PATH:
       return PathType;
 
-    case ValueType::STRING:
+    case ScalarType::STRING:
       return StringType;
 
-    // case ValueType::ARRAY: {
+    // case ScalarType::ARRAY: {
     //   ptr<Type> type;
     //   for(auto const &v: _value.array) {
     //     if (!type) type = v->type();
@@ -299,84 +299,84 @@ ptr<Type> Value::type() const {
     // }
   }
 
-  throw exception("unhanlded type for a Value");
+  throw exception("unhanlded type for a Scalar");
 }
 
 
-Value &Value::operator=(Value const &other) {
-  this->~Value();
+Scalar &Scalar::operator=(Scalar const &other) {
+  this->~Scalar();
 
   _scalarType = other._scalarType;
   switch (_scalarType) {
-    case ValueType::NONE:
-    case ValueType::UNSET:
+    case ScalarType::NONE:
+    case ScalarType::UNSET:
       break;
     
-    case ValueType::REAL:_value.real = other._value.real;
+    case ScalarType::REAL:_value.real = other._value.real;
       break;
 
-    case ValueType::INTEGER:_value.integer = other._value.integer;
+    case ScalarType::INTEGER:_value.integer = other._value.integer;
       break;
 
-    case ValueType::BOOLEAN:_value.boolean = other._value.boolean;
+    case ScalarType::BOOLEAN:_value.boolean = other._value.boolean;
       break;
 
-    case ValueType::PATH:
-    case ValueType::STRING:new(&_value.string) std::string(other._value.string);
+    case ScalarType::PATH:
+    case ScalarType::STRING:new(&_value.string) std::string(other._value.string);
       break;
   }
 
   return *this;
 }
 
-long Value::asInteger() const {
+long Scalar::asInteger() const {
   switch (_scalarType) {
-    case ValueType::NONE: 
-    case ValueType::UNSET: 
+    case ScalarType::NONE: 
+    case ScalarType::UNSET: 
       throw cast_error("cannot convert none/unset " + std::to_string(_value.real) + " to integer");
 
-    case ValueType::REAL:
+    case ScalarType::REAL:
       if (_value.real == (int)_value.real) {
         return (int)_value.real;
       }
       throw cast_error("cannot convert real " + std::to_string(_value.real) + " to integer");
 
 
-    case ValueType::INTEGER:return _value.integer;
+    case ScalarType::INTEGER:return _value.integer;
 
-    case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
+    case ScalarType::BOOLEAN: return _value.boolean ? 1 : 0;
 
-    case ValueType::STRING: throw cast_error("cannot convert string to integer");
-    case ValueType::PATH: throw cast_error("cannot convert path to integer");
+    case ScalarType::STRING: throw cast_error("cannot convert string to integer");
+    case ScalarType::PATH: throw cast_error("cannot convert path to integer");
     default:throw std::out_of_range("Scalar type is not known (converting to integer)");
   }
 
 }
-double Value::asReal() const {
+double Scalar::asReal() const {
   switch (_scalarType) {
-    case ValueType::NONE:
-    case ValueType::UNSET: 
+    case ScalarType::NONE:
+    case ScalarType::UNSET: 
       throw cast_error("cannot convert none/unset " + std::to_string(_value.real) + " to real");
 
-    case ValueType::REAL: return _value.real;
-    case ValueType::INTEGER:return _value.integer;
-    case ValueType::BOOLEAN: return _value.boolean ? 1 : 0;
-    case ValueType::PATH:
-    case ValueType::STRING: return !_value.string.empty();
+    case ScalarType::REAL: return _value.real;
+    case ScalarType::INTEGER:return _value.integer;
+    case ScalarType::BOOLEAN: return _value.boolean ? 1 : 0;
+    case ScalarType::PATH:
+    case ScalarType::STRING: return !_value.string.empty();
   }
   throw std::out_of_range("Scalar type is not known (converting to real)");
 }
 
-Path Value::asPath() const {
+Path Scalar::asPath() const {
   switch (_scalarType) {
-    case ValueType::NONE:
-    case ValueType::REAL:
-    case ValueType::INTEGER:
-    case ValueType::BOOLEAN:
-    case ValueType::UNSET:
+    case ScalarType::NONE:
+    case ScalarType::REAL:
+    case ScalarType::INTEGER:
+    case ScalarType::BOOLEAN:
+    case ScalarType::UNSET:
       throw cast_error("Cannot convert value into path");
-    case ValueType::PATH:
-    case ValueType::STRING: return Path(_value.string);
+    case ScalarType::PATH:
+    case ScalarType::STRING: return Path(_value.string);
       break;
   }
   throw std::out_of_range("Scalar type is not known (converting to real)");
@@ -384,97 +384,97 @@ Path Value::asPath() const {
 }
 
 
-bool Value::asBoolean() const {
+bool Scalar::asBoolean() const {
   switch (_scalarType) {
-    case ValueType::NONE:return false;
+    case ScalarType::NONE:return false;
 
-    case ValueType::REAL: return _value.real;
+    case ScalarType::REAL: return _value.real;
       break;
 
-    case ValueType::INTEGER:return _value.integer;
+    case ScalarType::INTEGER:return _value.integer;
       break;
 
-    case ValueType::BOOLEAN: return _value.boolean;
+    case ScalarType::BOOLEAN: return _value.boolean;
       break;
 
-    case ValueType::PATH:
-    case ValueType::STRING: return !_value.string.empty();
+    case ScalarType::PATH:
+    case ScalarType::STRING: return !_value.string.empty();
       break;
 
     default:throw std::out_of_range("Scalar type is not known (converting to boolean)");
   }
 }
 
-std::string Value::asString() const {
+std::string Scalar::asString() const {
   switch (_scalarType) {
-    case ValueType::UNSET:
-    case ValueType::NONE:
+    case ScalarType::UNSET:
+    case ScalarType::NONE:
       throw cast_error("Cannot convert none/unset to string");
 
-    case ValueType::REAL: return std::to_string(_value.real);
+    case ScalarType::REAL: return std::to_string(_value.real);
       break;
 
-    case ValueType::INTEGER:return std::to_string(_value.integer);
+    case ScalarType::INTEGER:return std::to_string(_value.integer);
       break;
 
-    case ValueType::BOOLEAN: return std::to_string(_value.boolean);
+    case ScalarType::BOOLEAN: return std::to_string(_value.boolean);
       break;
 
-    case ValueType::PATH:
-    case ValueType::STRING: return _value.string;
+    case ScalarType::PATH:
+    case ScalarType::STRING: return _value.string;
       break;
   }
   throw std::out_of_range("Scalar type is not known (converting to string)");
 
 }
 
-json Value::toJson() const {
+json Scalar::toJson() const {
   switch (scalarType()) {
-    case ValueType::NONE: return nullptr;
+    case ScalarType::NONE: return nullptr;
 
-    case ValueType::STRING:return json(_value.string);
+    case ScalarType::STRING:return json(_value.string);
 
-    case ValueType::INTEGER:return json(_value.integer);
+    case ScalarType::INTEGER:return json(_value.integer);
 
-    case ValueType::REAL:return json(_value.real);
+    case ScalarType::REAL:return json(_value.real);
 
-    case ValueType::BOOLEAN:return json(_value.boolean);
+    case ScalarType::BOOLEAN:return json(_value.boolean);
 
-    case ValueType::PATH: return json {{KEY_VALUE, _value.string}, {KEY_TYPE, PATH_TYPE.toString()}};
+    case ScalarType::PATH: return json {{KEY_VALUE, _value.string}, {KEY_TYPE, PATH_TYPE.toString()}};
 
-    case ValueType::UNSET:throw std::runtime_error("to json: unset has no type");
+    case ScalarType::UNSET:throw std::runtime_error("to json: unset has no type");
   }
   throw std::out_of_range("Scalar type is not known (converting to json)");
 }
 
-void Value::updateDigest(Digest &d) const {
+void Scalar::updateDigest(Digest &d) const {
 
   d.updateDigest(scalarType());
 
   // Hash value
   switch (_scalarType) {
-    case ValueType::UNSET:
-    case ValueType::NONE:
+    case ScalarType::UNSET:
+    case ScalarType::NONE:
       // No value content for these types
       break;
 
-    case ValueType::BOOLEAN:
+    case ScalarType::BOOLEAN:
       d.updateDigest(_value.boolean);
       break;
 
-    case ValueType::INTEGER:
+    case ScalarType::INTEGER:
       d.updateDigest(_value.integer);
       break;
-    case ValueType::REAL:
+    case ScalarType::REAL:
       d.updateDigest(_value.real);
       break;
 
-    case ValueType::PATH:
-    case ValueType::STRING:
+    case ScalarType::PATH:
+    case ScalarType::STRING:
       d.updateDigest(_value.string);
       break;
 
-    // case ValueType::ARRAY:
+    // case ScalarType::ARRAY:
     //   d.updateDigest(_value.array.size());
     //   for(auto const & element : _value.array) {
     //     d.updateDigest(*element);
@@ -482,40 +482,40 @@ void Value::updateDigest(Digest &d) const {
   }
 }
 
-bool Value::defined() const {
-  return _scalarType != ValueType::UNSET;
+bool Scalar::defined() const {
+  return _scalarType != ScalarType::UNSET;
 }
 
-bool Value::null() const {
-  return _scalarType == ValueType::NONE;
+bool Scalar::null() const {
+  return _scalarType == ScalarType::NONE;
 }
 
-ValueType const Value::scalarType() const {
+ScalarType const Scalar::scalarType() const {
   return _scalarType;
 }
 
-bool Value::getBoolean() const {
-  if (_scalarType != ValueType::BOOLEAN) throw std::runtime_error("Value is not a boolean");
+bool Scalar::getBoolean() const {
+  if (_scalarType != ScalarType::BOOLEAN) throw std::runtime_error("Scalar is not a boolean");
   return _value.boolean;
 }
 
-double Value::getReal() const {
-  if (_scalarType != ValueType::REAL) throw std::runtime_error("Value is not a boolean");
+double Scalar::getReal() const {
+  if (_scalarType != ScalarType::REAL) throw std::runtime_error("Scalar is not a boolean");
   return _value.real;
 }
 
-long Value::getInteger() const {
-  if (_scalarType != ValueType::INTEGER) throw std::runtime_error("Value is not a boolean");
+long Scalar::getInteger() const {
+  if (_scalarType != ScalarType::INTEGER) throw std::runtime_error("Scalar is not a boolean");
   return _value.integer;
 }
 
-Path Value::getPath() const {
-  if (_scalarType != ValueType::PATH) throw std::runtime_error("Value is not a path");
+Path Scalar::getPath() const {
+  if (_scalarType != ScalarType::PATH) throw std::runtime_error("Scalar is not a path");
   return Path(_value.string);
 }
 
-std::string const &Value::getString() {
-  if (_scalarType != ValueType::STRING) throw std::runtime_error("Value is not a string");
+std::string const &Scalar::getString() {
+  if (_scalarType != ScalarType::STRING) throw std::runtime_error("Scalar is not a string");
   return _value.string;
 }
 
@@ -524,7 +524,7 @@ std::string const &Value::getString() {
 //
 // --- Scalar parameters
 
-ScalarParameters::ScalarParameters(Value const &v) {
+ScalarParameters::ScalarParameters(Scalar const &v) {
   _value = v;
 } 
 
@@ -569,7 +569,7 @@ Path ScalarParameters::asPath() const {
   return _value.asPath();
 }
 
-ValueType ScalarParameters::valueType() const {
+ScalarType ScalarParameters::valueType() const {
   return _value.scalarType();
 }
 
@@ -587,16 +587,16 @@ bool ScalarParameters::null() const {
 }
 
 void ScalarParameters::set(YAML::Node const &node) {
-  _value = Value::fromYAML(node);
+  _value = Scalar::fromYAML(node);
 }
 
 
 void ScalarParameters::set(bool value) {
-  _value = Value(value);
+  _value = Scalar(value);
 }
 
 void ScalarParameters::set(long value) {
-  _value = Value(value);
+  _value = Scalar(value);
 }
 
 std::shared_ptr<Type> ScalarParameters::type() const {
@@ -604,7 +604,7 @@ std::shared_ptr<Type> ScalarParameters::type() const {
 }
 
 void ScalarParameters::set(std::string const & value, bool typeHint) {
-  _value = Value(value);
+  _value = Scalar(value);
 }
 
 bool ScalarParameters::equals(Parameters const &other) const {
@@ -615,7 +615,7 @@ bool ScalarParameters::equals(Parameters const &other) const {
 
 void ScalarParameters::outputJson(std::ostream &out, CommandContext & context) const {
   switch(_value.scalarType()) {
-    case ValueType::PATH:
+    case ScalarType::PATH:
       out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
           << xpm::KEY_VALUE << "\": \"";
       out << context.connector.resolve(asPath());

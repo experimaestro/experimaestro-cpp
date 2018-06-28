@@ -55,7 +55,7 @@ std::ostream &operator<<(std::ostream &os, const Type &c) {
 
  // ---- Type
 
-SimpleType::SimpleType(Typename const &tname, ValueType valueType, bool canIgnore)
+SimpleType::SimpleType(Typename const &tname, ScalarType valueType, bool canIgnore)
       : Type(tname, AnyType, true, canIgnore), _valueType(valueType) {}
 
 ptr<Type> AnyType = Type::any();
@@ -65,11 +65,11 @@ Type::Ptr const & Type::any() {
   return ANY;
 }
 
-ptr<Type> BooleanType = mkptr<SimpleType>(BOOLEAN_TYPE, ValueType::BOOLEAN);
-ptr<Type> IntegerType = mkptr<SimpleType>(INTEGER_TYPE, ValueType::INTEGER);
-ptr<Type> RealType = mkptr<SimpleType>(REAL_TYPE, ValueType::REAL);
-ptr<Type> StringType = mkptr<SimpleType>(STRING_TYPE, ValueType::STRING);
-ptr<Type> PathType = mkptr<SimpleType>(PATH_TYPE, ValueType::PATH, true);
+ptr<Type> BooleanType = mkptr<SimpleType>(BOOLEAN_TYPE, ScalarType::BOOLEAN);
+ptr<Type> IntegerType = mkptr<SimpleType>(INTEGER_TYPE, ScalarType::INTEGER);
+ptr<Type> RealType = mkptr<SimpleType>(REAL_TYPE, ScalarType::REAL);
+ptr<Type> StringType = mkptr<SimpleType>(STRING_TYPE, ScalarType::STRING);
+ptr<Type> PathType = mkptr<SimpleType>(PATH_TYPE, ScalarType::PATH, true);
 
 Type::Type(Typename const &type, ptr<Type> parent, bool predefined, bool canIgnore) :
     _type(type), _parent(parent), _predefined(predefined), _canIgnore(canIgnore) {

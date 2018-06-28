@@ -93,10 +93,10 @@ def parameters(value):
 
     # A path
     if isinstance(value, pathlib.Path):
-        return Parameters(Value(Path(str(value.absolute()))))
+        return Parameters(Scalar(Path(str(value.absolute()))))
 
     # For anything else, we try to convert it to a value
-    return ScalarParameters(Value(value))
+    return ScalarParameters(Scalar(value))
 
 def checknullsv(sv):
     """Returns either None or the sv"""
@@ -446,7 +446,7 @@ class TypeArgument(AbstractArgument):
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:
-            self.argument.defaultValue(Parameters(Value(default)))
+            self.argument.defaultValue(Parameters(Scalar(default)))
 
 
 class PathArgument(AbstractArgument):

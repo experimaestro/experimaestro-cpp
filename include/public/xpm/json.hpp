@@ -2868,13 +2868,13 @@ class basic_json
 
     Explicit type conversion between the JSON value and a compatible value.
 
-    @tparam ValueType non-pointer type compatible to the JSON value, for
+    @tparam ScalarType non-pointer type compatible to the JSON value, for
     instance `int` for JSON integer numbers, `bool` for JSON booleans, or
     `std::vector` types for JSON arrays
 
-    @return copy of the JSON value, converted to type @a ValueType
+    @return copy of the JSON value, converted to type @a ScalarType
 
-    @throw std::domain_error in case passed type @a ValueType is incompatible
+    @throw std::domain_error in case passed type @a ScalarType is incompatible
     to JSON; example: `"type must be object, but is null"`
 
     @complexity Linear in the size of the JSON value.
@@ -2891,16 +2891,16 @@ class basic_json
     implementation is from <http://stackoverflow.com/a/8315197/266378>.
     @endinternal
 
-    @sa @ref operator ValueType() const for implicit conversion
+    @sa @ref operator ScalarType() const for implicit conversion
     @sa @ref get() for pointer-member access
 
     @since version 1.0.0
     */
-    template<typename ValueType, typename std::enable_if<
-                 not std::is_pointer<ValueType>::value, int>::type = 0>
-    ValueType get() const
+    template<typename ScalarType, typename std::enable_if<
+                 not std::is_pointer<ScalarType>::value, int>::type = 0>
+    ScalarType get() const
     {
-        return get_impl(static_cast<ValueType*>(nullptr));
+        return get_impl(static_cast<ScalarType*>(nullptr));
     }
 
     /*!
@@ -3080,15 +3080,15 @@ class basic_json
     Implicit type conversion between the JSON value and a compatible value.
     The call is realized by calling @ref get() const.
 
-    @tparam ValueType non-pointer type compatible to the JSON value, for
+    @tparam ScalarType non-pointer type compatible to the JSON value, for
     instance `int` for JSON integer numbers, `bool` for JSON booleans, or
     `std::vector` types for JSON arrays. The character type of @ref string_t
     as well as an initializer list of this type is excluded to avoid
     ambiguities as these types implicitly convert to `std::string`.
 
-    @return copy of the JSON value, converted to type @a ValueType
+    @return copy of the JSON value, converted to type @a ScalarType
 
-    @throw std::domain_error in case passed type @a ValueType is incompatible
+    @throw std::domain_error in case passed type @a ScalarType is incompatible
     to JSON, thrown by @ref get() const
 
     @complexity Linear in the size of the JSON value.
@@ -3102,17 +3102,17 @@ class basic_json
 
     @since version 1.0.0
     */
-    template < typename ValueType, typename std::enable_if <
-                   not std::is_pointer<ValueType>::value and
-                   not std::is_same<ValueType, typename string_t::value_type>::value
+    template < typename ScalarType, typename std::enable_if <
+                   not std::is_pointer<ScalarType>::value and
+                   not std::is_same<ScalarType, typename string_t::value_type>::value
 #ifndef _MSC_VER  // Fix for issue #167 operator<< abiguity under VS2015
-                   and not std::is_same<ValueType, std::initializer_list<typename string_t::value_type>>::value
+                   and not std::is_same<ScalarType, std::initializer_list<typename string_t::value_type>>::value
 #endif
                    , int >::type = 0 >
-    operator ValueType() const
+    operator ScalarType() const
     {
         // delegate the call to get<>() const
-        return get<ValueType>();
+        return get<ScalarType>();
     }
 
     /// @}
@@ -3671,7 +3671,7 @@ class basic_json
     @param[in] key  key of the element to access
     @param[in] default_value  the value to return if @a key is not found
 
-    @tparam ValueType type compatible to JSON values, for instance `int` for
+    @tparam ScalarType type compatible to JSON values, for instance `int` for
     JSON integer numbers, `bool` for JSON booleans, or `std::vector` types for
     JSON arrays. Note the type of the expected value at @a key and the default
     value @a default_value must be compatible.
@@ -3694,9 +3694,9 @@ class basic_json
 
     @since version 1.0.0
     */
-    template<class ValueType, typename std::enable_if<
-                 std::is_convertible<basic_json_t, ValueType>::value, int>::type = 0>
-    ValueType value(const typename object_t::key_type& key, ValueType default_value) const
+    template<class ScalarType, typename std::enable_if<
+                 std::is_convertible<basic_json_t, ScalarType>::value, int>::type = 0>
+    ScalarType value(const typename object_t::key_type& key, ScalarType default_value) const
     {
         // at only works for objects
         if (is_object())
@@ -3720,7 +3720,7 @@ class basic_json
 
     /*!
     @brief overload for a default value of type const char*
-    @copydoc basic_json::value(const typename object_t::key_type&, ValueType) const
+    @copydoc basic_json::value(const typename object_t::key_type&, ScalarType) const
     */
     string_t value(const typename object_t::key_type& key, const char* default_value) const
     {
@@ -3748,7 +3748,7 @@ class basic_json
     @param[in] ptr  a JSON pointer to the element to access
     @param[in] default_value  the value to return if @a ptr found no value
 
-    @tparam ValueType type compatible to JSON values, for instance `int` for
+    @tparam ScalarType type compatible to JSON values, for instance `int` for
     JSON integer numbers, `bool` for JSON booleans, or `std::vector` types for
     JSON arrays. Note the type of the expected value at @a key and the default
     value @a default_value must be compatible.
@@ -3768,9 +3768,9 @@ class basic_json
 
     @since version 2.0.2
     */
-    template<class ValueType, typename std::enable_if<
-                 std::is_convertible<basic_json_t, ValueType>::value, int>::type = 0>
-    ValueType value(const json_pointer& ptr, ValueType default_value) const
+    template<class ScalarType, typename std::enable_if<
+                 std::is_convertible<basic_json_t, ScalarType>::value, int>::type = 0>
+    ScalarType value(const json_pointer& ptr, ScalarType default_value) const
     {
         // at only works for objects
         if (is_object())
@@ -3793,7 +3793,7 @@ class basic_json
 
     /*!
     @brief overload for a default value of type const char*
-    @copydoc basic_json::value(const json_pointer&, ValueType) const
+    @copydoc basic_json::value(const json_pointer&, ScalarType) const
     */
     string_t value(const json_pointer& ptr, const char* default_value) const
     {
