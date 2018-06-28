@@ -14,12 +14,12 @@ struct TestType {
   std::shared_ptr<Type> type;
   TestType() : type(std::make_shared<Type>(Typename("test"))) {
     auto a = std::make_shared<Argument>("a");
-    a->defaultValue(mkptr<Parameters>(Value(1l)));
+    a->defaultValue(mkptr<ScalarParameters>(1l));
     type->addArgument(a);
   }
 
-  ptr<Parameters> create() {
-    auto ptr = mkptr<Parameters>();
+  ptr<MapParameters> create() {
+    auto ptr = mkptr<MapParameters>();
     ptr->type(type);
     return ptr;
   }
@@ -27,19 +27,19 @@ struct TestType {
 
 TEST(Parameters, defaultSet) {
   auto object = TestType().create();
-  object->set("a", mkptr<Parameters>(Value(1l)));
+  object->set("a", mkptr<ScalarParameters>(1l));
   object->validate();
 
-  EXPECT_TRUE(object->get("a")->equals(Value(1)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarParameters(1)));
   EXPECT_TRUE(object->get("a")->isDefault());
 }
 
 TEST(Parameters, notDefault) {
   auto object = TestType().create();
-  object->set("a", mkptr<Parameters>(Value(2)));
+  object->set("a", mkptr<ScalarParameters>(2));
   object->validate();
 
-  EXPECT_TRUE(object->get("a")->equals(Value(2)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarParameters(2)));
   EXPECT_TRUE(!object->get("a")->isDefault());
 }
 
@@ -51,6 +51,6 @@ TEST(Parameters, defaultNotSet) {
   GeneratorContext context(ws);
   object->generate(context);
 
-  EXPECT_TRUE(object->get("a")->equals(Value(1)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarParameters(1)));
   EXPECT_TRUE(object->get("a")->isDefault());
 }
