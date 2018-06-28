@@ -24,14 +24,6 @@ TEST(Digest, Different) {
   EXPECT_NE(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 
-TEST(Digest, subkeys) {
-  Register r;
-  auto v0 = r.build(R"({ "a": 1})");
-  auto v1 = r.build(R"({ "a": { "$value": 1, "z": "ignore" } })");
-  EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
-}
-
-
 TEST(Digest, ignore) {
   auto r = mkptr<CppRegister>();
 
@@ -48,8 +40,8 @@ TEST(Digest, ignore) {
 TEST(Digest, ignorePath) {
   auto r = mkptr<CppRegister>();
 
-  auto v0 = r->build(R"({ "a": 1, "b": { "$type": "path", "value": "/a/path" } })");
-  auto v1 = r->build(R"({ "a": 1, "b": { "$type": "path", "value": "/another/path" } })");
+  auto v0 = r->build(R"({ "a": 1, "b": { "$type": "path", "$value": "/a/path" } })");
+  auto v1 = r->build(R"({ "a": 1, "b": { "$type": "path", "$value": "/another/path" } })");
   EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 

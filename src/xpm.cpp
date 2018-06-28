@@ -137,7 +137,7 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
     // --- Object
     case nlohmann::json::value_t::object: {
       std::shared_ptr<Value> p;
-      std::shared_ptr<Type> _type;
+      std::shared_ptr<Type> _type = AnyType;
 
       // (1) First, get the type of the object
       if (jsonValue.count(KEY_TYPE) > 0) {
@@ -150,11 +150,25 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
           LOGGER->warn("Could not find type '{}' in registry: using undefined type", typeName);
         }
       }
+
+      // Create the right type of object
+      if (_type->scalar() || jsonValue.count(KEY_VALUE) > 0) {
+        p = mkptr<ScalarValue>(Scalar());
+      } else if (_type->array()) {
+        auto _p = mkptr<ArrayValue>();
+        _p->_type = _type;
+        p = _p;
+      } else {
+        // Otherwise, this is a map
+        auto _p = mkptr<MapValue>();
+        _p->type(_type);
+        p = _p;
+      }
       
       // (2) Fill from JSON
       for (json::const_iterator it = jsonValue.begin(); it != jsonValue.end(); ++it) {
         if (it.key() == KEY_VALUE) {
-          if (p) throw argument_error("Scalar cannot be something else");
+          if (!p->isScalar()) throw argument_error("Scalar cannot be a map or an array");
 
           // Infer type from value
           auto value = Scalar(it.value());
@@ -170,10 +184,9 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
                   vtype->name().toString(), _type->name().toString()));
               }
             }
-          } else {
-            vtype = _type;
-          }
-          p = mkptr<ScalarValue>(value);
+          } 
+
+          p->asScalar()->_value = value;
           
         } else if (it.key() == KEY_TYPE) {
           // ignore
@@ -186,13 +199,13 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
           std::dynamic_pointer_cast<MapValue>(p)->_task = xpmRegister.getTask(it.value(), true);
         } else {
           if (!p) p = mkptr<MapValue>();
-          p->asMap()->_type = _type;
+          if (_type) p->asMap()->_type = _type;
           p->asMap()->set(it.key(), Value::create(xpmRegister, it.value()));
         }
       }
 
-      LOGGER->debug("Got an object of type {}", _type ? _type->toString() : "?");
-      return p ? p : mkptr<MapValue>();
+      LOGGER->debug("Got a value of type {}", _type ? _type->toString() : "?");
+      return p;
     }
 
     default: break;
@@ -681,6 +694,8 @@ void MapValue::updateDigest(Digest & digest) const {
 }
 
 std::shared_ptr<Object> MapValue::createObjects(xpm::Register &xpmRegister) {
+  Value::createObjects(xpmRegister);
+  
   _object = xpmRegister.createObject(shared_from_this());
   if (_object) {
     // Set the values

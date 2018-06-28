@@ -13,6 +13,16 @@
 #include <xpm/xpm.hpp>
 #include <xpm/type.hpp>
 
+#include <cxxabi.h>
+template<typename T>
+std::string demangle(T const & t) {
+  int status;
+  char * demangled = abi::__cxa_demangle(typeid(t).name(),0,0,&status);
+  std::string r = demangled;
+  free(demangled);
+  return r;
+}
+
 namespace xpm {
 
 template<class T> struct CppType;
@@ -69,8 +79,12 @@ inline void assignValue(Value::Ptr const &sv, Path &s) {
 template <typename T>
 inline void assignValue(xpm::Value::Ptr const &value,
                         std::shared_ptr<T> &p) {
-    p = std::dynamic_pointer_cast<T>(std::dynamic_pointer_cast<MapValue>(value)->object());
+  
+  auto object = value->asMap()->object();                        
+  p = std::dynamic_pointer_cast<T>(object);
+
   if (!p && value) {
+    std::cerr << demangle(p) << " and " << demangle(object) << std::endl;
     throw xpm::argument_error(std::string("Expected ") +
                               type_of<std::shared_ptr<T>>::value()->toString() +
                               " but got " + value->type()->toString());

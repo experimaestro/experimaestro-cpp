@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 #include <xpm/common.hpp>
 #include <xpm/cpp.hpp>
+#include <xpm/logging.hpp>
 
 #include <cxxabi.h>
 std::string demangle(std::type_info const &ti) {
@@ -88,9 +89,16 @@ TEST(CppInterface, basic) {
 }
 
 TEST(CppInterface, composed) {
-  auto sv = currentRegister()->build(R"({ "$type": "TypeB1", "x": 1, "a": { 
-    "$type": "TypeA", "x": 1, "name": "name" } }
-  )");
+  auto sv = currentRegister()->build(R"(
+  { 
+    "$type": "TypeB1", 
+    "x": 1, 
+    "a": { 
+      "$type": "TypeA", 
+      "x": 1, 
+      "name": "name" 
+    } 
+  })");
   auto o = sv->createObjects(*currentRegister());
   sv->validate();
 

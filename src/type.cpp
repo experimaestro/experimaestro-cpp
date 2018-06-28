@@ -55,8 +55,8 @@ std::ostream &operator<<(std::ostream &os, const Type &c) {
 
  // ---- Type
 
-SimpleType::SimpleType(Typename const &tname, ScalarType valueType, bool canIgnore)
-      : Type(tname, AnyType, true, canIgnore), _valueType(valueType) {}
+SimpleType::SimpleType(Typename const &tname, ScalarType scalarType, bool canIgnore)
+      : Type(tname, AnyType, true, canIgnore), _valueType(scalarType) {}
 
 ptr<Type> AnyType = Type::any();
 
