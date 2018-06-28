@@ -232,7 +232,18 @@ protected:
   friend class MapValue;
 };
 
-class MapValue : public Value {
+class ComplexValue : public Value {
+public:
+  ComplexValue();
+  virtual ~ComplexValue();
+
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const override;
+  void addTag(std::string const & name, Scalar scalar);
+protected:
+  std::map<std::string, Scalar> _tags;
+};
+
+class MapValue : public ComplexValue {
 public:
   MapValue();
   virtual ~MapValue();
@@ -306,7 +317,7 @@ private:
   friend class Value;
 };
 
-class ArrayValue : public Value {
+class ArrayValue : public ComplexValue {
 public:
   ArrayValue();
   virtual ~ArrayValue();

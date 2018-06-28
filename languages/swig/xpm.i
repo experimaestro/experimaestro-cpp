@@ -29,6 +29,8 @@
 #include <xpm/workspace.hpp>
 #include <SQLiteCpp/SQLiteCpp.h>
 
+#include <sstream>
+
 #undef SWIG_PYTHON_DIRECTOR_VTABLE
 %}
 
@@ -90,6 +92,7 @@ namespace xpm {
 %shared_ptr(xpm::Task)
 
 %shared_ptr(xpm::Value)
+%shared_ptr(xpm::ComplexValue)
 %shared_ptr(xpm::ArrayValue)
 %shared_ptr(xpm::MapValue)
 %shared_ptr(xpm::ScalarValue)
@@ -167,6 +170,20 @@ namespace xpm {
 %template(StringList) std::vector<std::string>;
 %template(String2String) std::map<std::string, std::string>;
 %template(String2Scalar) std::map<std::string, xpm::Scalar>;
+
+%extend std::map<std::string, xpm::Scalar> {
+    std::string toString() const {
+        std::ostringstream out;
+        bool first = true;
+        out << "{ ";
+        for(auto & pair: *$self) {
+            if (first) first = false; else out << ", ";
+            out << pair.first << ": " << pair.second.toString();
+        }
+        out << " }";
+        return out.str();
+    }
+}
 
 %exception {
     try {

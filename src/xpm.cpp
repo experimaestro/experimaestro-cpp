@@ -422,8 +422,32 @@ void Value::retrieveTags(std::map<std::string, Scalar> &tags) const {
   });
 }
 
+
 //
-// --- Array parameters
+// --- Complex value
+
+ComplexValue::ComplexValue() {}
+
+ComplexValue::~ComplexValue() {}
+
+
+void ComplexValue::retrieveTags(std::map<std::string, Scalar> &tags) const  {
+  Value::retrieveTags(tags);
+
+  for(auto pair: _tags) {
+    auto r = tags.insert(pair);
+    if (!r.second) throw assertion_error("Tag " + pair.first + " was present more than once in the value");
+  }
+  
+}
+
+void ComplexValue::addTag(std::string const & name, Scalar scalar) {
+  _tags[name] = scalar;
+}
+
+
+//
+// --- Array value
 //
 
 
@@ -510,6 +534,7 @@ std::shared_ptr<Value> ArrayValue::copy() {
   }
   return sv;
 }
+
 
 //
 // --- Map parameters
@@ -965,6 +990,7 @@ void ScalarValue::tag(std::string const &name) {
 }
 
 void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags) const {
+  if (_tag.empty()) return;
   auto r = tags.insert(std::pair<std::string, Scalar>(_tag, _value));
   if (!r.second) throw assertion_error("Tag " + _tag + " was present more than once in the value");
 }

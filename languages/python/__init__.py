@@ -82,7 +82,6 @@ def python2value(value):
     # A dictionary: transform
     if isinstance(value, dict):
         v = register.build(JSON_ENCODER.encode(value))
-        print(v, type(v))
         return v
 
     # A list
@@ -512,11 +511,26 @@ launcher = DirectLauncher(LocalConnector())
 launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
 set_launcher(launcher)
 
-def tag(name: str, x):
+def tag(name: str, x, object:PyObject=None):
     """Tag a value"""
+    if object:
+        object.__xpm__.sv.addTag(name, x)
+        return object
+
     value = ScalarValue(x)
     value.tag(name)
     return value
+
+def tags(value: PyObject):
+    """Return the tags associated with a value"""
+    return value.__xpm__.sv.tags()
+
+def tagspath(value: PyObject):
+    """Return the tags associated with a value"""
+    p = PPath()
+    for key, value in value.__xpm__.sv.tags().items():
+        p /= "%s_%s" % (key, value)
+    return p
 
 # --- Handle signals
 
