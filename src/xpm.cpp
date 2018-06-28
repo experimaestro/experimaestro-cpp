@@ -14,6 +14,9 @@
 #include <xpm/scalar.hpp>
 #include <xpm/task.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/connectors/connectors.hpp>
+#include <xpm/commandline.hpp>
+
 #include <__xpm/common.hpp>
 
 DEFINE_LOGGER("xpm")
@@ -396,6 +399,19 @@ bool Value::get(Value::Flag flag) const {
 
 
 void Value::foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) {}
+
+
+std::map<std::string, Scalar> Value::tags() const {
+  std::map<std::string, Scalar> map;
+  retrieveTags(map);
+  return map;
+}
+
+void Value::retrieveTags(std::map<std::string, Scalar> &tags) const {
+  const_cast<Value*>(this)->foreachChild([&tags](auto c) {
+    c->retrieveTags(tags);
+  });
+}
 
 //
 // --- Array parameters
@@ -783,7 +799,138 @@ ptr<Value> MapValue::set(const std::string &key, ptr<Value> const &value) {
   return it == _map.end() ? nullptr : it->second;
 }
 
+// ---
+// --- Scalar values
+// ---
 
+
+//
+// --- Scalar parameters
+
+ScalarValue::ScalarValue(Scalar const &v) {
+  _value = v;
+} 
+
+
+/// Returns the string
+std::string ScalarValue::asString() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asString();
+}
+
+/// Returns the string
+bool ScalarValue::asBoolean() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asBoolean();
+}
+
+/// Returns an integer
+long ScalarValue::asInteger() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asInteger();
+}
+
+/// Returns an integer
+double ScalarValue::asReal() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asReal();
+}
+
+/// Returns a path
+Path ScalarValue::asPath() const {
+  if (!_value.defined()) {
+    throw argument_error("Cannot convert value : value undefined");
+  }
+  return _value.asPath();
+}
+
+ScalarType ScalarValue::valueType() const {
+  return _value.scalarType();
+}
+
+
+nlohmann::json ScalarValue::toJson() const {
+  return _value.toJson();
+}
+
+bool ScalarValue::hasValue() const {
+  return _value.defined();
+}
+
+bool ScalarValue::null() const {
+  return _value.null();
+}
+
+void ScalarValue::set(YAML::Node const &node) {
+  _value = Scalar::fromYAML(node);
+}
+
+
+void ScalarValue::set(bool value) {
+  _value = Scalar(value);
+}
+
+void ScalarValue::set(long value) {
+  _value = Scalar(value);
+}
+
+std::shared_ptr<Type> ScalarValue::type() const {
+  return _value.type();
+}
+
+void ScalarValue::set(std::string const & value, bool typeHint) {
+  _value = Scalar(value);
+}
+
+bool ScalarValue::equals(Value const &other) const {
+  auto other_ = dynamic_cast<ScalarValue const *>(&other);
+  if (!other_) return false;
+  return _value.equals(other_->_value);
+}
+
+void ScalarValue::outputJson(std::ostream &out, CommandContext & context) const {
+  switch(_value.scalarType()) {
+    case ScalarType::PATH:
+      out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
+          << xpm::KEY_VALUE << "\": \"";
+      out << context.connector.resolve(asPath());
+      out << "\"}";
+      break;
+
+    default:
+      out << toJson();
+      break;
+  }
+}
+
+void ScalarValue::updateDigest(Digest & digest) const {
+  _value.updateDigest(digest);
+}
+
+std::shared_ptr<Value> ScalarValue::copy() {
+  auto sv = mkptr<ScalarValue>(_value);
+  sv->_flags = _flags;
+  return sv;
+}
+
+
+/// Tag this value
+void ScalarValue::tag(std::string const &name) {
+  _tag = name;
+}
+
+void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags) const {
+  auto r = tags.insert(std::pair<std::string, Scalar>(_tag, _value));
+  if (!r.second) throw assertion_error("Tag " + _tag + " was present more than once in the value");
+}
 
 // ---
 // --- Task

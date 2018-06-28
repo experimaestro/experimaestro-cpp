@@ -9,7 +9,6 @@
 #include <memory>
 #include <cstdint>
 
-#include <xpm/xpm.hpp>
 #include <xpm/json.hpp>
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
@@ -149,60 +148,6 @@ private:
 inline bool operator==(Scalar const &a, Scalar const &b) {
   return a.equals(b);
 }
-
-
-/// TODO: Fuse this with Scalar
-class ScalarValue : public Value {
-public:
-  virtual ~ScalarValue() = default;
-  /// Constructs from value
-  ScalarValue(Scalar const & v);
-
-  /// Returns the string
-  std::string asString() const;
-
-  /// Returns the string
-  bool asBoolean() const;
-
-  /// Returns an integer
-  long asInteger() const;
-
-  /// Returns an integer
-  double asReal() const;
-
-  /// Returns a path
-  Path asPath() const;
-
-  void set(bool value);
-  void set(long value);
-  void set(std::string const & value, bool typeHint = false);
-  void set(YAML::Node const &node);
-
-  /// Returns true if the value is defined
-  bool hasValue() const;
-
-  /// Returns true if the value is defined and null
-  bool null() const;
-
-  nlohmann::json toJson() const override;
-  ScalarType valueType() const;
-
-  virtual bool equals(Value const &other) const override;
-  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
-  virtual void updateDigest(Digest & digest) const override;
-  
-  virtual std::shared_ptr<Value> copy() override;
-  virtual std::shared_ptr<Type> type() const override;
-
-private:
-  /// The associated value
-  Scalar _value;
-
-  friend class Value;
-};
-
-
-
 
 } // endns: xpm
 

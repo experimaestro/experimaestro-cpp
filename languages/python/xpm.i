@@ -44,8 +44,6 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
     %COLLECTION(std::shared_ptr<xpm::Value>) 
 };
 
-%define YOOO $descriptor(xpm::MapValue) %enddef
-
 
 // Get the real object for a shared_ptr of an object
 %typemap(out) std::shared_ptr<xpm::Object> {
@@ -58,14 +56,11 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         }
 
         std::shared_ptr< xpm::Object > * smartresult = new std::shared_ptr<xpm::Object>($1);
-        return SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::Object>), SWIG_POINTER_OWN);
+        $result = SWIG_InternalNewPointerObj(SWIG_as_voidptr(smartresult), $descriptor(std::shared_ptr<xpm::Object>), SWIG_POINTER_OWN);
+    } else {
+        // Returns None
+        $result = SWIG_Py_Void();
     }
-
-
-    // Returns None
-    return SWIG_Py_Void();
-
-    $result = xpm::python::getRealObject($1);
 }
 
 // Get the real object for a shared_ptr of a value
@@ -114,88 +109,3 @@ attributeval(xpm::Argument, xpm::Generator, generator, generator, generator)
         return SWIG_InternalNewPointerObj(%as_voidptr(ptr), $descriptor(xpm::Typename*), SWIG_POINTER_OWN);
     }
 }
-
-
-
-// TODO: GARBAGE SECTION....
-
-#ifndef SWIG
-
-
-
-%{
-    #include <xpm/common.hpp>
-
-
-%extend xpm::Object {
-    /*void __setitem__(std::string const & key, std::shared_ptr<xpm::Object> const &value) {
-        (*($self))[key] = value;
-    }
-    void __setitem__(std::string const & key, std::map<std::string, std::shared_ptr<xpm::Object>> &value) {
-        (*($self))[key] = std::make_shared<xpm::Object>(value);
-    }
-    void __setitem__(std::string const & key, Scalar const &value) {
-        (*($self))[key] = std::make_shared<xpm::Object>(value);
-    }*/
-
-    PyObject * __getattro__(PyObject *name) {
-        auto _self = xpm::python::getRealObject($self->shared_from_this());
-
-        PyObject *object = PyObject_GenericGetAttr(_self, name);
-        if (object) {
-            return object;
-        }
-
-        if (!PyUnicode_Check(name)) {
-            PyErr_SetString(PyExc_AttributeError, "Attribute name is not a string");
-            return nullptr;
-        }
-
-        Py_ssize_t stringsize;
-        char *_key = (char*)PyUnicode_AsUTF8AndSize(name, &stringsize);
-        std::string key(_key, stringsize);
-
-      if ($self->hasKey(key)) {
-          PyErr_Clear();
-         return xpm::python::getRealObject($self->get(key));
-      }
-
-      // std::cerr << "Could not find attribute " << key << "\n";
-      PyErr_SetString(PyExc_AttributeError, (std::string("Could not find attribute ") + key).c_str());
-      return nullptr;
-    }
-
-    PyObject *call() {
-        // If we have a value, just return it
-        if (auto valuePtr = dynamic_cast<xpm::Scalar*>($self)) {
-            switch(valuePtr->scalarType()) {
-                case xpm::ScalarType::BOOLEAN:
-                    if (valuePtr->asBoolean()) { Py_RETURN_TRUE; } else { Py_RETURN_FALSE; }
-
-                case xpm::ScalarType::NONE:
-                    return SWIG_Py_Void();
-
-                case xpm::ScalarType::PATH: {
-                    auto pathPtr = new xpm::Path($self->asPath());
-                    return SWIG_InternalNewPointerObj(pathPtr, $descriptor(xpm::Path*), SWIG_POINTER_OWN );
-                }
-
-                case xpm::ScalarType::STRING:
-                    return PyUnicode_FromString($self->asString().c_str());
-
-                case xpm::ScalarType::INTEGER:
-                    return PyLong_FromLong($self->asInteger());
-
-                case xpm::ScalarType::REAL:
-                    return PyFloat_FromDouble($self->asReal());
-            }
-        }
-
-        // Otherwise return void
-        return SWIG_Py_Void();
-    }
-}
-
-%}
-
-#endif

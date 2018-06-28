@@ -140,10 +140,10 @@ namespace xpm {
     class Launcher;
 }
 
-// Include file
+// Include files
 %include <xpm/filesystem.hpp>
-%include <xpm/xpm.hpp>
 %include <xpm/scalar.hpp>
+%include <xpm/xpm.hpp>
 %include <xpm/type.hpp>
 %include <xpm/task.hpp>
 %include <xpm/register.hpp>
@@ -162,7 +162,7 @@ namespace xpm {
 // Template instanciation
 %template(StringList) std::vector<std::string>;
 %template(String2String) std::map<std::string, std::string>;
-%template(ValueArray) std::vector<std::shared_ptr<xpm::Value>>;
+%template(String2Scalar) std::map<std::string, xpm::Scalar>;
 
 %exception {
     try {

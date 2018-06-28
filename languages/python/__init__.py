@@ -509,6 +509,11 @@ launcher = DirectLauncher(LocalConnector())
 launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
 set_launcher(launcher)
 
+def tag(name: str, x):
+    """Tag a value"""
+    value = ScalarValue(x)
+    value.tag(name)
+    return value
 
 # --- Handle signals
 

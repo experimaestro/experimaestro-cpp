@@ -9,6 +9,8 @@
 #include <functional>
 #include <cstdint>
 
+#include <xpm/scalar.hpp>
+
 namespace xpm { 
   // Forward declarations
   class Value;
@@ -192,9 +194,14 @@ public:
   /// Convert to scalar or throw an exception
   std::shared_ptr<ScalarValue> asScalar();
   bool isScalar() const;
-  
+
+  /// Returns the tags (throw an error if a tag already exists)  
+  std::map<std::string, Scalar> tags() const;
 
 protected:
+  /// Retrieve tags in this value or its descendants
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const;
+
   /// For each child callback
   virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f);
 
@@ -276,7 +283,6 @@ protected:
   virtual void _validate() override;
   virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) override;
   virtual void _generate(GeneratorContext &context) override;
-
 private:
   /** Sets a value for the associated object (if any)  */
   void setObjectValue(std::string const &name, std::shared_ptr<Value> const &value);
@@ -332,6 +338,71 @@ private:
   std::vector<std::shared_ptr<Value>> _array;
   friend class Value;
 };
+
+
+
+/// A scalar value
+class ScalarValue : public Value {
+public:
+  virtual ~ScalarValue() = default;
+  /// Constructs from value
+  ScalarValue(Scalar const & v);
+
+  /// Returns the string
+  std::string asString() const;
+
+  /// Returns the string
+  bool asBoolean() const;
+
+  /// Returns an integer
+  long asInteger() const;
+
+  /// Returns an integer
+  double asReal() const;
+
+  /// Returns a path
+  Path asPath() const;
+
+  void set(bool value);
+  void set(long value);
+  void set(std::string const & value, bool typeHint = false);
+  void set(YAML::Node const &node);
+
+  /// Returns true if the value is defined
+  bool hasValue() const;
+
+  /// Returns true if the value is defined and null
+  bool null() const;
+
+  /// Tag this value
+  void tag(std::string const &name);
+
+  nlohmann::json toJson() const override;
+  ScalarType valueType() const;
+
+  virtual bool equals(Value const &other) const override;
+  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
+  virtual void updateDigest(Digest & digest) const override;
+  
+  virtual std::shared_ptr<Value> copy() override;
+  virtual std::shared_ptr<Type> type() const override;
+
+protected:
+
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const override;
+
+private:
+  /// The associated value
+  Scalar _value;
+
+  /// The tag name if any
+  std::string _tag;
+
+  friend class Value;
+};
+
+
+
 
 
 

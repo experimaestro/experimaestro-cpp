@@ -9,8 +9,6 @@
 #include <xpm/common.hpp>
 #include <yaml-cpp/yaml.h>
 #include <__xpm/common.hpp>
-#include <xpm/connectors/connectors.hpp>
-#include <xpm/commandline.hpp>
 
 typedef std::string stdstring;
 using nlohmann::json;
@@ -518,126 +516,6 @@ std::string const &Scalar::getString() {
   if (_scalarType != ScalarType::STRING) throw std::runtime_error("Scalar is not a string");
   return _value.string;
 }
-
-
-
-//
-// --- Scalar parameters
-
-ScalarValue::ScalarValue(Scalar const &v) {
-  _value = v;
-} 
-
-
-/// Returns the string
-std::string ScalarValue::asString() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asString();
-}
-
-/// Returns the string
-bool ScalarValue::asBoolean() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asBoolean();
-}
-
-/// Returns an integer
-long ScalarValue::asInteger() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asInteger();
-}
-
-/// Returns an integer
-double ScalarValue::asReal() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asReal();
-}
-
-/// Returns a path
-Path ScalarValue::asPath() const {
-  if (!_value.defined()) {
-    throw argument_error("Cannot convert value : value undefined");
-  }
-  return _value.asPath();
-}
-
-ScalarType ScalarValue::valueType() const {
-  return _value.scalarType();
-}
-
-
-nlohmann::json ScalarValue::toJson() const {
-  return _value.toJson();
-}
-
-bool ScalarValue::hasValue() const {
-  return _value.defined();
-}
-
-bool ScalarValue::null() const {
-  return _value.null();
-}
-
-void ScalarValue::set(YAML::Node const &node) {
-  _value = Scalar::fromYAML(node);
-}
-
-
-void ScalarValue::set(bool value) {
-  _value = Scalar(value);
-}
-
-void ScalarValue::set(long value) {
-  _value = Scalar(value);
-}
-
-std::shared_ptr<Type> ScalarValue::type() const {
-  return _value.type();
-}
-
-void ScalarValue::set(std::string const & value, bool typeHint) {
-  _value = Scalar(value);
-}
-
-bool ScalarValue::equals(Value const &other) const {
-  auto other_ = dynamic_cast<ScalarValue const *>(&other);
-  if (!other_) return false;
-  return _value.equals(other_->_value);
-}
-
-void ScalarValue::outputJson(std::ostream &out, CommandContext & context) const {
-  switch(_value.scalarType()) {
-    case ScalarType::PATH:
-      out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
-          << xpm::KEY_VALUE << "\": \"";
-      out << context.connector.resolve(asPath());
-      out << "\"}";
-      break;
-
-    default:
-      out << toJson();
-      break;
-  }
-}
-
-void ScalarValue::updateDigest(Digest & digest) const {
-  _value.updateDigest(digest);
-}
-
-std::shared_ptr<Value> ScalarValue::copy() {
-  auto sv = mkptr<ScalarValue>(_value);
-  sv->_flags = _flags;
-  return sv;
-}
-
 
 
 }
