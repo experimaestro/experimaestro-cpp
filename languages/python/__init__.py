@@ -72,7 +72,7 @@ def parameters(value):
     """Transforms a Python value into a structured value"""
 
     # Simple case: it is already a configuration
-    if isinstance(value, Parameters):
+    if isinstance(value, Value):
         return value
 
     # It is a PyObject: get the associated configuration
@@ -85,7 +85,7 @@ def parameters(value):
 
     # A list
     if isinstance(value, list):
-        newvalue = ArrayParameters()
+        newvalue = ArrayValue()
         for v in value:
             newvalue.append(parameters(v))
 
@@ -93,10 +93,10 @@ def parameters(value):
 
     # A path
     if isinstance(value, pathlib.Path):
-        return Parameters(Scalar(Path(str(value.absolute()))))
+        return Value(Scalar(Path(str(value.absolute()))))
 
     # For anything else, we try to convert it to a value
-    return ScalarParameters(Scalar(value))
+    return ScalarValue(Scalar(value))
 
 def checknullsv(sv):
     """Returns either None or the sv"""
@@ -113,7 +113,7 @@ class XPMObject(Object):
         self.pyobject = pyobject
 
         if sv is None:
-            self.sv = MapParameters()
+            self.sv = MapValue()
         else:
             self.sv = sv.asMap()
 
@@ -446,7 +446,7 @@ class TypeArgument(AbstractArgument):
         self.argument.required = (default is
                                   None) if required is None else required
         if default is not None:
-            self.argument.defaultValue(Parameters(Scalar(default)))
+            self.argument.defaultValue(Value(Scalar(default)))
 
 
 class PathArgument(AbstractArgument):

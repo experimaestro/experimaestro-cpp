@@ -15,7 +15,7 @@
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 #include <xpm/commandline.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 #include <xpm/register.hpp>
 #include <xpm/logging.hpp>
 
@@ -86,10 +86,10 @@ namespace xpm {
 %shared_ptr(xpm::SimpleType)
 %shared_ptr(xpm::ArrayType)
 %shared_ptr(xpm::Task)
-%shared_ptr(xpm::Parameters)
-%shared_ptr(xpm::ArrayParameters)
-%shared_ptr(xpm::MapParameters)
-%shared_ptr(xpm::ScalarParameters)
+%shared_ptr(xpm::Value)
+%shared_ptr(xpm::ArrayValue)
+%shared_ptr(xpm::MapValue)
+%shared_ptr(xpm::ScalarValue)
 %shared_ptr(xpm::Argument)
 %shared_ptr(xpm::Register)
 %shared_ptr(xpm::Generator)
@@ -143,7 +143,7 @@ namespace xpm {
 // Include file
 %include <xpm/filesystem.hpp>
 %include <xpm/xpm.hpp>
-%include <xpm/value.hpp>
+%include <xpm/scalar.hpp>
 %include <xpm/type.hpp>
 %include <xpm/task.hpp>
 %include <xpm/register.hpp>
@@ -162,7 +162,7 @@ namespace xpm {
 // Template instanciation
 %template(StringList) std::vector<std::string>;
 %template(String2String) std::map<std::string, std::string>;
-%template(ValueArray) std::vector<std::shared_ptr<xpm::Parameters>>;
+%template(ValueArray) std::vector<std::shared_ptr<xpm::Value>>;
 
 %exception {
     try {

@@ -40,7 +40,7 @@ class Task
    */
   void submit(std::shared_ptr<Workspace> const & workspace,
               std::shared_ptr<Launcher> const & launcher,
-              std::shared_ptr<Parameters> const & sv) const;
+              std::shared_ptr<Value> const & sv) const;
 
   /** Returns the type of this task */
   Typename name() const;

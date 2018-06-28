@@ -19,7 +19,7 @@ namespace xpm {
 
 std::shared_ptr<spdlog::logger> logger(std::string const &name);
 
-class Parameters;
+class Value;
 class Typename;
 class Type;
 class Path;

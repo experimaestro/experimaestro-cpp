@@ -24,7 +24,7 @@ namespace xpm {
 class Launcher;
 class Resource;
 class Workspace;
-class Parameters;
+class Value;
 class CommandLine;
 struct JobPriorityComparator;
 class CounterDependency;
@@ -276,11 +276,11 @@ public:
   virtual void run() override;
   virtual void init() override;
   /// Set the parameters
-  void parameters(std::shared_ptr<Parameters> const & parameters);
-  std::shared_ptr<Parameters> parameters();
+  void parameters(std::shared_ptr<Value> const & parameters);
+  std::shared_ptr<Value> parameters();
 private:
   std::shared_ptr<CommandLine> _command;
-  std::shared_ptr<Parameters> _parameters;
+  std::shared_ptr<Value> _parameters;
 };
 
 /// Defines the priority between two jobs

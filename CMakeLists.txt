@@ -39,7 +39,7 @@ set(PUBLIC_HEADERS
         include/public/xpm/register.hpp
         include/public/xpm/task.hpp
         include/public/xpm/type.hpp 
-        include/public/xpm/value.hpp
+        include/public/xpm/scalar.hpp
         include/public/xpm/workspace.hpp
         include/public/xpm/xpm.hpp
         
@@ -76,7 +76,7 @@ set(SOURCES
         src/common.cpp 
         src/register.cpp 
         src/jsonserialization.cpp
-        src/value.cpp
+        src/scalar.cpp
         src/scriptbuilder.cpp
         src/type.cpp
 

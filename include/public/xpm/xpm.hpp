@@ -11,7 +11,7 @@
 
 namespace xpm { 
   // Forward declarations
-  class Parameters;
+  class Value;
   class AbstractObjectHolder;
   class Type;
   class Object;
@@ -25,9 +25,9 @@ namespace xpm {
   class GeneratorContext;
   struct CommandContext;
 
-  class ScalarParameters;
-  class MapParameters;
-  class ArrayParameters;
+  class ScalarValue;
+  class MapValue;
+  class ArrayValue;
 }
 
 #include <xpm/json.hpp>
@@ -53,7 +53,7 @@ public:
   virtual ~Object();
 
   /** Sets a value in the native object */
-  virtual void setValue(std::string const &name, std::shared_ptr<Parameters> const & value) = 0;
+  virtual void setValue(std::string const &name, std::shared_ptr<Value> const & value) = 0;
 
   /** Run (if this is a task) */
   virtual void run();
@@ -64,7 +64,7 @@ public:
 
 
 /**
- * Parameters.
+ * Value.
  * 
  * A configuration can have:
  * 
@@ -72,7 +72,7 @@ public:
  * - a value (optional)
  * - an object
  */
-class Parameters NOSWIG(: public std::enable_shared_from_this<Parameters>) {
+class Value NOSWIG(: public std::enable_shared_from_this<Value>) {
 public:
   typedef uint8_t Flags;
   enum class Flag : Flags {
@@ -83,21 +83,21 @@ public:
     IGNORE = 16 //< This structured value should be ignored
   };
 
-  typedef std::shared_ptr<Parameters> Ptr;
+  typedef std::shared_ptr<Value> Ptr;
 
   /// Default constructor
-  Parameters();
+  Value();
 
 #ifndef SWIG
   /// Constructor from JSON
-  static std::shared_ptr<Parameters> create(Register &xpmRegister, nlohmann::json const &jsonValue);
+  static std::shared_ptr<Value> create(Register &xpmRegister, nlohmann::json const &jsonValue);
 #endif
 
   /// Destructor
-  virtual ~Parameters();
+  virtual ~Value();
 
   /// Returns true if objects are equal
-  virtual bool equals(Parameters const &other) const = 0;
+  virtual bool equals(Value const &other) const = 0;
 
   /// Seal the object
   void seal();
@@ -168,7 +168,7 @@ public:
   /**
    * Copy the configuration
    */
-  virtual std::shared_ptr<Parameters> copy() = 0;
+  virtual std::shared_ptr<Value> copy() = 0;
 
   /**
    * Compute the a digest for this configuration
@@ -182,21 +182,21 @@ public:
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const = 0);
 
   /// Convert to map or throw an exception
-  std::shared_ptr<MapParameters> asMap();
+  std::shared_ptr<MapValue> asMap();
   bool isMap() const;
   
   /// Convert to array  or throw an exception
-  std::shared_ptr<ArrayParameters> asArray();
+  std::shared_ptr<ArrayValue> asArray();
   bool isArray() const;
   
   /// Convert to scalar or throw an exception
-  std::shared_ptr<ScalarParameters> asScalar();
+  std::shared_ptr<ScalarValue> asScalar();
   bool isScalar() const;
   
 
 protected:
   /// For each child callback
-  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f);
+  virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f);
 
   /// Update digest
   virtual void updateDigest(Digest & digest) const = 0;
@@ -222,13 +222,13 @@ protected:
   friend struct Digest;
   friend class Register;
 
-  friend class MapParameters;
+  friend class MapValue;
 };
 
-class MapParameters : public Parameters {
+class MapValue : public Value {
 public:
-  MapParameters();
-  virtual ~MapParameters();
+  MapValue();
+  virtual ~MapValue();
 
   /** Sets the task */
   void task(std::shared_ptr<Task> const &task);
@@ -247,23 +247,23 @@ public:
   bool hasKey(std::string const &key) const;
 
   /// Set one value (if map)
-  std::shared_ptr<Parameters> set(const std::string &key, std::shared_ptr<Parameters> const &);
+  std::shared_ptr<Value> set(const std::string &key, std::shared_ptr<Value> const &);
 
   /// Get access to one value (if map)
-  std::shared_ptr<Parameters> get(const std::string &key);
+  std::shared_ptr<Value> get(const std::string &key);
 
   /** Set type */
   void type(std::shared_ptr<Type> const &type);
   virtual std::shared_ptr<Type> type() const override;
 
-  virtual bool equals(Parameters const &other) const override;
+  virtual bool equals(Value const &other) const override;
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
 
   virtual nlohmann::json toJson() const override;
 
   virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister) override;
   virtual void updateDigest(Digest & digest) const override;
-  virtual std::shared_ptr<Parameters> copy() override;
+  virtual std::shared_ptr<Value> copy() override;
   virtual void addDependencies(Job & job, bool skipThis) override;
   
   /// Get generating job
@@ -274,12 +274,12 @@ public:
 
 protected:
   virtual void _validate() override;
-  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) override;
+  virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) override;
   virtual void _generate(GeneratorContext &context) override;
 
 private:
   /** Sets a value for the associated object (if any)  */
-  void setObjectValue(std::string const &name, std::shared_ptr<Parameters> const &value);
+  void setObjectValue(std::string const &name, std::shared_ptr<Value> const &value);
 
   /// Type of the object
   std::shared_ptr<Type> _type;
@@ -296,41 +296,41 @@ private:
   std::shared_ptr<Task> _task;
 
   /// The content
-  std::map<std::string, std::shared_ptr<Parameters>> _map;
-  friend class Parameters;
+  std::map<std::string, std::shared_ptr<Value>> _map;
+  friend class Value;
 };
 
-class ArrayParameters : public Parameters {
+class ArrayValue : public Value {
 public:
-  ArrayParameters();
-  virtual ~ArrayParameters();
+  ArrayValue();
+  virtual ~ArrayValue();
 
   /// Returns the size of the array or the map
   size_t size() const;
 
   /// Append an element to the array
-  void push_back(std::shared_ptr<Parameters> const & parameters);
+  void push_back(std::shared_ptr<Value> const & parameters);
 
   /// Get an element of the array
-  std::shared_ptr<Parameters> operator[](size_t index);
+  std::shared_ptr<Value> operator[](size_t index);
 
-  virtual bool equals(Parameters const &other) const override;
+  virtual bool equals(Value const &other) const override;
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
   virtual nlohmann::json toJson() const override;
   virtual void updateDigest(Digest & digest) const override;
-  virtual std::shared_ptr<Parameters> copy() override;
+  virtual std::shared_ptr<Value> copy() override;
   virtual std::shared_ptr<Type> type() const override;
 
 protected:
   virtual void _validate() override;
-  virtual void foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) override;
+  virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) override;
 
 private:
   /// Type of the object
   std::shared_ptr<Type> _type;
 
-  std::vector<std::shared_ptr<Parameters>> _array;
-  friend class Parameters;
+  std::vector<std::shared_ptr<Value>> _array;
+  friend class Value;
 };
 
 
@@ -342,19 +342,19 @@ private:
 #ifndef SWIG
 
 struct GeneratorLock {
-  GeneratorLock(GeneratorContext * context, Parameters * configuration);
+  GeneratorLock(GeneratorContext * context, Value * configuration);
   inline operator bool() { return true; }
   GeneratorContext * context;
 };
 
 class GeneratorContext {
 public:
-  std::vector<Parameters *> stack;
+  std::vector<Value *> stack;
   Workspace & workspace;
   
   GeneratorContext(Workspace & ws);
-  GeneratorContext(Workspace & ws, std::shared_ptr<Parameters> const &sv);
-  inline GeneratorLock enter(Parameters * configuration) {
+  GeneratorContext(Workspace & ws, std::shared_ptr<Value> const &sv);
+  inline GeneratorLock enter(Value * configuration) {
     return GeneratorLock(this, configuration);
   }
 };
@@ -365,7 +365,7 @@ public:
  */
 class Generator {
  public:
-  virtual std::shared_ptr<Parameters> generate(GeneratorContext const &context) = 0;
+  virtual std::shared_ptr<Value> generate(GeneratorContext const &context) = 0;
   virtual ~Generator() {}
 
   static std::shared_ptr<Generator> createFromJSON(nlohmann::json const &);
@@ -383,7 +383,7 @@ class PathGenerator : public Generator {
   PathGenerator(const char *s) : PathGenerator(std::string(s)) {}
   PathGenerator(std::string const & = "");
   PathGenerator(nlohmann::json const &);
-  virtual std::shared_ptr<Parameters> generate(GeneratorContext const &context);
+  virtual std::shared_ptr<Value> generate(GeneratorContext const &context);
   virtual nlohmann::json toJson() const;
 };
 
@@ -405,8 +405,8 @@ class Argument {
   Argument &ignored(bool required);
   bool ignored() const;
 
-  Argument &defaultValue(std::shared_ptr<Parameters> const &defaultValue);
-  std::shared_ptr<Parameters> defaultValue() const;
+  Argument &defaultValue(std::shared_ptr<Value> const &defaultValue);
+  std::shared_ptr<Value> defaultValue() const;
 
   std::shared_ptr<Generator> generator();
   std::shared_ptr<Generator> const &generator() const;
@@ -436,7 +436,7 @@ class Argument {
   bool _ignored;
 
   /// Default value
-  std::shared_ptr<Parameters> _defaultValue;
+  std::shared_ptr<Value> _defaultValue;
 
   /// A generator
   std::shared_ptr<Generator> _generator;

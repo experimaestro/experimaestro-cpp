@@ -165,11 +165,11 @@ int Type::hash() const {
 }
 
 
-void Type::setProperty(std::string const &name, Parameters::Ptr const &value) {
+void Type::setProperty(std::string const &name, Value::Ptr const &value) {
   _properties[name] = value;
 }
 
-Parameters::Ptr Type::getProperty(std::string const &name) {
+Value::Ptr Type::getProperty(std::string const &name) {
   auto it = _properties.find(name);
   if (it == _properties.end()) return nullptr;
   return it->second;

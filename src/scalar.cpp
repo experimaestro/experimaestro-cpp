@@ -5,7 +5,7 @@
 #include <regex>
 #include <xpm/xpm.hpp>
 #include <xpm/type.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 #include <xpm/common.hpp>
 #include <yaml-cpp/yaml.h>
 #include <__xpm/common.hpp>
@@ -524,13 +524,13 @@ std::string const &Scalar::getString() {
 //
 // --- Scalar parameters
 
-ScalarParameters::ScalarParameters(Scalar const &v) {
+ScalarValue::ScalarValue(Scalar const &v) {
   _value = v;
 } 
 
 
 /// Returns the string
-std::string ScalarParameters::asString() const {
+std::string ScalarValue::asString() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -538,7 +538,7 @@ std::string ScalarParameters::asString() const {
 }
 
 /// Returns the string
-bool ScalarParameters::asBoolean() const {
+bool ScalarValue::asBoolean() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -546,7 +546,7 @@ bool ScalarParameters::asBoolean() const {
 }
 
 /// Returns an integer
-long ScalarParameters::asInteger() const {
+long ScalarValue::asInteger() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -554,7 +554,7 @@ long ScalarParameters::asInteger() const {
 }
 
 /// Returns an integer
-double ScalarParameters::asReal() const {
+double ScalarValue::asReal() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
@@ -562,58 +562,58 @@ double ScalarParameters::asReal() const {
 }
 
 /// Returns a path
-Path ScalarParameters::asPath() const {
+Path ScalarValue::asPath() const {
   if (!_value.defined()) {
     throw argument_error("Cannot convert value : value undefined");
   }
   return _value.asPath();
 }
 
-ScalarType ScalarParameters::valueType() const {
+ScalarType ScalarValue::valueType() const {
   return _value.scalarType();
 }
 
 
-nlohmann::json ScalarParameters::toJson() const {
+nlohmann::json ScalarValue::toJson() const {
   return _value.toJson();
 }
 
-bool ScalarParameters::hasValue() const {
+bool ScalarValue::hasValue() const {
   return _value.defined();
 }
 
-bool ScalarParameters::null() const {
+bool ScalarValue::null() const {
   return _value.null();
 }
 
-void ScalarParameters::set(YAML::Node const &node) {
+void ScalarValue::set(YAML::Node const &node) {
   _value = Scalar::fromYAML(node);
 }
 
 
-void ScalarParameters::set(bool value) {
+void ScalarValue::set(bool value) {
   _value = Scalar(value);
 }
 
-void ScalarParameters::set(long value) {
+void ScalarValue::set(long value) {
   _value = Scalar(value);
 }
 
-std::shared_ptr<Type> ScalarParameters::type() const {
+std::shared_ptr<Type> ScalarValue::type() const {
   return _value.type();
 }
 
-void ScalarParameters::set(std::string const & value, bool typeHint) {
+void ScalarValue::set(std::string const & value, bool typeHint) {
   _value = Scalar(value);
 }
 
-bool ScalarParameters::equals(Parameters const &other) const {
-  auto other_ = dynamic_cast<ScalarParameters const *>(&other);
+bool ScalarValue::equals(Value const &other) const {
+  auto other_ = dynamic_cast<ScalarValue const *>(&other);
   if (!other_) return false;
   return _value.equals(other_->_value);
 }
 
-void ScalarParameters::outputJson(std::ostream &out, CommandContext & context) const {
+void ScalarValue::outputJson(std::ostream &out, CommandContext & context) const {
   switch(_value.scalarType()) {
     case ScalarType::PATH:
       out << "{\"" << xpm::KEY_TYPE << "\":\"" << xpm::PathType->name().toString() << "\",\""
@@ -628,12 +628,12 @@ void ScalarParameters::outputJson(std::ostream &out, CommandContext & context) c
   }
 }
 
-void ScalarParameters::updateDigest(Digest & digest) const {
+void ScalarValue::updateDigest(Digest & digest) const {
   _value.updateDigest(digest);
 }
 
-std::shared_ptr<Parameters> ScalarParameters::copy() {
-  auto sv = mkptr<ScalarParameters>(_value);
+std::shared_ptr<Value> ScalarValue::copy() {
+  auto sv = mkptr<ScalarValue>(_value);
   sv->_flags = _flags;
   return sv;
 }

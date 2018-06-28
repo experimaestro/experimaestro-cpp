@@ -9,7 +9,7 @@
 
 #include <xpm/common.hpp>
 #include <xpm/register.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/type.hpp>
 
@@ -21,10 +21,10 @@ template<class T> struct CppType;
 class CppRegister : public Register {
 public:
   /// Run task
-  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Parameters> const & sv) override;
+  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Value> const & sv) override;
 
   /// Create object
-  virtual std::shared_ptr<Object> createObject(std::shared_ptr<Parameters> const & sv) override;
+  virtual std::shared_ptr<Object> createObject(std::shared_ptr<Value> const & sv) override;
 
   void addType(ptr<Type> const & type) {
       Register::addType(type);
@@ -45,31 +45,31 @@ template <typename T> struct type_of {};
 
 template <typename T> struct ArgumentHolder {
   virtual ~ArgumentHolder() {}
-  virtual void setValue(T &self, xpm::Parameters::Ptr const &value) = 0;
+  virtual void setValue(T &self, xpm::Value::Ptr const &value) = 0;
 };
 
-inline void assignValue(Parameters::Ptr const &sv, std::string &s) {
-    s = std::dynamic_pointer_cast<ScalarParameters>(sv)->asString();
+inline void assignValue(Value::Ptr const &sv, std::string &s) {
+    s = std::dynamic_pointer_cast<ScalarValue>(sv)->asString();
 }
-inline void assignValue(Parameters::Ptr const &sv, int &x) {
-  x = std::dynamic_pointer_cast<ScalarParameters>(sv)->asInteger();
+inline void assignValue(Value::Ptr const &sv, int &x) {
+  x = std::dynamic_pointer_cast<ScalarValue>(sv)->asInteger();
 }
-inline void assignValue(Parameters::Ptr const &sv, long &x) {
-  x = std::dynamic_pointer_cast<ScalarParameters>(sv)->asInteger();
+inline void assignValue(Value::Ptr const &sv, long &x) {
+  x = std::dynamic_pointer_cast<ScalarValue>(sv)->asInteger();
 }
-inline void assignValue(Parameters::Ptr const &sv, Path &s) {
-  s = std::dynamic_pointer_cast<ScalarParameters>(sv)->asPath();
+inline void assignValue(Value::Ptr const &sv, Path &s) {
+  s = std::dynamic_pointer_cast<ScalarValue>(sv)->asPath();
 }
-// inline void assignValue(Parameters::Ptr const &sv, Scalar::Array &s) {
+// inline void assignValue(Value::Ptr const &sv, Scalar::Array &s) {
 //   s = sv->asArray();
 // }
 
 
 /// Assigning another object
 template <typename T>
-inline void assignValue(xpm::Parameters::Ptr const &value,
+inline void assignValue(xpm::Value::Ptr const &value,
                         std::shared_ptr<T> &p) {
-    p = std::dynamic_pointer_cast<T>(std::dynamic_pointer_cast<MapParameters>(value)->object());
+    p = std::dynamic_pointer_cast<T>(std::dynamic_pointer_cast<MapValue>(value)->object());
   if (!p && value) {
     throw xpm::argument_error(std::string("Expected ") +
                               type_of<std::shared_ptr<T>>::value()->toString() +
@@ -84,7 +84,7 @@ struct TypedArgumentHolder : public ArgumentHolder<T> {
   TypedArgumentHolder(Scalar T::*valuePtr) : valuePtr(valuePtr) {}
 
   virtual void setValue(T &self,
-                        xpm::Parameters::Ptr const &value) override {
+                        xpm::Value::Ptr const &value) override {
     xpm::assignValue(value, (&self)->*valuePtr);
   }
 };
@@ -116,7 +116,7 @@ XPM_SIMPLETYPE_OF(long, IntegerType);
 XPM_SIMPLETYPE_OF(int, IntegerType);
 XPM_SIMPLETYPE_OF(float, RealType);
 XPM_SIMPLETYPE_OF(double, RealType);
-XPM_SIMPLETYPE_OF(std::shared_ptr<Parameters>, AnyType);
+XPM_SIMPLETYPE_OF(std::shared_ptr<Value>, AnyType);
 XPM_SIMPLETYPE_OF(Path, PathType);
 
 template<typename Self>
@@ -162,12 +162,12 @@ struct BaseCppTypeBuilder {
   }
 
   template <typename U> Self &defaultValue(U const &v) {
-    _argument->defaultValue(std::make_shared<ScalarParameters>(Scalar(v)));
+    _argument->defaultValue(std::make_shared<ScalarValue>(Scalar(v)));
     return dynamic_cast<Self&>(*this);
   }
 
   Self &defaultJson(nlohmann::json const &j) {
-    _argument->defaultValue(std::make_shared<Parameters>(*_register, j));
+    _argument->defaultValue(std::make_shared<Value>(*_register, j));
     return dynamic_cast<Self&>(*this);
   }
 };
@@ -212,20 +212,20 @@ struct CppTypeBuilder : public BaseCppTypeBuilder<CppTypeBuilder<T,Parent>> {
 class DefaultCppObject : public Object {
 public:
   void setValue(std::string const &name,
-                ptr<Parameters> const &value) override {
+                ptr<Value> const &value) override {
   }
 };
 
 
 template <typename T, typename Parent = Object>
 class CppObject : public Parent {
-  ptr<Parameters> _sv;
+  ptr<Value> _sv;
 public:
   static std::shared_ptr<CppType<T>> XPM_TYPE;
 
-  ptr<Parameters> value() { return _sv; }
+  ptr<Value> value() { return _sv; }
   void setValue(std::string const &name,
-                ptr<Parameters> const &value) override {
+                ptr<Value> const &value) override {
     auto it = XPM_TYPE->_arguments.find(name);
     if (it != XPM_TYPE->_arguments.end()) {
       T &t = dynamic_cast<T &>(*this);

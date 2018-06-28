@@ -241,11 +241,11 @@ CommandLineJob::CommandLineJob(xpm::Path const &locator,
     : Job(locator, launcher), _command(command) {
 }
 
-void CommandLineJob::parameters(std::shared_ptr<Parameters> const & parameters) {
+void CommandLineJob::parameters(std::shared_ptr<Value> const & parameters) {
   _parameters = parameters;
 }
 
-std::shared_ptr<Parameters> CommandLineJob::parameters() {
+std::shared_ptr<Value> CommandLineJob::parameters() {
   return _parameters;  
 }
 

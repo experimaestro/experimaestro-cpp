@@ -22,7 +22,7 @@ namespace xpm {
 
 struct Digest;
 class Type;
-class Parameters;
+class Value;
 class Register;
 
 enum class ScalarType : int8_t {
@@ -73,7 +73,7 @@ class Scalar {
   Scalar &operator=(Scalar const &other);
 
   virtual ~Scalar();
-  // virtual std::shared_ptr<Parameters> copy();
+  // virtual std::shared_ptr<Value> copy();
 
   ScalarType const scalarType() const;
   std::shared_ptr<Type> type() const;
@@ -152,11 +152,11 @@ inline bool operator==(Scalar const &a, Scalar const &b) {
 
 
 /// TODO: Fuse this with Scalar
-class ScalarParameters : public Parameters {
+class ScalarValue : public Value {
 public:
-  virtual ~ScalarParameters() = default;
+  virtual ~ScalarValue() = default;
   /// Constructs from value
-  ScalarParameters(Scalar const & v);
+  ScalarValue(Scalar const & v);
 
   /// Returns the string
   std::string asString() const;
@@ -187,18 +187,18 @@ public:
   nlohmann::json toJson() const override;
   ScalarType valueType() const;
 
-  virtual bool equals(Parameters const &other) const override;
+  virtual bool equals(Value const &other) const override;
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
   virtual void updateDigest(Digest & digest) const override;
   
-  virtual std::shared_ptr<Parameters> copy() override;
+  virtual std::shared_ptr<Value> copy() override;
   virtual std::shared_ptr<Type> type() const override;
 
 private:
   /// The associated value
   Scalar _value;
 
-  friend class Parameters;
+  friend class Value;
 };
 
 

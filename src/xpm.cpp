@@ -11,7 +11,7 @@
 #include <xpm/common.hpp>
 #include <xpm/xpm.hpp>
 #include <xpm/register.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 #include <xpm/task.hpp>
 #include <xpm/workspace.hpp>
 #include <__xpm/common.hpp>
@@ -106,7 +106,7 @@ Typename Typename::array() const {
 // ---
 
 Object::~Object() {}
-void Object::setValue(std::string const &name, std::shared_ptr<Parameters> const & value) {}
+void Object::setValue(std::string const &name, std::shared_ptr<Value> const & value) {}
 
 void Object::run() {
   throw assertion_error("Object is not a task: cannot run it!");
@@ -115,11 +115,11 @@ void Object::run() {
 void Object::init() {
 }
 
-Parameters::~Parameters() {
+Value::~Value() {
 }
 
 
-Parameters::Parameters() : _flags(0) {
+Value::Value() : _flags(0) {
 }
 
 class DummyJob : public Job {
@@ -130,13 +130,13 @@ public:
   virtual void run() override { throw cast_error("This is dummy job - it cannot be run!"); }
 };
 
-std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::json const &jsonValue) {
+std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const &jsonValue) {
 
   switch (jsonValue.type()) {
 
     // --- Object
     case nlohmann::json::value_t::object: {
-      std::shared_ptr<Parameters> p;
+      std::shared_ptr<Value> p;
       std::shared_ptr<Type> _type;
 
       // (1) First, get the type of the object
@@ -173,36 +173,36 @@ std::shared_ptr<Parameters> Parameters::create(Register &xpmRegister, nlohmann::
           } else {
             vtype = _type;
           }
-          p = mkptr<ScalarParameters>(value);
+          p = mkptr<ScalarValue>(value);
           
         } else if (it.key() == KEY_TYPE) {
           // ignore
         } else if (it.key() == KEY_JOB) {
-          if (!p) p = mkptr<MapParameters>();
+          if (!p) p = mkptr<MapValue>();
           p->asMap()->job(mkptr<DummyJob>(it.value()));
         } else if (it.key() == KEY_TASK) {
-          if (!p) p = mkptr<MapParameters>();
+          if (!p) p = mkptr<MapValue>();
           p->asMap()->_type = _type;
-          std::dynamic_pointer_cast<MapParameters>(p)->_task = xpmRegister.getTask(it.value(), true);
+          std::dynamic_pointer_cast<MapValue>(p)->_task = xpmRegister.getTask(it.value(), true);
         } else {
-          if (!p) p = mkptr<MapParameters>();
+          if (!p) p = mkptr<MapValue>();
           p->asMap()->_type = _type;
-          p->asMap()->set(it.key(), Parameters::create(xpmRegister, it.value()));
+          p->asMap()->set(it.key(), Value::create(xpmRegister, it.value()));
         }
       }
 
       LOGGER->debug("Got an object of type {}", _type ? _type->toString() : "?");
-      return p ? p : mkptr<MapParameters>();
+      return p ? p : mkptr<MapValue>();
     }
 
     default: break;
   }
     
-  return mkptr<ScalarParameters>(Scalar(jsonValue));
+  return mkptr<ScalarValue>(Scalar(jsonValue));
 }
 
 // Convert to JSON
-json Parameters::toJson() const {
+json Value::toJson() const {
   nlohmann::json o = {};
   
   if (type()->name() != AnyType->name()) {
@@ -215,20 +215,20 @@ json Parameters::toJson() const {
 
 
 
-std::string Parameters::toJsonString() {
+std::string Value::toJsonString() {
   return toJson().dump();
 }
 
 
 /// Internal digest function
-std::array<unsigned char, DIGEST_LENGTH> Parameters::digest() const {
+std::array<unsigned char, DIGEST_LENGTH> Value::digest() const {
   Digest d;
   this->updateDigest(d);
   return d.get();
 };
 
 
-void Parameters::seal() {
+void Value::seal() {
   if (get(Flag::SEALED)) return;
 
   foreachChild([](auto &child) { child->seal(); });
@@ -236,19 +236,19 @@ void Parameters::seal() {
   set(Flag::SEALED, true);
 }
 
-bool Parameters::isSealed() const {
+bool Value::isSealed() const {
   return get(Flag::SEALED);
 }
 
-bool Parameters::isDefault() const {
+bool Value::isDefault() const {
   return get(Flag::DEFAULT);
 }
 
-bool Parameters::ignore() const {
+bool Value::ignore() const {
   return get(Flag::IGNORE);
 }
 
-bool Parameters::canIgnore() {
+bool Value::canIgnore() {
   // If the ignore flag is set
   if (ignore()) {
     return true;
@@ -266,7 +266,7 @@ bool Parameters::canIgnore() {
   return false;
 }
 
-std::string Parameters::uniqueIdentifier() const {
+std::string Value::uniqueIdentifier() const {
   // Compute the digest
   auto array = digest();
 
@@ -283,21 +283,21 @@ std::string Parameters::uniqueIdentifier() const {
   return s;
 }
 
-void Parameters::configure(Workspace & ws) {
+void Value::configure(Workspace & ws) {
   GeneratorContext context(ws);
   generate(context);
   validate();
   seal();
 }
 
-ptr<Object> Parameters::createObjects(xpm::Register &xpmRegister) {
+ptr<Object> Value::createObjects(xpm::Register &xpmRegister) {
   // Create sub-objects
-  foreachChild([&](ptr<Parameters> const &p) { p->createObjects(xpmRegister); });
+  foreachChild([&](ptr<Value> const &p) { p->createObjects(xpmRegister); });
 
   return nullptr;
 }
 
-void Parameters::addDependencies(Job & job,  bool skipThis) {
+void Value::addDependencies(Job & job,  bool skipThis) {
   // Stop here
   if (canIgnore())
     return;
@@ -305,9 +305,9 @@ void Parameters::addDependencies(Job & job,  bool skipThis) {
   foreachChild([&](auto p) { p->addDependencies(job, false); });
 }
 
-void Parameters::_generate(GeneratorContext &context) {}
+void Value::_generate(GeneratorContext &context) {}
 
-void Parameters::generate(GeneratorContext &context) {
+void Value::generate(GeneratorContext &context) {
   if (auto A = context.enter(this)) {
     // Already generated
     if (get(Flag::GENERATED)) {
@@ -330,75 +330,75 @@ void Parameters::generate(GeneratorContext &context) {
   }
 }
 
-ptr<MapParameters> Parameters::asMap() {
-  auto p = std::dynamic_pointer_cast<MapParameters>(this->shared_from_this());
+ptr<MapValue> Value::asMap() {
+  auto p = std::dynamic_pointer_cast<MapValue>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Map");
   return p;
 }
 
-ptr<ArrayParameters> Parameters::asArray() {
-  auto p = std::dynamic_pointer_cast<ArrayParameters>(this->shared_from_this());
+ptr<ArrayValue> Value::asArray() {
+  auto p = std::dynamic_pointer_cast<ArrayValue>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Array");
   return p;
 }
 
-ptr<ScalarParameters> Parameters::asScalar() {
-  auto p = std::dynamic_pointer_cast<ScalarParameters>(this->shared_from_this());
+ptr<ScalarValue> Value::asScalar() {
+  auto p = std::dynamic_pointer_cast<ScalarValue>(this->shared_from_this());
   if (!p) throw argument_error("Cannot cast to Scalar");
   return p;
 }
 
-bool Parameters::isMap() const {
-  return dynamic_cast<MapParameters const *>(this) != nullptr;
+bool Value::isMap() const {
+  return dynamic_cast<MapValue const *>(this) != nullptr;
 }
 
-bool Parameters::isArray() const {
-  return dynamic_cast<ArrayParameters const *>(this) != nullptr;
+bool Value::isArray() const {
+  return dynamic_cast<ArrayValue const *>(this) != nullptr;
 }
 
-bool Parameters::isScalar() const {
-  return dynamic_cast<ScalarParameters const *>(this) != nullptr;
+bool Value::isScalar() const {
+  return dynamic_cast<ScalarValue const *>(this) != nullptr;
 }
 
 
-void Parameters::validate() {
+void Value::validate() {
   if (get(Flag::VALIDATED)) return;
   _validate();
   set(Flag::VALIDATED, true);
 }
 
-void Parameters::_validate() {
+void Value::_validate() {
 }
 
-void Parameters::set(Parameters::Flag flag, bool value) {
+void Value::set(Value::Flag flag, bool value) {
   if (value) _flags |= (Flags)flag;
   else _flags &= ~((Flags)flag);
 
   assert(get(flag) == value);
 }
 
-bool Parameters::get(Parameters::Flag flag) const {
+bool Value::get(Value::Flag flag) const {
   return ((Flags)flag) & _flags;
 }
 
 
-void Parameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {}
+void Value::foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) {}
 
 //
 // --- Array parameters
 //
 
 
-ArrayParameters::ArrayParameters() : _type(mkptr<ArrayType>(AnyType)) {}
+ArrayValue::ArrayValue() : _type(mkptr<ArrayType>(AnyType)) {}
 
-ArrayParameters::~ArrayParameters() {}
+ArrayValue::~ArrayValue() {}
 
-void ArrayParameters::updateDigest(Digest & digest) const {
+void ArrayValue::updateDigest(Digest & digest) const {
   digest.updateDigest(ParametersTypes::ARRAY);
 }
 
  // If array, validate the array
-void ArrayParameters::_validate() {
+void ArrayValue::_validate() {
   for(size_t i = 0, N = size(); i < N; ++i) {
     try {
       (*this)[i]->validate();
@@ -409,32 +409,32 @@ void ArrayParameters::_validate() {
 }
 
 
-void ArrayParameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
+void ArrayValue::foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) {
   for(auto p: _array) {
     f(p);
   }
 }
 
-std::shared_ptr<Parameters> ArrayParameters::operator[](size_t index) {
+std::shared_ptr<Value> ArrayValue::operator[](size_t index) {
   return _array[index];
 }
 
 
-size_t ArrayParameters::size() const {
+size_t ArrayValue::size() const {
   return _array.size();
 }
 
-ptr<Type> ArrayParameters::type() const {
+ptr<Type> ArrayValue::type() const {
   return _type;
 }
 
-void ArrayParameters::push_back(std::shared_ptr<Parameters> const & parameters) {
+void ArrayValue::push_back(std::shared_ptr<Value> const & parameters) {
   _array.push_back(parameters);
   _type = Type::lca(_type, parameters->type());
 }
 
-bool ArrayParameters::equals(Parameters const & other) const {
-  auto other_ = dynamic_cast<ArrayParameters const *>(&other);
+bool ArrayValue::equals(Value const & other) const {
+  auto other_ = dynamic_cast<ArrayValue const *>(&other);
   if (!other_) return false;
 
   if (_array.size() != other_->_array.size()) 
@@ -448,7 +448,7 @@ bool ArrayParameters::equals(Parameters const & other) const {
   return true;
 }
 
-void ArrayParameters::outputJson(std::ostream &out, CommandContext & context) const {
+void ArrayValue::outputJson(std::ostream &out, CommandContext & context) const {
   out << "{\"" << xpm::KEY_TYPE << "\":\"" << type()->name().toString() << "\",\""
       << xpm::KEY_VALUE << "\": [";
   for(size_t i = 0; i < size(); ++i) {
@@ -458,7 +458,7 @@ void ArrayParameters::outputJson(std::ostream &out, CommandContext & context) co
   out << "]}";
 }
 
-nlohmann::json ArrayParameters::toJson() const {
+nlohmann::json ArrayValue::toJson() const {
   auto j = nlohmann::json::array();
   for(auto p: _array) {
     j.push_back(p->toJson());
@@ -466,8 +466,8 @@ nlohmann::json ArrayParameters::toJson() const {
   return j;
 }
 
-std::shared_ptr<Parameters> ArrayParameters::copy() {
-  auto sv = mkptr<ArrayParameters>();
+std::shared_ptr<Value> ArrayValue::copy() {
+  auto sv = mkptr<ArrayValue>();
   for(auto p: _array) {
     sv->_array.push_back(p->copy());
   }
@@ -478,18 +478,18 @@ std::shared_ptr<Parameters> ArrayParameters::copy() {
 // --- Map parameters
 //
 
-MapParameters::MapParameters() : _type(AnyType) {}
-MapParameters::~MapParameters() {}
+MapValue::MapValue() : _type(AnyType) {}
+MapValue::~MapValue() {}
 
-ptr<Type> MapParameters::type() const {
+ptr<Type> MapValue::type() const {
   return _type;
 }
-void MapParameters::type(ptr<Type> const & type) {
+void MapValue::type(ptr<Type> const & type) {
   _type = type;
 }
 
-ptr<Parameters> MapParameters::copy() {
-  auto sv = mkptr<MapParameters>();
+ptr<Value> MapValue::copy() {
+  auto sv = mkptr<MapValue>();
   sv->_job = _job;
   sv->_object = _object;
   sv->_task = _task;
@@ -500,12 +500,12 @@ ptr<Parameters> MapParameters::copy() {
   return sv;
 }
 
-bool MapParameters::equals(Parameters const &other) const {
+bool MapValue::equals(Value const &other) const {
   NOT_IMPLEMENTED();
 }
 
   
-void MapParameters::addDependencies(Job & job,  bool skipThis) {
+void MapValue::addDependencies(Job & job,  bool skipThis) {
   if (_job) {
     LOGGER->info("Found dependency resource {}", _job);
     job.addDependency(_job->createDependency());
@@ -515,13 +515,13 @@ void MapParameters::addDependencies(Job & job,  bool skipThis) {
 }
 
   
-ptr<Parameters> MapParameters::get(const std::string &key) {
+ptr<Value> MapValue::get(const std::string &key) {
   auto value = _map.find(key);
   if (value == _map.end()) throw std::out_of_range(key + " is not defined for object");
   return value->second;
 }
 
-void MapParameters::_validate() {
+void MapValue::_validate() {
   // Loop over the whole hierarchy
   for (auto type = _type; type; type = type->parentType()) {
     LOGGER->debug("Looking at type {} [{} arguments]", type->name(), type->arguments().size());
@@ -563,7 +563,7 @@ void MapParameters::_validate() {
   }
 }
 
-void MapParameters::_generate(GeneratorContext &context) {
+void MapValue::_generate(GeneratorContext &context) {
   // ... for missing arguments
   for (auto type = _type; type; type = type->parentType()) {
     for (auto entry : type->arguments()) {
@@ -584,8 +584,8 @@ void MapParameters::_generate(GeneratorContext &context) {
         } else if (!argument.required()) {
           // Set value null
           LOGGER->debug("Setting null value for {}...", argument.name());
-          auto value = mkptr<ScalarParameters>(Scalar::NONE);
-          value->Parameters::set(Flag::DEFAULT, true);
+          auto value = mkptr<ScalarValue>(Scalar::NONE);
+          value->Value::set(Flag::DEFAULT, true);
           set(argument.name(), value);
         }
       }
@@ -594,7 +594,7 @@ void MapParameters::_generate(GeneratorContext &context) {
 }
 
 
-void MapParameters::outputJson(std::ostream &out, CommandContext & context) const {
+void MapValue::outputJson(std::ostream &out, CommandContext & context) const {
   out << "{";
   bool first = true;
 
@@ -620,7 +620,7 @@ void MapParameters::outputJson(std::ostream &out, CommandContext & context) cons
       out << "\"" << entry.first << "\":";
       
       if (hasKey(argument.name())) {
-        const_cast<MapParameters*>(this)->get(argument.name())->outputJson(out, context);
+        const_cast<MapValue*>(this)->get(argument.name())->outputJson(out, context);
       } else {
         out << "null";
       }
@@ -631,9 +631,9 @@ void MapParameters::outputJson(std::ostream &out, CommandContext & context) cons
 }
     
 
-nlohmann::json MapParameters::toJson() const {
+nlohmann::json MapValue::toJson() const {
     // No content
-  if (_map.empty() && !_task && !type() && !Parameters::get(Flag::DEFAULT)) {
+  if (_map.empty() && !_task && !type() && !Value::get(Flag::DEFAULT)) {
         return nullptr;
     }
     
@@ -654,7 +654,7 @@ nlohmann::json MapParameters::toJson() const {
     return o;
 }
   
-void MapParameters::updateDigest(Digest & digest) const {
+void MapValue::updateDigest(Digest & digest) const {
   digest.updateDigest(type()->name().toString());
 
   if (_task) {
@@ -680,7 +680,7 @@ void MapParameters::updateDigest(Digest & digest) const {
 
 }
 
-std::shared_ptr<Object> MapParameters::createObjects(xpm::Register &xpmRegister) {
+std::shared_ptr<Object> MapValue::createObjects(xpm::Register &xpmRegister) {
   _object = xpmRegister.createObject(shared_from_this());
   if (_object) {
     // Set the values
@@ -696,50 +696,50 @@ std::shared_ptr<Object> MapParameters::createObjects(xpm::Register &xpmRegister)
 }
 
 
-void MapParameters::setObjectValue(std::string const &name, ptr<Parameters> const &value) {
+void MapValue::setObjectValue(std::string const &name, ptr<Value> const &value) {
   if (_object) {
     _object->setValue(name, value);
   }
 }
 
-void MapParameters::foreachChild(std::function<void(std::shared_ptr<Parameters> const &)> f) {
+void MapValue::foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) {
   for(auto &kv: _map) {
     f(kv.second);
   }
 }
 
-std::shared_ptr<Job> const & MapParameters::job() const { 
+std::shared_ptr<Job> const & MapValue::job() const { 
   return _job; 
 }
 
-void MapParameters::job( std::shared_ptr<Job> const & _job) { 
+void MapValue::job( std::shared_ptr<Job> const & _job) { 
   this->_job = _job; 
 }
 
-bool MapParameters::hasKey(std::string const &key) const {
+bool MapValue::hasKey(std::string const &key) const {
   return _map.find(key) != _map.end();
 }
 
 
-void MapParameters::object(ptr<Object> const &object) {
+void MapValue::object(ptr<Object> const &object) {
   _object = object;
 }
 
-ptr<Object> MapParameters::object() {
+ptr<Object> MapValue::object() {
   return _object;
 }
 
-void MapParameters::task(ptr<Task> const &task) {
+void MapValue::task(ptr<Task> const &task) {
   _task = task;
 }
 
-ptr<Task> MapParameters::task() {
+ptr<Task> MapValue::task() {
   return _task;
 }
 
 
-ptr<Parameters> MapParameters::set(const std::string &key, ptr<Parameters> const &value) {
-  if (Parameters::get(Flag::SEALED)) {
+ptr<Value> MapValue::set(const std::string &key, ptr<Value> const &value) {
+  if (Value::get(Flag::SEALED)) {
     throw sealed_error();
   }
 
@@ -812,12 +812,12 @@ Argument &Argument::help(const std::string &help) {
   return *this;
 }
 
-Argument &Argument::defaultValue(ptr<Parameters> const &defaultValue) {
+Argument &Argument::defaultValue(ptr<Value> const &defaultValue) {
   _defaultValue = defaultValue;
   _required = false;
   return *this;
 }
-ptr<Parameters> Argument::defaultValue() const { return _defaultValue; }
+ptr<Value> Argument::defaultValue() const { return _defaultValue; }
 
 ptr<Generator> Argument::generator() { return _generator; }
 ptr<Generator> const &Argument::generator() const { return _generator; }
@@ -836,13 +836,13 @@ Argument &Argument::type(ptr<Type> const &type) {
 
 // ---- Generators
 
-GeneratorContext::GeneratorContext(Workspace & ws, ptr<Parameters> const &sv) : workspace(ws) {
+GeneratorContext::GeneratorContext(Workspace & ws, ptr<Value> const &sv) : workspace(ws) {
   stack.push_back(sv.get());
 }
 GeneratorContext::GeneratorContext(Workspace & ws) : workspace(ws) {
 }
 
-GeneratorLock::GeneratorLock(GeneratorContext * context, Parameters *sv) : context(context) {
+GeneratorLock::GeneratorLock(GeneratorContext * context, Value *sv) : context(context) {
   context->stack.push_back(sv);
 }
 
@@ -867,7 +867,7 @@ nlohmann::json PathGenerator::toJson() const {
   };
 }
 
-ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
+ptr<Value> PathGenerator::generate(GeneratorContext const &context) {
   Path p = context.workspace.jobsdir();
   auto uuid = context.stack[0]->uniqueIdentifier();
 
@@ -880,7 +880,7 @@ ptr<Parameters> PathGenerator::generate(GeneratorContext const &context) {
   if (!_name.empty()) {
     p = Path(p, { _name });
   }
-  return mkptr<ScalarParameters>(Scalar(p));
+  return mkptr<ScalarValue>(Scalar(p));
 }
 
 PathGenerator::PathGenerator(std::string const &name) : _name(name) {

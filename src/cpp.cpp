@@ -30,11 +30,11 @@ void currentRegister(ptr<CppRegister> const &_register) {
   CURRENTREGISTER = _register;
 }
 
-void CppRegister::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Parameters> const & sv) {
+void CppRegister::runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Value> const & sv) {
 }
 
 /// Create object
-std::shared_ptr<Object> CppRegister::createObject(std::shared_ptr<Parameters> const & sv) {
+std::shared_ptr<Object> CppRegister::createObject(std::shared_ptr<Value> const & sv) {
   auto it = constructors.find(sv->type());
   if (it == constructors.end()) {
     return mkptr<DefaultCppObject>();

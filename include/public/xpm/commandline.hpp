@@ -15,7 +15,7 @@
 
 namespace xpm {
 
-class Parameters;
+class Value;
 class Job;
 struct CommandContext;
 class Workspace;
@@ -155,7 +155,7 @@ struct NamedPipeRedirections {
 struct CommandContext {
   Workspace & workspace;
   Connector const & connector;
-  std::shared_ptr<Parameters> parameters;
+  std::shared_ptr<Value> parameters;
   std::unordered_map<CommandPart const *, NamedPipeRedirections> namedPipeRedirectionsMap;
   Path folder;
   std::string name;

@@ -7,7 +7,7 @@
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/xpm.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 #include <xpm/common.hpp>
 #include <xpm/workspace.hpp>
 #include <xpm/type.hpp>

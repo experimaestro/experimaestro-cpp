@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include <xpm/common.hpp>
-#include <xpm/value.hpp>
+#include <xpm/scalar.hpp>
 
 namespace xpm {
 
@@ -21,7 +21,7 @@ namespace xpm {
 class Type;
 class Object;
 class Argument;
-class Parameters;
+class Value;
 
 SWIG_IMMUTABLE;
 extern std::shared_ptr<Type> IntegerType;
@@ -165,8 +165,8 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
   void description(std::string const &description) { _description = description; }
 
   /** Set a property */
-  void setProperty(std::string const &name, std::shared_ptr<Parameters> const &value);
-  std::shared_ptr<Parameters> getProperty(std::string const &name);
+  void setProperty(std::string const &name, std::shared_ptr<Value> const &value);
+  std::shared_ptr<Value> getProperty(std::string const &name);
 
   /** Is it a scalar */
   virtual bool scalar() { return false; }
@@ -205,7 +205,7 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
    * Properties of this type.
    * They are useful to characterize a type when building experiments
    */
-  std::unordered_map<std::string, std::shared_ptr<Parameters>> _properties;
+  std::unordered_map<std::string, std::shared_ptr<Value>> _properties;
 
 
   std::string _description;

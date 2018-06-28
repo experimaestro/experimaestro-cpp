@@ -109,7 +109,7 @@ ptr<Type> Register::getType(Typename const &typeName) {
 }
 
 // Find a type given a type name
-ptr<Type> Register::getType(ptr<Parameters> const &object) {
+ptr<Type> Register::getType(ptr<Value> const &object) {
   return object->type();
 }
 
@@ -122,11 +122,11 @@ std::vector<std::string> reverse(std::vector<std::string> const &_args) {
 }
 
 namespace {
-void showArguments(ptr<Parameters> const & _sv, Type const & type, std::string const & indent = "") {
-  auto sv = std::dynamic_pointer_cast<MapParameters>(_sv);
+void showArguments(ptr<Value> const & _sv, Type const & type, std::string const & indent = "") {
+  auto sv = std::dynamic_pointer_cast<MapValue>(_sv);
   for(auto const &x: type.arguments()) {
     auto subtype =  x.second->type();
-    auto subSV = sv && sv->hasKey(x.first) ? std::dynamic_pointer_cast<MapParameters>(sv->get(x.first)) : nullptr;
+    auto subSV = sv && sv->hasKey(x.first) ? std::dynamic_pointer_cast<MapValue>(sv->get(x.first)) : nullptr;
 
     if (subSV) {
       auto svType = subSV->type();
@@ -159,18 +159,18 @@ void showArguments(ptr<Parameters> const & _sv, Type const & type, std::string c
 }
 
 /// Follow
-ptr<Parameters> getSubValue(MapParameters & _sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
+ptr<Value> getSubValue(MapValue & _sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
   auto sv = &_sv;
-  ptr<MapParameters> subsv = nullptr;
+  ptr<MapValue> subsv = nullptr;
   for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
     next = fullkey.find(separator, pos+1);
     std::string key = fullkey.substr(pos, next-pos);
 
     if (sv->hasKey(key)) {
-      subsv = std::dynamic_pointer_cast<MapParameters>(sv->get(key));
+      subsv = std::dynamic_pointer_cast<MapValue>(sv->get(key));
     } else {
       // Create structured value
-      subsv = mkptr<MapParameters>();
+      subsv = mkptr<MapValue>();
 
       // Propagate types
       auto const &arguments = sv->type()->arguments();
@@ -189,7 +189,7 @@ ptr<Parameters> getSubValue(MapParameters & _sv, std::string const & fullkey, st
 }
 
 /// Merge values from YAML into a structured value
-void merge(Register & xpmRegister, MapParameters &sv, YAML::Node const &node) {
+void merge(Register & xpmRegister, MapValue &sv, YAML::Node const &node) {
   switch (node.Type()) {
 
   case YAML::NodeType::Sequence:
@@ -255,7 +255,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       ->required(false);
 
     std::vector<std::string> yamlStrings;
-    _run->add_option("--yaml", yamlStrings, "Parameters in YAML format")
+    _run->add_option("--yaml", yamlStrings, "Value in YAML format")
       ->required(false);
 
     int argumentHelp = 0;
@@ -275,7 +275,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
 
     _run->set_callback( [&](){
       if (parameters.size() % 2 != 0) {
-        throw argument_error("Parameters should be of the form [--path-name-of-argument value]*");
+        throw argument_error("Value should be of the form [--path-name-of-argument value]*");
       }
 
       // Retrieve the task
@@ -285,9 +285,9 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
       }
 
       // Read the JSON file
-      ptr<MapParameters> sv;
+      ptr<MapValue> sv;
       if (paramFile.empty()) {
-        sv = mkptr<MapParameters>();
+        sv = mkptr<MapValue>();
         sv->type(task->type());
       } else {
         std::ifstream stream(paramFile);
@@ -300,7 +300,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
           throw;
         }
 
-        sv = std::dynamic_pointer_cast<MapParameters>(Parameters::create(*this, j));
+        sv = std::dynamic_pointer_cast<MapValue>(Value::create(*this, j));
         
       }
 
@@ -358,7 +358,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
  
 }
 
-void Register::runTask(ptr<Task> const & task, ptr<Parameters> const & sv) {
+void Register::runTask(ptr<Task> const & task, ptr<Value> const & sv) {
   auto object = sv->asMap()->object();
   if (!object) {
     throw assertion_error(fmt::format("No object was created for structured value of type {}", sv->type()->toString()));
@@ -372,7 +372,7 @@ void Register::runTask(ptr<Task> const & task, ptr<Parameters> const & sv) {
 }
 
   /// Create object
-ptr<Object> Register::createObject(ptr<Parameters> const & sv) {
+ptr<Object> Register::createObject(ptr<Value> const & sv) {
   return nullptr;
 }
 
@@ -401,8 +401,8 @@ void Register::generate() const {
   std::cout << "}" << std::endl;
 }
 
-ptr<Parameters> Register::build(std::string const &value) {
-  return Parameters::create(*this, json::parse(value));
+ptr<Value> Register::build(std::string const &value) {
+  return Value::create(*this, json::parse(value));
 }
 
 void Register::parse(int argc, const char **argv) {
@@ -485,7 +485,7 @@ void Register::load(nlohmann::json const &j) {
     if (e.count("properties")) {
       auto properties = e["properties"];
       for (json::iterator it_prop = properties.begin(); it_prop != properties.end(); ++it_prop) {
-        auto object = Parameters::create(*this, it_prop.value());
+        auto object = Value::create(*this, it_prop.value());
         type->setProperty(it_prop.key(), object);
       }
     }
@@ -510,7 +510,7 @@ void Register::load(nlohmann::json const &j) {
 
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
-          a->defaultValue(Parameters::create(*this, value["default"]));
+          a->defaultValue(Value::create(*this, value["default"]));
         }
 
         if (value.count("generator")) {
