@@ -202,7 +202,6 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
     }
 
     case nlohmann::json::value_t::array: {
-      std::cerr << "Got an array!\n";
       auto array = mkptr<ArrayValue>();
       for(auto child: jsonValue) {
         array->push_back(create(xpmRegister, child));

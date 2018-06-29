@@ -331,7 +331,6 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         auto subsv = std::get<0>(valuetype);
         auto subtype = std::get<1>(valuetype);
 
-        std::cerr << parameters[i] << " " << subsv->type()->name() << std::endl;
         if (subsv->isScalar()) {
           subsv->asScalar()->set(parameters[i+1], subtype);
         } else {
