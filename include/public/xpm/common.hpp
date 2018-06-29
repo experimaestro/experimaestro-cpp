@@ -113,6 +113,32 @@ class io_error : public exception {
 
 
 #define NOT_IMPLEMENTED() throw not_implemented_error(__func__, __FILE__, __LINE__)
+
 }
+
+
+#ifndef SWIG
+
+#include <cxxabi.h>
+template<typename T>
+std::string demangle(T const & t) {
+  int status;
+  char * demangled = abi::__cxa_demangle(typeid(t).name(),0,0,&status);
+  std::string r = demangled;
+  free(demangled);
+  return r;
+}
+
+template<typename T>
+std::string demangle(std::shared_ptr<T> const & t) {
+  if (t) {
+    return "shared_ptr of " + demangle(*t);
+  } else {
+    return "nullptr";
+  }
+}
+
+
+#endif
 
 #endif //PROJECT_COMMON_HPP

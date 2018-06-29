@@ -61,16 +61,6 @@ const Typename PATH_TYPE("path");
 
 static const std::unordered_set<Typename> IGNORED_TYPES = {PATH_TYPE};
 
-
-template<typename T>
-std::string demangle(T const & t) {
-  int status;
-  char * demangled = abi::__cxa_demangle(typeid(t).name(),0,0,&status);
-  std::string r = demangled;
-  free(demangled);
-  return r;
-}
-
 void Outputable::output(std::ostream &out) const {
   out << "Object of type " << demangle(this) << std::endl;
 }
@@ -954,8 +944,8 @@ std::shared_ptr<Type> ScalarValue::type() const {
   return _value.type();
 }
 
-void ScalarValue::set(std::string const & value, bool typeHint) {
-  _value = Scalar(value);
+void ScalarValue::set(std::string const & value, ptr<Type> const & typeHint) {
+  _value = Scalar::fromString(value, typeHint);
 }
 
 bool ScalarValue::equals(Value const &other) const {

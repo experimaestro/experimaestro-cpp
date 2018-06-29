@@ -98,6 +98,11 @@ Type::Ptr Type::parentType() {
   return _parent;
 }
 
+ptr<Value> Type::create() const {
+  return mkptr<MapValue>();
+}
+
+
 Typename const &Type::name() const { return _type; }
 
 /// Return the type
@@ -213,4 +218,12 @@ ArrayType::ArrayType(Type::Ptr const & componentType)
     ), _componentType(componentType) {
 }
    
+ptr<Value> ArrayType::create() const {
+  return mkptr<ArrayValue>();
+}
+
+ptr<Value> SimpleType::create() const {
+  return mkptr<ScalarValue>();
+}
+
 }

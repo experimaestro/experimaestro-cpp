@@ -13,16 +13,6 @@
 #include <xpm/xpm.hpp>
 #include <xpm/type.hpp>
 
-#include <cxxabi.h>
-template<typename T>
-std::string demangle(T const & t) {
-  int status;
-  char * demangled = abi::__cxa_demangle(typeid(t).name(),0,0,&status);
-  std::string r = demangled;
-  free(demangled);
-  return r;
-}
-
 namespace xpm {
 
 template<class T> struct CppType;

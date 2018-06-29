@@ -177,9 +177,11 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
   /// Checks whether another type can be assigned as this type
   bool accepts(Type::Ptr const &other) const;
 
-
   /// Base type for any type
   static Type::Ptr const & any();
+
+  /// Create a value of the appropriate class
+  virtual std::shared_ptr<Value> create() const;
 
   /**
    * Creates a new type
@@ -220,12 +222,14 @@ class SimpleType : public Type {
   SimpleType(Typename const &tname, ScalarType valueType, bool canIgnore = false);
   inline ScalarType valueType() { return _valueType; }
   virtual bool scalar() override { return true; }
+  virtual std::shared_ptr<Value> create() const override;
 };
 
 class ArrayType : public Type {
   Type::Ptr _componentType;
 public:
   ArrayType(Type::Ptr const & componentType);
+  virtual std::shared_ptr<Value> create() const override;
   virtual bool array() override { return true; }
   Type::Ptr componentType() { return _componentType; }
 };

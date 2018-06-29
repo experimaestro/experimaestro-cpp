@@ -158,34 +158,43 @@ void showArguments(ptr<Value> const & _sv, Type const & type, std::string const 
   }
 }
 
-/// Follow
-ptr<Value> getSubValue(MapValue & _sv, std::string const & fullkey, std::string const & separator, bool lenient = false) {
-  auto sv = &_sv;
-  ptr<MapValue> subsv = nullptr;
+
+typedef std::tuple<ptr<Value>, ptr<Type>> ValueTypePtr;
+
+/**
+ *  Follow a path given by fullkey
+ */
+ ValueTypePtr getSubValue(Value & svref, std::string const & fullkey, std::string const & separator) {
+  auto sv = &svref;
+  ptr<Value> subsv = nullptr;
+  ptr<Type> type = nullptr;
+
   for (size_t pos = 0, next = 0; next != std::string::npos; pos = next + 1) {
     next = fullkey.find(separator, pos+1);
     std::string key = fullkey.substr(pos, next-pos);
 
-    if (sv->hasKey(key)) {
-      subsv = std::dynamic_pointer_cast<MapValue>(sv->get(key));
-    } else {
-      // Create structured value
-      subsv = mkptr<MapValue>();
+    auto mapsv = dynamic_cast<MapValue*>(sv);
+    if (!mapsv) throw argument_error("value is not a map");
+    
+    auto const &arguments = mapsv->type()->arguments();
+    auto it = arguments.find(key);
+    if (it == arguments.end()) {
+      throw argument_error("Cannot find " + fullkey);
+    }
+    auto & arg = *it->second;
+    type = arg.type();
 
-      // Propagate types
-      auto const &arguments = sv->type()->arguments();
-      auto it = arguments.find(key);
-      if (it != arguments.end()) {
-        subsv->type(it->second->type());
-      } else if (!lenient) {
-        throw argument_error("Cannot find " + fullkey);
-      }
-      sv->set(key, subsv);
+    if (mapsv->hasKey(key)) {
+      // There is a value
+      subsv = std::dynamic_pointer_cast<MapValue>(mapsv->get(key));
+    } else {
+      subsv = type->create();
+      mapsv->set(key, subsv);
     }
     sv = subsv.get();
   }
 
-  return subsv;
+  return std::make_tuple(subsv, type);
 }
 
 /// Merge values from YAML into a structured value
@@ -219,9 +228,8 @@ void merge(Register & xpmRegister, MapValue &sv, YAML::Node const &node) {
       auto fullkey = pair.first.as<std::string>();
 
       // Find the structured value
-      auto subsv = getSubValue(sv, fullkey, ".");
-      merge(xpmRegister, *subsv->asMap(), pair.second);
-
+      auto p = getSubValue(sv, fullkey, ".");
+      merge(xpmRegister, *std::get<0>(p)->asMap(), pair.second);
     }
     break;
   }
@@ -318,11 +326,14 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         if (parameters[i].substr(0,2) != "--") {
           throw argument_error("Option '" + parameters[i] + "' does not begin by --");
         }
-        auto subsv = getSubValue(*sv, parameters[i].substr(2), "-");
 
-        if (subsv->type()->scalar()) {
-          //subsv->asMap()->set(parameters[i+1], true);
-          NOT_IMPLEMENTED(); // FIXME: re-implement
+        auto valuetype = getSubValue(*sv, parameters[i].substr(2), "-");
+        auto subsv = std::get<0>(valuetype);
+        auto subtype = std::get<1>(valuetype);
+
+        std::cerr << parameters[i] << " " << subsv->type()->name() << std::endl;
+        if (subsv->isScalar()) {
+          subsv->asScalar()->set(parameters[i+1], subtype);
         } else {
           auto type = getType(parameters[i+1]);
           if (!type) throw argument_error("Type " + parameters[i+1] + " does not exist");

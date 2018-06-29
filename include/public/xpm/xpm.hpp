@@ -387,7 +387,7 @@ public:
 
   void set(bool value);
   void set(long value);
-  void set(std::string const & value, bool typeHint = false);
+  void set(std::string const & value, std::shared_ptr<Type> const & typeHint = nullptr);
   void set(YAML::Node const &node);
 
   /// Returns true if the value is defined
