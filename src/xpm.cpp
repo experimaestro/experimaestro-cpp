@@ -412,13 +412,13 @@ void Value::foreachChild(std::function<void(std::shared_ptr<Value> const &)> f) 
 
 std::map<std::string, Scalar> Value::tags() const {
   std::map<std::string, Scalar> map;
-  retrieveTags(map);
+  retrieveTags(map, "");
   return map;
 }
 
-void Value::retrieveTags(std::map<std::string, Scalar> &tags) const {
-  const_cast<Value*>(this)->foreachChild([&tags](auto c) {
-    c->retrieveTags(tags);
+void Value::retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const {
+  const_cast<Value*>(this)->foreachChild([&tags, &context](auto c) {
+    c->retrieveTags(tags, context);
   });
 }
 
@@ -431,15 +431,20 @@ ComplexValue::ComplexValue() {}
 ComplexValue::~ComplexValue() {}
 
 
-void ComplexValue::retrieveTags(std::map<std::string, Scalar> &tags) const  {
-  Value::retrieveTags(tags);
+void ComplexValue::retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const  {
+  Value::retrieveTags(tags, _tagContext.empty() ? context : ( context + _tagContext + "/" ));
 
   for(auto pair: _tags) {
-    auto r = tags.insert(pair);
+    auto r = tags.insert({ context + pair.first, pair.second });
     if (!r.second) throw assertion_error("Tag " + pair.first + " was present more than once in the value");
   }
   
 }
+
+void ComplexValue::setTagContext(std::string const & name) {
+  _tagContext = name;
+}
+
 
 void ComplexValue::addTag(std::string const & name, Scalar scalar) {
   _tags[name] = scalar;
@@ -989,9 +994,9 @@ void ScalarValue::tag(std::string const &name) {
   _tag = name;
 }
 
-void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags) const {
+void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const {
   if (_tag.empty()) return;
-  auto r = tags.insert(std::pair<std::string, Scalar>(_tag, _value));
+  auto r = tags.insert({ context + _tag, _value });
   if (!r.second) throw assertion_error("Tag " + _tag + " was present more than once in the value");
 }
 

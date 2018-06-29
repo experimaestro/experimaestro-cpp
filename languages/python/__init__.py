@@ -511,10 +511,13 @@ launcher = DirectLauncher(LocalConnector())
 launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
 set_launcher(launcher)
 
-def tag(name: str, x, object:PyObject=None):
+def tag(name: str, x, object:PyObject=None, context=None):
     """Tag a value"""
     if object:
-        object.__xpm__.sv.addTag(name, x)
+        sv = object.__xpm__.sv # type: MavValue
+        sv.addTag(name, x)
+        if context:
+            sv.setTagContext(context)
         return object
 
     value = ScalarValue(x)

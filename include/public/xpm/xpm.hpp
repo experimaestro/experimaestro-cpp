@@ -200,7 +200,7 @@ public:
 
 protected:
   /// Retrieve tags in this value or its descendants
-  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const;
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const;
 
   /// For each child callback
   virtual void foreachChild(std::function<void(std::shared_ptr<Value> const &)> f);
@@ -237,10 +237,12 @@ public:
   ComplexValue();
   virtual ~ComplexValue();
 
-  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const override;
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const override;
   void addTag(std::string const & name, Scalar scalar);
+  void setTagContext(std::string const & name);
 protected:
   std::map<std::string, Scalar> _tags;
+  std::string _tagContext;
 };
 
 class MapValue : public ComplexValue {
@@ -408,8 +410,7 @@ public:
   virtual std::shared_ptr<Type> type() const override;
 
 protected:
-
-  virtual void retrieveTags(std::map<std::string, Scalar> &tags) const override;
+  virtual void retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const override;
 
 private:
   /// The associated value
