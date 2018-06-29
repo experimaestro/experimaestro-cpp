@@ -532,7 +532,7 @@ def tagspath(value: PyObject):
     """Return the tags associated with a value"""
     p = PPath()
     for key, value in value.__xpm__.sv.tags().items():
-        p /= "%s_%s" % (key, value)
+        p /= "%s=%s" % (key.replace("/","-"), value)
     return p
 
 # --- Handle signals

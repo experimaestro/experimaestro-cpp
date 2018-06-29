@@ -432,10 +432,11 @@ ComplexValue::~ComplexValue() {}
 
 
 void ComplexValue::retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const  {
-  Value::retrieveTags(tags, _tagContext.empty() ? context : ( context + _tagContext + "/" ));
+  auto c = _tagContext.empty() ? context : ( context + _tagContext + "/" );
+  Value::retrieveTags(tags, c);
 
   for(auto pair: _tags) {
-    auto r = tags.insert({ context + pair.first, pair.second });
+    auto r = tags.insert({ c + pair.first, pair.second });
     if (!r.second) throw assertion_error("Tag " + pair.first + " was present more than once in the value");
   }
   
