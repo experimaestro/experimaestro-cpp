@@ -122,13 +122,14 @@ class XPMObject(Object):
         self.sv.type(self.pyobject.__class__.__xpmtype__)
         self.setting = False
         self.submitted = False
+        self.dependencies = []
 
     @property
     def job(self):
         job = self.sv.job()
         if job: return job
         raise Exception("No job associated with python2value %s" % self.sv)
-
+        
     def set(self, k, v):
         if self.setting: return
 
@@ -192,7 +193,7 @@ class PyObject:
             raise Exception("Task %s was already submitted" % self)
         if send:
             launcher = launcher or DEFAULT_LAUNCHER
-            self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.sv)
+            self.__class__.__xpmtask__.submit(workspace, launcher, self.__xpm__.sv, self.__xpm__.dependencies)
 
         self.__xpm__.submitted = True
         return self
@@ -214,6 +215,9 @@ class PyObject:
         return self.__xpm__.job.stdoutPath().localpath()
     def _stderr(self):
         return self.__xpm__.job.stdoutPath().localpath()
+
+    def _adddependency(self, dependency):
+        self.__xpm__.dependencies.append(dependency)
 
 # Another way to submit if the method is overriden
 def submit(*args, **kwargs):

@@ -9,6 +9,7 @@ namespace xpm {
 
 class Workspace;
 class CommandLine;
+class Dependency;
 
 /**
  * A task can be executed and has an associated type
@@ -40,7 +41,8 @@ class Task
    */
   void submit(std::shared_ptr<Workspace> const & workspace,
               std::shared_ptr<Launcher> const & launcher,
-              std::shared_ptr<Value> const & sv) const;
+              std::shared_ptr<Value> const & sv,
+              std::vector<std::shared_ptr<Dependency>> const & dependencies) const;
 
   /** Returns the type of this task */
   Typename name() const;

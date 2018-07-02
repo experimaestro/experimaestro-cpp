@@ -27,7 +27,8 @@ Typename Task::name() const { return _type->name(); }
 
 void Task::submit(ptr<Workspace> const & _workspace,
   ptr<Launcher> const & _launcher,
-  ptr<Value> const & _sv
+  ptr<Value> const & _sv,
+  std::vector<std::shared_ptr<Dependency>> const & dependencies
 ) const {
   LOGGER->info("Preparing job");
 
@@ -57,6 +58,9 @@ void Task::submit(ptr<Workspace> const & _workspace,
   job->parameters(sv);
   job->init();
   sv->job(job);
+  for(auto dependency: dependencies) {
+    job->addDependency(dependency);
+  }
 
   workspace->submit(job);
   LOGGER->debug("Submitting job {} (id {}) {}", job->locator(), job->getId(), sv->toJsonString());

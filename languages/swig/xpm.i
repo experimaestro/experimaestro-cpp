@@ -109,6 +109,8 @@ namespace xpm {
 %shared_ptr(xpm::CounterToken)
 %shared_ptr(xpm::Job)
 %shared_ptr(xpm::CommandLineJob)
+
+%shared_ptr(xpm::Dependency)
 %shared_ptr(xpm::Workspace)
 
 %shared_ptr(xpm::AbstractCommandComponent)
@@ -168,6 +170,7 @@ namespace xpm {
 
 // Template instanciation
 %template(StringList) std::vector<std::string>;
+%template(Dependencies) std::vector<std::shared_ptr<xpm::Dependency>>;
 %template(String2String) std::map<std::string, std::string>;
 %template(String2Scalar) std::map<std::string, xpm::Scalar>;
 
