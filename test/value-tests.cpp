@@ -40,16 +40,16 @@ TEST(Value, defaultSet) {
   object->set("a", mkptr<ScalarValue>(1l));
   object->validate();
 
-  EXPECT_TRUE(object->get("a")->equals(ScalarValue(1)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarValue(1l)));
   EXPECT_TRUE(object->get("a")->isDefault());
 }
 
 TEST(Value, notDefault) {
   auto object = TestType().create();
-  object->set("a", mkptr<ScalarValue>(2));
+  object->set("a", mkptr<ScalarValue>(2l));
   object->validate();
 
-  EXPECT_TRUE(object->get("a")->equals(ScalarValue(2)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarValue(2l)));
   EXPECT_TRUE(!object->get("a")->isDefault());
 }
 
@@ -61,6 +61,6 @@ TEST(Value, defaultNotSet) {
   GeneratorContext context(ws);
   object->generate(context);
 
-  EXPECT_TRUE(object->get("a")->equals(ScalarValue(1)));
+  EXPECT_TRUE(object->get("a")->equals(ScalarValue(1l)));
   EXPECT_TRUE(object->get("a")->isDefault());
 }
