@@ -32,6 +32,13 @@ TEST(Digest, DifferentType) {
   EXPECT_NE(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
 
+TEST(Digest, DifferentArrays) {
+  Register r;
+  auto v0 = r.build(R"({ "a": [1,3] })");
+  auto v1 = r.build(R"({ "a": [1,2] })");
+  EXPECT_NE(v0->uniqueIdentifier(), v1->uniqueIdentifier());
+}
+
 TEST(Digest, ignore) {
   auto r = mkptr<CppRegister>();
 

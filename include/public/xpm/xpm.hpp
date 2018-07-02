@@ -13,7 +13,6 @@
 
 namespace xpm { 
   // Forward declarations
-  class Value;
   class AbstractObjectHolder;
   class Type;
   class Object;
@@ -27,6 +26,8 @@ namespace xpm {
   class GeneratorContext;
   struct CommandContext;
 
+  class Value;
+  class ComplexValue;
   class ScalarValue;
   class MapValue;
   class ArrayValue;
@@ -229,6 +230,9 @@ protected:
   friend struct Digest;
   friend class Register;
 
+  friend class ScalarValue;
+  friend class ArrayValue;
+  friend class ComplexValue;
   friend class MapValue;
 };
 

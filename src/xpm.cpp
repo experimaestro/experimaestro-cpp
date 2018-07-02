@@ -452,6 +452,10 @@ ArrayValue::~ArrayValue() {}
 
 void ArrayValue::updateDigest(Digest & digest) const {
   digest.updateDigest(ParametersTypes::ARRAY);
+  digest.updateDigest(_array.size());
+  for(auto const & c : _array) {
+    c->updateDigest(digest);
+  }
 }
 
  // If array, validate the array
