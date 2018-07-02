@@ -211,7 +211,7 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
 
     default: break;
   }
-    
+
   return mkptr<ScalarValue>(Scalar(jsonValue));
 }
 

@@ -12,7 +12,7 @@ The goal is to be able to launch experiments without running a server first.
 - [x] Implement launchers (`Launcher`, `LocalhostLauncher`)
 - [x] Implement scheduler (`Scheduler`): just monitors
 - [ ] Implement database to store information
-- [ ] Add tags
+- [x] Add tags
 
 ### Medium term: external
 

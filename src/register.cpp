@@ -186,7 +186,7 @@ typedef std::tuple<ptr<Value>, ptr<Type>> ValueTypePtr;
 
     if (mapsv->hasKey(key)) {
       // There is a value
-      subsv = std::dynamic_pointer_cast<MapValue>(mapsv->get(key));
+      subsv = mapsv->get(key);
     } else {
       subsv = type->create();
       mapsv->set(key, subsv);
@@ -330,7 +330,7 @@ bool Register::parse(std::vector<std::string> const &_args, bool tryParse) {
         auto valuetype = getSubValue(*sv, parameters[i].substr(2), "-");
         auto subsv = std::get<0>(valuetype);
         auto subtype = std::get<1>(valuetype);
-
+        assert(subsv->isScalar() == subtype->scalar());
         if (subsv->isScalar()) {
           subsv->asScalar()->set(parameters[i+1], subtype);
         } else {
