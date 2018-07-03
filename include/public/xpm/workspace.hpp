@@ -28,6 +28,7 @@ class Value;
 class CommandLine;
 struct JobPriorityComparator;
 class CounterDependency;
+class Lock;
 
 typedef std::uint64_t ResourceId;
 
@@ -57,9 +58,15 @@ public:
   /// Check the status and update the dependent if needed
   void check();
 
+  /// Lock the resource
+  std::shared_ptr<Lock> lock();
+
 protected:
   /// To string
   virtual void output(std::ostream &out) const override;
+
+  /// Lock the dependency
+  virtual std::shared_ptr<Lock> _lock() = 0;
 
 private:
   // The origin
@@ -67,6 +74,9 @@ private:
 
   // The dependent
   std::shared_ptr<Resource> _target;
+
+  // The current lock (if any)
+  std::weak_ptr<Lock> _currentLock;
 
   /// Old satisfaction status
   DependencyStatus _oldStatus;
@@ -212,8 +222,6 @@ public:
   /// Get the current state
   JobState state() const;
 
-  /// Run the job
-  virtual void run() = 0;
 
   /// Get a dependency to this resource
   std::shared_ptr<Dependency> createDependency() override;
@@ -230,9 +238,20 @@ public:
   /// Get the path to the lock start path
   Path pathTo(std::function<Path(Path const &)> f) const;
 
+  /** 
+   * Starts the job:
+   * 
+   * 1) Ensures all dependencies are satisfied and locked
+   * 2) Runs by giving all the locks
+   */
+  void start();
+
 protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
+
+  /// Run the job (called by start)
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) = 0;
 
   /// Set the current state
   JobState state(JobState newState);
@@ -273,7 +292,7 @@ public:
     std::shared_ptr<Launcher> const & launcher,
     std::shared_ptr<CommandLine> const & command);
   virtual ~CommandLineJob() = default;
-  virtual void run() override;
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) override;
   virtual void init() override;
   /// Set the parameters
   void parameters(std::shared_ptr<Value> const & parameters);

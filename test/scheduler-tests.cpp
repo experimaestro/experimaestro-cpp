@@ -51,7 +51,7 @@ public:
 
   friend std::ostream & operator<<(std::ostream &out, FakeJob const & job);
 
-  virtual void run() override {
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) override {
     LOGGER->info("[start] Running {}", *this);
     start = std::chrono::system_clock::now();
     std::this_thread::sleep_for(duration);
@@ -109,9 +109,10 @@ TEST_F(SchedulerTest, Token) {
     ws->submit(job1);
     ws->submit(job2);
 
+    LOGGER->info("Waiting for jobs to be completed");
     ws->waitUntilTaskCompleted();
 
-    EXPECT_TRUE(job1->end > job2->start || job2->end > job1->start)
+    EXPECT_TRUE(job1->end < job2->start || job2->end < job1->start)
       << job1 << " and " << job2 << " did overlap";
 
 }

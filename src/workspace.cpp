@@ -51,13 +51,27 @@ void Dependency::output(std::ostream &out) const {
 void Dependency::target(ptr<Resource> const &resource) { _target = resource; }
 
 void Dependency::check() {
+  // We have a lock, no need to go further
   std::unique_lock<std::mutex> lock(_mutex);
+
+  if (_currentLock.lock()) return;
   DependencyStatus s = status();
-  LOGGER->info("Dependency {} is {} (was: {})", *this, s, _oldStatus);
   if (s != _oldStatus) {
+    LOGGER->info("Dependency {} is {} (was: {})", *this, s, _oldStatus);
     _target->dependencyChanged(*this, _oldStatus, s);
   }
 }
+
+
+std::shared_ptr<Lock> Dependency::lock() {
+  std::unique_lock<std::mutex> lock(_mutex);
+  auto current = _currentLock.lock();
+  if (!current) {
+    _currentLock = current = _lock(); 
+  }
+  return current;
+}
+
 
 // --- Resource
 
@@ -96,16 +110,53 @@ void Resource::output(std::ostream &out) const {
 }
 
 
+//
 // --- Token
-
-CounterToken::CounterToken(uint32_t limit) : _limit(limit), _usedTokens(0) {}
-CounterToken::~CounterToken() {}
-void CounterToken::limit(uint32_t limit) { _limit = limit; }
+//
 
 class CounterDependency : public Dependency {
+  /// Counter token lock
+  struct Lock : public xpm::Lock {
+    ptr<CounterDependency> dependency;
+    Lock(ptr<CounterDependency> const & dependency) : dependency(dependency) {
+      dependency->l_acquire();
+    }
+
+    virtual ~Lock() {
+      if (!this->detached()) {
+        dependency->release();
+      }
+    }
+  };
+
+  // Dependency should be locked
+  void l_acquire() {
+      if (_value + _counter->_usedTokens > _counter->_limit) {
+        throw lock_error("Not enough tokens");
+      } 
+      _counter->_usedTokens += _value;
+      LOGGER->info("Acquire: used tokens {}/{}", _counter->_usedTokens, _counter->_limit);
+  }
+
+  void release() {
+    {
+      // Lock guard to avoid concurrent
+      std::lock_guard<std::mutex> lock(_counter->_mutex);
+      _counter->_usedTokens -= _value;
+      LOGGER->info("Release: used tokens {}/{}", _counter->_usedTokens, _counter->_limit);
+    }
+    for(auto & d: _counter->_dependents) {
+      d.lock()->check();
+    }
+  }
+
 public:
   CounterDependency(ptr<CounterToken> const & counter, CounterToken::Value value) 
     : Dependency(counter), _counter(counter), _value(value) {}
+
+  std::shared_ptr<xpm::Lock> _lock() override { 
+    return mkptr<Lock>(std::dynamic_pointer_cast<CounterDependency>(shared_from_this()));
+  }
 
   virtual DependencyStatus status() const override {
     return _counter->_usedTokens + _value <= _counter->_limit ? 
@@ -114,7 +165,12 @@ public:
 private:
   ptr<CounterToken> _counter;
   CounterToken::Value _value;
+  friend struct Lock;
 };
+
+CounterToken::CounterToken(uint32_t limit) : _limit(limit), _usedTokens(0) {}
+CounterToken::~CounterToken() {}
+void CounterToken::limit(uint32_t limit) { _limit = limit; }
 
 ptr<Dependency> CounterToken::createDependency(Value count) {
   return mkptr<CounterDependency>(std::static_pointer_cast<CounterToken>(shared_from_this()), count);
@@ -124,6 +180,9 @@ ptr<Dependency> CounterToken::createDependency() {
   throw exception("Cannot make a simple dependency from a token");
 }
 
+
+
+
 // --- Job
 
 class JobDependency : public Dependency {
@@ -132,6 +191,10 @@ public:
   JobDependency(ptr<Job> const & job);
   virtual ~JobDependency() {}
   virtual DependencyStatus status() const override;  
+  std::shared_ptr<xpm::Lock> _lock() override { 
+    return nullptr;
+  }
+
 };
 
 JobDependency::JobDependency(ptr<Job> const & job) : Dependency(job), job(job) {
@@ -191,6 +254,8 @@ void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, Depen
     _unsatisfied -= value(to) - value(from);
   }
 
+  LOGGER->info("Job {} : unsatisfied {}", *this, _unsatisfied);
+
   if (to == DependencyStatus::FAIL) {
     // Job completed
     jobCompleted();
@@ -199,7 +264,7 @@ void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, Depen
 
   if (_unsatisfied == 0) {
     LOGGER->info("Job {} is ready to run", *this);
-    run();
+    start();
   }
 }
 
@@ -233,6 +298,30 @@ void Job::jobCompleted() {
   }
 }
 
+void Job::start() {
+  std::thread([this]() {
+    std::unique_lock<std::mutex> jobLock(_mutex);
+
+    // (1) Lock all the dependencies
+    std::vector<std::shared_ptr<Lock>> locks;
+    for(auto dependency: _dependencies) {
+      try {
+        auto lock = dependency->lock();
+        if (lock) {
+          locks.push_back(lock);
+        }
+      } catch(lock_error &e) {
+        // Lock error: we abort
+        LOGGER->info("Aborting start for job {}", *this);
+        return;
+      }
+    }
+
+    // (2) Run the task
+    run(std::move(jobLock), std::move(locks));
+  }).detach();
+}
+
 // --- Command line job
 
 CommandLineJob::CommandLineJob(xpm::Path const &locator,
@@ -253,71 +342,68 @@ void CommandLineJob::init() {
   _parameters->addDependencies(*this, false);
 }
 
-void CommandLineJob::run() {
+void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) {
   // Run uses a thread
-  std::thread([this]() {
-    std::unique_lock<std::mutex> jobLock(_mutex);
-    LOGGER->info("Running job {}...", *this);
+  LOGGER->info("Running job {}...", *this);
 
-    auto scriptBuilder = _launcher->scriptBuilder();
-    auto processBuilder = _launcher->processBuilder();
+  auto scriptBuilder = _launcher->scriptBuilder();
+  auto processBuilder = _launcher->processBuilder();
 
-    auto & connector = *_launcher->connector();
-    auto const donePath = pathTo(DONE_PATH);
+  auto & connector = *_launcher->connector();
+  auto const donePath = pathTo(DONE_PATH);
 
-    // Check if already done
-    auto check = [&] {
-      if (connector.fileType(donePath) == FileType::FILE) {
-        LOGGER->info("Job {} is already done", *this);
-        state(JobState::DONE);
-        jobCompleted();
-        return true;
-      }
-      return false;
-    };
+  // Check if already done
+  auto check = [&] {
+    if (connector.fileType(donePath) == FileType::FILE) {
+      LOGGER->info("Job {} is already done", *this);
+      state(JobState::DONE);
+      jobCompleted();
+      return true;
+    }
+    return false;
+  };
 
-    // check if done
-    if (check()) return;
+  // check if done
+  if (check()) return;
 
-    // Lock the job and check done again (just in case)
-    LOGGER->debug("Making directories job {}...", _locator);
-    Path directory = _locator.parent();
-    _launcher->connector()->mkdirs(directory, true, false);
+  // Lock the job and check done again (just in case)
+  LOGGER->debug("Making directories job {}...", _locator);
+  Path directory = _locator.parent();
+  _launcher->connector()->mkdirs(directory, true, false);
 
-    auto lockPath = pathTo(LOCK_PATH);
+  auto lockPath = pathTo(LOCK_PATH);
 
-    auto lock = _launcher->connector()->lock(lockPath);
-    if (check()) return;
+  auto lock = _launcher->connector()->lock(lockPath);
+  if (check()) return;
+  
+  // Now we can write the script
+  scriptBuilder->command = _command;
+  scriptBuilder->lockFiles.push_back(lockPath);
+  Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
+  auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
+  
+  LOGGER->info("Starting job {}", _locator);
+  processBuilder->environment = _launcher->environment();
+  processBuilder->command.push_back(
+      _launcher->connector()->resolve(scriptPath));
+  processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
+  processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
+
+  ptr<Process> process = processBuilder->start();
+  state(JobState::RUNNING);
+  
+  // Avoid to remove the locks ourselves
+  startlock->detachState(true);
+  lock->detachState(true);
+
+  // Wait for end of execution
+  LOGGER->info("Waiting for job {} to finish", _locator);
+  int exitCode = process->exitCode();
+  state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
+  LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
+
     
-    // Now we can write the script
-    scriptBuilder->command = _command;
-    scriptBuilder->lockFiles.push_back(lockPath);
-    Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-    auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
-    
-    LOGGER->info("Starting job {}", _locator);
-    processBuilder->environment = _launcher->environment();
-    processBuilder->command.push_back(
-        _launcher->connector()->resolve(scriptPath));
-    processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
-    processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
-
-    ptr<Process> process = processBuilder->start();
-    state(JobState::RUNNING);
-    
-    // Avoid to remove the locks ourselves
-    startlock->detachState(true);
-    lock->detachState(true);
-
-    // Wait for end of execution
-    LOGGER->info("Waiting for job {} to finish", _locator);
-    int exitCode = process->exitCode();
-    state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
-    LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
-
-      
-      this->jobCompleted();
-  }).detach();
+    this->jobCompleted();
 }
 
 // -- Workspace
@@ -382,7 +468,7 @@ void Workspace::submit(ptr<Job> const &job) {
 
   // Check if ready
   if (job->_dependencies.empty() && job->ready()) {
-    job->run();
+    job->start();
   }
 }
 

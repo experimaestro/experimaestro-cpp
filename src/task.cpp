@@ -58,6 +58,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
   job->parameters(sv);
   job->init();
   sv->job(job);
+  LOGGER->info("Adding {} manual dependencies", dependencies.size());
   for(auto dependency: dependencies) {
     job->addDependency(dependency);
   }
