@@ -72,6 +72,7 @@ void Dependency::check() {
   if (s != _oldStatus) {
     LOGGER->info("Dependency {} is {} (was: {})", *this, s, _oldStatus);
     _target->dependencyChanged(*this, _oldStatus, s);
+    _oldStatus = s;
   }
 }
 
