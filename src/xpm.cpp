@@ -120,7 +120,9 @@ public:
   DummyJob(nlohmann::json const & j) : Job(Path((std::string const &)(j["locator"])), nullptr) {
   }
   virtual ~DummyJob() {}
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) override { throw cast_error("This is dummy job - it cannot be run!"); }
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override { 
+    throw cast_error("This is dummy job - it cannot be run!"); 
+  }
 };
 
 std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const &jsonValue) {

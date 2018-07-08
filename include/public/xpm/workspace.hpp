@@ -251,7 +251,7 @@ protected:
   friend struct JobPriorityComparator;
 
   /// Run the job (called by start)
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) = 0;
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) = 0;
 
   /// Set the current state
   JobState state(JobState newState);
@@ -292,11 +292,12 @@ public:
     std::shared_ptr<Launcher> const & launcher,
     std::shared_ptr<CommandLine> const & command);
   virtual ~CommandLineJob() = default;
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) override;
   virtual void init() override;
   /// Set the parameters
   void parameters(std::shared_ptr<Value> const & parameters);
   std::shared_ptr<Value> parameters();
+protected:
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override;
 private:
   std::shared_ptr<CommandLine> _command;
   std::shared_ptr<Value> _parameters;
