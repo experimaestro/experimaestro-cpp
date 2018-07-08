@@ -51,7 +51,7 @@ public:
 
   friend std::ostream & operator<<(std::ostream &out, FakeJob const & job);
 
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) override {
+  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override {
     LOGGER->info("[start] Running {}", *this);
     start = std::chrono::system_clock::now();
     std::this_thread::sleep_for(duration);

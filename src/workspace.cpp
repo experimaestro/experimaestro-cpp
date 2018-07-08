@@ -17,6 +17,19 @@
 
 DEFINE_LOGGER("xpm.workspace");
 
+
+
+namespace {
+  /**
+   *
+   * Comments about the locking:
+   * 
+   * (1) submit: [check dependencies]
+   * (2) start: [acquire resources] - run - [release resources]
+   */
+  std::mutex WORKSPACE_MUTEX;
+}
+
 namespace xpm {
 
 std::ostream & operator<<(std::ostream &out, DependencyStatus s) {
@@ -254,7 +267,7 @@ void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, Depen
     _unsatisfied -= value(to) - value(from);
   }
 
-  LOGGER->info("Job {} : unsatisfied {}", *this, _unsatisfied);
+  LOGGER->info("Job {}: unsatisfied {}", *this, _unsatisfied);
 
   if (to == DependencyStatus::FAIL) {
     // Job completed
@@ -300,7 +313,8 @@ void Job::jobCompleted() {
 
 void Job::start() {
   std::thread([this]() {
-    std::unique_lock<std::mutex> jobLock(_mutex);
+    // Lock while we require all the dependencies
+    std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
 
     // (1) Lock all the dependencies
     std::vector<std::shared_ptr<Lock>> locks;
@@ -312,13 +326,17 @@ void Job::start() {
         }
       } catch(lock_error &e) {
         // Lock error: we abort
+        state(JobState::READY);
         LOGGER->info("Aborting start for job {}", *this);
         return;
       }
     }
 
     // (2) Run the task
-    run(std::move(jobLock), std::move(locks));
+    run(std::move(jobLock), locks);
+
+    // (3) release resources
+    locks.clear();
   }).detach();
 }
 
@@ -342,7 +360,7 @@ void CommandLineJob::init() {
   _parameters->addDependencies(*this, false);
 }
 
-void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> && locks) {
+void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) {
   // Run uses a thread
   LOGGER->info("Running job {}...", *this);
 
@@ -396,6 +414,9 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
   startlock->detachState(true);
   lock->detachState(true);
 
+  // Unlock since started
+  jobLock.unlock();
+
   // Wait for end of execution
   LOGGER->info("Waiting for job {} to finish", _locator);
   int exitCode = process->exitCode();
@@ -403,7 +424,9 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
   LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
 
     
-    this->jobCompleted();
+  this->jobCompleted();
+
+  // All the lock from "locks" will be released here
 }
 
 // -- Workspace
@@ -444,26 +467,29 @@ Workspace::~Workspace() {
 
 
 void Workspace::submit(ptr<Job> const &job) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  {
+    std::lock_guard<std::mutex> lock(WORKSPACE_MUTEX);
 
-  // Skip if same path exists
-  if (_jobs.find(job->locator()) != _jobs.end()) {
-    LOGGER->warn("Job with path {} already exists - skipping new submission",
-                 job->locator());
-    return;
-  }
+    // Skip if same path exists
+    if (_jobs.find(job->locator()) != _jobs.end()) {
+      LOGGER->warn("Job with path {} already exists - skipping new submission",
+                  job->locator());
+      return;
+    }
 
-  waitingJobs.insert(job.get());
+    waitingJobs.insert(job.get());
 
-  // Add job to list
-  job->_submissionTime = std::time(nullptr);
-  job->_workspace = shared_from_this();
-  _jobs[job->locator()] = job;
+    // Add job to list
+    job->_submissionTime = std::time(nullptr);
+    job->_workspace = shared_from_this();
+    _jobs[job->locator()] = job;
 
-  // Register dependencies so that we are notified of changes
-  for(auto & dependency: job->_dependencies) {
-    dependency->_origin->addDependent(dependency);
-    dependency->check();
+    // Register dependencies so that we are notified of changes
+    for(auto & dependency: job->_dependencies) {
+      dependency->_origin->addDependent(dependency);
+      dependency->check();
+    }
+
   }
 
   // Check if ready
