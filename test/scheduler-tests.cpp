@@ -54,12 +54,12 @@ public:
   virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override {
     LOGGER->info("[start] Running {}", *this);
     start = std::chrono::system_clock::now();
+
+    jobLock.unlock();
     std::this_thread::sleep_for(duration);
 
     end = std::chrono::system_clock::now();
     LOGGER->info("[end] Running {}", *this);
-    state(JobState::DONE);
-    jobCompleted();
   }
 };
 

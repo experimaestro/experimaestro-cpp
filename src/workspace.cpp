@@ -315,6 +315,7 @@ void Job::jobCompleted() {
 void Job::start() {
   std::thread([this]() {
     // Lock while we require all the dependencies
+    LOGGER->info("Starting job {}", *this);
     std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
 
     // (1) Lock all the dependencies
@@ -327,8 +328,9 @@ void Job::start() {
         }
       } catch(lock_error &e) {
         // Lock error: we abort
-        state(JobState::READY);
         LOGGER->info("Aborting start for job {}", *this);
+        dependency->check();
+        state(JobState::READY);
         return;
       }
     }
@@ -337,6 +339,13 @@ void Job::start() {
     run(std::move(jobLock), locks);
 
     // (3) release resources
+    
+    std::unique_lock<std::mutex> jobLockRelease(WORKSPACE_MUTEX);
+
+    // Mark this job as completed
+    this->jobCompleted();
+
+    // All the lock from "locks" will be released here
     locks.clear();
   }).detach();
 }
@@ -423,11 +432,6 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
   int exitCode = process->exitCode();
   state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
   LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
-
-    
-  this->jobCompleted();
-
-  // All the lock from "locks" will be released here
 }
 
 // -- Workspace
