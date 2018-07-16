@@ -64,9 +64,6 @@ void Dependency::output(std::ostream &out) const {
 void Dependency::target(ptr<Resource> const &resource) { _target = resource; }
 
 void Dependency::check() {
-  // We have a lock, no need to go further
-  std::unique_lock<std::mutex> lock(_mutex);
-
   if (_currentLock.lock()) return;
   DependencyStatus s = status();
   if (s != _oldStatus) {
@@ -78,7 +75,6 @@ void Dependency::check() {
 
 
 std::shared_ptr<Lock> Dependency::lock() {
-  std::unique_lock<std::mutex> lock(_mutex);
   auto current = _currentLock.lock();
   if (!current) {
     _currentLock = current = _lock(); 
@@ -155,7 +151,6 @@ class CounterDependency : public Dependency {
   void release() {
     {
       // Lock guard to avoid concurrent
-      std::lock_guard<std::mutex> lock(_counter->_mutex);
       _counter->_usedTokens -= _value;
       LOGGER->info("Release: used tokens {}/{}", _counter->_usedTokens, _counter->_limit);
     }
@@ -264,7 +259,6 @@ bool Job::ready() const { return _unsatisfied == 0; }
 void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, DependencyStatus to) {
   static auto value = [](DependencyStatus s) { return s == DependencyStatus::OK ? 1 : 0; };
   {
-    std::unique_lock<std::mutex> lock(_mutex);
     _unsatisfied -= value(to) - value(from);
   }
 
