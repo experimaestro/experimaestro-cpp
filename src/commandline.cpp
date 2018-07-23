@@ -41,19 +41,17 @@ AbstractCommandComponent::~AbstractCommandComponent() {
 
 namespace {
 std::string transform(Workspace &context, std::string const &value) {
+  // Match {{...}}
   static std::regex re(R"(\{\{((?:(?!\}\}).)+)\}\})");
   std::ostringstream out;
-  std::sregex_iterator
-      it(value.begin(), value.end(), re),
-      end;
   size_t lastpos = 0;
 
-  do {
+  for(std::sregex_iterator it(value.begin(), value.end(), re), end; it != end; ++it) {
     std::smatch match = *it;
     out << value.substr(lastpos, match.position() - lastpos)
         << context.get(match[1].str());
     lastpos = match.position() + match.length();
-  } while (++it != end);
+  }
 
   out << value.substr(lastpos);
 

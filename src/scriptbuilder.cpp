@@ -27,7 +27,7 @@ std::string ShScriptBuilder::protect_quoted(std::string const &string) {
 
 ScriptBuilder::~ScriptBuilder() {}
 
-ShScriptBuilder::ShScriptBuilder() : shPath("/bin/sh") {}
+ShScriptBuilder::ShScriptBuilder() : shPath("/bin/bash") {}
 
 
 Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path const &path,

@@ -512,7 +512,9 @@ def set_launcher(launcher):
     DEFAULT_LAUNCHER = launcher
 
 launcher = DirectLauncher(LocalConnector())
-launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
+if os.getenv("PYTHONPATH"):
+    launcher.environment()["PYTHONPATH"] = os.getenv("PYTHONPATH")
+
 set_launcher(launcher)
 
 def tag(name: str, x, object:PyObject=None, context=None):

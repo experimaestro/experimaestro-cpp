@@ -82,7 +82,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 		  "src/efsw/FileWatcherWin32.cpp"
 		  "src/efsw/FileWatcherFSEvents.cpp")
 
-	if (NOT EXISTS "/usr/include/sys/inotify.h" AND NOT EXISTS "/usr/local/include/sys/inotify.h")
+	if (NOT EXISTS "/usr/include/sys/inotify.h" AND NOT EXISTS "/usr/local/include/sys/inotify.h" AND NOT EXISTS "/usr/include/linux/inotify.h")
 		add_definitions(-DEFSW_INOTIFY_NOSYS)
 	endif()	  
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
