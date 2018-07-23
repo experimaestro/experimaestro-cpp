@@ -81,9 +81,6 @@ private:
   /// Old satisfaction status
   DependencyStatus _oldStatus;
   
-  /// Resource mutex
-  std::mutex _mutex;
-
   friend class Resource;
   friend class Workspace;
 };
@@ -115,9 +112,6 @@ public:
 protected:
   /// Resource that depend on this one to be completed
   std::vector<std::weak_ptr<Dependency>> _dependents;
-
-  /// Resource mutex
-  std::mutex _mutex;
 
   /// Resource id
   ResourceId _resourceId;
@@ -380,9 +374,6 @@ private:
 
   /// The variables for this workspace
   std::map<std::string, std::string> _variables;
-
-  /// State mutex
-  std::mutex _mutex;
 
   /// SQL Lite
   std::unique_ptr<SQLite::Database> _db;
