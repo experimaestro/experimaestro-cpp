@@ -308,29 +308,32 @@ void Job::jobCompleted() {
 
 void Job::start() {
   std::thread([this]() {
-    // Lock while we require all the dependencies
-    LOGGER->info("Starting job {}", *this);
-    std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
-
-    // (1) Lock all the dependencies
     std::vector<std::shared_ptr<Lock>> locks;
-    for(auto dependency: _dependencies) {
-      try {
-        auto lock = dependency->lock();
-        if (lock) {
-          locks.push_back(lock);
-        }
-      } catch(lock_error &e) {
-        // Lock error: we abort
-        LOGGER->info("Aborting start for job {}", *this);
-        dependency->check();
-        state(JobState::READY);
-        return;
-      }
-    }
+    
+    {
+      // Lock while we require all the dependencies
+      LOGGER->info("Starting job {}", *this);
+      std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
 
-    // (2) Run the task
-    run(std::move(jobLock), locks);
+      // (1) Lock all the dependencies
+      for(auto dependency: _dependencies) {
+        try {
+          auto lock = dependency->lock();
+          if (lock) {
+            locks.push_back(lock);
+          }
+        } catch(lock_error &e) {
+          // Lock error: we abort
+          LOGGER->info("Aborting start for job {}", *this);
+          dependency->check();
+          state(JobState::READY);
+          return;
+        }
+      }
+
+      // (2) Run the task
+      run(std::move(jobLock), locks);
+    }
 
     // (3) release resources
     
