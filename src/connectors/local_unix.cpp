@@ -235,12 +235,21 @@ public:
   /// Exit code
   virtual int exitCode() override {
     int exit_status;
-    waitpid(pid, &exit_status, 0);
+    auto code = waitpid(pid, &exit_status, 0);
+    if (code == -1) {
+      LOGGER->error("Error with waitpid {}", code);
+      throw std::runtime_error("waitpid error could not be handled");
+    }
+
+    // Signals that the process ended
     {
       std::lock_guard<std::mutex> lock(close_mutex);
       closed = true;
     }
     close_fds();
+
+    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", exit_status,
+      WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
 
     if (exit_status >= 256)
       exit_status = exit_status >> 8;
