@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <fstream>
 
 #include <xpm/json.hpp>
 #include <xpm/rpc/configuration.hpp>
@@ -41,7 +42,7 @@ ConfigurationParameters::ConfigurationParameters(std::string const &path) {
 }
 
 ServerConfiguration const& ConfigurationParameters::serverConfiguration() const {
-  return configurations._serverConfiguration;
+  return _serverConfiguration;
 }
 
 }} // xpm::rpc

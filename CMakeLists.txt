@@ -95,6 +95,7 @@ set(SOURCES
         # RPC sources
         src/rpc/notifications.cpp
         src/rpc/jsonrpcclient.cpp
+        src/rpc/configuration.cpp
         src/rpc/client.cpp
         src/rpc/server.cpp
 )
@@ -105,6 +106,7 @@ list(APPEND LINKED_LIBRARIES
     ${LIBWEBSOCKETS_LIBRARIES} 
     ${LIBSSH_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT} 
+    ${Poco_LIBRARIES}
     yaml-cpp
     SQLiteCpp
     sqlite3
