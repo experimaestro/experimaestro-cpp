@@ -6,11 +6,13 @@ set(LINKED_LIBRARIES "")
 set(INCLUDE_DIRECTORIES "")
 
 include(UseSWIG)
-
+include(CmakeHelpers)
+include(CmakeFindExtensions)
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
+find_package(Poco REQUIRED COMPONENTS NetSSL)
 # find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
@@ -94,6 +96,7 @@ set(SOURCES
         src/rpc/notifications.cpp
         src/rpc/jsonrpcclient.cpp
         src/rpc/client.cpp
+        src/rpc/server.cpp
 )
         
 find_package (Threads)
@@ -131,7 +134,7 @@ foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
     target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ext/efsw/include)
     set_target_properties(${xpmlib} PROPERTIES 
-        CXX_STANDARD 14
+        CXX_STANDARD 17
         OUTPUT_NAME experimaestro)
 
 endforeach()
@@ -140,7 +143,7 @@ endforeach()
 
 add_executable(experimaestro experimaestro/main.cpp)
 target_link_libraries(experimaestro experimaestro_shared ${LINKED_LIBRARIES})
-set_property(TARGET experimaestro PROPERTY CXX_STANDARD 11)
+set_property(TARGET experimaestro PROPERTY CXX_STANDARD 17)
 
 
 # --- Add googletest
@@ -226,7 +229,7 @@ if (true)
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
 				MACOSX_RPATH TRUE
 				INSTALL_RPATH "${XPM_LOADER_PATH}"
-				CXX_STANDARD 11
+				CXX_STANDARD 17
         )
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 

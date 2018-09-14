@@ -2,31 +2,15 @@
 // Created by Benjamin Piwowarski on 26/11/2016.
 //
 
-#ifndef PROJECT_XPMCLIENT_H
-#define PROJECT_XPMCLIENT_H
+#ifndef EXPERIMAESTRO_RPC_CLIENT_H
+#define EXPERIMAESTRO_RPC_CLIENT_H
 
 #include <string>
 #include <unordered_map>
 #include <xpm/json.hpp>
 #include <xpm/rpc/jsonrpcclient.hpp>
 
-namespace xpm {
-
-struct HostConfiguration {
-  std::string id;
-  std::string host;
-  int port;
-  std::string username;
-  std::string password;
-};
-
-class ConfigurationParameters {
-  std::unordered_map<std::string, HostConfiguration> configurations;
-  std::string defaultHost;
- public:
-  ConfigurationParameters(std::string const &path = "");
-  HostConfiguration const &defaultConfiguration() const;
-};
+namespace xpm::rpc {
 
 class Client {
   JsonRPCClient _client;
@@ -50,6 +34,6 @@ class Client {
   static Client &defaultClient();
 };
 
-}
+} // ns xpm::rpc
 
 #endif //PROJECT_XPMCLIENT_H
