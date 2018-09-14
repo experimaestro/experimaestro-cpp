@@ -6,6 +6,7 @@
 #  LIBSSH_DEFINITIONS - Compiler switches required for using libssh
 
 find_package(PkgConfig)
+
 pkg_check_modules(PC_LIBSSH QUIET libssh libssh_threads)
 set(LIBSSH_DEFINITIONS ${PC_LIBSSH_CFLAGS_OTHER})
 
@@ -17,13 +18,15 @@ find_path(LIBSSH_INCLUDE_DIR libssh/ssh2.h
 find_library(LIBSSH_LIBRARY NAMES ssh libssh
         HINTS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS} )
 
-find_library(LIBSSH_THREADS_LIBRARY NAMES ssh_threads libssh_threads
-        HINTS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS} )
+# Not needed with libssh >= 0.8
+# find_library(LIBSSH_THREADS_LIBRARY NAMES ssh_threads libssh_threads
+#         HINTS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS} )
 
-set(LIBSSH_LIBRARIES ${LIBSSH_LIBRARY} ${LIBSSH_THREADS_LIBRARY})
+set(LIBSSH_LIBRARIES ${LIBSSH_LIBRARY}) # ${LIBSSH_THREADS_LIBRARY})
 set(LIBSSH_INCLUDE_DIRS ${LIBSSH_INCLUDE_DIR} )
 
 include(FindPackageHandleStandardArgs)
+
 # handle the QUIETLY and REQUIRED arguments and set LIBSSH_FOUND to TRUE
 # if all listed variables are TRUE
 find_package_handle_standard_args(LibSsh  DEFAULT_MSG
