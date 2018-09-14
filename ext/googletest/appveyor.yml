@@ -38,6 +38,7 @@ install:
 - ps: |
     Write-Output "Compiler: $env:compiler"
     Write-Output "Generator: $env:generator"
+    Write-Output "Env:Configuation: $env:configuration"
     if (-not (Test-Path env:APPVEYOR_PULL_REQUEST_NUMBER)) {
       Write-Output "This is *NOT* a pull request build"
     } else {
@@ -77,6 +78,11 @@ build_script:
     if ($LastExitCode -ne 0) {
         throw "Exec: $ErrorMessage"
     }
+
+
+skip_commits:
+  files:
+    - '**/*.md'
 
 test_script:
 - ps: |

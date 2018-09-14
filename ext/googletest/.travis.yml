@@ -1,5 +1,5 @@
 # Build matrix / environment variable are explained on:
-# http://about.travis-ci.org/docs/user/build-configuration/
+# https://docs.travis-ci.com/user/customizing-the-build/
 # This file can be validated on:
 # http://lint.travis-ci.org/
 
@@ -72,10 +72,10 @@ addons:
     #   https://github.com/travis-ci/apt-source-whitelist/blob/master/ubuntu.json
     sources:
     - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.7
+    - llvm-toolchain-precise-3.9
     packages:
     - g++-4.9
-    - clang-3.7
+    - clang-3.9
 
 notifications:
   email: false
