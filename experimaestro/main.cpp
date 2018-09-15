@@ -29,7 +29,7 @@ int main(int argc, char const **argv) {
       app.add_subcommand("server", "Start the experimaestro server");
   _generate->set_callback([&]() {  
     LOGGER->info("Starting server");
-
+    rpc::Server::ensureStarted();
   });
 
   CLI11_PARSE(app, argc, argv);

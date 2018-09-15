@@ -12,9 +12,6 @@
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
 
-#define SQLITE_THREADSAFE 1
-#include <SQLiteCpp/SQLiteCpp.h>
-
 DEFINE_LOGGER("xpm.workspace");
 
 
@@ -457,9 +454,6 @@ Workspace::Workspace() : Workspace("") {
 }
 
 Workspace::Workspace(std::string const &path) : _path(path) {
-  if (!path.empty()) {
-    _db = std::unique_ptr<SQLite::Database>(new SQLite::Database(path + "/experimaestro.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE));
-  }
   activeWorkspaces.insert(this);
 }
 

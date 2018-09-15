@@ -32,10 +32,10 @@ ConfigurationParameters::ConfigurationParameters(std::string const &path) {
   auto server = j["server"];
 
   _serverConfiguration = {
-        server["host"],
+        server["name"],
         (int)server["port"],
-        server["username"],
-        server["password"]
+        server["host"],
+        server["directory"]
     };
 
 

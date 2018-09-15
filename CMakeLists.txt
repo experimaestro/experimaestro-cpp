@@ -12,7 +12,7 @@ find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
-find_package(Poco REQUIRED COMPONENTS NetSSL)
+find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 # find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
@@ -20,7 +20,6 @@ set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp EXCLUDE_FROM_ALL)
 set(STATIC_LIB ON CACHE BOOL "Build EFSW as a static library" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/efsw EXCLUDE_FROM_ALL)
 
@@ -103,12 +102,10 @@ set(SOURCES
 find_package (Threads)
 list(APPEND LINKED_LIBRARIES 
     ${OPENSSL_LIBRARIES} 
-    ${LIBWEBSOCKETS_LIBRARIES} 
     ${LIBSSH_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT} 
     ${Poco_LIBRARIES}
     yaml-cpp
-    SQLiteCpp
     sqlite3
     efsw
     )
@@ -119,7 +116,6 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/ext"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/public"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
 )
@@ -200,7 +196,7 @@ if (true)
         " Use PYTHON_INSTALL_LOCATION configuration to change this setting."
         " Note: install prefix was ${CMAKE_INSTALL_PREFIX}")
 
-    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
+    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR})
 
 
     set(CMAKE_SWIG_FLAGS "-builtin;-threads")
@@ -286,4 +282,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

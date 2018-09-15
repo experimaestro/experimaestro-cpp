@@ -71,6 +71,7 @@ if (NOT Poco_FOUND)
     CppParser/include
     Data/include
     Data/ODBC/include
+    Data/SQLite/include
     Foundation/include
     Crypto/include
     Net/include
@@ -99,6 +100,7 @@ if (NOT Poco_FOUND)
   find_component(Poco Zip          Zip          PocoZip${Poco_LIB_SUFFIX}          Poco/Zip/Zip.h)
   find_component(Poco Data         Data         PocoData${Poco_LIB_SUFFIX}         Poco/Data/Data.h)
   find_component(Poco ODBC         ODBC         PocoDataODBC${Poco_LIB_SUFFIX}     Poco/Data/ODBC/Connector.h)
+  find_component(Poco SQLite       SQLite       PocoDataSQLite${Poco_LIB_SUFFIX}   Poco/Data/SQLite/Connector.h)
   find_component(Poco PageCompiler PageCompiler PocoPageCompiler${Poco_LIB_SUFFIX} Poco/PageCompiler/PageCompiler.h)
   find_component(Poco Foundation   Foundation   PocoFoundation${Poco_LIB_SUFFIX}   Poco/Foundation.h)
 

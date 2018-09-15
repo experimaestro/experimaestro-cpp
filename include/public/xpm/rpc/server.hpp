@@ -9,9 +9,14 @@
 #include <unordered_map>
 #include <xpm/json.hpp>
 #include <xpm/rpc/jsonrpcclient.hpp>
+#include <Poco/Util/ServerApplication.h>
 
 namespace xpm::rpc {
-
+class Server : public Poco::Util::ServerApplication {
+  int serve();
+public:
+  static void ensureStarted();
+};
 }
 
 #endif //PROJECT_RPC_SERVER_H

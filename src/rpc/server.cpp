@@ -1,23 +1,27 @@
+#include <Poco/Net/ConsoleCertificateHandler.h>
 #include <Poco/Net/HTTPRequestHandler.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
+#include <Poco/Net/HTTPSStreamFactory.h>
 #include <Poco/Net/HTTPServer.h>
+#include <Poco/Net/HTTPServerParams.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerResponse.h>
 #include <Poco/Net/HTTPStreamFactory.h>
-#include <Poco/Net/HTTPSStreamFactory.h>
-#include <Poco/Net/SSLManager.h>
-#include <Poco/Net/WebSocket.h>
-#include <Poco/Net/NetException.h>
-#include <Poco/Net/HTTPServerParams.h>
-#include <Poco/Net/PrivateKeyPassphraseHandler.h>
 #include <Poco/Net/InvalidCertificateHandler.h>
-#include <Poco/Util/ServerApplication.h>
-#include <Poco/Net/SecureServerSocket.h>
 #include <Poco/Net/KeyConsoleHandler.h>
-#include <Poco/Net/ConsoleCertificateHandler.h>
+#include <Poco/Net/NetException.h>
+#include <Poco/Net/PrivateKeyPassphraseHandler.h>
+#include <Poco/Net/SSLManager.h>
+#include <Poco/Net/SecureServerSocket.h>
+#include <Poco/Net/WebSocket.h>
 #include <Poco/Util/Application.h>
+#include <Poco/Util/ServerApplication.h>
+#include <Poco/Uri.h>
 
 #include <xpm/rpc/configuration.hpp>
+#include <xpm/rpc/server.hpp>
+#include <__xpm/common.hpp>
+DEFINE_LOGGER("xpm");
 
 namespace xpm::rpc {
 
@@ -25,12 +29,53 @@ using namespace Poco::Net;
 using namespace Poco::Util;
 
 using Poco::Net::HTTPRequestHandler;
-using Poco::Util::Application;
 using Poco::Net::WebSocketException;
+using Poco::Util::Application;
 
 class PageRequestHandler : public HTTPRequestHandler {
 public:
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
+    Poco::URI uri(request.getURI());
+		response.setChunkedTransferEncoding(true);
+		response.setContentType("text/html");
+		std::ostream& ostr = response.send();
+		ostr << "<html>";
+		ostr << "<head>";
+		ostr << "<title>WebSocketServer</title>";
+		ostr << "<script type=\"text/javascript\">";
+		ostr << "function WebSocketTest()";
+		ostr << "{";
+		ostr << "  if (\"WebSocket\" in window)";
+		ostr << "  {";
+		ostr << "    var ws = new WebSocket(\"ws://" << request.serverAddress().toString() << "/ws\");";
+		ostr << "    ws.onopen = function()";
+		ostr << "      {";
+		ostr << "        ws.send(\"Hello, world!\");";
+		ostr << "      };";
+		ostr << "    ws.onmessage = function(evt)";
+		ostr << "      { ";
+		ostr << "        var msg = evt.data;";
+		ostr << "        alert(\"Message received: \" + msg);";
+		ostr << "        ws.close();";
+		ostr << "      };";
+		ostr << "    ws.onclose = function()";
+		ostr << "      { ";
+		ostr << "        alert(\"WebSocket closed.\");";
+		ostr << "      };";
+		ostr << "  }";
+		ostr << "  else";
+		ostr << "  {";
+		ostr << "     alert(\"This browser does not support WebSockets.\");";
+		ostr << "  }";
+		ostr << "}";
+		ostr << "</script>";
+		ostr << "</head>";
+		ostr << "<body>";
+		ostr << "  <h1>WebSocket Server</h1>";
+    ostr << "<div>" << uri.getPath() << "</div>";
+		ostr << "  <p><a href=\"javascript:WebSocketTest()\">Run WebSocket Script</a></p>";
+		ostr << "</body>";
+    ostr << "</html>";
 
   }
 };
@@ -94,53 +139,53 @@ public:
   }
 };
 
-class Server : public ServerApplication {
-public:
-  int serve() {
-    HTTPStreamFactory::registerFactory();
-    HTTPSStreamFactory::registerFactory();
+int Server::serve() {
+  HTTPStreamFactory::registerFactory();
+  HTTPSStreamFactory::registerFactory();
 
-    Poco::Net::initializeSSL();
-    Poco::SharedPtr<PrivateKeyPassphraseHandler> ptrConsole =
-        new KeyConsoleHandler(true);
-    Poco::SharedPtr<InvalidCertificateHandler> pInvalidCertHandler =
-        new ConsoleCertificateHandler(false);
+  Poco::Net::initializeSSL();
+  Poco::SharedPtr<PrivateKeyPassphraseHandler> ptrConsole =
+      new KeyConsoleHandler(true);
+  Poco::SharedPtr<InvalidCertificateHandler> pInvalidCertHandler =
+      new ConsoleCertificateHandler(false);
 
-    // Poco::Net::SSLManager::InvalidCertificateHandlerPtr ptrHandler ( new
-    // Poco::Net::AcceptCertificateHandler(false) );
-    Context::Ptr pContext = new Context(
-        Context::SERVER_USE, "my-key.pem", "src/my-cert.pem", "",
-        Context::VERIFY_RELAXED, 9, false, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
-    Poco::Net::SSLManager::instance().initializeServer(
-        ptrConsole, pInvalidCertHandler, pContext);
+  // Poco::Net::SSLManager::InvalidCertificateHandlerPtr ptrHandler ( new
+  // Poco::Net::AcceptCertificateHandler(false) );
+  // Context::Ptr pContext = new Context(
+      // Context::SERVER_USE, "my-key.pem", "src/my-cert.pem", "",
+      // Context::VERIFY_RELAXED, 9, false, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+  // Poco::Net::SSLManager::instance().initializeServer(
+      // ptrConsole, pInvalidCertHandler, pContext);
 
-    SocketAddress t_osocketaddr("localhost:8080");
+  SocketAddress t_osocketaddr("localhost:8080");
+  // SecureServerSocket svs(t_osocketaddr, 64, pContext);
 
-    SecureServerSocket svs(t_osocketaddr, 64, pContext);
-    Poco::Net::HTTPServerParams::Ptr t_pServerParams = new Poco::Net::HTTPServerParams;
-    t_pServerParams->setMaxThreads(100);
-    t_pServerParams->setMaxQueued(100);
-    t_pServerParams->setThreadIdleTime(1000);
+  ServerSocket svs(t_osocketaddr, 64);
 
-    HTTPServer srv(new RequestHandlerFactory, svs, t_pServerParams);
-    srv.start();
-    // HTTPServer s(nullptr, ServerSocket(9090), new HTTPServerParams);
-    // s.start();
+  Poco::Net::HTTPServerParams::Ptr t_pServerParams =
+      new Poco::Net::HTTPServerParams;
+  t_pServerParams->setMaxThreads(100);
+  t_pServerParams->setMaxQueued(100);
+  t_pServerParams->setThreadIdleTime(1000);
 
-    waitForTerminationRequest(); // wait for CTRL-C or kill
+  HTTPServer srv(new RequestHandlerFactory, svs, t_pServerParams);
+  srv.start();
+  waitForTerminationRequest(); // wait for CTRL-C or kill
 
-    srv.stop();
+  srv.stop();
 
-    return Application::EXIT_OK;
-  }
+  return Application::EXIT_OK;
+}
 
-  /**
-   * Check the the server has started, and starts it if not
-   */
-  static void ensureStarted() {
-    // (1) Check that server is on
-    ConfigurationParameters parameters;
-    auto conf = parameters.serverConfiguration();
-  }
-};
+/**
+ * Check the the server has started, and starts it if not
+ */
+void Server::ensureStarted() {
+  // (1) Check that server is on
+  ConfigurationParameters parameters;
+  auto conf = parameters.serverConfiguration();
+  Server server;
+  server.serve();
+}
+
 } // namespace xpm::rpc
