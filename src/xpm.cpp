@@ -191,7 +191,7 @@ std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const
         } else if (it.key() == KEY_TASK) {
           if (!p) p = mkptr<MapValue>();
           p->asMap()->_type = _type;
-          std::dynamic_pointer_cast<MapValue>(p)->_task = xpmRegister.getTask(it.value(), true);
+          std::dynamic_pointer_cast<MapValue>(p)->_task = xpmRegister.getTask(it.value().get<std::string>(), true);
         } else {
           if (!p) p = mkptr<MapValue>();
           if (_type) p->asMap()->_type = _type;

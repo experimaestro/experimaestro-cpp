@@ -15,6 +15,7 @@ struct ServerConfiguration {
   // Host name
   std::string host;
 
+  // Main directory
   std::string directory;
 };
 

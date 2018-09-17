@@ -4,6 +4,8 @@
 
 #include <string>
 #include <regex>
+#include <sstream>
+
 #include <xpm/json.hpp>
 #include <xpm/commandline.hpp>
 #include <xpm/xpm.hpp>
@@ -11,7 +13,6 @@
 #include <xpm/common.hpp>
 #include <xpm/workspace.hpp>
 #include <xpm/type.hpp>
-
 #include <xpm/connectors/connectors.hpp>
 
 #include <__xpm/scriptbuilder.hpp>
