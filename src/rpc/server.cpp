@@ -31,6 +31,7 @@
 #include <Poco/Net/WebSocket.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Uri.h>
+#include <Poco/Logger.h>
 
 #include <spdlog/fmt/fmt.h>
 
@@ -107,7 +108,7 @@ public:
       int n;
       do {
         n = ws.receiveFrame(buffer, sizeof(buffer), flags);
-        // nlohmann::json::from_cbor(buffer);
+        nlohmann::json::from_cbor(buffer);
         LOGGER->info(Poco::format(
             "Frame received (length=%d, flags=0x%x).", n, unsigned(flags)));
         ws.sendFrame(buffer, n, flags);
@@ -162,6 +163,9 @@ int Server::serve() {
   ConfigurationParameters parameters;
   auto conf = parameters.serverConfiguration();
   Poco::Path basepath(conf.directory);
+
+  auto & pocoLogger = Poco::Logger::get(Poco::Logger::ROOT);
+  pocoLogger.setLevel(Poco::Message::PRIO_TRACE);
 
   // --- SQLite connection
 
