@@ -260,7 +260,7 @@ Scalar::Scalar(nlohmann::json const &jsonValue) {
     }
 
     default:
-      throw exception(fmt::format("Unhandled JSON type for a Scalar: {}", jsonValue.type()));
+      throw exception(fmt::format("Unhandled JSON type for a Scalar: {}", (int)jsonValue.type()));
   }
 }
 

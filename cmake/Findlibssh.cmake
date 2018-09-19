@@ -25,6 +25,10 @@ find_library(LIBSSH_LIBRARY NAMES ssh libssh
 set(LIBSSH_LIBRARIES ${LIBSSH_LIBRARY}) # ${LIBSSH_THREADS_LIBRARY})
 set(LIBSSH_INCLUDE_DIRS ${LIBSSH_INCLUDE_DIR} )
 
+
+# Retrieve libssh version
+# execute_process()
+
 include(FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set LIBSSH_FOUND to TRUE

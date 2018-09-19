@@ -6,6 +6,7 @@
 
 #include <xpm/logging.hpp>
 #include <__xpm/common.hpp>
+#include <spdlog/sinks/ansicolor_sink.h>
 
 namespace xpm {
 namespace {
@@ -18,7 +19,7 @@ void initLogging() {
     initialized = true;
 
     spdlog::set_pattern("[%x %H:%M:%S/%n] %v");
-    spdlog::set_async_mode(8192);
+    // spdlog::set_async_mode(8192);
 
     // auto errsink = spdlog::sinks::stderr_sink_mt::instance();
     sink = std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>();

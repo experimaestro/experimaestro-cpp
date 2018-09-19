@@ -7,10 +7,11 @@
 
 #include <xpm/common.hpp>
 #include <xpm/rpc/client.hpp>
+#include <xpm/rpc/configuration.hpp>
 
 #include <__xpm/common.hpp>
 
-namespace xpm {
+namespace xpm::rpc {
 using nlohmann::json;
 
 namespace {
@@ -19,47 +20,6 @@ namespace {
 }
 
 Client *Client::DEFAULT_CLIENT = nullptr;
-
-ConfigurationParameters::ConfigurationParameters(std::string const &path) {
-  std::string _path = path;
-  if (path.empty()) {
-    _path = std::string(std::getenv("HOME")) + "/.experimaestro/settings.json";
-  }
-  LOGGER->info("Reading configuration {}", path);
-
-  std::ifstream in(_path);
-  if (!in) {
-    throw exception("Cannot read configuration file " + _path);
-  }
-
-  json j = json::parse(in);
-
-  defaultHost = j.count("default-host") > 0 ? j["default-host"] : "";
-
-  json hosts = j["hosts"];
-  for (json::iterator it = hosts.begin(); it != hosts.end(); ++it) {
-    std::string hostid = it.key();
-    json hostc = it.value();
-    if (defaultHost == "") {
-      defaultHost = hostid;
-    }
-    configurations[hostid] = {
-        hostid,
-        hostc["host"],
-        (int)hostc["port"],
-        hostc["username"],
-        hostc["password"]
-    };
-  }
-
-  if (hosts.empty()) {
-    throw exception("No host defined in " + _path);
-  }
-}
-
-HostConfiguration const& ConfigurationParameters::defaultConfiguration() const {
-  return configurations.find(defaultHost)->second;
-}
 
 Client::Client(const std::string &wsURL, const std::string &username, const std::string &password)
     : _client(wsURL, username, password, true) {
@@ -108,16 +68,16 @@ Client &Client::defaultClient() {
   if (DEFAULT_CLIENT == nullptr) {
     // Try to connect
     ConfigurationParameters configuration;
-    const auto conf = configuration.defaultConfiguration();
+    const auto conf = configuration.serverConfiguration();
     std::string uri = "ws://" + conf.host + ":" + std::to_string(conf.port) + "/web-socket";
     LOGGER->info("Connecting to default client {}", uri);
 
     static std::unique_ptr<Client> defaultClient(
-      new Client(uri, conf.username, conf.password)
+      new Client(uri, "hello", "world") // conf.username, conf.password)
     );
     defaultClient->ping();
   }
   return *DEFAULT_CLIENT;
 }
 
-} // xpm ns
+} // xpm::rpc ns

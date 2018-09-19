@@ -17,7 +17,6 @@
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
-namespace SQLite { class Database; }
 
 namespace xpm {
 
@@ -374,9 +373,6 @@ private:
 
   /// The variables for this workspace
   std::map<std::string, std::string> _variables;
-
-  /// SQL Lite
-  std::unique_ptr<SQLite::Database> _db;
 };
 
 

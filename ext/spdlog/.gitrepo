@@ -5,8 +5,8 @@
 ;
 [subrepo]
 	remote = https://github.com/gabime/spdlog.git
-	branch = master
-	commit = d033ccc0c70b3705cd799535a8658a9e9aae3192
-	parent = abe2457a9c1a9af97eb7ce063320f99d11cc8db6
-	cmdver = 0.4.0
+	branch = v1.x
+	commit = 188cff7d6567b80c6b99bc15899fef9637a8fe52
+	parent = cb02862fb5deac079a908e2e87603833bead4db0
 	method = merge
+	cmdver = 0.4.0

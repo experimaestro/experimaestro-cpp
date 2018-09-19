@@ -6,11 +6,13 @@ set(LINKED_LIBRARIES "")
 set(INCLUDE_DIRECTORIES "")
 
 include(UseSWIG)
-
+include(CmakeHelpers)
+include(CmakeFindExtensions)
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
+find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 # find_package(YamlCPP REQUIRED)
 # find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
@@ -18,7 +20,6 @@ set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/SQLiteCpp EXCLUDE_FROM_ALL)
 set(STATIC_LIB ON CACHE BOOL "Build EFSW as a static library" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/efsw EXCLUDE_FROM_ALL)
 
@@ -93,17 +94,18 @@ set(SOURCES
         # RPC sources
         src/rpc/notifications.cpp
         src/rpc/jsonrpcclient.cpp
+        src/rpc/configuration.cpp
         src/rpc/client.cpp
+        src/rpc/server.cpp
 )
         
 find_package (Threads)
 list(APPEND LINKED_LIBRARIES 
     ${OPENSSL_LIBRARIES} 
-    ${LIBWEBSOCKETS_LIBRARIES} 
     ${LIBSSH_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT} 
+    ${Poco_LIBRARIES}
     yaml-cpp
-    SQLiteCpp
     sqlite3
     efsw
     )
@@ -114,7 +116,6 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/ext"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/public"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/websocketpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
 )
@@ -131,7 +132,7 @@ foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
     target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ext/efsw/include)
     set_target_properties(${xpmlib} PROPERTIES 
-        CXX_STANDARD 14
+        CXX_STANDARD 17
         OUTPUT_NAME experimaestro)
 
 endforeach()
@@ -140,7 +141,7 @@ endforeach()
 
 add_executable(experimaestro experimaestro/main.cpp)
 target_link_libraries(experimaestro experimaestro_shared ${LINKED_LIBRARIES})
-set_property(TARGET experimaestro PROPERTY CXX_STANDARD 11)
+set_property(TARGET experimaestro PROPERTY CXX_STANDARD 17)
 
 
 # --- Add googletest
@@ -195,7 +196,7 @@ if (true)
         " Use PYTHON_INSTALL_LOCATION configuration to change this setting."
         " Note: install prefix was ${CMAKE_INSTALL_PREFIX}")
 
-    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
+    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR})
 
 
     set(CMAKE_SWIG_FLAGS "-builtin;-threads")
@@ -226,7 +227,7 @@ if (true)
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
 				MACOSX_RPATH TRUE
 				INSTALL_RPATH "${XPM_LOADER_PATH}"
-				CXX_STANDARD 11
+				CXX_STANDARD 17
         )
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
@@ -281,4 +282,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared SQLiteCpp sqlite3 efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
