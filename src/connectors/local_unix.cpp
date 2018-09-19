@@ -241,7 +241,7 @@ public:
     LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={}) / Now waiting with -PID", WEXITSTATUS(exit_status), WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
 
     if (code == -1) {
-      LOGGER->error("Error with waitpid {}", code);
+      LOGGER->error("Error with waitpid: {}", strerror(errno));
       throw std::runtime_error("waitpid error could not be handled");
     }
 
