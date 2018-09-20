@@ -18,7 +18,9 @@
 #include <unistd.h>
 
 #include <Poco/DirectoryWatcher.h>
-#include "Poco/Delegate.h"
+#include <Poco/Delegate.h>
+#include <Poco/Path.h>
+
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
 
@@ -350,8 +352,8 @@ struct DeleteListener {
   DeleteListener(std::string const & filename) : filename(filename) {}
 
   void onFileDeleted(const void *, const Poco::DirectoryWatcher::DirectoryEvent& removeEvent) {
-    auto filename = removeEvent.item.path();
-    LOGGER->debug("Notification in directory {}", filename);
+    auto filename = Poco::Path(removeEvent.item.path()).getFileName();
+    LOGGER->debug("Notification in directory: file {} deleted", filename);
     if (this->filename == filename) {
       std::lock_guard<std::mutex> lock(mutex);
       deleted = true;
@@ -377,6 +379,7 @@ std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
     dw.itemRemoved += Poco::delegate(&listener, &DeleteListener::onFileDeleted);
     std::unique_lock<std::mutex> lock(listener.mutex);
 
+    LOGGER->debug("Waiting for lock file {} to be removed", path);
     listener.cv.wait(lock, [&] { 
       return listener.deleted; 
     });
