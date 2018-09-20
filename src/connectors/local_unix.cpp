@@ -239,17 +239,16 @@ public:
     auto code = waitpid(pid, &exit_status, 0);
 
     // FIXME: not clear what to wait (PID or -PID)
-    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={}) / Now waiting with -PID", WEXITSTATUS(exit_status), WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
+    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", WEXITSTATUS(exit_status), WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
 
     if (code == -1) {
-      LOGGER->error("Error with waitpid: {}", strerror(errno));
-      throw std::runtime_error("waitpid error could not be handled");
-    }
+      LOGGER->error("Error with waitpid: {} - waiting with -PID", strerror(errno));
 
-    code = waitpid(-pid, &exit_status, 0);
-    if (code == -1) {
-      LOGGER->error("Error with waitpid {}", code);
-      throw std::runtime_error("waitpid error could not be handled");
+      code = waitpid(-pid, &exit_status, 0);
+      if (code == -1) {
+        LOGGER->error("Error with waitpid {}", strerror(errno));
+        throw std::runtime_error("waitpid error could not be handled");
+      }
     }
 
     // Signals that the process ended
