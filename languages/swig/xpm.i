@@ -27,7 +27,6 @@
 #include <xpm/connectors/ssh.hpp>
 
 #include <xpm/workspace.hpp>
-#include <SQLiteCpp/SQLiteCpp.h>
 
 #include <sstream>
 
