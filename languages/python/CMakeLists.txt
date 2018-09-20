@@ -13,8 +13,6 @@ message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and install
 include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR} ${LIBWEBSOCKETS_INCLUDE_DIRS})
 
 
-set(CMAKE_SWIG_FLAGS "-builtin")
-
 # Build module experimaestro
 set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} xpm.i ${CMAKE_CURRENT_BINARY_DIR}/../../documentation.i)
 if (${CMAKE_VERSION} VERSION_LESS "3.8.0")

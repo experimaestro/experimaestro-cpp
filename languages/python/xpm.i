@@ -3,7 +3,6 @@
 
 %include "collection.i"
 
-
 // Pythonic renames and mappings
 
 %feature("python:slot", "tp_str",functype = "reprfunc") *::toString;

@@ -21,7 +21,6 @@ set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
 set(STATIC_LIB ON CACHE BOOL "Build EFSW as a static library" FORCE)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/efsw EXCLUDE_FROM_ALL)
 
 # ---
 
@@ -107,7 +106,6 @@ list(APPEND LINKED_LIBRARIES
     ${Poco_LIBRARIES}
     yaml-cpp
     sqlite3
-    efsw
     )
 message(STATUS "Linked libraries: ${LINKED_LIBRARIES}")
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
@@ -130,7 +128,7 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ext/efsw/include)
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
     set_target_properties(${xpmlib} PROPERTIES 
         CXX_STANDARD 17
         OUTPUT_NAME experimaestro)
@@ -198,7 +196,6 @@ if (true)
 
     include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR})
 
-
     set(CMAKE_SWIG_FLAGS "-builtin;-threads")
 
     # Build module experimaestro
@@ -227,8 +224,10 @@ if (true)
                 LIBRARY_OUTPUT_NAME "_${swigpythonname}"
 				MACOSX_RPATH TRUE
 				INSTALL_RPATH "${XPM_LOADER_PATH}"
-				CXX_STANDARD 17
+                CXX_STANDARD 17
         )
+        target_compile_definitions("_${swigtargetname}_python" PUBLIC "SWIG_DIRECTOR_NO_UEH")
+        target_compile_options("_${swigtargetname}_python" PUBLIC "-Wno-unused-label" "-Wno-dynamic-class-memaccess")
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
 		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
@@ -282,4 +281,4 @@ endif ()
 
 
 export(PACKAGE experimaestro)
-export(TARGETS experimaestro experimaestro_shared efsw FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
+export(TARGETS experimaestro experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

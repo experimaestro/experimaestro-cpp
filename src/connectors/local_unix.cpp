@@ -17,9 +17,8 @@
 #include <thread>
 #include <unistd.h>
 
-
-#include <efsw/efsw.hpp>
-
+#include <Poco/DirectoryWatcher.h>
+#include "Poco/Delegate.h"
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
 
@@ -342,7 +341,7 @@ void LocalConnector::createFile(Path const &path, bool errorIfExists) const {
   std::ofstream out(path.localpath());
 }
 
-struct DeleteListener : public efsw::FileWatchListener {
+struct DeleteListener {
   std::mutex mutex;
   std::condition_variable cv;
   std::string filename; ///< Filename to watch
@@ -350,11 +349,10 @@ struct DeleteListener : public efsw::FileWatchListener {
 
   DeleteListener(std::string const & filename) : filename(filename) {}
 
-  void handleFileAction(efsw::WatchID watchid, const std::string &dir,
-                        const std::string &filename, efsw::Action action,
-                        std::string oldFilename = "") override {
-    LOGGER->debug("Notification in directory {}: {}", dir, filename);
-    if (action == efsw::Actions::Delete && this->filename == filename) {
+  void onFileDeleted(const void *, const Poco::DirectoryWatcher::DirectoryEvent& removeEvent) {
+    auto filename = removeEvent.item.path();
+    LOGGER->debug("Notification in directory {}", filename);
+    if (this->filename == filename) {
       std::lock_guard<std::mutex> lock(mutex);
       deleted = true;
       cv.notify_all();
@@ -374,15 +372,11 @@ std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
           "Lock path {} already exists and is not a file", path.localpath()));
     }
 
-    efsw::FileWatcher fileWatcher;
+    Poco::DirectoryWatcher dw (path.parent().localpath(), Poco::DirectoryWatcher::DW_ITEM_REMOVED);
     DeleteListener listener(path.name());
+    dw.itemRemoved += Poco::delegate(&listener, &DeleteListener::onFileDeleted);
     std::unique_lock<std::mutex> lock(listener.mutex);
-    auto watchID = fileWatcher.addWatch(path.parent().localpath(), &listener, true);
-    if (watchID < 0) {
-      throw io_error("Could not setup a file watcher");
-    }
 
-    fileWatcher.watch();
     listener.cv.wait(lock, [&] { 
       return listener.deleted; 
     });
