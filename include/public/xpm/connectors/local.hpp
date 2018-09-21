@@ -30,6 +30,9 @@ class LocalProcessBuilder : public ProcessBuilder {
 public:
   virtual std::shared_ptr<Process> start() override;
   friend class LocalProcess;
+
+  /// function to execute (if no command)
+  std::function<void()> function;
 };
 
 }

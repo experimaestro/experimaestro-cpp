@@ -138,6 +138,7 @@ class LocalProcess : public Process {
 
 public:
   ~LocalProcess() { LOGGER->debug("Deleting LocalProcess", (void *)this); }
+
   LocalProcess(LocalProcessBuilder &builder) {
     // Pipes for the different streams
     LOGGER->debug("Creating LocalProcess", (void *)this);
@@ -153,7 +154,7 @@ public:
     }
 
     if (pid == 0) {
-      // Child process
+      // --- Child process: the new one
 
       // Associate with stdin/stdout/stderr
       stdin_p.associate(0);
@@ -171,13 +172,14 @@ public:
       // Detach
       setpgid(0, 0);
 
+      // and run!
       run(builder);
 
       // Don't go further
       _exit(0);
     }
 
-    // Parent process
+    // --- Parent process 
 
     // Get pipes if any
     stdin = stdin_p.pipefd();

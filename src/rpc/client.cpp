@@ -21,8 +21,8 @@ namespace {
 
 Client *Client::DEFAULT_CLIENT = nullptr;
 
-Client::Client(const std::string &wsURL, const std::string &username, const std::string &password)
-    : _client(wsURL, username, password, true) {
+Client::Client(const std::string &host, int port, const std::string &username, const std::string &password)
+    : _client(host, port, username, password, true) {
   _client.setHandler(std::bind(&Client::handler, this, std::placeholders::_1));
   DEFAULT_CLIENT = this;
 }
@@ -69,11 +69,10 @@ Client &Client::defaultClient() {
     // Try to connect
     ConfigurationParameters configuration;
     const auto conf = configuration.serverConfiguration();
-    std::string uri = "ws://" + conf.host + ":" + std::to_string(conf.port) + "/web-socket";
-    LOGGER->info("Connecting to default client {}", uri);
+    LOGGER->info("Connecting to default client {}:{}", conf.host, conf.port);
 
     static std::unique_ptr<Client> defaultClient(
-      new Client(uri, "hello", "world") // conf.username, conf.password)
+      new Client(conf.host, conf.port, "hello", "world") // conf.username, conf.password)
     );
     defaultClient->ping();
   }

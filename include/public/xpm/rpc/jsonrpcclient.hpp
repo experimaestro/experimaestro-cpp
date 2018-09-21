@@ -33,7 +33,7 @@ class JsonRPCClient {
  public:
 
   /// Construct a connection with a given URI
-  JsonRPCClient(std::string const &uri, std::string const &username,
+  JsonRPCClient(std::string const &host, int port, std::string const &username,
                 std::string const &password, bool debug);
 
   /// Close connection

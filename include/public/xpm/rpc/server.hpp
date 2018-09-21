@@ -19,9 +19,13 @@ namespace xpm::rpc {
 class Server : public Poco::Util::ServerApplication {
   std::unique_ptr<Poco::Data::Session> session;
 
-  int serve();
+  int serve(bool locked);
 public:
-  static void ensureStarted();
+  /// Get a client handle
+  static void client();
+
+  /// Start the server
+  static void start(bool locked);
 };
 }
 

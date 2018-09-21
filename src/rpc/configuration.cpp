@@ -37,7 +37,8 @@ ConfigurationParameters::ConfigurationParameters(std::string const &path) {
       server["name"],
       (int)server["port"],
       server.count("host") > 0 ? server["host"].get<std::string>() : std::string("localhost"),
-      server.count("directory") > 0 ? server["directory"].get<std::string>() : defaultPath
+      server.count("directory") > 0 ? server["directory"].get<std::string>() : defaultPath,
+      server.count("experimaestro") > 0 ? server["experimaestro"].get<std::string>() : "experimaestro",
   };
 
 

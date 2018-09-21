@@ -94,6 +94,8 @@ public:
 
   /// Should the process be detached
   bool detach;
+
+  /// The environment
   Environment environment;
 
   /// The command to execute

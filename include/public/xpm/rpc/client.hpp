@@ -21,7 +21,7 @@ class Client {
  public:
   typedef nlohmann::json json;
 
-  Client(std::string const &wsURL, std::string const &username, std::string const &password);
+  Client(std::string const &host, int port, std::string const &username, std::string const &password);
   ~Client();
 
   /// Generic request

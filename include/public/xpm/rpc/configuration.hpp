@@ -17,6 +17,9 @@ struct ServerConfiguration {
 
   // Main directory
   std::string directory;
+
+  /// Path to the experimaestro executable
+  std::string experimaestro;
 };
 
 class ConfigurationParameters {
