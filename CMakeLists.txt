@@ -2,25 +2,27 @@ cmake_minimum_required(VERSION 3.0.0)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 project(experimaestro)
+
 set(LINKED_LIBRARIES "")
 set(INCLUDE_DIRECTORIES "")
 
 include(UseSWIG)
-include(CmakeHelpers)
-include(CmakeFindExtensions)
+include(CMakeHelpers)
+include(CMakeFindExtensions)
+
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
-# find_package(YamlCPP REQUIRED)
-# find_package(SQLite3 REQUIRED) (provided by SQLiteCpp)
 
-set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
+# --- Set YAML options
+SET(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library (YAML)")
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+
+set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
-set(STATIC_LIB ON CACHE BOOL "Build EFSW as a static library" FORCE)
 
 # ---
 

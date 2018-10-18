@@ -1,9 +1,12 @@
 [submodule "ext/googletest"]
 	path = ext/googletest
 	url = https://github.com/google/googletest.git
+	branch = master
 [submodule "ext/spdlog"]
 	path = ext/spdlog
 	url = https://github.com/gabime/spdlog.git
+	branch = master
 [submodule "ext/yaml-cpp"]
 	path = ext/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
+	branch = master

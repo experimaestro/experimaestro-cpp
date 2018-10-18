@@ -30,7 +30,7 @@
 #include <Poco/Net/SSLManager.h>
 #include <Poco/Net/SecureServerSocket.h>
 #include <Poco/Net/WebSocket.h>
-#include <Poco/Uri.h>
+#include <Poco/URI.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Process.h>
 
