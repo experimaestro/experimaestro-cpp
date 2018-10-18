@@ -13,7 +13,7 @@ addons:
       - doxygen
       - libssh-dev
       - g++-7
-
+      - libpoco-dev
 
 before_install:
   - cd test/docker

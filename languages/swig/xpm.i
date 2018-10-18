@@ -80,7 +80,8 @@ namespace xpm {
 %ignore *::istream;
 
 // Documentation
-%include "documentation.i"
+// FIXME: error in generated doc
+// %include "documentation.i"
 
 %shared_ptr(xpm::Object)
 
