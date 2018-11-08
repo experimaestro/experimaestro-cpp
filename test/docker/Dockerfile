@@ -1,7 +1,7 @@
 FROM debian:jessie
 
 # Install packages (SSH)
-RUN apt-get update && apt-get install -yq --no-install-recommends mysql-client debconf-utils openssh-server oar-server oar-server-pgsql oar-user oar-user-pgsql oar-node postgresql-client && apt-get -y clean
+RUN apt-get update && apt-get install -yq --no-install-recommends mysql-client debconf-utils openssh-server && apt-get -y clean
 
 # Allow servers to start
 RUN sed -i "s/^exit 101$/exit 0/" /usr/sbin/policy-rc.d
@@ -9,10 +9,8 @@ RUN sed -i "s/^exit 101$/exit 0/" /usr/sbin/policy-rc.d
 # Allow SSH to work
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
-
 # Extra package
 RUN apt-get install -yq --no-install-recommends vim less && apt-get -y clean
-
 
 # Create a user with a key
 RUN useradd -ms /bin/bash testuser
@@ -20,17 +18,10 @@ RUN useradd -ms /bin/bash testuser
 # COPY id_rsa.pub /home/testuser/.ssh/authorized_keys
 # RUN chown -R testuser.testuser /home/testuser && chmod og-rwx /home/testuser/.ssh
 
-# Configure OAR
-# RUN sed -i -e 's/^DB_TYPE=.*/DB_TYPE="mysql"/' -e 's/^DB_PORT=.*/DB_PORT="3306"/'  -e 's/^DB_HOSTNAME=.*/DB_HOSTNAME="mysql"/' -e 's/^DB_BASE_PASSWD=.*/DB_BASE_PASSWD="oar"/'  -e 's/^DB_BASE_PASSWD_RO=.*/DB_BASE_PASSWD_RO="oar_ro"/' /etc/oar/oar.conf && sed -i 's/-n "-20"//' /etc/init.d/oar-node
-
-RUN sed -i -e 's/^DB_TYPE=.*/DB_TYPE="Pg"/' -e 's/^DB_PORT=.*/DB_PORT="5432"/'  -e 's/^DB_HOSTNAME=.*/DB_HOSTNAME="postgres"/' -e 's/^DB_BASE_PASSWD=.*/DB_BASE_PASSWD="oar"/'  -e 's/^DB_BASE_PASSWD_RO=.*/DB_BASE_PASSWD_RO="oar_ro"/' /etc/oar/oar.conf && sed -i 's/-n "-20"//' /etc/init.d/oar-node
-
 
 # Copy start files
 
-COPY start-oar-node.sh /root
 COPY run.sh /root
-COPY oar.hosts /var/lib/oar
 COPY ssh_defaults /etc/default/ssh
 
 # Expose testuser volume
