@@ -216,7 +216,9 @@ public:
     char *envp[builder.environment.size() + 1];
     envp[builder.environment.size()] = nullptr;
     std::vector<std::string> envarray;
+    LOGGER->info("Setting up the environment");
     for (auto const &entry : builder.environment) {
+      LOGGER->info("ENV: {}={}", entry.first, entry.second);
       envarray.push_back(entry.first + "=" + entry.second);
       envp[envarray.size() - 1] = const_cast<char *>(envarray.back().c_str());
     }

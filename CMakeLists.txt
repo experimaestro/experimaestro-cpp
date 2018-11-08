@@ -232,7 +232,7 @@ if (true)
 
 		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
         install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-        install(TARGETS yaml-cpp-targets COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+        # install(TARGETS yaml-cpp-targets COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 
     endforeach()
     configure_file(languages/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
