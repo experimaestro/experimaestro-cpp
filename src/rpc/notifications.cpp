@@ -8,15 +8,11 @@
 #include <chrono>
 #include <condition_variable>
 
-#define ASIO_STANDALONE
-#include <asio.hpp>
 #include <__xpm/common.hpp>
 
 DEFINE_LOGGER("rpc")
 
 namespace xpm {
-
-using namespace asio::ip;
 
 namespace {
 
@@ -33,8 +29,6 @@ struct Progress {
   std::string hostname;
   std::string path;
   std::string port;
-  asio::io_service io_service;
-  tcp::resolver::iterator endpoint_iterator;
 
   /// Last update time
   std::chrono::time_point<std::chrono::system_clock> last_update_time;
@@ -87,9 +81,9 @@ struct Progress {
     }
 
     // Resolves hostname
-    tcp::resolver resolver(io_service);
-    tcp::resolver::query query(hostname, port, asio::ip::resolver_query_base::flags::all_matching);
-    endpoint_iterator = resolver.resolve(query);
+    // tcp::resolver resolver(io_service);
+    // tcp::resolver::query query(hostname, port, asio::ip::resolver_query_base::flags::all_matching);
+    // endpoint_iterator = resolver.resolve(query);
 
     // Creates a new thread that will run independently of the rest
     notifierThread = std::thread(&Progress::tick, this);
@@ -128,16 +122,16 @@ struct Progress {
    */
   void notify(float value) {
     try {
-        tcp::socket socket(io_service);
-        connect(socket, endpoint_iterator);
+        // tcp::socket socket(io_service);
+        // connect(socket, endpoint_iterator);
 
-        asio::streambuf request;
-        std::ostream request_stream(&request);
-        request_stream << "GET " << path << "/progress/" << value << " HTTP/1.0\r\n";
-        request_stream << "Host: " << hostname << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Connection: close\r\n\r\n";
-        write(socket, request);
+        // asio::streambuf request;
+        // std::ostream request_stream(&request);
+        // request_stream << "GET " << path << "/progress/" << value << " HTTP/1.0\r\n";
+        // request_stream << "Host: " << hostname << "\r\n";
+        // request_stream << "Accept: */*\r\n";
+        // request_stream << "Connection: close\r\n\r\n";
+        // write(socket, request);
       } catch(std::exception &e) {
         LOGGER->info("Caught exception while reporting progress: {}", e.what());
       }

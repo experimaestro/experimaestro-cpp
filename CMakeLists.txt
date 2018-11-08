@@ -11,8 +11,7 @@ include(CMakeFindExtensions)
 
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(PythonInterp 3 REQUIRED)
-find_package(libssh REQUIRED)
+   find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 
 # --- Set YAML options
@@ -232,7 +231,9 @@ if (true)
         swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
 
 		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-		install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+        install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+        install(TARGETS yaml-cpp-targets COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+
     endforeach()
     configure_file(languages/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
 	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
