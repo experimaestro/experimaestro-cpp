@@ -129,7 +129,7 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} "${Poco_INCLUDE_DIR}/include")
     set_target_properties(${xpmlib} PROPERTIES 
         CXX_STANDARD 17
         OUTPUT_NAME experimaestro)

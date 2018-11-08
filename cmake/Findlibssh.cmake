@@ -7,7 +7,7 @@
 
 find_package(PkgConfig)
 
-pkg_check_modules(PC_LIBSSH QUIET libssh libssh_threads)
+pkg_check_modules(PC_LIBSSH QUIET libssh)
 set(LIBSSH_DEFINITIONS ${PC_LIBSSH_CFLAGS_OTHER})
 
 message(STATUS "Looking for libssh...")
