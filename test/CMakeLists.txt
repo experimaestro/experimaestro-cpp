@@ -9,7 +9,7 @@ ExternalProject_Add(googletest
         CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${EXT_INSTALL_DIR}"
         INSTALL_COMMAND   ""
         BUILD_BYPRODUCTS 
-        <BINARY_DIR>/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a
+        <BINARY_DIR>/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a
 )
 
 # Specify include dir
@@ -18,7 +18,7 @@ set(GTEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ext/googletest/googletest/i
 
 # Library
 ExternalProject_Get_Property(googletest binary_dir)
-set(GTEST_LIBRARY_PATH ${binary_dir}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 set(GTEST_LIBRARY gtest)
 add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
 set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION
@@ -41,7 +41,7 @@ set(XPM_TEST_USERDIR "${CMAKE_CURRENT_SOURCE_DIR}/docker/userdir")
 configure_file(config.h.in config.h)
 
 target_link_libraries(experimaestro-tests experimaestro_shared gtest ${LINKED_LIBRARIES})
-add_dependencies(experimaestro-tests gtest)
+# add_dependencies(experimaestro-tests gtest)
 target_include_directories(experimaestro-tests PUBLIC 
         ${CMAKE_CURRENT_BINARY_DIR}
         ${OPENSSL_INCLUDE_DIR} 

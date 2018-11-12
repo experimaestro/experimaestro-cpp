@@ -116,6 +116,7 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
+    "${Poco_INCLUDE_DIRS}"
 )
 include_directories(${INCLUDE_DIRECTORIES})
 
@@ -128,7 +129,7 @@ install(DIRECTORY include/xpm DESTINATION include)
 
 foreach(xpmlib experimaestro_shared)
     target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR} "${Poco_INCLUDE_DIR}/include")
+    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
     set_target_properties(${xpmlib} PROPERTIES 
         CXX_STANDARD 17
         OUTPUT_NAME experimaestro)
