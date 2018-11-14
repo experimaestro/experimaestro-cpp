@@ -116,7 +116,9 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/private"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
-    "${Poco_INCLUDE_DIRS}"
+    "${LIBSSH_INCLUDE_DIR}"
+    ${Poco_INCLUDE_DIRS}
+    "${Poco_INCLUDE_DIR}/include"
 )
 include_directories(${INCLUDE_DIRECTORIES})
 
