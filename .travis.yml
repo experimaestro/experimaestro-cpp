@@ -2,7 +2,7 @@
 language: cpp
 
 # Environment
-dist: trusty # Use more recent Ubuntu
+dist: xenial
 addons:
   apt:
     sources:
