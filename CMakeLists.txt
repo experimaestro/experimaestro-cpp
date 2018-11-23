@@ -11,7 +11,7 @@ include(CMakeFindExtensions)
 
 find_package(SWIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-   find_package(libssh REQUIRED)
+find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 
 # --- Set YAML options
@@ -105,8 +105,7 @@ list(APPEND LINKED_LIBRARIES
     ${CMAKE_THREAD_LIBS_INIT} 
     ${Poco_LIBRARIES}
     yaml-cpp
-    sqlite3
-    )
+)
 message(STATUS "Linked libraries: ${LINKED_LIBRARIES}")
 SET(EXT_INSTALL_DIR "${CMAKE_BINARY_DIR}/external/googletest")
 
@@ -240,7 +239,9 @@ if (true)
     endforeach()
     configure_file(languages/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
 	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-	install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
