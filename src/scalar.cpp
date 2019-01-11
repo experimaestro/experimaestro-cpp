@@ -59,12 +59,17 @@ Scalar Scalar::cast(Type::Ptr const &type) {
   throw std::out_of_range("Scalar type is not known (casting)");
 }
 
-namespace {
+const std::regex &re_integer() {
   static const std::regex RE_INTEGER(R"(\d+)");
+  return RE_INTEGER;
+}
+
+const std::regex &re_real() {
   static const std::regex RE_REAL(
       R"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)");
-
+  return RE_REAL;
 }
+
 
 Scalar Scalar::fromYAML(YAML::Node const &node) {
   switch (node.Type()) {
@@ -92,11 +97,11 @@ Scalar Scalar::fromYAML(YAML::Node const &node) {
         return Scalar(false);
 
       // Integer
-      if (std::regex_match(s, RE_INTEGER)) {
+      if (std::regex_match(s, re_integer())) {
         return Scalar(std::atol(s.c_str()));
       }
 
-      if (std::regex_match(s, RE_REAL)) {
+      if (std::regex_match(s, re_real())) {
         return Scalar(std::atof(s.c_str()));
       }
 
@@ -120,7 +125,7 @@ Scalar Scalar::fromString(std::string const & s, ptr<Type> const & hint) {
   }
 
   if (hint == IntegerType) {
-    if (std::regex_match(s, RE_INTEGER)) {
+    if (std::regex_match(s, re_integer())) {
       return Scalar(std::atol(s.c_str()));
     }
     throw argument_error(s + " cannot be interpreted as an integer");
@@ -135,7 +140,7 @@ Scalar Scalar::fromString(std::string const & s, ptr<Type> const & hint) {
   }
 
   if (hint == RealType) {
-    if (std::regex_match(s, RE_REAL)) {
+    if (std::regex_match(s, re_real())) {
       return Scalar(std::atof(s.c_str()));
     }
     throw argument_error(s + " cannot be interpreted as a real");
