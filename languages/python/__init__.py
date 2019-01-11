@@ -520,7 +520,10 @@ set_launcher(launcher)
 def tag(name: str, x, object:PyObject=None, context=None):
     """Tag a value"""
     if object:
-        sv = object.__xpm__.sv # type: MavValue
+        if not hasattr(object, "__xpm__"):
+            object = sv = python2value(object)
+        else:
+            sv = object.__xpm__.sv # type: MapValue
         sv.addTag(name, x)
         if context:
             sv.setTagContext(context)
@@ -530,8 +533,10 @@ def tag(name: str, x, object:PyObject=None, context=None):
     value.tag(name)
     return value
 
-def tags(value: PyObject):
+def tags(value):
     """Return the tags associated with a value"""
+    if isinstance(value, Value):
+        return value.tags()
     return value.__xpm__.sv.tags()
 
 def tagspath(value: PyObject):
