@@ -170,6 +170,11 @@ public:
       }
 
       // Detach
+      int sid = setsid();
+      if (sid < 0) {
+        LOGGER->error("Error while calling sid");
+        _exit(1);
+      }
       setpgid(0, 0);
 
       // and run!
