@@ -10,7 +10,6 @@ include(CMakeHelpers)
 include(CMakeFindExtensions)
 
 find_package(SWIG REQUIRED)
-find_package(OpenSSL REQUIRED)
 find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 
@@ -100,7 +99,6 @@ set(SOURCES
         
 find_package (Threads)
 list(APPEND LINKED_LIBRARIES 
-    ${OPENSSL_LIBRARIES} 
     ${LIBSSH_LIBRARIES} 
     ${CMAKE_THREAD_LIBS_INIT} 
     ${Poco_LIBRARIES}
@@ -196,7 +194,7 @@ if (true)
         " Use PYTHON_INSTALL_LOCATION configuration to change this setting."
         " Note: install prefix was ${CMAKE_INSTALL_PREFIX}")
 
-    include_directories(${PYTHON_INCLUDE_PATH} ${OPENSSL_INCLUDE_DIR})
+    include_directories(${PYTHON_INCLUDE_PATH})
 
     set(CMAKE_SWIG_FLAGS "-builtin;-threads")
 

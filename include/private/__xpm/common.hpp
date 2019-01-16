@@ -9,8 +9,7 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include <openssl/sha.h>
-
+#include <Poco/SHA1Engine.h>
 #include <xpm/common.hpp>
 
 #define DEFINE_LOGGER(name) namespace { auto LOGGER = ::xpm::logger(name); }
@@ -29,36 +28,31 @@ std::ostream &operator<<(std::ostream &os, const Type &c);
 std::ostream &operator<<(std::ostream &os, const Path &c);
 
 struct Digest {
-  SHA_CTX context;
+  Poco::SHA1Engine context;
 
 
   Digest() {
-    if (!SHA1_Init(&context)) {
-      throw std::runtime_error("Error while initializing SHA-1");
-    }
   }
 
   template<typename T>
   void updateDigest(T const &value) {
     static_assert(std::is_pod<T>::value, "Expected a POD value");
-
-    if (!SHA1_Update(&context, &value, sizeof(T))) {
-      throw std::runtime_error("Error while computing SHA-1");
-    }
+    context.update(&value, sizeof(T));
   }
 
   inline void updateDigest(std::string const &value) {
-    if (!SHA1_Update(&context, value.c_str(), value.size())) {
-      throw std::runtime_error("Error while computing SHA-1");
-    }
+    context.update(value);
   }
 
 
-  inline std::array<unsigned char, SHA_DIGEST_LENGTH> get() {
-    std::array<unsigned char, SHA_DIGEST_LENGTH> md;
-    if (!SHA1_Final(md.data(), &context)) {
-      throw std::runtime_error("Error while retrieving SHA-1");
+  inline std::array<unsigned char, Poco::SHA1Engine::DIGEST_SIZE> get() {
+    auto d = context.digest();
+    if (d.size() != Poco::SHA1Engine::DIGEST_SIZE) {
+      throw std::runtime_error("Error while retrieving SHA-1: digest size not maching real size");
     }
+    
+    std::array<unsigned char, Poco::SHA1Engine::DIGEST_SIZE> md;
+    std::copy(d.begin(), d.end(), md.begin());
     return md;
   }
 };
