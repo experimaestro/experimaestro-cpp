@@ -1,7 +1,7 @@
 FROM debian:jessie
 
 # Install packages (SSH)
-RUN apt-get update && apt-get install -yq --no-install-recommends mysql-client debconf-utils openssh-server && apt-get -y clean
+RUN apt-get update && apt-get install -yq --no-install-recommends debconf-utils openssh-server && apt-get -y clean
 
 # Allow servers to start
 RUN sed -i "s/^exit 101$/exit 0/" /usr/sbin/policy-rc.d
@@ -14,13 +14,8 @@ RUN apt-get install -yq --no-install-recommends vim less && apt-get -y clean
 
 # Create a user with a key
 RUN useradd -ms /bin/bash testuser
-# RUN mkdir /home/testuser/.ssh
-# COPY id_rsa.pub /home/testuser/.ssh/authorized_keys
-# RUN chown -R testuser.testuser /home/testuser && chmod og-rwx /home/testuser/.ssh
-
 
 # Copy start files
-
 COPY run.sh /root
 COPY ssh_defaults /etc/default/ssh
 
