@@ -211,6 +211,7 @@ public:
           builder.stderr.function(buffer.get(), static_cast<size_t>(n));
       });
     }
+
   }
 
   void run(ProcessBuilder &builder) {
@@ -236,7 +237,9 @@ public:
     }
 
     // Execute the command
-    execve(builder.command[0].c_str(), args, envp);
+    int code = execve(builder.command[0].c_str(), args, envp);
+    LOGGER->info("Executing command {} failed: code {}", builder.command[0], code);
+    _exit(code);
   }
 
   /// isRunning
@@ -246,8 +249,6 @@ public:
   virtual int exitCode() override {
     int exit_status;
     auto code = waitpid(pid, &exit_status, 0);
-
-    // FIXME: not clear what to wait (PID or -PID)
     LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", WEXITSTATUS(exit_status), WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
 
     if (code == -1) {
