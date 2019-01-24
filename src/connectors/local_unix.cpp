@@ -134,7 +134,7 @@ class LocalProcess : public Process {
   std::thread stdout_thread, stderr_thread;
 
   bool closed = true;
-  int pid = -1;
+  pid_t pid = -1;
 
 public:
   ~LocalProcess() { LOGGER->debug("Deleting LocalProcess", (void *)this); }
@@ -146,7 +146,7 @@ public:
     Pipe stdout_p(builder.stdout, true);
     Pipe stderr_p(builder.stderr, true);
 
-    pid_t pid = fork();
+    pid = fork();
 
     if (pid < 0) {
       // Error
