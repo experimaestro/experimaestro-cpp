@@ -211,7 +211,6 @@ public:
           builder.stderr.function(buffer.get(), static_cast<size_t>(n));
       });
     }
-
   }
 
   void run(ProcessBuilder &builder) {
@@ -236,9 +235,10 @@ public:
       args[i] = const_cast<char *>(builder.command[i].c_str());
     }
 
-    // Execute the command
     int code = execve(builder.command[0].c_str(), args, envp);
-    LOGGER->info("Executing command {} failed: code {}", builder.command[0], code);
+
+    // The execution failed itself (if the process started, we should not be here)
+    LOGGER->warn("Executing command {} failed: code {}", builder.command[0], code);
     _exit(code);
   }
 
