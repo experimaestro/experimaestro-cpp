@@ -22,5 +22,10 @@ jobs:
           name: Creating Build Files
           command: 'cmake -GNinja -H. -Bbuild'
       - run:
+          name: Building
+          command: |
+            ninja -C build experimaestro-tests
+      - run:
           name: Test
-          command: 'CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test'
+          command: |
+            CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
