@@ -3,16 +3,14 @@ version: 2
 jobs:
   build:
     docker:
-      - image: "debian:stretch"
+      - image: "debian:buster"
     steps:
       - checkout
       - run:
           name: Installing SUDO
           command: |
-            echo 'deb http://deb.debian.org/debian stretch-backports main contrib non-free' >> /etc/apt/sources.list
             apt-get update
-            apt-get -y -t stretch-backports install cmake libssh-dev
-            apt-get install -y libpoco-dev git g++-8 swig ninja-build doxygen python3-dev pkg-config
+            apt-get install -y libpoco-dev git g++-8 cmake libssh-dev swig ninja-build doxygen python3-dev pkg-config
       - run:
           name: "Pull Submodules"
           command: |
@@ -21,7 +19,7 @@ jobs:
       - run:
           name: Creating Build Files
           command: |
-            CC=gcc-8 CXX=g++-8 cmake -GNinja -H. -Bbuild
+            cmake -GNinja -H. -Bbuild
       - run:
           name: Building
           command: |
