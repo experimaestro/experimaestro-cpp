@@ -121,7 +121,7 @@ class _JSONRPCClient {
       
       Buffer<char> buffer(4096);
       int flags = 0;
-      int count = _websocket->receiveFrame(buffer, flags);
+      int count = _websocket->receiveFrame(buffer.begin(), buffer.size(), flags);
       if (count == 0) return; // WS shutdown
       LOGGER->info("Received a frame of length {}: {} / {}", count, buffer.begin(), flags);
 
