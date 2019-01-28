@@ -23,7 +23,7 @@ jobs:
       - run:
           name: Building
           command: |
-            ninja -C build experimaestro-tests
+            ninja -j 2 -C build experimaestro-tests
       - run:
           name: Test
           command: |
