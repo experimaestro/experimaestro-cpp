@@ -19,6 +19,8 @@ pages:
     - Java: manager/java.md
     - Python: manager/python.md
 
+- Developing: developing.md
+
 theme: 
     name: material
     feature:
