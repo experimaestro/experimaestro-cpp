@@ -26,5 +26,6 @@ jobs:
             ninja -j 2 -C build experimaestro-tests
       - run:
           name: Test
+          # TODO: run SSH server to test remote calls
           command: |
             GTEST_FILTER="-SshTest.*" CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
