@@ -1,82 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-    
-        
     <url>
-     <loc>/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/main concepts/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/installing/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
-        
     <url>
-     <loc>/scheduler/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/scheduler/connectors/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/scheduler/notification/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
-    
-        
     <url>
-     <loc>/manager/intro/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/manager/definitions/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/manager/json/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/manager/java/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
     <url>
-     <loc>/manager/python/</loc>
-     <lastmod>2018-05-25</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
-        
-    
-
+    <url>
+     <loc>None</loc>
+     <lastmod>2019-01-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
 </urlset>

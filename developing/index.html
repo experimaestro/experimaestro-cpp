@@ -38,7 +38,7 @@
     
     
       
-        <title>Installing - experimaestro</title>
+        <title>Developing - experimaestro</title>
       
     
     
@@ -103,7 +103,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="#python" tabindex="1" class="md-skip">
+      <a href="#tests" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -129,7 +129,7 @@
                 experimaestro
               </span>
               <span class="md-header-nav__topic">
-                Installing
+                Developing
               </span>
             
           
@@ -201,9 +201,7 @@
       
         
 
-  
-
-<nav class="md-tabs md-tabs--active" data-md-component="tabs">
+<nav class="md-tabs" data-md-component="tabs">
   <div class="md-tabs__inner md-grid">
     <ul class="md-tabs__list">
       
@@ -212,7 +210,7 @@
   
     <li class="md-tabs__item">
       
-        <a href=".." title="Basics" class="md-tabs__link md-tabs__link--active">
+        <a href=".." title="Basics" class="md-tabs__link">
           Basics
         </a>
       
@@ -297,12 +295,10 @@
       
       
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1" checked>
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1">
     
     <label class="md-nav__link" for="nav-1">
       Basics
@@ -342,20 +338,11 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-    <a href="./" title="Installing" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../installing/" title="Installing" class="md-nav__link">
       Installing
     </a>
-    
   </li>
 
         
@@ -512,11 +499,45 @@
       
       
 
+  
 
-  <li class="md-nav__item">
-    <a href="../developing/" title="Developing" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Developing
+      </label>
+    
+    <a href="./" title="Developing" class="md-nav__link md-nav__link--active">
       Developing
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tests" title="Tests" class="md-nav__link">
+    Tests
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
     
@@ -534,8 +555,22 @@
 <nav class="md-nav md-nav--secondary">
   
   
-    
   
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tests" title="Tests" class="md-nav__link">
+    Tests
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
   
 </nav>
                   </div>
@@ -547,17 +582,14 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/bpiwowar/experimaestro/edit/master/docs/installing.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                  <a href="https://github.com/bpiwowar/experimaestro/edit/master/docs/developing.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="python">Python</h1>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Experimaestro is compatible with Python 3 only.</p>
-</div>
-<p>You need a working <code>python3</code> interpreter on your system along with <code>pip3</code>.</p>
-<p>To install required python's modules type:</p>
-<div class="codehilite"><pre><span></span>pip3 install experimaestro
+                  <h1>Developing</h1>
+                
+                <h2 id="tests">Tests</h2>
+<p>To avoid SSH tests that require <code>docker</code> to be installed, use</p>
+<div class="codehilite"><pre><span></span>./test/experimaestro-tests --gtest_filter<span class="o">=</span><span class="s2">&quot;-SshTest.*&quot;</span>
 </pre></div>
                 
                   
@@ -579,7 +611,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../main concepts/" title="Main concepts" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../manager/python/" title="Python" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -588,25 +620,11 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Main concepts
+                Python
               </span>
             </div>
           </a>
         
-        
-          <a href="../scheduler/" title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
-            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
-              <span class="md-flex__ellipsis">
-                <span class="md-footer-nav__direction">
-                  Next
-                </span>
-                Home
-              </span>
-            </div>
-            <div class="md-flex__cell md-flex__cell--shrink">
-              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
-            </div>
-          </a>
         
       </nav>
     </div>
