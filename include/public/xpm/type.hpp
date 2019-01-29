@@ -132,6 +132,11 @@ class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
    */
   std::unordered_map<std::string, std::shared_ptr<Argument>> const &arguments() const;
 
+  /**
+   * Get an argument
+   */
+  std::shared_ptr<Argument> argument(std::string const & name);
+
   /// Returns the JSON string corresponding to this type
   std::string toJson() const;
 
