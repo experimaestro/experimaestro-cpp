@@ -90,6 +90,13 @@ std::unordered_map<std::string, ptr<Argument>> const &Type::arguments() const {
   return _arguments;
 }
 
+std::shared_ptr<Argument> Type::argument(std::string const & name) {
+  auto it = _arguments.find(name);
+
+  return _arguments.end() == it ? nullptr : it->second;
+}
+
+
 void Type::parentType(Ptr const &type) {
   _parent = type;
 }
