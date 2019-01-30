@@ -176,13 +176,11 @@ typedef std::tuple<ptr<Value>, ptr<Type>> ValueTypePtr;
     auto mapsv = dynamic_cast<MapValue*>(sv);
     if (!mapsv) throw argument_error("value is not a map");
     
-    auto const &arguments = mapsv->type()->arguments();
-    auto it = arguments.find(key);
-    if (it == arguments.end()) {
+    auto arg = mapsv->type()->argument(key);
+    if (!arg) {
       throw argument_error("Cannot find " + fullkey);
     }
-    auto & arg = *it->second;
-    type = arg.type();
+    type = arg->type();
 
     if (mapsv->hasKey(key)) {
       // There is a value
