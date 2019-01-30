@@ -14,8 +14,8 @@ using namespace xpm;
 
 struct TestType {
   std::shared_ptr<Type> type;
-  TestType() : type(std::make_shared<Type>(Typename("test"))) {
-    auto a = std::make_shared<Argument>("a");
+  TestType() : type(mkptr<Type>(Typename("test"))) {
+    auto a = mkptr<Argument>("a");
     a->defaultValue(mkptr<ScalarValue>(1l));
     type->addArgument(a);
   }
@@ -63,4 +63,18 @@ TEST(Value, defaultNotSet) {
 
   EXPECT_TRUE(object->get("a")->equals(ScalarValue(1l)));
   EXPECT_TRUE(object->get("a")->isDefault());
+}
+
+
+TEST(Value, Immutable) {
+  auto v = mkptr<MapValue>();
+  auto v1 = mkptr<MapValue>();
+  
+  v1->set("b", mkptr<ScalarValue>(1l));
+  v->set("a", v1);
+  v1->set("b", mkptr<ScalarValue>(2l));
+  
+  auto vb = v->get("a")->asMap()->get("b")->asScalar()->asInteger();
+  auto v1b = v1->get("b")->asScalar()->asInteger();
+  EXPECT_NE(vb, v1b);
 }

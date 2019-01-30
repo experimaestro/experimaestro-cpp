@@ -200,6 +200,9 @@ public:
   std::map<std::string, Scalar> tags() const;
 
 protected:
+  /// Copy constructor
+  Value(Value const &);
+
   /// Retrieve tags in this value or its descendants
   virtual void retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const;
 
@@ -221,9 +224,6 @@ protected:
   /// Generate
   virtual void _generate(GeneratorContext &context);
 
-  /// Whether this value is sealed or not
-  Flags _flags;
-
   friend class ObjectFactory;
   friend struct Helper;
   friend class Task;
@@ -234,11 +234,16 @@ protected:
   friend class ArrayValue;
   friend class ComplexValue;
   friend class MapValue;
+
+  /// Whether this value is sealed or not
+  Flags _flags;
 };
 
 class ComplexValue : public Value {
 public:
   ComplexValue();
+  /// Copy constructor
+  ComplexValue(ComplexValue const &);
   virtual ~ComplexValue();
 
   virtual void retrieveTags(std::map<std::string, Scalar> &tags, std::string const & context) const override;
@@ -252,6 +257,11 @@ protected:
 class MapValue : public ComplexValue {
 public:
   MapValue();
+
+  /// Copy constructor
+  MapValue(MapValue const &);
+
+
   virtual ~MapValue();
 
   /** Sets the task */
@@ -284,10 +294,10 @@ public:
   NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
 
   virtual nlohmann::json toJson() const override;
+  virtual std::shared_ptr<Value> copy() override;
 
   virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister) override;
   virtual void updateDigest(Digest & digest) const override;
-  virtual std::shared_ptr<Value> copy() override;
   virtual void addDependencies(Job & job, bool skipThis) override;
   
   /// Get generating job
@@ -321,11 +331,15 @@ private:
   /// The content
   std::map<std::string, std::shared_ptr<Value>> _map;
   friend class Value;
+  friend class std::shared_ptr<MapValue>;
 };
 
 class ArrayValue : public ComplexValue {
 public:
   ArrayValue();
+  /// Copy constructor
+  ArrayValue(ArrayValue const &);
+
   virtual ~ArrayValue();
 
   /// Returns the size of the array or the map
@@ -367,10 +381,12 @@ public:
   ScalarValue(Path const &value);
   ScalarValue(bool value);
   ScalarValue(double value);
+  ScalarValue(ScalarValue const &);
 
   std::string toString() const;
 
   virtual ~ScalarValue() = default;
+
   /// Constructs from value
   ScalarValue(Scalar const & v);
 

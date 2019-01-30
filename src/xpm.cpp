@@ -125,6 +125,11 @@ public:
   }
 };
 
+
+Value::Value(Value const &other) : _flags(other._flags) {
+
+}
+
 std::shared_ptr<Value> Value::create(Register &xpmRegister, nlohmann::json const &jsonValue) {
 
   switch (jsonValue.type()) {
@@ -418,6 +423,8 @@ void Value::retrieveTags(std::map<std::string, Scalar> &tags, std::string const 
 // --- Complex value
 
 ComplexValue::ComplexValue() {}
+ComplexValue::ComplexValue(ComplexValue const &other) 
+  : Value(other), _tags(other._tags), _tagContext(other._tagContext) {}
 
 ComplexValue::~ComplexValue() {}
 
@@ -529,11 +536,14 @@ nlohmann::json ArrayValue::toJson() const {
 }
 
 std::shared_ptr<Value> ArrayValue::copy() {
-  auto sv = mkptr<ArrayValue>();
-  for(auto p: _array) {
-    sv->_array.push_back(p->copy());
+  return mkptr<ArrayValue>(*this);
+}
+
+ArrayValue::ArrayValue(ArrayValue const &other)
+  : ComplexValue(other), _ctype(other._ctype) {
+  for(auto p: other._array) {
+    _array.push_back(p->copy());
   }
-  return sv;
 }
 
 
@@ -552,15 +562,18 @@ void MapValue::type(ptr<Type> const & type) {
 }
 
 ptr<Value> MapValue::copy() {
-  auto sv = mkptr<MapValue>();
-  sv->_job = _job;
-  sv->_object = _object;
-  sv->_task = _task;
-  sv->_flags = _flags;
-  sv->_type = _type;
-  sv->_map =_map;
+  return mkptr<MapValue>(*this);
+}
 
-  return sv;
+MapValue::MapValue(MapValue const &other) : ComplexValue(other) {
+  _job = other._job;
+  _object = other._object;
+  _task = other._task;
+  _flags = other._flags;
+  _type = other._type;
+  for(auto item: other._map) {
+    _map[item.first] = item.second->copy();
+  }
 }
 
 bool MapValue::equals(Value const &other) const {
@@ -803,10 +816,12 @@ ptr<Task> MapValue::task() {
 }
 
 
-ptr<Value> MapValue::set(const std::string &key, ptr<Value> const &value) {
+ptr<Value> MapValue::set(const std::string &key, ptr<Value> const &_value) {
   if (Value::get(Flag::SEALED)) {
     throw sealed_error();
   }
+
+  auto value = _value->copy();
 
   if (RESTRICTED_KEYS.count(key) > 0)
     throw argument_error("Cannot access directly to " + key);
@@ -979,9 +994,12 @@ void ScalarValue::updateDigest(Digest & digest) const {
 }
 
 std::shared_ptr<Value> ScalarValue::copy() {
-  auto sv = mkptr<ScalarValue>(_value);
-  sv->_flags = _flags;
-  return sv;
+  return mkptr<ScalarValue>(*this);
+}
+
+ScalarValue::ScalarValue(ScalarValue const &other) 
+  : Value(other), _tag(other._tag) {
+  _value = other._value;
 }
 
 
