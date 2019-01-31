@@ -2,6 +2,7 @@
 #include <unordered_map>
 
 #include <spdlog/fmt/fmt.h>
+#include <yaml-cpp/yaml.h>
 
 #include <__xpm/scriptbuilder.hpp>
 #include <__xpm/common.hpp>
@@ -9,6 +10,7 @@
 #include <xpm/launchers/launchers.hpp>
 #include <xpm/connectors/connectors.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/xpm.hpp>
 
 DEFINE_LOGGER("scriptbuilder");
 
@@ -50,6 +52,17 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
 
   out << "#!" << shPath << std::endl;
   out << "# Experimaestro generated task" << std::endl << std::endl;
+
+  // Output tags
+  out << "# __tags__ = ";
+  YAML::Emitter yout(out);
+  yout.SetMapFormat(YAML::Flow);
+  yout << YAML::BeginMap;
+  for(auto item: const_cast<CommandLineJob&>(job).parameters()->tags()) {
+    yout << YAML::Key << item.first << YAML::Value << item.second.toYAML();
+  }
+  yout << YAML::EndMap;
+  out << std::endl << std::endl;
 
   CommandContext context(ws, connector, path.parent(), path.name());
   context.parameters = const_cast<CommandLineJob&>(job).parameters();
