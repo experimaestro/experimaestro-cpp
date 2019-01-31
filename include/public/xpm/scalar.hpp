@@ -16,6 +16,9 @@
 namespace YAML {
   class Node;
 }
+namespace YAML {
+  class Node;
+}
 
 namespace xpm {
 
@@ -68,6 +71,7 @@ class Scalar {
 
 #ifndef SWIG
   Scalar(nlohmann::json const &jsonValue);
+  virtual YAML::Node toYAML() const;
 #endif
 
   Scalar(Scalar const &other);

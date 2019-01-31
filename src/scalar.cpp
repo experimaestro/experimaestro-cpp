@@ -455,6 +455,31 @@ json Scalar::toJson() const {
   throw std::out_of_range("Scalar type is not known (converting to json)");
 }
 
+YAML::Node Scalar::toYAML() const {
+  switch (scalarType()) {
+    case ScalarType::NONE: return YAML::Node(YAML::Null);
+
+    case ScalarType::STRING:return YAML::Node(_value.string);
+
+    case ScalarType::INTEGER:return YAML::Node(_value.integer);
+
+    case ScalarType::REAL:return YAML::Node(_value.real);
+
+    case ScalarType::BOOLEAN:return YAML::Node(_value.boolean);
+
+    case ScalarType::PATH: {
+      YAML::Node ypath;
+      ypath[KEY_VALUE] = _value.string;
+      ypath[KEY_TYPE] = PATH_TYPE.toString();
+      return ypath;
+    }
+
+    case ScalarType::UNSET:throw std::runtime_error("to YAML: unset has no type");
+  }
+  throw std::out_of_range("Scalar type is not known (converting to YAML)");
+}
+
+
 void Scalar::updateDigest(Digest &d) const {
 
   d.updateDigest(scalarType());
