@@ -493,6 +493,16 @@ class PathArgument(AbstractArgument):
         generator = PathGenerator(path)
         self.argument.generator(generator)
 
+class ConstantArgument(AbstractArgument):
+    """
+    An constant argument (useful for versionning tasks)
+    """
+    def __init__(self, name: str, value, help=""):
+        value = python2value(value)
+        xpmtype = register.getType(value)
+        super().__init__(name, xpmtype, help=help)
+        self.argument.constant(value)
+
 
 # --- Export some useful functions
 

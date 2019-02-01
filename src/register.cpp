@@ -144,7 +144,7 @@ void showArguments(ptr<Value> const & _sv, Type const & type, std::string const 
       << " (" << subtypeName << ")\t" 
       << x.second->help();
     if (x.second->required()) std::cout << " REQUIRED";
-    if (subtype->predefined()) {
+    if (subtype->predefined() && !x.second->constant()) {
       if (subSV) {
         std::cout << " (value " << subSV->toJson() << ")";
       } else if (x.second->defaultValue()) {
@@ -519,6 +519,11 @@ void Register::load(nlohmann::json const &j) {
         if (value.count("default")) {
           LOGGER->debug("    -> Found a default value");
           a->defaultValue(Value::create(*this, value["default"]));
+        }
+
+        if (value.count("constant")) {
+          LOGGER->debug("    -> Found a constant value");
+          a->constant(Value::create(*this, value["default"]));
         }
 
         if (value.count("generator")) {

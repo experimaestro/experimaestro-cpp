@@ -165,8 +165,14 @@ struct BaseCppTypeBuilder {
     return dynamic_cast<Self&>(*this);
   }
 
+
   template <typename U> Self &defaultValue(U const &v) {
     _argument->defaultValue(std::make_shared<ScalarValue>(Scalar(v)));
+    return dynamic_cast<Self&>(*this);
+  }
+
+  template <typename U> Self &constant(U const &v) {
+    _argument->constant(std::make_shared<ScalarValue>(Scalar(v)));
     return dynamic_cast<Self&>(*this);
   }
 
