@@ -17,8 +17,6 @@ namespace Poco::Data { class Session; }
 
 namespace xpm::rpc {
 class Server : public Poco::Util::ServerApplication {
-  std::unique_ptr<Poco::Data::Session> session;
-
   int serve(bool locked);
 public:
   /// Get a client handle
