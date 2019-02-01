@@ -16,9 +16,8 @@ class Client {
     open = () => {
         console.log("Websocket connection open", this.ws);
         this.ws.send(JSON.stringify({a: "Hello" }));
-        this.ws.send(JSON.stringify({a: "World" }));
     }
-
+    
     close = () => {
         console.log("Websocket connection closed");
     }

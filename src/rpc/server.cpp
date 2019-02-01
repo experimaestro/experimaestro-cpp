@@ -37,7 +37,7 @@
 #include <csignal>
 #include <spdlog/fmt/fmt.h>
 
-// #include <xpm/json.hpp>
+#include <xpm/json.hpp>
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
 #include <xpm/rpc/configuration.hpp>
@@ -102,105 +102,14 @@ public:
   }
 };
 
-/// Handle a WebSocket connection.
-class WebSocketRequestHandler : public HTTPRequestHandler {
-public:
-  void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
-    try {
-      WebSocket ws(request, response);
-      LOGGER->info("WebSocket connection established.");
-      char buffer[32768];
-      int flags;
-      int n;
-      do {
-        LOGGER->info("Reading...\n");
-        n = ws.receiveFrame(buffer, sizeof(buffer), flags);
-        
-        LOGGER->info(Poco::format("Frame received (length=%d, flags=0x%x).", n,
-                                  unsigned(flags)));
-
-        if ((flags  & WebSocket::FRAME_OP_TEXT) && (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
-          if (n > 0) LOGGER->info("{}", std::string(buffer, n));
-        }
-        
-        // ws.sendFrame("Hello", 5);
-        // ws.sendFrame("Yop", 3);
-      } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) !=
-                            WebSocket::FRAME_OP_CLOSE);
-      LOGGER->info("WebSocket connection closed.");
-    } catch (WebSocketException &exc) {
-      LOGGER->warn(exc.message());
-      switch (exc.code()) {
-      case WebSocket::WS_ERR_HANDSHAKE_UNSUPPORTED_VERSION:
-        response.set("Sec-WebSocket-Version", WebSocket::WEBSOCKET_VERSION);
-        // fallthrough
-      case WebSocket::WS_ERR_NO_HANDSHAKE:
-      case WebSocket::WS_ERR_HANDSHAKE_NO_VERSION:
-      case WebSocket::WS_ERR_HANDSHAKE_NO_KEY:
-        response.setStatusAndReason(HTTPResponse::HTTP_BAD_REQUEST);
-        response.setContentLength(0);
-        response.send();
-        break;
-      case WebSocket::WS_ERR_PAYLOAD_TOO_BIG:
-        break;
-      }
-    }
-  }
-};
-
-class RequestHandlerFactory : public HTTPRequestHandlerFactory {
-public:
-  HTTPRequestHandler *createRequestHandler(const HTTPServerRequest &request) {
-    LOGGER->info("Request from " + request.clientAddress().toString() + ": " +
-                 request.getMethod() + " " + request.getURI() + " " +
-                 request.getVersion());
-
-    for (HTTPServerRequest::ConstIterator it = request.begin();
-         it != request.end(); ++it) {
-      LOGGER->info(it->first + ": " + it->second);
-    }
-
-    if (request.find("Upgrade") != request.end() &&
-        Poco::icompare(request["Upgrade"], "websocket") == 0) {
-      return new WebSocketRequestHandler;
-
-    } else
-      return new PageRequestHandler;
-  }
-};
-
 namespace {
-int DB_VERSION = 1;
+    static int DB_VERSION = 1;
 }
-
-int Server::serve(bool pidlocked) {
-  ConfigurationParameters parameters;
-  auto conf = parameters.serverConfiguration();
-  auto basepath = Poco::Path::forDirectory(conf.directory);
-  auto pidfile = Poco::File(basepath.resolve("server.pid"));
-
-  try {
-    if (!pidlocked) {
-      // --- Set lock file
-      try {
-        if (!pidfile.createFile()) {
-          LOGGER->error("Could not create the PID file {} - aborting",
-                        pidfile.path());
-          return 1;
-        }
-      } catch(...) {
-          LOGGER->error("Could not create the PID file {} - aborting",
-                pidfile.path());
-          return 1;
-
-      }
-
-      pidlocked = true;
-      {
-        Poco::FileOutputStream s(pidfile.path());
-        s << Poco::Process::id() << std::endl;
-      }
-    }
+/// Handle the communication with websockets
+class Store {
+  std::unique_ptr<Poco::Data::Session> session;
+public:
+  Store(Poco::Path basepath) {
 
     try {
       // --- SQLite connection
@@ -286,7 +195,135 @@ int Server::serve(bool pidlocked) {
 
     LOGGER->info("Database update to version {}", DB_VERSION);
 
+  }
+
+  nlohmann::json handle(nlohmann::json & message) {
+    return 1;
+  }
+
+};
+
+/// Handle a WebSocket connection.
+class WebSocketRequestHandler : public HTTPRequestHandler {
+public:
+  WebSocketRequestHandler(Store & store) : _store(store) {}
+
+  void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
+    try {
+      WebSocket ws(request, response);
+      LOGGER->info("WebSocket connection established.");
+      char buffer[32769];
+      int flags;
+      int n;
+      do {
+        LOGGER->info("Reading...\n");
+        n = ws.receiveFrame(buffer, sizeof(buffer)-1, flags);
+        
+        LOGGER->info(Poco::format("Frame received (length=%d, flags=0x%x).", n,
+                                  unsigned(flags)));
+
+        if ((flags  & WebSocket::FRAME_OP_TEXT) && (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
+          buffer[n] = 0;
+          auto request = nlohmann::json::parse(buffer);
+          auto answer = _store.handle(request);
+          if (!answer.is_null()) {
+            LOGGER->info("Sending answer {}", answer);
+            auto s = answer.dump();
+            ws.sendFrame(s.c_str(), s.size());
+          }
+        }
+        
+        // ws.sendFrame("Hello", 5);
+        // ws.sendFrame("Yop", 3);
+      } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) !=
+                            WebSocket::FRAME_OP_CLOSE);
+      LOGGER->info("WebSocket connection closed.");
+    } catch (WebSocketException &exc) {
+      LOGGER->warn(exc.message());
+      switch (exc.code()) {
+      case WebSocket::WS_ERR_HANDSHAKE_UNSUPPORTED_VERSION:
+        response.set("Sec-WebSocket-Version", WebSocket::WEBSOCKET_VERSION);
+        // fallthrough
+      case WebSocket::WS_ERR_NO_HANDSHAKE:
+      case WebSocket::WS_ERR_HANDSHAKE_NO_VERSION:
+      case WebSocket::WS_ERR_HANDSHAKE_NO_KEY:
+        response.setStatusAndReason(HTTPResponse::HTTP_BAD_REQUEST);
+        response.setContentLength(0);
+        response.send();
+        break;
+      case WebSocket::WS_ERR_PAYLOAD_TOO_BIG:
+        break;
+      }
+    } catch(std::exception & e) {
+        LOGGER->warn("Uncaught exception: {}", e.what());
+    } catch(...) {
+        LOGGER->warn("Uncaught exception");
+    }
+  }
+protected:
+  Store & _store;
+};
+
+class RequestHandlerFactory : public HTTPRequestHandlerFactory {
+public:
+  RequestHandlerFactory(Store & store) : _store(store) {
+  }
+
+  HTTPRequestHandler *createRequestHandler(const HTTPServerRequest &request) {
+    LOGGER->info("Request from " + request.clientAddress().toString() + ": " +
+                 request.getMethod() + " " + request.getURI() + " " +
+                 request.getVersion());
+
+    for (HTTPServerRequest::ConstIterator it = request.begin();
+         it != request.end(); ++it) {
+      LOGGER->info(it->first + ": " + it->second);
+    }
+
+    if (request.find("Upgrade") != request.end() &&
+        Poco::icompare(request["Upgrade"], "websocket") == 0) {
+      return new WebSocketRequestHandler(_store);
+
+    } else
+      return new PageRequestHandler;
+  }
+protected:
+  Store & _store;
+};
+
+
+
+int Server::serve(bool pidlocked) {
+  ConfigurationParameters parameters;
+  auto conf = parameters.serverConfiguration();
+  auto basepath = Poco::Path::forDirectory(conf.directory);
+  auto pidfile = Poco::File(basepath.resolve("server.pid"));
+
+  try {
+    if (!pidlocked) {
+      // --- Set lock file
+      try {
+        if (!pidfile.createFile()) {
+          LOGGER->error("Could not create the PID file {} - aborting",
+                        pidfile.path());
+          return 1;
+        }
+      } catch(...) {
+          LOGGER->error("Could not create the PID file {} - aborting",
+                pidfile.path());
+          return 1;
+
+      }
+
+      pidlocked = true;
+      {
+        Poco::FileOutputStream s(pidfile.path());
+        s << Poco::Process::id() << std::endl;
+      }
+    }
+
     // --- Start the web server
+
+    Store store(basepath);
 
     HTTPStreamFactory::registerFactory();
 
@@ -321,7 +358,7 @@ int Server::serve(bool pidlocked) {
     t_pServerParams->setMaxQueued(100);
     t_pServerParams->setThreadIdleTime(1000);
 
-    HTTPServer httpserver(new RequestHandlerFactory, svs, t_pServerParams);
+    HTTPServer httpserver(new RequestHandlerFactory(store), svs, t_pServerParams);
     httpserver.start();
     LOGGER->info("Started server on {}:{}", conf.host, conf.port);
     waitForTerminationRequest(); // wait for CTRL-C or kill
