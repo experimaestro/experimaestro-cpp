@@ -30,18 +30,18 @@
 #include <Poco/Net/SSLManager.h>
 #include <Poco/Net/SecureServerSocket.h>
 #include <Poco/Net/WebSocket.h>
+#include <Poco/Process.h>
 #include <Poco/URI.h>
 #include <Poco/Util/Application.h>
-#include <Poco/Process.h>
 
 #include <csignal>
 #include <spdlog/fmt/fmt.h>
 
 // #include <xpm/json.hpp>
 #include <__xpm/common.hpp>
+#include <xpm/connectors/local.hpp>
 #include <xpm/rpc/configuration.hpp>
 #include <xpm/rpc/server.hpp>
-#include <xpm/connectors/local.hpp>
 
 DEFINE_LOGGER("xpm");
 
@@ -109,16 +109,22 @@ public:
     try {
       WebSocket ws(request, response);
       LOGGER->info("WebSocket connection established.");
-      char buffer[1024];
+      char buffer[32768];
       int flags;
       int n;
       do {
         LOGGER->info("Reading...\n");
         n = ws.receiveFrame(buffer, sizeof(buffer), flags);
+        
         LOGGER->info(Poco::format("Frame received (length=%d, flags=0x%x).", n,
                                   unsigned(flags)));
-        ws.sendFrame("Hello", 5);
-        ws.sendFrame("Yop", 3);
+
+        if ((flags  & WebSocket::FRAME_OP_TEXT) && (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
+          if (n > 0) LOGGER->info("{}", std::string(buffer, n));
+        }
+        
+        // ws.sendFrame("Hello", 5);
+        // ws.sendFrame("Yop", 3);
       } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) !=
                             WebSocket::FRAME_OP_CLOSE);
       LOGGER->info("WebSocket connection closed.");
@@ -134,6 +140,8 @@ public:
         response.setStatusAndReason(HTTPResponse::HTTP_BAD_REQUEST);
         response.setContentLength(0);
         response.send();
+        break;
+      case WebSocket::WS_ERR_PAYLOAD_TOO_BIG:
         break;
       }
     }
@@ -174,9 +182,17 @@ int Server::serve(bool pidlocked) {
   try {
     if (!pidlocked) {
       // --- Set lock file
-      if (!pidfile.createFile()) {
-        LOGGER->error("Could not create the PID file {} - aborting", pidfile.path());
-        return 1;
+      try {
+        if (!pidfile.createFile()) {
+          LOGGER->error("Could not create the PID file {} - aborting",
+                        pidfile.path());
+          return 1;
+        }
+      } catch(...) {
+          LOGGER->error("Could not create the PID file {} - aborting",
+                pidfile.path());
+          return 1;
+
       }
 
       pidlocked = true;
@@ -192,6 +208,7 @@ int Server::serve(bool pidlocked) {
       using namespace Poco::Data::Keywords;
 
       auto sqlitepath = basepath.resolve("data.sqlite");
+      LOGGER->info("Opening database {}", sqlitepath.toString());
       Poco::Data::SQLite::Connector::registerConnector();
       session = std::make_unique<Poco::Data::Session>(
           "SQLite", sqlitepath.absolute().toString());
@@ -263,7 +280,7 @@ int Server::serve(bool pidlocked) {
       }
 
     } catch (Poco::Data::DataException &e) {
-      LOGGER->error("Erreur while updating database: {}", e.displayText());
+      LOGGER->error("Error while updating database: {}", e.displayText());
       throw;
     }
 
@@ -311,18 +328,16 @@ int Server::serve(bool pidlocked) {
     LOGGER->info("Shuting down server on {}:{}", conf.host, conf.port);
 
     httpserver.stop();
-    pidfile.remove(); 
-  } catch(...) {
+    pidfile.remove();
+  } catch (...) {
     if (pidlocked) {
-      pidfile.remove(); 
+      pidfile.remove();
     }
   }
   return Application::EXIT_OK;
 }
 
-void Server::start(bool locked) {
-  Server().serve(locked);
-}
+void Server::start(bool locked) { Server().serve(locked); }
 
 /**
  * Check the the server has started, and starts it if not.
@@ -332,11 +347,11 @@ void Server::client() {
   ConfigurationParameters parameters;
   auto conf = parameters.serverConfiguration();
 
-
   auto basepath = Poco::Path::forDirectory(conf.directory);
   auto pidfile = Poco::File(basepath.resolve("server.pid"));
   if (!pidfile.createFile()) {
-    LOGGER->error("Could not create the PID file {} - aborting", pidfile.path());
+    LOGGER->error("Could not create the PID file {} - aborting",
+                  pidfile.path());
     return;
   }
 
@@ -344,12 +359,11 @@ void Server::client() {
 
   // (2) Launch server
 
-
   auto builder = LocalConnector().processBuilder();
   builder->detach = true;
   builder->stdout = Redirect::file("");
   builder->stderr = Redirect::file("");
-  builder->command = { conf.experimaestro, "server" };
+  builder->command = {conf.experimaestro, "server"};
   builder->start();
 }
 
