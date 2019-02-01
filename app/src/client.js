@@ -2,10 +2,11 @@
 
 // Connects to the Websocket server
 
-export default class Client {
+class Client {
     ws: WebSocket;
 
     constructor() {
+        console.log("Connecting to websocket...");
         this.ws = new WebSocket("ws://localhost:12345");
         this.ws.addEventListener('open', this.open);        
         this.ws.addEventListener('close', this.close);        
@@ -15,13 +16,22 @@ export default class Client {
     open = () => {
         console.log("Websocket connection open", this.ws);
         this.ws.send(JSON.stringify({a: "Hello" }));
+        this.ws.send(JSON.stringify({a: "World" }));
     }
 
     close = () => {
         console.log("Websocket connection closed");
     }
 
-    message = (event: any) => {
+    message = (event: any) => {        
         console.log('Message from server ', event.data);
     }
+
+
+    /** Send without waiting for an answer */
+    send = (data: any) => {
+        // return this.ws.send(JSON.stringify(data));
+    }
 }
+
+export default new Client();
