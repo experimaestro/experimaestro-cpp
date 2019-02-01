@@ -132,7 +132,7 @@ std::string Type::toJson() const {
     }
 
     // Only output not required when needed
-    if (!arg.required() && !arg.defaultValue()) {
+    if ((!arg.required() && !arg.defaultValue()) || arg.constant()) {
       definition["required"] = false;
     }
 
@@ -142,6 +142,9 @@ std::string Type::toJson() const {
 
     if (arg.defaultValue()) {
       definition["default"] = arg.defaultValue()->toJson();
+    }
+    if (arg.constant()) {
+      definition["constant"] = arg.constant()->toJson();
     }
 
     if (definition.empty()) {

@@ -261,6 +261,9 @@ public:
   /// Copy constructor
   MapValue(MapValue const &);
 
+  /// Construct with type
+  MapValue(std::shared_ptr<Type> const &);
+
 
   virtual ~MapValue();
 
@@ -514,8 +517,14 @@ class Argument {
   Argument &required(bool required);
   bool required() const;
 
-  Argument &ignored(bool required);
+  Argument &ignored(bool ignored);
   bool ignored() const;
+  
+  /** True if the value is a constant
+   * Use default to set its value
+   */
+  std::shared_ptr<Value> constant() const;
+  Argument &constant(std::shared_ptr<Value> const &constantValue);
 
   Argument &defaultValue(std::shared_ptr<Value> const &defaultValue);
   std::shared_ptr<Value> defaultValue() const;
@@ -547,8 +556,11 @@ class Argument {
   /// Ignore
   bool _ignored;
 
-  /// Default value
-  std::shared_ptr<Value> _defaultValue;
+  /// Constant
+  bool _constant;
+
+  /// Default or constant value
+  std::shared_ptr<Value> _value;
 
   /// A generator
   std::shared_ptr<Generator> _generator;

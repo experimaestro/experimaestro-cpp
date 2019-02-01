@@ -552,6 +552,8 @@ ArrayValue::ArrayValue(ArrayValue const &other)
 //
 
 MapValue::MapValue() : _type(AnyType) {}
+MapValue::MapValue(ptr<Type> const &type) : _type(type) {}
+
 MapValue::~MapValue() {}
 
 ptr<Type> MapValue::type() const {
@@ -656,6 +658,12 @@ void MapValue::_generate(GeneratorContext &context) {
           auto value = argument.defaultValue()->copy();
           value->set(Flag::DEFAULT, true);
           value->set(Flag::IGNORE, argument.ignored());
+          set(argument.name(), value);
+        } else if (argument.constant()) {
+          LOGGER->debug("Setting constant value for {}...", argument.name());
+          auto value = argument.constant()->copy();
+          value->set(Flag::DEFAULT, false);
+          value->set(Flag::IGNORE, false);
           set(argument.name(), value);
         } else if (!argument.required()) {
           // Set value null
@@ -1019,7 +1027,7 @@ void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags, std::string 
 // ---
 
 
-Argument::Argument(std::string const &name) : _name(name), _type(AnyType), _required(true), _ignored(false), _generator(nullptr) {
+Argument::Argument(std::string const &name) : _name(name), _type(AnyType), _required(true), _ignored(false), _generator(nullptr), _constant(false) {
 }
 
 Argument::Argument() : Argument("") {
@@ -1047,6 +1055,16 @@ Argument &Argument::ignored(bool ignored) {
   return *this;
 }
 
+ptr<Value> Argument::constant() const { 
+  return _constant ? _value : nullptr; 
+}
+
+Argument &Argument::constant(ptr<Value> const &constant) {
+  _constant = (bool)constant;
+  _value = constant;
+  return *this;
+}
+
 
 const std::string &Argument::help() const {
   return _help;
@@ -1057,11 +1075,15 @@ Argument &Argument::help(const std::string &help) {
 }
 
 Argument &Argument::defaultValue(ptr<Value> const &defaultValue) {
-  _defaultValue = defaultValue;
+  _value = defaultValue;
   _required = false;
+  _constant = false;
   return *this;
 }
-ptr<Value> Argument::defaultValue() const { return _defaultValue; }
+ptr<Value> Argument::defaultValue() const { 
+  if (_constant) return nullptr;
+  return _value; 
+}
 
 ptr<Generator> Argument::generator() { return _generator; }
 ptr<Generator> const &Argument::generator() const { return _generator; }

@@ -78,3 +78,21 @@ TEST(Value, Immutable) {
   auto v1b = v1->get("b")->asScalar()->asInteger();
   EXPECT_NE(vb, v1b);
 }
+
+
+TEST(Value, constant) {
+  auto r = mkptr<CppRegister>();
+  
+  auto t = SimpleCppTypeBuilder("constant", r)
+    .argument<int>("a").constant(1);
+  
+
+  Workspace ws;
+  GeneratorContext context(ws);
+
+  auto v = mkptr<MapValue>(t.type);
+
+  v->generate(context);
+  auto a = v->get("a")->asScalar()->asInteger();
+  EXPECT_EQ(a, 1);
+}
