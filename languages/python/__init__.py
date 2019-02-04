@@ -13,6 +13,26 @@ from pathlib import Path as PPath
 from .experimaestro import *
 
 logger = logging.getLogger("xpm")
+modulepath = PPath(__file__).parent
+
+# --- Import C bindings
+
+from cffi import FFI
+import re
+
+ffi = FFI()
+with open(modulepath / "api.h", "r") as fp:
+    RE_SKIP = re.compile(r"""^\s*(?:#include|#ifn?def|#endif|#define|extern "C") .*""")
+    cdef = ""
+    for line in fp:
+        if not RE_SKIP.match(line):
+            cdef += line
+
+    ffi.cdef(cdef)
+
+print(modulepath / "libexperimaestro.so")
+lib = ffi.dlopen(str(modulepath / "libexperimaestro.so"))
+
 
 # --- Utilities and constants
 
@@ -530,6 +550,21 @@ class _Definitions:
 types = _Definitions(register.getType)
 tasks = _Definitions(register.getTask)
 
+class Workspace():
+    """An experimental workspace"""
+    def __init__(self, path):
+        # Initialize the base class
+        self.ptr = ffi.gc(lib.workspace_new(str(path).encode("utf-8")), lib.workspace_free)
+
+    def current(self):
+        """Set this workspace as being the default workspace for all the tasks"""
+        lib.workspace_current(self.ptr)
+
+    def experiment(self, name):
+        """Sets the current experiment name"""
+        lib.workspace_experiment(self.ptr, str(name).encode("utf-8"))
+
+Workspace.waitUntilTaskCompleted = lib.workspace_waitUntilTaskCompleted
 
 def experiment(path, name):
     """Defines an experiment
@@ -601,5 +636,5 @@ signal.signal(signal.SIGQUIT, handleKill)
 @atexit.register
 def handleExit():
     logger.info("End of script: waiting for jobs to be completed")
-    Workspace.waitUntilTaskCompleted()
+    lib.workspace_waitUntilTaskCompleted()
 
