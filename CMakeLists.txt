@@ -51,6 +51,9 @@ set(PUBLIC_HEADERS
 
         include/public/xpm/rpc/client.hpp
         include/public/xpm/rpc/jsonrpcclient.hpp
+        include/public/xpm/rpc/server.hpp
+        include/public/xpm/rpc/servercontext.hpp
+
 )
 
 set(PRIVATE_HEADERS
@@ -62,6 +65,9 @@ set(PRIVATE_HEADERS
 set(SOURCES
         # Include files
         ${PUBLIC_HEADERS} 
+        # Exclude from public to avoid SWIG recompilation
+        include/public/xpm/api.h
+
         ${PRIVATE_HEADERS}
 
         # Source files
@@ -95,6 +101,10 @@ set(SOURCES
         src/rpc/configuration.cpp
         src/rpc/client.cpp
         src/rpc/server.cpp
+        src/rpc/servercontext.cpp
+
+        # API
+        src/api.cpp
 )
         
 find_package (Threads)
@@ -240,6 +250,8 @@ if (true)
     install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+
+    install(FILES ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
