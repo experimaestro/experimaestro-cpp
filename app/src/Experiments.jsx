@@ -15,7 +15,6 @@ class Experiments extends Component<Props> {
     render() {
         let { experiment } = this.props;
         return <div>
-            <h2>Experiment "{experiment}"</h2>
             </div>;
     }
 }

@@ -9,18 +9,19 @@ import { type State } from './store';
 import Tasks from './Tasks'
 import Experiments from './Experiments'
 
-type StateProps = { connected: boolean }
+type StateProps = { 
+  connected: boolean,
+  experiment: string
+}
 type Props = StateProps;
 
 class App extends Component<Props> {
   render() {
-    let { connected } = this.props;
+    let { connected, experiment } = this.props;
     return (
-      <div className={`App ${connected ? "connected" : "not-connected"}`}>
+      <div>
         <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo"/>
-          <h1 className="App-title">Experimaestro</h1>
-          <h2>Experiment manager</h2>
+          <h1 className="App-title">Experimaestro {experiment ? " – " + experiment : ""}  <i className={`fab fa-staylinked ws-status ${connected ? "ws-link" : "ws-no-link" }`} /> </h1>
         </header>
         <Experiments/>
         <Tasks/>
@@ -29,5 +30,5 @@ class App extends Component<Props> {
   }
 }
 
-const mapStateToProps = (state: State) => ({ connected: state.connected })
+const mapStateToProps = (state: State) => ({ connected: state.connected, experiment: state.experiment })
 export default connect(mapStateToProps)(App);

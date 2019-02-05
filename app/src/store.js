@@ -14,14 +14,15 @@ type Experiment = {
 
 export type Job = {
     locator: string;
-    state: "running" | "done" | "error" | "waiting";
+    status: "running" | "done" | "error" | "waiting";
 
     start: string;
     end: string;
     submitted: string;
+    progress: number;
 }
 export type Jobs = {
-    byId: { string: Job },
+    byId: { [string]: Job },
     ids: Array<string>
 }
 
@@ -30,7 +31,7 @@ export type State = {
 
     experiment: ?string;
     jobs: Jobs,
-    experiments: {string: Experiment};
+    experiments: {[string]: Experiment};
 }
 
 
@@ -50,6 +51,28 @@ type Action =
 
 
 // --- Reducer
+
+// const fakeJobs = {
+//         byId: { 
+//             "1": {
+//                 locator: "/a/b/c1",
+//                 end: "",
+//                 start: "",
+//                 submitted: "",
+//                 status: "running",
+//                 progress: 0.2
+//             }, 
+//             "2": {
+//                 locator: "/a/b/c2",
+//                 end: "",
+//                 start: "",
+//                 submitted: "",
+//                 status: "error",
+//                 progress: 1
+//             }
+//         },
+//         ids: [ "1", "2" ]
+// }
 
 const initialState : State = {
     connected: false,

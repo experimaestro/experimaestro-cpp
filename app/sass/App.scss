@@ -1,0 +1,53 @@
+$fa-font-path: "fa-webfonts";
+
+@import '@fortawesome/fontawesome-free/scss/fontawesome';
+@import '@fortawesome/fontawesome-free/scss/regular';
+@import '@fortawesome/fontawesome-free/scss/brands';
+@import '@fortawesome/fontawesome-free/scss/solid';
+@import './jobs';
+
+body {
+    font-size: 1rem;
+}
+
+.App {
+    text-align: center;
+  }
+
+  .ws-status {
+    position: absolute;
+    right: 1rem;
+    font-size: 2rem;
+    &.ws-no-link {
+      color: red
+    }
+
+    &.ws-link {
+      color: green
+    }
+  }
+  
+  .App-header {
+    background-color: #222;
+    // height: 120px;
+    padding: 20px;
+    color: white;
+  }
+  
+  .App-header div {
+    display: inline-block;
+  }
+  
+  .App-title {
+    font-size: 1.5em;
+  }
+  
+  .App-intro {
+    font-size: large;
+  }
+  
+  @keyframes App-logo-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  

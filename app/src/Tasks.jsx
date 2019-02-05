@@ -14,10 +14,17 @@ type Props = StateProps;
 class Tasks extends Component<Props> {
     render() {
         let { jobs } = this.props;
-        return <div>{
+        return <div id="resources">{
             jobs.ids.map((jobId) => {
                 let job = jobs.byId[jobId];
-                return <div key={jobId}><span className={`status status-${job.status}`}>{job.status}</span>{job.locator}</div>
+                return <div className="resource" key={jobId}>
+                    {
+                        job.status == "running" ?
+                        <span className="status progressbar-container"><span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div></span> :
+                        <span className={`status status-${job.status}`}>{job.status}</span>
+                    }
+                    <span className="resource-id">{job.locator}</span>
+                </div>
             })
         }</div>;
     }

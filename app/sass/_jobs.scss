@@ -1,0 +1,270 @@
+body {
+    font-size: 12px;
+}
+
+dt {
+    color: blue;
+}
+
+dd {
+    padding-bottom: .5em;
+}
+
+#header {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+
+
+#header .title {
+    font-size: x-large;
+}
+
+#header .links {
+    margin: 1em;
+}
+
+/* Dialogs are hidden by default */
+.dialog {
+    display: none;
+}
+
+#connection {
+    right: 0;
+    top: 0;
+    position: fixed;
+}
+
+#clipboard dd:hover {
+    color: white;
+    background: black;
+    cursor: pointer;
+}
+
+/* Javascript documentation */
+#jsdocumentation dl {
+    padding-left: 0.5cm;
+}
+
+#jsdocumentation dt {
+    font-size: large;
+}
+
+/* Icons with an action */
+.fa.link {
+    padding: 3pt;
+    cursor: pointer;
+}
+
+.fa.link:hover {
+    background: black;
+    color: red;
+    padding: 3pt;
+    cursor: pointer;
+}
+
+/** Button lists */
+ul.buttons {
+    padding: 0;
+}
+
+.buttons > li {
+    display: inline-block;
+}
+
+#experiments svg {
+    display: none;
+}
+
+/** SVG graph */
+
+.link {
+    stroke: #ccc;
+}
+
+.node text {
+    pointer-events: none;
+    font: 10px sans-serif;
+}
+
+/*
+
+  Display of resources
+
+*/
+
+#experiment-timestamp {
+    display: inline-block;
+    color: #555;
+}
+
+.resources {
+    padding: 1ex;
+}
+
+#resources {
+    list-style-type: none;
+    padding: 5px;
+}
+
+
+#resources .resource-id {
+    padding: 3px;
+    margin-left: 0em;
+    margin-right: 0.5em;
+    background: #777;
+    color: white;
+    font-weight: bold;
+    border-radius: 3px;
+}
+
+
+#resources > div {
+    text-align: left;
+}
+
+#resources span.with-progressbar::before {
+    display: none;
+}
+
+#resources .resource .status {
+    position: relative;
+    display: inline-block;
+    font-variant-caps: all-small-caps;
+    font-weight: bold;
+    font-stretch: condensed;
+    font-size: 1.7ex;
+
+    margin-right: 0.5ex;
+    
+    width: 60px;
+    line-height: 2em;
+
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    
+    border-radius: 4px;
+    border: 1px solid #aaa;
+
+}
+
+.status.progressbar-container {
+    position: relative;
+    background: lightgreen;
+}
+
+.progressbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: green;
+}
+
+.status div.status-running {
+    color: white;
+    display: inline-block;
+    z-index: 1;
+}
+
+
+
+#resources div.resource-link {
+    display: inline-block;
+}
+
+#resources span.status-waiting {
+    background: orange;
+    color: white;
+}
+
+#resources span.status-ready {
+    background: yellow;
+    color: black;
+}
+
+#resources span.status-on_hold {
+    background: orangered;
+    color: white;
+}
+
+
+#resources span.status-done {
+    background: darkgreen;
+    color: white;
+}
+
+#resources span.status-error {
+    background: red;
+    color: white;
+}
+
+
+
+/* Restart */
+
+#resources .resource-actions > div.actions {
+    position: absolute;
+    background: white;
+    display: none;
+    transition: 5s ease-out;
+}
+
+#resources .resource-actions:hover > div.actions {
+    display: inline-block;
+    padding: 2px;
+    border: 1px solid black;
+    transition: 1s ease-out;
+}
+
+#resources .resource-actions i.fa {
+    display: none;
+    padding: 2px;
+}
+
+#resources .resource-actions i.fa {
+    display:  inline;
+}
+
+#resources .resource-actions i.fa[name="restart"] {
+    display: none;
+}
+
+#resources .resource-actions i.fa[name^="fileview"] {
+    display: none;
+}
+
+#resources .resource-actions i.fa[name="kill"] {
+    display: none;
+}
+
+
+#resources span.status-running .resource-actions i.fa[name="kill"] {
+    display: inline;
+}
+#resources span.status-on_hold .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+#resources span.status-error .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+#resources span.status-done .resource-actions i.fa[name="restart"] {
+    display: inline;
+}
+
+#resources span.status-running i.fa[name^="fileview"],
+#resources span.status-done i.fa[name^="fileview"],
+#resources span.status-error i.fa[name^="fileview"] {
+    display: inline;
+}
+
+/* Delete */
+
+#resources span.status-done .resource-actions:hover i.fa[name="delete"] {
+    display: none;
+}
+
