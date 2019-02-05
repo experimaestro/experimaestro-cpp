@@ -550,6 +550,18 @@ class _Definitions:
 types = _Definitions(register.getType)
 tasks = _Definitions(register.getTask)
 
+
+EXCEPTIONS = {
+    lib.ERROR_RUNTIME: RuntimeError
+}
+
+def checkexception():
+    code = lib.lasterror_code()
+    if code != lib.ERROR_NONE:
+        raise EXCEPTIONS.get(code, Exception)(ffi.string(lib.lasterror_message()))
+def cstr(s):
+    return str(s).encode("utf-8")
+
 class Workspace():
     """An experimental workspace"""
     def __init__(self, path):
@@ -562,9 +574,14 @@ class Workspace():
 
     def experiment(self, name):
         """Sets the current experiment name"""
-        lib.workspace_experiment(self.ptr, str(name).encode("utf-8"))
+        lib.workspace_experiment(self.ptr, cstr(name))
+
+    def server(self, port: int):
+        lib.workspace_server(self.ptr, port, cstr(modulepath / "htdocs"))
+        checkexception()
 
 Workspace.waitUntilTaskCompleted = lib.workspace_waitUntilTaskCompleted
+workspace = None
 
 def experiment(path, name):
     """Defines an experiment
@@ -572,6 +589,7 @@ def experiment(path, name):
     :param path: The working directory for the experiment
     :param name: The name of the experiment
     """
+    global workspace
     if isinstance(path, PPath):
         path = path.absolute()
     workspace = Workspace(str(path))

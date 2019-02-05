@@ -4,6 +4,14 @@
 #include <xpm/workspace.hpp>
 
 using xpm::mkptr;
+namespace {
+    std::string lasterror_string;
+}
+
+#define XPM_CATCH_BLOCK \
+    catch(std::runtime_error &e) { lasterror = ERROR_RUNTIME; lasterror_string = e.what();  return; } \
+    catch(std::exception &e) { lasterror = ERROR_GENERIC; lasterror_string = e.what();  return; } \
+    catch(...) { lasterror = ERROR_UNKNOWN;  lasterror_string = "Unknown exception"; return; }
 
 template<class T, class U, class... Args> 
 inline U* mkcptr(Args&&... args) { 
@@ -28,6 +36,16 @@ template<class T, class U> void freecptr(U *c_ptr) {
 
 extern "C" {
     #include <xpm/api.h>
+    
+    Error lasterror;
+
+    // Error lasterror;
+    const char * lasterror_message() {
+        return lasterror_string.c_str();
+    }
+    enum Error lasterror_code() {
+        return lasterror;
+    }
 
     void workspace_free(Workspace *c_ws) {
         freecptr<xpm::Workspace, Workspace>(c_ws);
@@ -43,7 +61,12 @@ extern "C" {
     void workspace_experiment(Workspace *c_ws, CString path) {
         ref<xpm::Workspace>(c_ws).experiment(std::string(path));
     }
-
+    void workspace_server(Workspace *c_ws, int port, CString htdocs) {
+        try { 
+            ref<xpm::Workspace>(c_ws).server(port, std::string(htdocs)); 
+            lasterror = ERROR_NONE;
+        } XPM_CATCH_BLOCK
+    }   
 
     void workspace_waitUntilTaskCompleted() {
         xpm::Workspace::waitUntilTaskCompleted();

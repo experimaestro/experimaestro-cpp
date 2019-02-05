@@ -29,6 +29,11 @@ struct JobPriorityComparator;
 class CounterDependency;
 class Lock;
 
+namespace rpc {
+ class ExperimentServerContext;
+ class Server;
+} //rpc
+
 typedef std::uint64_t ResourceId;
 
 enum class DependencyStatus {
@@ -207,7 +212,7 @@ public:
   void addDependency(std::shared_ptr<Dependency> const & dependency);
 
   /// The locator
-  Path const & locator() { return _locator; }
+  Path const & locator() const { return _locator; }
 
   /// Returns true if the job is ready to run
   bool ready() const;
@@ -355,6 +360,9 @@ public:
   /// Notify that a job finished
   void jobFinished(Job const &job);
 
+  /// Server
+  void server(int port, std::string const & htdocs);
+
 private:
   /// Working directory path
   Path _path;
@@ -373,6 +381,10 @@ private:
 
   /// The variables for this workspace
   std::map<std::string, std::string> _variables;
+
+  /// The server context, if any
+  std::shared_ptr<rpc::ExperimentServerContext> _serverContext;
+  std::shared_ptr<rpc::Server> _server;
 };
 
 

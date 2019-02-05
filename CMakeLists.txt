@@ -27,9 +27,7 @@ add_definitions("-Wall -Werror=return-type")
 
 # Enables PIC (position independent code)
 enable_testing()
-
-
-set(PUBLIC_HEADERS
+set(SWIG_PUBLIC_HEADERS
         include/public/xpm/commandline.hpp
         include/public/xpm/cpp.hpp 
         include/public/xpm/filesystem.hpp
@@ -49,11 +47,15 @@ set(PUBLIC_HEADERS
         include/public/xpm/launchers/launchers.hpp
         include/public/xpm/launchers/oar.hpp
 
-        include/public/xpm/rpc/client.hpp
-        include/public/xpm/rpc/jsonrpcclient.hpp
-        include/public/xpm/rpc/server.hpp
-        include/public/xpm/rpc/servercontext.hpp
+)
 
+set(PUBLIC_HEADERS
+    ${SWIG_PUBLIC_HEADERS}
+    
+    include/public/xpm/rpc/client.hpp
+    include/public/xpm/rpc/jsonrpcclient.hpp
+    include/public/xpm/rpc/server.hpp
+    include/public/xpm/rpc/servercontext.hpp
 )
 
 set(PRIVATE_HEADERS
@@ -169,7 +171,7 @@ add_custom_command(
         COMMAND touch xml/index.xml # Necessary when doxygen does not update the documentation
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating XML documentation with Doxygen" VERBATIM
-        DEPENDS ${PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+        DEPENDS ${SWIG_PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
 )
 add_custom_target(documentation_index DEPENDS xml/index.xml)
 
@@ -252,6 +254,7 @@ if (true)
     install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 
     install(FILES ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/app/build/ COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION}/htdocs)
     add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)

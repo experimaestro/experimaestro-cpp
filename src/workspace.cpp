@@ -8,6 +8,9 @@
 #include <xpm/launchers/launchers.hpp>
 #include <xpm/connectors/connectors.hpp>
 
+#include <xpm/rpc/servercontext.hpp>
+#include <xpm/rpc/server.hpp>
+
 #include <spdlog/fmt/fmt.h>
 #include <__xpm/common.hpp>
 #include <__xpm/scriptbuilder.hpp>
@@ -485,7 +488,12 @@ void Workspace::submit(ptr<Job> const &job) {
       dependency->_origin->addDependent(dependency);
       dependency->check();
     }
+  }
 
+  if (_serverContext) {
+    _serverContext->forEach([job](auto & l) {
+      l.jobSubmitted(*job);
+    });
   }
 
   // Check if ready
@@ -584,6 +592,16 @@ void Workspace::waitUntilTaskCompleted() {
     }
   } while (count > 0 && !exitSignal);
  
+}
+
+void Workspace::server(int port, std::string const & htdocs) {
+  if (_serverContext) throw new std::runtime_error("Server already started");
+
+  LOGGER->info("Trying to run server on http://{}:{}", "127.0.0.1", port);
+  _serverContext = mkptr<rpc::ExperimentServerContext>(*this, "127.0.0.1", port, htdocs);
+  _server = mkptr<rpc::Server>();
+  _server->start(*_serverContext, false);
+  LOGGER->info("Started server http://{}:{}", "127.0.0.1", port);
 }
 
 

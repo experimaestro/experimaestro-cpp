@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "flow-bin": "^0.92.0",
+    "http-proxy-middleware": "^0.19.1",
     "immer": "^1.12.1",
     "react": "^16.5.1",
     "react-dom": "^16.5.1",

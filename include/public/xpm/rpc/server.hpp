@@ -5,26 +5,49 @@
 #ifndef PROJECT_RPC_SERVER_H
 #define PROJECT_RPC_SERVER_H
 
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <memory>
 
+#include <Poco/Util/ServerApplication.h>
 #include <xpm/json.hpp>
 #include <xpm/rpc/jsonrpcclient.hpp>
-#include <Poco/Util/ServerApplication.h>
 
-namespace Poco::Data { class Session; }
+namespace Poco {
+  class File;
+}
+namespace Poco::Data {
+  class Session;
+}
+namespace Poco::Net {
+  class HTTPServer;
+}
 
 namespace xpm::rpc {
+
+class ServerContext;
+
 class Server : public Poco::Util::ServerApplication {
-  int serve(bool locked);
+  std::unique_ptr<Poco::Net::HTTPServer> _httpserver;
+  std::unique_ptr<Poco::File> _pidfile;
 public:
+  /// Close the server
+  Server();
+  virtual ~Server();
+
   /// Get a client handle
   static void client();
 
   /// Start the server
-  static void start(bool locked);
-};
-}
+  void serve(ServerContext & context, bool locked);
 
-#endif //PROJECT_RPC_SERVER_H
+  /// Start the server and wait for termination
+  void start(ServerContext & context, bool locked);
+
+  /// Close
+  void terminate();
+};
+
+} // namespace xpm::rpc
+
+#endif // PROJECT_RPC_SERVER_H

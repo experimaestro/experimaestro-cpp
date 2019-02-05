@@ -1,15 +1,11 @@
 #include <algorithm>
 
 // --- File
+
 #include <Poco/File.h>
 #include <Poco/FileStream.h>
 #include <Poco/StreamCopier.h>
 #include <Poco/Util/ServerApplication.h>
-
-// --- SQL
-
-#include <Poco/Data/SQLite/Connector.h>
-#include <Poco/Data/Session.h>
 
 // --- Net
 #include <Poco/Logger.h>
@@ -37,13 +33,16 @@
 #include <csignal>
 #include <spdlog/fmt/fmt.h>
 
-#include <xpm/json.hpp>
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
+#include <xpm/json.hpp>
+#include <xpm/rpc/configuration.hpp>
+#include <xpm/workspace.hpp>
 #include <xpm/rpc/configuration.hpp>
 #include <xpm/rpc/server.hpp>
+#include <xpm/rpc/servercontext.hpp>
 
-DEFINE_LOGGER("xpm");
+DEFINE_LOGGER("xpm.rpc");
 
 namespace xpm::rpc {
 
@@ -56,12 +55,14 @@ using Poco::Util::Application;
 
 class PageRequestHandler : public HTTPRequestHandler {
 public:
+  PageRequestHandler(ServerContext &context) : _context(context) {}
+
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
     Poco::URI uri(request.getURI());
-
-    Poco::Path path(Poco::Path("app/"), Poco::Path(uri.getPath().substr(1)));
-    LOGGER->info("Path is {}", path.absolute().toString());
+    Poco::Path base(_context.htdocs() + "/");
+    Poco::Path path(base, Poco::Path(uri.getPath().substr(1)));
     Poco::File file(path);
+    LOGGER->info("Path is {} [base {}]", path.absolute().toString(), base.toString());
 
     if (!file.exists()) {
       LOGGER->info("Page does not exist {}", request.getURI());
@@ -100,141 +101,45 @@ public:
     std::ostream &ostr = response.send();
     Poco::StreamCopier::copyStream(s, ostr);
   }
-};
-
-namespace {
-    static int DB_VERSION = 1;
-}
-/// Handle the communication with websockets
-class Store {
-  std::unique_ptr<Poco::Data::Session> session;
-public:
-  Store(Poco::Path basepath) {
-
-    try {
-      // --- SQLite connection
-
-      using namespace Poco::Data::Keywords;
-
-      auto sqlitepath = basepath.resolve("data.sqlite");
-      LOGGER->info("Opening database {}", sqlitepath.toString());
-      Poco::Data::SQLite::Connector::registerConnector();
-      session = std::make_unique<Poco::Data::Session>(
-          "SQLite", sqlitepath.absolute().toString());
-
-      *session << "CREATE TABLE IF NOT EXISTS Config (key VARCHAR(30) PRIMARY "
-                  "KEY, value VARCHAR NOT NULL)",
-          now;
-
-      Poco::Data::Statement select(*session);
-      int version = 0;
-      *session << "PRAGMA foreign_keys = ON", now;
-      select << "SELECT Value FROM Config WHERE key='version'", into(version),
-          now;
-      LOGGER->info("Database version is {}", version);
-
-      switch (version) {
-      case 0: {
-        // New database
-        *session << R"SQL(
-          CREATE TABLE IF NOT EXISTS Auth (
-            token VARCHAR(255) PRIMARY KEY, 
-            validity DATETIME NOT NULL
-          );
-          
-          CREATE TABLE IF NOT EXISTS Experiment (
-            id INTEGER PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            CONSTRAINT unique_experiment UNIQUE(name, timestamp)
-          );
-
-          CREATE TABLE IF NOT EXISTS Task (
-            id INTEGER PRIMARY KEY,
-            experiment_id INTEGER NOT NULL,
-            CONSTRAINT valid_experiment FOREIGN KEY (experiment_id) REFERENCES Experiment(id)
-          );
-
-          CREATE TABLE IF NOT EXISTS Tag (
-            task_id INTEGER NOT NULL REFERENCES Task(id),
-            key VARCHAR(255) NOT NULL,
-            value JSON NOT NULL,
-            CONSTRAINT tag_reference PRIMARY KEY(task_id, key)
-          );
-
-          CREATE TABLE IF NOT EXISTS Token (
-            id INTEGER NOT NULL PRIMARY KEY,
-            key VARCHAR(255) NOT NULL,
-            capacity int NOT NULL,
-            value int NOT NULL,
-            CONSTRAINT unique_token UNIQUE(key)
-          );
-
-          CREATE TABLE IF NOT EXISTS LockedToken (
-            token_id INTEGER NOT NULL REFERENCES Token(id),
-            task_id INTEGER NOT NULL REFERENCES Task(id),
-            value INTEGER NOT NULL,
-            CONSTRAINT unique_lockedtoken UNIQUE(token_id, task_id)
-          );
-
-        )SQL",
-            now;
-
-        // Poco::Data::Statement update(*session);
-        *session << "INSERT OR REPLACE INTO Config(key, value) VALUES "
-                    "('version', ?)",
-            use(DB_VERSION), now;
-        break;
-      }
-      }
-
-    } catch (Poco::Data::DataException &e) {
-      LOGGER->error("Error while updating database: {}", e.displayText());
-      throw;
-    }
-
-    LOGGER->info("Database update to version {}", DB_VERSION);
-
-  }
-
-  nlohmann::json handle(nlohmann::json & message) {
-    return 1;
-  }
+protected:
+  ServerContext &_context;
 
 };
 
 /// Handle a WebSocket connection.
-class WebSocketRequestHandler : public HTTPRequestHandler {
+class WebSocketRequestHandler : public HTTPRequestHandler, public ServerContextListener {
 public:
-  WebSocketRequestHandler(Store & store) : _store(store) {}
+  WebSocketRequestHandler(ServerContext &context) : _context(context) {}
+
+  std::unique_ptr<WebSocket> _ws;
 
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
+    _context.add(this);
     try {
-      WebSocket ws(request, response);
+      _ws = std::unique_ptr<WebSocket>(new WebSocket(request, response));
       LOGGER->info("WebSocket connection established.");
       char buffer[32769];
       int flags;
       int n;
       do {
         LOGGER->info("Reading...\n");
-        n = ws.receiveFrame(buffer, sizeof(buffer)-1, flags);
-        
+        n = _ws->receiveFrame(buffer, sizeof(buffer) - 1, flags);
+
         LOGGER->info(Poco::format("Frame received (length=%d, flags=0x%x).", n,
                                   unsigned(flags)));
 
-        if ((flags  & WebSocket::FRAME_OP_TEXT) && (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
+        if ((flags & WebSocket::FRAME_OP_TEXT) &&
+            (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
           buffer[n] = 0;
           auto request = nlohmann::json::parse(buffer);
-          auto answer = _store.handle(request);
+          auto answer = _context.handle(request);
           if (!answer.is_null()) {
             LOGGER->info("Sending answer {}", answer);
             auto s = answer.dump();
-            ws.sendFrame(s.c_str(), s.size());
+            _ws->sendFrame(s.c_str(), s.size());
           }
         }
-        
-        // ws.sendFrame("Hello", 5);
-        // ws.sendFrame("Yop", 3);
+
       } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) !=
                             WebSocket::FRAME_OP_CLOSE);
       LOGGER->info("WebSocket connection closed.");
@@ -254,20 +159,35 @@ public:
       case WebSocket::WS_ERR_PAYLOAD_TOO_BIG:
         break;
       }
-    } catch(std::exception & e) {
-        LOGGER->warn("Uncaught exception: {}", e.what());
-    } catch(...) {
-        LOGGER->warn("Uncaught exception");
+    } catch (std::exception &e) {
+      LOGGER->warn("Uncaught exception: {}", e.what());
+    } catch (...) {
+      LOGGER->warn("Uncaught exception");
+    }
+
+    _context.remove(this);
+  }
+
+  void jobSubmitted(xpm::Job const & job) override {
+    if (_ws) {
+      // nlohmann::json j, payload;
+      // payload["locator"] = job.locator().toString();
+      // j["action"] = "job.new";
+      // j["payload"] = payload;
+      nlohmann::json j = { { "action", "job.new" }, { "payload", { "locator", job.locator().toString() }} };
+      auto s = j.dump();
+      _ws->sendFrame(s.c_str(), s.size());
     }
   }
+
+
 protected:
-  Store & _store;
+  ServerContext &_context;
 };
 
 class RequestHandlerFactory : public HTTPRequestHandlerFactory {
 public:
-  RequestHandlerFactory(Store & store) : _store(store) {
-  }
+  RequestHandlerFactory(ServerContext &context) : _context(context) {}
 
   HTTPRequestHandler *createRequestHandler(const HTTPServerRequest &request) {
     LOGGER->info("Request from " + request.clientAddress().toString() + ": " +
@@ -281,49 +201,43 @@ public:
 
     if (request.find("Upgrade") != request.end() &&
         Poco::icompare(request["Upgrade"], "websocket") == 0) {
-      return new WebSocketRequestHandler(_store);
+      return new WebSocketRequestHandler(_context);
 
     } else
-      return new PageRequestHandler;
+      return new PageRequestHandler(_context);
   }
+
 protected:
-  Store & _store;
+  ServerContext &_context;
 };
 
-
-
-int Server::serve(bool pidlocked) {
-  ConfigurationParameters parameters;
-  auto conf = parameters.serverConfiguration();
-  auto basepath = Poco::Path::forDirectory(conf.directory);
-  auto pidfile = Poco::File(basepath.resolve("server.pid"));
+void Server::start(ServerContext &context, bool pidlocked) {
+  _pidfile = pidlocked ? context.pidFile() : nullptr;
 
   try {
-    if (!pidlocked) {
+    if (_pidfile) {
       // --- Set lock file
       try {
-        if (!pidfile.createFile()) {
-          LOGGER->error("Could not create the PID file {} - aborting",
-                        pidfile.path());
-          return 1;
-        }
-      } catch(...) {
-          LOGGER->error("Could not create the PID file {} - aborting",
-                pidfile.path());
-          return 1;
+        if (!_pidfile->createFile()) {
+          throw std::runtime_error(fmt::format(
+              "Could not create the PID file {} - aborting", _pidfile->path()));
 
+        }
+      } catch (...) {
+        LOGGER->error("Could not create the PID file {} - aborting",
+                      _pidfile->path());
+        throw std::runtime_error(fmt::format(
+            "Could not create the PID file {} - aborting", _pidfile->path()));
       }
 
       pidlocked = true;
       {
-        Poco::FileOutputStream s(pidfile.path());
+        Poco::FileOutputStream s(_pidfile->path());
         s << Poco::Process::id() << std::endl;
       }
     }
 
     // --- Start the web server
-
-    Store store(basepath);
 
     HTTPStreamFactory::registerFactory();
 
@@ -348,7 +262,7 @@ int Server::serve(bool pidlocked) {
 
     // --- END IF SSL
 
-    SocketAddress t_osocketaddr(conf.host, conf.port);
+    SocketAddress t_osocketaddr(context.host(), context.port());
     // SecureServerSocket svs(t_osocketaddr, 64, pContext);
     ServerSocket svs(t_osocketaddr);
 
@@ -358,23 +272,41 @@ int Server::serve(bool pidlocked) {
     t_pServerParams->setMaxQueued(100);
     t_pServerParams->setThreadIdleTime(1000);
 
-    HTTPServer httpserver(new RequestHandlerFactory(store), svs, t_pServerParams);
-    httpserver.start();
-    LOGGER->info("Started server on {}:{}", conf.host, conf.port);
-    waitForTerminationRequest(); // wait for CTRL-C or kill
-    LOGGER->info("Shuting down server on {}:{}", conf.host, conf.port);
+    _httpserver = std::unique_ptr<HTTPServer>(new HTTPServer(
+        new RequestHandlerFactory(context), svs, t_pServerParams));
+    _httpserver->start();
+    LOGGER->info("Started server on {}:{}", context.host(), context.port());
 
-    httpserver.stop();
-    pidfile.remove();
   } catch (...) {
-    if (pidlocked) {
-      pidfile.remove();
+    if (_pidfile) {
+      _pidfile->remove();
     }
+    throw;
   }
-  return Application::EXIT_OK;
 }
 
-void Server::start(bool locked) { Server().serve(locked); }
+void Server::terminate() {
+  LOGGER->info("Shuting down server");
+  _httpserver->stop();
+  _httpserver = nullptr;
+
+  if (_pidfile) {
+    _pidfile->remove();
+    _pidfile = nullptr;
+  }
+}
+
+void Server::serve(ServerContext &context, bool pidlocked) {
+  start(context, pidlocked);
+  Poco::Util::ServerApplication::waitForTerminationRequest(); // wait for CTRL-C
+                                                              // or kill
+  terminate();
+}
+Server::Server() { 
+}
+Server::~Server() { 
+  terminate(); 
+}
 
 /**
  * Check the the server has started, and starts it if not.
