@@ -10,6 +10,7 @@
 #include <xpm/rpc/server.hpp>
 #include <xpm/rpc/client.hpp>
 #include <xpm/common.hpp>
+#include <xpm/rpc/servercontext.hpp>
 
 #include <__xpm/CLI11.hpp>
 #include <__xpm/common.hpp>
@@ -35,7 +36,8 @@ int main(int argc, char const **argv) {
   _generate->add_flag("--locked", _generate_locked, "Use this flag when the lock has been already taken [internal]");
   _generate->set_callback([&]() {  
     LOGGER->info("Starting server");
-    rpc::Server::start(_generate_locked > 0);
+    rpc::MainServerContext context;
+    rpc::Server::start(context, _generate_locked > 0);
   });
 
   auto _client = app.add_subcommand("client", "Runs an experimaestro client (debugging)");
