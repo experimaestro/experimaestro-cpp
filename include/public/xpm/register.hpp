@@ -45,7 +45,7 @@ class Register {
    * @param argc
    * @param argv
    */
-  void parse(int argc, const char **argv);
+  bool parse(int argc, const char **argv);
 
   /// Register a new task
   void addTask(std::shared_ptr<Task> const &task);

@@ -20,9 +20,6 @@ template<class T> struct CppType;
 /// Register for C++ projects
 class CppRegister : public Register {
 public:
-  /// Run task
-  virtual void runTask(std::shared_ptr<Task> const & task, std::shared_ptr<Value> const & sv) override;
-
   /// Create object
   virtual std::shared_ptr<Object> createObject(std::shared_ptr<Value> const & sv) override;
 
@@ -56,6 +53,9 @@ inline void assignValue(Value::Ptr const &sv, int &x) {
 }
 inline void assignValue(Value::Ptr const &sv, long &x) {
   x = std::dynamic_pointer_cast<ScalarValue>(sv)->asInteger();
+}
+inline void assignValue(Value::Ptr const &sv, bool &x) {
+  x = std::dynamic_pointer_cast<ScalarValue>(sv)->asBoolean();
 }
 inline void assignValue(Value::Ptr const &sv, Path &s) {
   s = std::dynamic_pointer_cast<ScalarValue>(sv)->asPath();
@@ -260,8 +260,9 @@ template <typename _Type, typename _Task> struct TaskBuilder {
     auto command = std::make_shared<Command>();
     command->add(EXECUTABLE_PATH);
     command->add(std::make_shared<CommandString>("run"));
-    command->add(std::make_shared<CommandString>(tname));
+    command->add(std::make_shared<CommandString>("--json-file"));
     command->add(std::make_shared<CommandParameters>());
+    command->add(std::make_shared<CommandString>(tname));
     commandLine->add(command);
     task->commandline(commandLine);
     currentRegister()->addTask(task);
