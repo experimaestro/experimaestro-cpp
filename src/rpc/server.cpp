@@ -106,17 +106,40 @@ protected:
 
 };
 
+Emitter::~Emitter() {}
+
+struct WebSocketEmitter : public Emitter {
+  std::weak_ptr<WebSocket> ws;
+
+  WebSocketEmitter(std::weak_ptr<WebSocket> ws) : ws(ws) {}
+
+  virtual bool active() override {
+    return !ws.expired();
+  }
+
+  virtual void send(nlohmann::json const & j) override { 
+    auto s = j.dump();
+    if (auto _ws = ws.lock()) {
+      auto s = j.dump();
+      _ws->sendFrame(s.c_str(), s.size());
+    } else {
+      // TODO: handle errors?
+    }
+  }
+};
+
 /// Handle a WebSocket connection.
 class WebSocketRequestHandler : public HTTPRequestHandler, public ServerContextListener {
 public:
   WebSocketRequestHandler(ServerContext &context) : _context(context) {}
 
-  std::unique_ptr<WebSocket> _ws;
+  std::shared_ptr<WebSocket> _ws;
 
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
     _context.add(this);
     try {
-      _ws = std::unique_ptr<WebSocket>(new WebSocket(request, response));
+      _ws = mkptr<WebSocket>(request, response);
+      auto emitter = mkptr<WebSocketEmitter>(_ws);
       LOGGER->info("WebSocket connection established.");
       char buffer[32769];
       int flags;
@@ -132,7 +155,7 @@ public:
             (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
           buffer[n] = 0;
           auto request = nlohmann::json::parse(buffer);
-          auto answer = _context.handle(request);
+          auto answer = _context.handle(emitter, request);
           if (!answer.is_null()) {
             LOGGER->info("Sending answer {}", answer);
             auto s = answer.dump();
@@ -142,6 +165,7 @@ public:
 
       } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) !=
                             WebSocket::FRAME_OP_CLOSE);
+      _ws = 0;
       LOGGER->info("WebSocket connection closed.");
     } catch (WebSocketException &exc) {
       LOGGER->warn(exc.message());
@@ -168,18 +192,24 @@ public:
     _context.remove(this);
   }
 
-  void jobSubmitted(xpm::Job const & job) override {
-    if (_ws) {
-      // nlohmann::json j, payload;
-      // payload["locator"] = job.locator().toString();
-      // j["action"] = "job.new";
-      // j["payload"] = payload;
-      nlohmann::json j = { { "action", "job.new" }, { "payload", { "locator", job.locator().toString() }} };
+  virtual void send(nlohmann::json const & j) { 
       auto s = j.dump();
       _ws->sendFrame(s.c_str(), s.size());
+  }
+
+  void jobSubmitted(xpm::Job const & job) override {
+    if (_ws) {
+      nlohmann::json j = { { "action", "JOB_UPDATE" }, { "payload", job.getJsonState() } };
+      send(j);
     }
   }
 
+  void jobChanged(xpm::Job const & job) override {
+    if (_ws) {
+      nlohmann::json j = { { "action", "JOB_UPDATE" }, { "payload", { "locator", job.getJsonState() }} };
+      send(j);
+    }
+  }
 
 protected:
   ServerContext &_context;

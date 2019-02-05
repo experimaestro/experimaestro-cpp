@@ -69,7 +69,11 @@ inline void assignValue(Value::Ptr const &sv, Path &s) {
 template <typename T>
 inline void assignValue(xpm::Value::Ptr const &value,
                         std::shared_ptr<T> &p) {
-  
+
+  if (value->isScalar() && value->asScalar()->valueType() == ScalarType::NONE) {
+    // Null value
+    return;
+  }
   auto object = value->asMap()->object();                        
   p = std::dynamic_pointer_cast<T>(object);
 

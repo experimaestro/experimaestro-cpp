@@ -254,6 +254,17 @@ nlohmann::json Job::toJson() const  {
 
 JobState Job::state() const { return _state; }
 
+nlohmann::json Job::getJsonState() const {
+  nlohmann::json payload = {
+    { "locator", _locator.toString() },
+    { "status", state() },
+    { "start", startTime() },
+    { "end", endTime() },
+    { "submitted", submissionTime() },
+    { "status", state() },
+  };
+  return payload;
+}
 bool Job::ready() const { return _unsatisfied == 0; }
 
 void Job::dependencyChanged(Dependency &dependency, DependencyStatus from, DependencyStatus to) {
@@ -603,6 +614,19 @@ void Workspace::server(int port, std::string const & htdocs) {
   _server->start(*_serverContext, false);
   LOGGER->info("Started server http://{}:{}", "127.0.0.1", port);
 }
+
+void Workspace::refresh(xpm::rpc::Emitter & emitter) {
+  emitter.send({ {"type", "CLEAN_INFORMATION"} });
+  emitter.send({ {"type", "EXPERIMENT_ADD"}, { "payload", {
+    { "name", _experiment }
+  }}});
+  emitter.send({ {"type", "EXPERIMENT_SET_MAIN"}, { "payload", _experiment } });
+
+  for(auto entry: _jobs) {
+    emitter.send({ {"type", "JOB_UPDATE"}, { "payload", entry.second->getJsonState() } });
+  }
+}
+
 
 
 } // namespace xpm

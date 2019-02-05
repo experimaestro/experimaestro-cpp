@@ -32,6 +32,7 @@ class Lock;
 namespace rpc {
  class ExperimentServerContext;
  class Server;
+ struct Emitter;
 } //rpc
 
 typedef std::uint64_t ResourceId;
@@ -113,6 +114,10 @@ public:
 
   /// Returns the resource as JSON (to include in job parameters)
   virtual nlohmann::json toJson() const { return nullptr; }
+
+  /// Returns a JSON state
+  virtual nlohmann::json getJsonState() const { return nullptr; };
+
 protected:
   /// Resource that depend on this one to be completed
   std::vector<std::weak_ptr<Dependency>> _dependents;
@@ -193,6 +198,16 @@ enum struct JobState {
   DONE
 };
 
+#ifndef SWIG
+NLOHMANN_JSON_SERIALIZE_ENUM(JobState, {
+    {JobState::WAITING, "waiting"},
+    {JobState::READY, "ready"},
+    {JobState::RUNNING, "running"},
+    {JobState::ERROR, "error"},
+    {JobState::DONE, "done"}
+});
+#endif 
+
 /// String representation of a job state
 std::ostream &operator<<(std::ostream & out, JobState const & state);
 
@@ -220,6 +235,13 @@ public:
   /// Get the current state
   JobState state() const;
 
+  /// Get start time
+  std::time_t startTime() const { return _startTime; }
+  std::time_t endTime() const { return _endTime; }
+  std::time_t submissionTime() const { return _submissionTime; }
+
+  /// Get a JSON representation of the state
+  virtual nlohmann::json getJsonState() const override;
 
   /// Get a dependency to this resource
   std::shared_ptr<Dependency> createDependency() override;
@@ -275,6 +297,12 @@ protected:
 
   /// Submission time
   std::time_t _submissionTime;
+
+  /// Start time
+  std::time_t _startTime;
+
+  /// Start time
+  std::time_t _endTime;
 
   /// Number of dependencies that are not satisifed
   size_t _unsatisfied;
@@ -362,6 +390,9 @@ public:
 
   /// Server
   void server(int port, std::string const & htdocs);
+
+  /// Refresh
+  void refresh(xpm::rpc::Emitter &);
 
 private:
   /// Working directory path

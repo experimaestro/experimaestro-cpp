@@ -2,22 +2,25 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { type State, refreshExperiments } from './store'
+import { type State } from './store'
 
 
 type DispatchProps = {
-    refreshExperiments: typeof refreshExperiments
 }
-type Props = DispatchProps;
+type Props = { ...DispatchProps,
+    experiment: string
+}
 
 class Experiments extends Component<Props> {
-    componentDidMount() {
-        this.props.refreshExperiments();
-    }
     render() {
-        return <div>Hello</div>;
+        let { experiment } = this.props;
+        return <div>
+            <h2>Experiment "{experiment}"</h2>
+            </div>;
     }
 }
 
-const mapStateToProps = (state: State) => ({})
-export default connect(mapStateToProps, { refreshExperiments })(Experiments);
+const mapStateToProps = (state: State) => ({
+    experiment: state.experiment
+})
+export default connect(mapStateToProps, {  })(Experiments);

@@ -1,11 +1,29 @@
 // @flow
 
-import React, { Component } from 'react';
+import React, { Component } from 'react'
+import { connect } from 'react-redux'
 
-class Tasks extends Component<{}> {
+import { type State, type Jobs } from './store'
+
+type StateProps = {
+    jobs: Jobs
+};
+
+type Props = StateProps;
+
+class Tasks extends Component<Props> {
     render() {
-        return <div>Hello</div>;
+        let { jobs } = this.props;
+        return <div>{
+            jobs.ids.map((jobId) => {
+                let job = jobs.byId[jobId];
+                return <div key={jobId}><span className={`status status-${job.status}`}>{job.status}</span>{job.locator}</div>
+            })
+        }</div>;
     }
 }
 
-export default Tasks;
+const mapStateToProps = (state: State) : StateProps => ({
+    jobs: state.jobs
+})
+export default connect(mapStateToProps)(Tasks);

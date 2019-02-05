@@ -8,6 +8,14 @@
   vertical-align: middle;
 }
 
+.connected .App-logo {
+  border: 1px solid blue;
+}
+
+.not-connected .App-logo {
+  border: 1px solid red;
+}
+
 .App-header {
   background-color: #222;
   height: 120px;
@@ -30,4 +38,18 @@
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+
+
+/** Jobs */
+
+.status {
+  border: 1px solid black;
+  margin: 2px;
+  padding: 2px;
+}
+
+.status-done {
+  background: green;
 }

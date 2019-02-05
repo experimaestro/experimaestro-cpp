@@ -1,9 +1,12 @@
 // @flow
 
-// Connects to the Websocket server
+import store from './store'
 
+/// Connects to the Websocket server
 class Client {
     ws: WebSocket;
+    waiting: Map<number, any>;
+    queued: Array<any>;
 
     constructor() {
         console.log("Connecting to websocket");
@@ -18,22 +21,31 @@ class Client {
     }
 
     open = () => {
-        console.log("Websocket connection open", this.ws);
-        this.ws.send(JSON.stringify({action: "experiments.refresh" }));
+        store.dispatch({ type: "CONNECTED", payload: true });
     }
 
     close = () => {
-        console.log("Websocket connection closed");
+        store.dispatch({ type: "CONNECTED", payload: false });
     }
 
     message = (event: any) => {        
-        console.log('Message from server ', event.data);
+        store.dispatch(JSON.parse(event.data));
     }
 
 
     /** Send without waiting for an answer */
     send = (data: any) => {
-        // return this.ws.send(JSON.stringify(data));
+        if (this.ws.readyState === WebSocket.OPEN) {
+            return this.ws.send(JSON.stringify(data));
+        } else {
+            console.log("Connection not ready");
+        }
+            
+    }
+
+    /** Wait for an answer */
+    query = (data: any, timeout: number = 60) => {
+        return this.ws.send(JSON.stringify(data));
     }
 }
 
