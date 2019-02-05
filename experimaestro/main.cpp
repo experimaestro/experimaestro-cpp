@@ -37,7 +37,8 @@ int main(int argc, char const **argv) {
   _generate->set_callback([&]() {  
     LOGGER->info("Starting server");
     rpc::MainServerContext context;
-    rpc::Server::start(context, _generate_locked > 0);
+    rpc::Server server;
+    server.serve(context, _generate_locked > 0);
   });
 
   auto _client = app.add_subcommand("client", "Runs an experimaestro client (debugging)");
