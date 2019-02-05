@@ -1027,7 +1027,7 @@ void ScalarValue::retrieveTags(std::map<std::string, Scalar> &tags, std::string 
 // ---
 
 
-Argument::Argument(std::string const &name) : _name(name), _type(AnyType), _required(true), _ignored(false), _generator(nullptr), _constant(false) {
+Argument::Argument(std::string const &name) : _name(name), _type(AnyType), _required(true), _ignored(false),  _constant(false), _generator(nullptr) {
 }
 
 Argument::Argument() : Argument("") {

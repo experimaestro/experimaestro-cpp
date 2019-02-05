@@ -2,8 +2,10 @@
 #include <Poco/Data/SQLite/Connector.h>
 #include <Poco/Data/Session.h>
 #include <Poco/Path.h>
+#include <Poco/Net/WebSocket.h>
 
 
+#include <xpm/workspace.hpp>
 #include <xpm/rpc/configuration.hpp>
 #include <xpm/rpc/servercontext.hpp>
 #include <__xpm/common.hpp>
@@ -19,10 +21,15 @@ namespace {
 
 
 ServerContext::~ServerContext() {}
-nlohmann::json ServerContext::handle(nlohmann::json &message) {
+nlohmann::json ServerContext::handle(std::shared_ptr<Emitter> const & emitter, nlohmann::json &message) {
     if (message.count("action") > 0) {
         std::string action = message["action"];
-        if (action == "refresh-tasks") {
+        if (action == "refresh") {
+            // application requested a refresh (new connexion)
+            std::thread([this, emitter]() {
+                this->refresh(emitter);
+            }).detach();
+            return nullptr;
         }
     }
     return nullptr;
@@ -147,12 +154,22 @@ MainServerContext::MainServerContext() {
 }
 
 
+void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {
+    
+}
+
+
 
 ExperimentServerContext::ExperimentServerContext(Workspace & workspace, std::string const & host, int port, std::string const & htdocs) : _workspace(workspace) {
     _port = port;
     _hostname = host;
     _htdocs = htdocs;
 }
+
+void ExperimentServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {
+    _workspace.refresh(*emitter);
+}
+
 
 
 } // namespace xpm::rpc

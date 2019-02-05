@@ -10,11 +10,12 @@
 #include <xpm/json.hpp>
 #include <Poco/File.h>
 
-namespace Poco {
-namespace Data {
+namespace Poco::Data {
     class Session;
-} // Data
-} // Poco
+} // Poco::Data
+namespace Poco::Net {
+    class WebSocket;
+}
 
 namespace xpm {
     class Workspace;
@@ -23,8 +24,15 @@ namespace xpm {
 
 namespace xpm::rpc {
 
+struct Emitter {
+  virtual ~Emitter();
+  virtual bool active() = 0;
+  virtual void send(nlohmann::json const & j) = 0;
+};
+
 struct ServerContextListener {
-    virtual void jobSubmitted(xpm::Job const & job) {}
+    virtual void jobSubmitted(xpm::Job const & job) = 0;
+    virtual void jobChanged(xpm::Job const & job) = 0;
 };
 
 class ServerContext {
@@ -36,7 +44,7 @@ protected:
 public:
     virtual ~ServerContext();
 
-    virtual nlohmann::json handle(nlohmann::json &message);
+    nlohmann::json handle(std::shared_ptr<Emitter> const & emitter, nlohmann::json &message);
     std::unique_ptr<Poco::File> pidFile() const;
 
     int port();
@@ -46,12 +54,16 @@ public:
     void add(ServerContextListener *);
     void remove(ServerContextListener *);
     void forEach(std::function<void(ServerContextListener&)> );
+
+    virtual void refresh(std::shared_ptr<Emitter> const & emitter) = 0;
 };
 
 class MainServerContext : public ServerContext {
 public:
     MainServerContext();
     virtual ~MainServerContext();
+    virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
+
 private:
   std::unique_ptr<Poco::Data::Session> session;
 };
@@ -59,6 +71,7 @@ private:
 class ExperimentServerContext : public ServerContext {
 public:
     ExperimentServerContext(Workspace & workspace, std::string const & host, int port, std::string const & htdocs);
+    virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
 private:
     Workspace & _workspace;
 };

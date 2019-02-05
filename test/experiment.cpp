@@ -19,6 +19,7 @@ DEFINE_LOGGER("xpm");
 struct TypeA : public CppObject<TypeA> {
   bool failure;
   long sleep;
+  std::shared_ptr<TypeA> parent;
 
   void run() override {
     std::cerr << "Running !!!\n";
@@ -31,7 +32,8 @@ struct TypeA : public CppObject<TypeA> {
 
 XPM_TYPE("TypeA", TypeA)
     .argument("sleep", &TypeA::sleep)
-    .argument("failure", &TypeA::failure);
+    .argument("failure", &TypeA::failure)
+    .argument("parent", &TypeA::parent).required(false);
 XPM_SIMPLETASK("task.a", TypeA);
 
 int main(int argc, const char **argv) {
@@ -59,17 +61,30 @@ int main(int argc, const char **argv) {
       ws->experiment("test");
       if (port > 0)
         ws->server(port, ".");
-      auto v = Value::create(
-                   *currentRegister(),
-                   {{"$type", "TypeA"}, {"sleep", 100}, {"failure", false}})
-                   ->asMap();
-
+      
+      // Will always be empty
       std::vector<std::shared_ptr<Dependency>> dependencies;
 
-      currentRegister()
-          ->getTask(Typename("task.a"))
-          ->submit(ws, nullptr, v, dependencies);
+      for(int a: {1, 5, 30, 60, 120, 240}) {
+        auto v = Value::create(
+                    *currentRegister(),
+                    {{"$type", "TypeA"}, {"sleep", a}, {"failure", false}})
+                    ->asMap();
 
+
+        currentRegister()
+            ->getTask(Typename("task.a"))
+            ->submit(ws, nullptr, v, dependencies);
+
+        auto v2 = Value::create(*currentRegister(),
+          {{"$type", "TypeA"}, {"sleep", a}, {"failure", false}})
+        ->asMap();
+        v2->set("parent", v);
+
+        currentRegister()
+            ->getTask(Typename("task.a"))
+            ->submit(ws, nullptr, v2, dependencies);
+      }
       Workspace::waitUntilTaskCompleted();
     });
   }
