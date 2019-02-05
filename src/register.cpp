@@ -413,12 +413,12 @@ ptr<Value> Register::build(std::string const &value) {
   return Value::create(*this, json::parse(value));
 }
 
-void Register::parse(int argc, const char **argv) {
+bool Register::parse(int argc, const char **argv) {
   std::vector<std::string> args;
   for (int i = 1; i < argc; ++i) {
     args.emplace_back(std::string(argv[i]));
   }
-  parse(args);
+  return parse(args);
 }
 
 void Register::load(const std::string &value) {

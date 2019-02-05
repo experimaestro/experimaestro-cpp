@@ -56,3 +56,14 @@ add_test(cpptests experimaestro-tests)
 # Trick to get the target built
 add_test(ctest_build_test_code "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target experimaestro-tests "--config" "$<CONFIG>")
 set_tests_properties(cpptests PROPERTIES DEPENDS ctest_build_test_code)
+
+
+
+# --- Experiment
+
+add_executable(experiment experiment.cpp)
+target_link_libraries(experiment experimaestro_shared ${LINKED_LIBRARIES})
+target_include_directories(experiment PUBLIC 
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${OPENSSL_INCLUDE_DIR} 
+)
