@@ -237,8 +237,13 @@ public:
 
   /// Get start time
   std::time_t startTime() const { return _startTime; }
+  /// Get end time
   std::time_t endTime() const { return _endTime; }
+  /// Get submission time
   std::time_t submissionTime() const { return _submissionTime; }
+
+  /// Set task and job IDs
+  void setIds(std::string const & taskId, std::string const & jobId);
 
   /// Get a JSON representation of the state
   virtual nlohmann::json getJsonState() const override;
@@ -306,6 +311,12 @@ protected:
 
   /// Number of dependencies that are not satisifed
   size_t _unsatisfied;
+
+  /// Task ID
+  std::string _taskId;
+
+  /// Job ID (hash)
+  std::string _jobId;
 private:
   /// Resource state
   JobState _state;
@@ -385,6 +396,8 @@ public:
   /// Wait that all tasks are completed
   static void waitUntilTaskCompleted();
 
+  /// Notify that a job start
+  void jobStarted(Job const &job);
   /// Notify that a job finished
   void jobFinished(Job const &job);
 

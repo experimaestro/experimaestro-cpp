@@ -5,6 +5,7 @@ import produce from "immer"
 import createSagaMiddleware from 'redux-saga'
 import { composeWithDevTools } from 'redux-devtools-extension'
 import rootSaga from './sagas'
+import _ from 'lodash';
 
 // ---- States
 
@@ -20,6 +21,9 @@ export type Job = {
     end: string;
     submitted: string;
     progress: number;
+
+    jobId: string;
+    taskId: string;
 }
 export type Jobs = {
     byId: { [string]: Job },
@@ -45,7 +49,8 @@ type Action =
     | { type: "EXPERIMENT_ADD", payload: Experiment }
     | { type: "EXPERIMENT_SET_MAIN", payload: string }
 
-    | { type: "JOB_UPDATE", payload: Job }
+    | { type: "JOB_ADD", payload: Job }
+    | { type: "JOB_UPDATE", payload: $Shape<Job> }
 ;
 
 
@@ -106,11 +111,18 @@ const reducer : Reducer<State,Action> =
                 draft.experiments[action.payload.name] = action.payload;
                 break;
 
-            case "JOB_UPDATE":
+            case "JOB_ADD":
                 if (draft.jobs.byId[action.payload.locator] === undefined) {
                     draft.jobs.ids.push(action.payload.locator);
                 }
                 draft.jobs.byId[action.payload.locator] = action.payload;
+                break;
+
+            case "JOB_UPDATE":
+                if (draft.jobs.byId[action.payload.locator] === undefined) {
+                } else {
+                    _.merge(draft.jobs.byId[action.payload.locator], action.payload);
+                }
                 break;
 
             default: 

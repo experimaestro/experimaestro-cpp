@@ -23,7 +23,8 @@ class Tasks extends Component<Props> {
                         <span className="status progressbar-container"><span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div></span> :
                         <span className={`status status-${job.status}`}>{job.status}</span>
                     }
-                    <span className="resource-id">{job.locator}</span>
+                    <span className="task-id">{job.taskId}</span>
+                    <span className="job-id">{job.jobId}</span>
                 </div>
             })
         }</div>;

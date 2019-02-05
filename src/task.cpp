@@ -44,7 +44,9 @@ void Task::submit(ptr<Workspace> const & _workspace,
   }
   auto &launcher = _launcher ? _launcher : Launcher::defaultLauncher();
 
-  // Set locator
+  // Set locator 
+  // FIXME: identifier computed two times
+  auto jobId = sv->uniqueIdentifier();
   auto svlocator = getPathGenerator()->generate(GeneratorContext(*workspace, sv));
 
   // Validate and seal the task sv
@@ -55,6 +57,7 @@ void Task::submit(ptr<Workspace> const & _workspace,
 
   // Set the command parameters
   auto job = mkptr<CommandLineJob>(std::dynamic_pointer_cast<ScalarValue>(svlocator)->asPath(), launcher, _commandLine);
+  job->setIds(_identifier.toString(), jobId);
   job->parameters(sv);
   job->init();
   sv->job(job);

@@ -5,6 +5,7 @@
 #include <xpm/commandline.hpp>
 
 #include <xpm/xpm.hpp>
+#include <xpm/json.hpp>
 #include <xpm/launchers/launchers.hpp>
 #include <xpm/connectors/connectors.hpp>
 
@@ -254,9 +255,16 @@ nlohmann::json Job::toJson() const  {
 
 JobState Job::state() const { return _state; }
 
+void Job::setIds(std::string const & taskId, std::string const & jobId) {
+  _taskId = taskId;
+  _jobId = jobId;
+}
+
 nlohmann::json Job::getJsonState() const {
   nlohmann::json payload = {
     { "locator", _locator.toString() },
+    { "taskId", _taskId },
+    { "jobId", _jobId },
     { "status", state() },
     { "start", startTime() },
     { "end", endTime() },
@@ -343,6 +351,7 @@ void Job::start() {
       }
 
       // (2) Run the task
+      _workspace->jobStarted(*this);
       run(std::move(jobLock), locks);
     }
 
@@ -502,9 +511,8 @@ void Workspace::submit(ptr<Job> const &job) {
   }
 
   if (_serverContext) {
-    _serverContext->forEach([job](auto & l) {
-      l.jobSubmitted(*job);
-    });
+    nlohmann::json j = { { "type", "JOB_ADD" }, { "payload", job->getJsonState() } };
+    _serverContext->forEach([&j](auto & l) { l.send(j); });
   }
 
   // Check if ready
@@ -513,9 +521,26 @@ void Workspace::submit(ptr<Job> const &job) {
   }
 }
 
+void Workspace::jobStarted(Job const & job) {
+  if (_serverContext) {
+    nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
+      { "locator", job.locator().toString() },
+      { "status", job.state() }
+    }}};
+    _serverContext->forEach([&j](auto & l) { l.send(j); });
+  }
+}
+
 void Workspace::jobFinished(Job const & job) {
   std::lock_guard<std::mutex> lock(JOB_CHANGED_MUTEX);
   waitingJobs.erase(&job);
+  if (_serverContext) {
+    nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
+      { "locator", job.locator().toString() },
+      { "status", job.state() }
+    }}};
+    _serverContext->forEach([&j](auto & l) { l.send(j); });
+  }
   JOB_CHANGED.notify_all();
 }
 
@@ -623,7 +648,7 @@ void Workspace::refresh(xpm::rpc::Emitter & emitter) {
   emitter.send({ {"type", "EXPERIMENT_SET_MAIN"}, { "payload", _experiment } });
 
   for(auto entry: _jobs) {
-    emitter.send({ {"type", "JOB_UPDATE"}, { "payload", entry.second->getJsonState() } });
+    emitter.send({ {"type", "JOB_ADD"}, { "payload", entry.second->getJsonState() } });
   }
 }
 

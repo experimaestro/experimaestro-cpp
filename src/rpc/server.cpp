@@ -140,6 +140,10 @@ public:
     try {
       _ws = mkptr<WebSocket>(request, response);
       auto emitter = mkptr<WebSocketEmitter>(_ws);
+
+      // Set a large timeout
+      _ws->setReceiveTimeout(Poco::Timespan(1, 0, 0, 0, 0));
+
       LOGGER->info("WebSocket connection established.");
       char buffer[32769];
       int flags;
@@ -193,22 +197,10 @@ public:
   }
 
   virtual void send(nlohmann::json const & j) { 
-      auto s = j.dump();
-      _ws->sendFrame(s.c_str(), s.size());
-  }
-
-  void jobSubmitted(xpm::Job const & job) override {
-    if (_ws) {
-      nlohmann::json j = { { "action", "JOB_UPDATE" }, { "payload", job.getJsonState() } };
-      send(j);
-    }
-  }
-
-  void jobChanged(xpm::Job const & job) override {
-    if (_ws) {
-      nlohmann::json j = { { "action", "JOB_UPDATE" }, { "payload", { "locator", job.getJsonState() }} };
-      send(j);
-    }
+      if (_ws) {
+        auto s = j.dump();
+        _ws->sendFrame(s.c_str(), s.size());
+      }
   }
 
 protected:

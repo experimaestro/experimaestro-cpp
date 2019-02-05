@@ -31,8 +31,7 @@ struct Emitter {
 };
 
 struct ServerContextListener {
-    virtual void jobSubmitted(xpm::Job const & job) = 0;
-    virtual void jobChanged(xpm::Job const & job) = 0;
+    virtual void send(nlohmann::json const & message) = 0;
 };
 
 class ServerContext {

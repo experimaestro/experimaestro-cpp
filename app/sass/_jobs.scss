@@ -111,16 +111,20 @@ ul.buttons {
 }
 
 
-#resources .resource-id {
+#resources .task-id {
+    font-size: .8rem;
     padding: 3px;
     margin-left: 0em;
     margin-right: 0.5em;
-    background: #777;
-    color: white;
+    color: #777;
+    // color: white;
     font-weight: bold;
     border-radius: 3px;
 }
-
+#resources .job-id {
+    font-size: .8rem;
+    font-family: 'Courier New', Courier, monospace;
+}
 
 #resources > div {
     text-align: left;
@@ -128,6 +132,10 @@ ul.buttons {
 
 #resources span.with-progressbar::before {
     display: none;
+}
+
+#resources .resource {
+    margin: 3px;
 }
 
 #resources .resource .status {
@@ -141,7 +149,7 @@ ul.buttons {
     margin-right: 0.5ex;
     
     width: 60px;
-    line-height: 2em;
+    line-height: 1.3rem;
 
     white-space: nowrap;
     vertical-align: middle;
