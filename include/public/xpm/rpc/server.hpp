@@ -38,10 +38,10 @@ public:
   /// Get a client handle
   static void client();
 
-  /// Start the server
+  /// Start the server and wait for termination
   void serve(ServerContext & context, bool locked);
 
-  /// Start the server and wait for termination
+  /// Start the server
   void start(ServerContext & context, bool locked);
 
   /// Close
