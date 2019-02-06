@@ -28,6 +28,7 @@ class CommandLine;
 struct JobPriorityComparator;
 class CounterDependency;
 class Lock;
+class Process;
 
 namespace rpc {
  class ExperimentServerContext;
@@ -229,6 +230,9 @@ public:
   /// Get the current state
   JobState state() const;
 
+  /// Kill the job (if running)
+  virtual void kill() = 0;
+
   /// Get start time
   std::time_t startTime() const { return _startTime; }
   /// Get end time
@@ -330,11 +334,15 @@ public:
   /// Set the parameters
   void parameters(std::shared_ptr<Value> const & parameters);
   std::shared_ptr<Value> parameters();
+  virtual nlohmann::json getJsonState() const override;
+  void kill() override;
+
 protected:
   virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override;
 private:
   std::shared_ptr<CommandLine> _command;
   std::shared_ptr<Value> _parameters;
+  std::shared_ptr<Process> _process;
 };
 
 /// Defines the priority between two jobs
@@ -390,11 +398,15 @@ public:
   /// Experiment
   void experiment(std::string const & name);
 
+  /// Kill a job
+  void kill(std::string const & jobId);
+
   /// Wait that all tasks are completed
   static void waitUntilTaskCompleted();
 
   /// Notify that a job start
   void jobStarted(Job const &job);
+
   /// Notify that a job finished
   void jobFinished(Job const &job);
 
@@ -412,7 +424,7 @@ private:
   std::string _experiment;
 
   /// All the jobs
-  std::unordered_map<Path, std::shared_ptr<Job>> _jobs;
+  std::unordered_map<std::string, std::shared_ptr<Job>> _jobs;
 
   /// Count the number of waiting jobs
   std::unordered_set<Job const *> waitingJobs;

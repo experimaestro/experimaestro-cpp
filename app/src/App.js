@@ -2,7 +2,8 @@
 
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import logo from './logo.png';
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css';
 
 import './App.css';
 import { type State } from './store';
@@ -23,6 +24,7 @@ class App extends Component<Props> {
         <header className="App-header">
           <h1 className="App-title">Experimaestro {experiment ? " – " + experiment : ""}  <i className={`fab fa-staylinked ws-status ${connected ? "ws-link" : "ws-no-link" }`} /> </h1>
         </header>
+        <ToastContainer toastClassName="dark-toast"/>
         <Experiments/>
         <Tasks/>
       </div>

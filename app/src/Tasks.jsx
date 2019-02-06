@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-
+import client from './client'
 import { type State, type Jobs } from './store'
 
 type StateProps = {
@@ -12,6 +12,10 @@ type StateProps = {
 type Props = StateProps;
 
 class Tasks extends Component<Props> {
+    kill = (jobId: string) => {
+        client.send({ type: "kill", payload: jobId}, "cannot kill job " + jobId)
+    }
+
     render() {
         let { jobs } = this.props;
         return <div id="resources">{
@@ -20,7 +24,13 @@ class Tasks extends Component<Props> {
                 return <div className="resource" key={jobId}>
                     {
                         job.status == "running" ?
-                        <span className="status progressbar-container"><span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div></span> :
+                        <React.Fragment>
+                            <span className="status progressbar-container">
+                                <span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div>
+                            </span> 
+                            <i className="fa fa-skull-crossbones" onClick={() => this.kill(jobId) }/>
+                        </React.Fragment>
+                        :
                         <span className={`status status-${job.status}`}>{job.status}</span>
                     }
                     <span className="task-id">{job.taskId}</span>

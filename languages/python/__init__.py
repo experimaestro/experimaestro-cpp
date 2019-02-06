@@ -595,6 +595,7 @@ def experiment(path, name):
     workspace = Workspace(str(path))
     workspace.current()
     workspace.experiment(name)
+    return workspace
 
 def set_launcher(launcher):
     global DEFAULT_LAUNCHER

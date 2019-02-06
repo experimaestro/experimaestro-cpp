@@ -81,7 +81,7 @@ public:
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
     Poco::URI uri(request.getURI());
     
-    LOGGER->info("URI is {}", request.getURI());
+    LOGGER->debug("URI is {}", request.getURI());
     
     static std::regex re_notify(R"(^/notify/([a-zA-Z0-9]+)$)");
     std::smatch matches;
@@ -115,6 +115,10 @@ public:
       response.setContentType("image/x-icon");
     } else if (ext == "png") {
       response.setContentType("image/png");
+    } else if (ext == "woff2") {
+      response.setContentType("font/woff2");
+    } else if (ext == "ttf") {
+      response.setContentType("font/ttf");
     } else {
       LOGGER->info("Unknown type {}", request.getURI());
       response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
@@ -158,7 +162,7 @@ struct WebSocketEmitter : public Emitter {
 };
 
 /// Handle a WebSocket connection.
-class WebSocketRequestHandler : public HTTPRequestHandler, public ServerContextListener {
+class WebSocketRequestHandler : public HTTPRequestHandler, public Emitter {
 public:
   WebSocketRequestHandler(ServerContext &context) : _context(context) {}
 
@@ -178,21 +182,23 @@ public:
       int flags;
       int n;
       do {
-        LOGGER->info("Reading...\n");
         n = _ws->receiveFrame(buffer, sizeof(buffer) - 1, flags);
 
-        LOGGER->info(Poco::format("Frame received (length=%d, flags=0x%x).", n,
+        LOGGER->debug(Poco::format("Frame received (length=%d, flags=0x%x).", n,
                                   unsigned(flags)));
 
         if ((flags & WebSocket::FRAME_OP_TEXT) &&
             (flags & WebSocket::FRAME_FLAG_FIN) && (n > 0)) {
           buffer[n] = 0;
           auto request = nlohmann::json::parse(buffer);
-          auto answer = _context.handle(emitter, request);
-          if (!answer.is_null()) {
-            LOGGER->info("Sending answer {}", answer);
-            auto s = answer.dump();
-            _ws->sendFrame(s.c_str(), s.size());
+          try {
+            auto answer = _context.handle(emitter, request);
+            if (!answer.is_null()) {
+              LOGGER->info("Sending answer {}", answer);
+              send(answer);
+            }
+          } catch(std::exception & e) {
+            send({ { "type", "SERVER_ERROR" }, { "payload", e.what() } });
           }
         }
 
@@ -223,6 +229,10 @@ public:
     }
 
     _context.remove(this);
+  }
+
+  virtual bool active() {
+    return _ws.get();
   }
 
   virtual void send(nlohmann::json const & j) { 

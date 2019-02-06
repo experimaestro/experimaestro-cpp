@@ -272,6 +272,7 @@ nlohmann::json Job::getJsonState() const {
     { "end", endTime() },
     { "submitted", submissionTime() },
     { "status", state() },
+    { "tags", {} }
   };
   return payload;
 }
@@ -436,7 +437,7 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
   processBuilder->stderr = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".err"})));
   processBuilder->stdout = Redirect::file(connector.resolve(directory.resolve({_locator.name() + ".out"})));
 
-  ptr<Process> process = processBuilder->start();
+  _process = processBuilder->start();
   state(JobState::RUNNING);
   
   // Avoid to remove the locks ourselves
@@ -448,9 +449,23 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
 
   // Wait for end of execution
   LOGGER->info("Waiting for job {} to finish", _locator);
-  int exitCode = process->exitCode();
+  int exitCode = _process->exitCode();
   state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
   LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
+}
+
+void CommandLineJob::kill() {
+  if (_process) _process->kill(false);
+}
+
+nlohmann::json CommandLineJob::getJsonState() const {
+  auto j = Job::getJsonState();
+
+  auto &tags = j["tags"];
+  for(auto &entry: _parameters->tags()) {
+    tags[entry.first] = entry.second.toJson();
+  }
+  return j;
 }
 
 // -- Workspace
@@ -492,9 +507,9 @@ void Workspace::submit(ptr<Job> const &job) {
     std::lock_guard<std::mutex> lock(WORKSPACE_MUTEX);
 
     // Skip if same path exists
-    if (_jobs.find(job->locator()) != _jobs.end()) {
+    if (_jobs.find(job->getJobId()) != _jobs.end()) {
       LOGGER->warn("Job with path {} already exists - skipping new submission",
-                  job->locator());
+                  job->getJobId());
       return;
     }
 
@@ -503,7 +518,7 @@ void Workspace::submit(ptr<Job> const &job) {
     // Add job to list
     job->_submissionTime = std::time(nullptr);
     job->_workspace = shared_from_this();
-    _jobs[job->locator()] = job;
+    _jobs[job->getJobId()] = job;
 
     // Register dependencies so that we are notified of changes
     for(auto & dependency: job->_dependencies) {
@@ -538,13 +553,25 @@ void Workspace::jobFinished(Job const & job) {
   waitingJobs.erase(&job);
   if (_serverContext) {
     nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
-      { "locator", job.locator().toString() },
+      { "jobId", job.getJobId() },
       { "status", job.state() }
     }}};
     _serverContext->forEach([&j](auto & l) { l.send(j); });
   }
   JOB_CHANGED.notify_all();
 }
+
+void Workspace::kill(std::string const & jobId) {
+  std::lock_guard<std::mutex> lock(WORKSPACE_MUTEX);
+  auto it = _jobs.find(jobId);
+  if (it == _jobs.end()) {
+    throw argument_error("Job ID " + jobId + " not found");
+  }
+
+  auto & job = *it->second;
+  job.kill();
+}
+
 
 void Workspace::current() {
   CURRENT_WORKSPACE = shared_from_this();
@@ -650,6 +677,7 @@ void Workspace::refresh(xpm::rpc::Emitter & emitter) {
   }}});
   emitter.send({ {"type", "EXPERIMENT_SET_MAIN"}, { "payload", _experiment } });
 
+  std::lock_guard<std::mutex> lock(WORKSPACE_MUTEX);
   for(auto entry: _jobs) {
     emitter.send({ {"type", "JOB_ADD"}, { "payload", entry.second->getJsonState() } });
   }

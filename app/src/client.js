@@ -1,6 +1,7 @@
 // @flow
 
 import store from './store'
+import { toast } from 'react-toastify'
 
 /// Connects to the Websocket server
 class Client {
@@ -26,6 +27,7 @@ class Client {
 
     close = () => {
         store.dispatch({ type: "CONNECTED", payload: false });
+        toast("Websocket connexion closed", {type: "info"});
     }
 
     message = (event: any) => {    
@@ -34,11 +36,15 @@ class Client {
 
 
     /** Send without waiting for an answer */
-    send = (data: any) => {
+    send = (data: any, message: ?string) => {
         if (this.ws.readyState === WebSocket.OPEN) {
             return this.ws.send(JSON.stringify(data));
         } else {
             console.log("Connection not ready");
+            if (message) {
+                toast("No websocket connection: could not " + message, {type: "error"});
+            }
+            return false;
         }
             
     }

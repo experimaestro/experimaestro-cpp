@@ -23,6 +23,9 @@ export type Job = {
     start: string;
     end: string;
     submitted: string;
+
+    tags: {[string]: number|string|boolean};
+
     progress: number;
 }
 export type Jobs = {

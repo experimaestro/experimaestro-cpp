@@ -19,20 +19,35 @@ namespace {
     static int DB_VERSION = 1;
 }
 
+inline void protectThread(ptr<Emitter> const & emitter,  std::function<void()> f) {
+    std::thread([emitter, f]() {
+        try {
+            f();
+        } catch(std::exception & e) {
+            emitter->send({ { "type", "SERVER_ERROR" }, { "payload", e.what() } });
+        }
+    }).detach();
+}
 
 ServerContext::~ServerContext() {}
 nlohmann::json ServerContext::handle(std::shared_ptr<Emitter> const & emitter, nlohmann::json &message) {
-    if (message.count("action") > 0) {
-        std::string action = message["action"];
-        if (action == "refresh") {
+    if (message.count("type") > 0) {
+        std::string type = message["type"];
+        if (type == "refresh") {
             // application requested a refresh (new connexion)
-            std::thread([this, emitter]() {
-                this->refresh(emitter);
-            }).detach();
+            protectThread(emitter, [this, emitter]() { refresh(emitter); });
+            return nullptr;
+        } 
+
+        if (type == "kill") {
+            std::string jobId = message["payload"];
+            protectThread(emitter, [this, emitter, jobId]() { this->kill(emitter, jobId); });                       
             return nullptr;
         }
+
+        throw std::runtime_error("Cannot handle action " + type);
     }
-    return nullptr;
+    throw std::runtime_error("No type in message");
 }
 
 std::unique_ptr<Poco::File> ServerContext::pidFile() const { return nullptr; }
@@ -42,13 +57,13 @@ std::string const & ServerContext::host() { return _hostname; }
 std::string const & ServerContext::htdocs() { return _htdocs; }
 
 
-void ServerContext::add(ServerContextListener * listener) {
+void ServerContext::add(Emitter * listener) {
     _listeners.insert(listener);
 }
-void ServerContext::remove(ServerContextListener * listener) {
+void ServerContext::remove(Emitter * listener) {
     _listeners.erase(listener);
 }
-void ServerContext::forEach(std::function<void(ServerContextListener&)> f) {
+void ServerContext::forEach(std::function<void(Emitter&)> f) {
     for(auto listener: _listeners) {
         f(*listener);
     }
@@ -158,6 +173,7 @@ void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {
 }
 void MainServerContext::jobStatusNotification(std::string const & jobId, std::string status) {}
 
+void MainServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {}
 
 
 
@@ -173,8 +189,13 @@ void ExperimentServerContext::refresh(std::shared_ptr<Emitter> const & emitter) 
     _workspace.refresh(*emitter);
 }
 
-void ExperimentServerContext::jobStatusNotification(std::string const & jobId, std::string status) {}
+void ExperimentServerContext::jobStatusNotification(std::string const & jobId, std::string status) {
+    // TODO: implement (useful when restarting)
+}
 
+void ExperimentServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {
+    _workspace.kill(jobId);
+}
 
 
 } // namespace xpm::rpc

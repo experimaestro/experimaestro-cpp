@@ -289,9 +289,9 @@ public:
     std::lock_guard<std::mutex> lock(close_mutex);
     if (pid > 0 && !closed) {
       if (force)
-        ::kill(-pid, SIGTERM);
+        ::kill(pid, SIGTERM);
       else
-        ::kill(-pid, SIGINT);
+        ::kill(pid, SIGINT);
     }
   }
 
