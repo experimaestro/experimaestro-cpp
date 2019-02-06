@@ -99,9 +99,6 @@ public:
   /// Finish the initialization
   virtual void init();
 
-  /// Get the workspace resource ID
-  inline ResourceId getId() const { return _resourceId; }
-
   void addDependent(std::shared_ptr<Dependency> const & dependency);
   void removeDependent(std::shared_ptr<Dependency> const & dependency);
 
@@ -121,9 +118,6 @@ public:
 protected:
   /// Resource that depend on this one to be completed
   std::vector<std::weak_ptr<Dependency>> _dependents;
-
-  /// Resource id
-  ResourceId _resourceId;
 
   /// Signals a change in a dependency
   virtual void dependencyChanged(Dependency & dependency, 
@@ -244,6 +238,9 @@ public:
 
   /// Set task and job IDs
   void setIds(std::string const & taskId, std::string const & jobId);
+
+  /// Get a JSON representation of the state
+  std::string const & getJobId() const;
 
   /// Get a JSON representation of the state
   virtual nlohmann::json getJsonState() const override;
@@ -402,7 +399,7 @@ public:
   void jobFinished(Job const &job);
 
   /// Server
-  void server(int port, std::string const & htdocs);
+  std::shared_ptr<rpc::Server> server(int port, std::string const & htdocs);
 
   /// Refresh
   void refresh(xpm::rpc::Emitter &);

@@ -8,6 +8,11 @@
 #include <chrono>
 #include <condition_variable>
 
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPMessage.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/Net/HTTPClientSession.h>
+
 #include <__xpm/common.hpp>
 
 DEFINE_LOGGER("rpc")
@@ -28,7 +33,7 @@ struct Progress {
   // TCP-IP related parameters
   std::string hostname;
   std::string path;
-  std::string port;
+  int port;
 
   /// Last update time
   std::chrono::time_point<std::chrono::system_clock> last_update_time;
@@ -75,7 +80,7 @@ struct Progress {
     std::string _notification_url(notification_url);
     if (std::regex_search(_notification_url, match, re_http)) {
       hostname = match[1];
-      port = match[2];
+      port = std::atoi(match[2].str().c_str());
       path = match[3];
       LOGGER->info("Notifications: host {}, port {}, path {}", hostname, port, path);
     }
@@ -122,16 +127,13 @@ struct Progress {
    */
   void notify(float value) {
     try {
-        // tcp::socket socket(io_service);
-        // connect(socket, endpoint_iterator);
+        Poco::Net::HTTPClientSession session(hostname, port);
+        session.setTimeout(Poco::Timespan(1, 0)); // 1s timeout
+        Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, 
+           fmt::format("{}?progress={:.3f}", path, value), Poco::Net::HTTPMessage::HTTP_1_1);
+        // Poco::Net::HTTPResponse response;
+        session.sendRequest(request);
 
-        // asio::streambuf request;
-        // std::ostream request_stream(&request);
-        // request_stream << "GET " << path << "/progress/" << value << " HTTP/1.0\r\n";
-        // request_stream << "Host: " << hostname << "\r\n";
-        // request_stream << "Accept: */*\r\n";
-        // request_stream << "Connection: close\r\n\r\n";
-        // write(socket, request);
       } catch(std::exception &e) {
         LOGGER->info("Caught exception while reporting progress: {}", e.what());
       }

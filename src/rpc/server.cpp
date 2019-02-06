@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <regex>
 
 // --- File
 
@@ -54,18 +55,46 @@ using Poco::Net::WebSocketException;
 using Poco::Util::Application;
 
 class PageRequestHandler : public HTTPRequestHandler {
+
 public:
   PageRequestHandler(ServerContext &context) : _context(context) {}
 
+  void handleJobNotification(std::string jobId, Poco::URI &uri, HTTPServerResponse &response) {
+    auto query = uri.getQueryParameters();
+    for(auto & p: query) {
+      if (p.first == "progress") {
+        float progress = std::atof(p.second.c_str());
+        _context.forEach([&](auto &l) {
+          l.send({ { "type", "JOB_UPDATE" }, { "payload", {
+            { "jobId", jobId },
+            { "progress", progress }
+          }}});
+        });
+      } else if (p.first == "status") {
+        _context.jobStatusNotification(jobId, p.second);
+      }
+    }
+
+    response.setStatus(Poco::Net::HTTPResponse::HTTP_ACCEPTED);
+  }
+
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
     Poco::URI uri(request.getURI());
+    
+    LOGGER->info("URI is {}", request.getURI());
+    
+    static std::regex re_notify(R"(^/notify/([a-zA-Z0-9]+)$)");
+    std::smatch matches;
+    if (std::regex_search(uri.getPath(), matches, re_notify)) {
+      handleJobNotification(matches[1].str(), uri, response);
+      return;
+    }
+    
     Poco::Path base(_context.htdocs() + "/");
     Poco::Path path(base, Poco::Path(uri.getPath().substr(1)));
     Poco::File file(path);
-    LOGGER->info("Path is {} [base {}]", path.absolute().toString(), base.toString());
-
     if (!file.exists()) {
-      LOGGER->info("Page does not exist {}", request.getURI());
+      LOGGER->warn("Page does not exist {}", request.getURI());
       response.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
       response.setContentType("text/html");
       std::ostream &ostr = response.send();
@@ -212,13 +241,16 @@ public:
   RequestHandlerFactory(ServerContext &context) : _context(context) {}
 
   HTTPRequestHandler *createRequestHandler(const HTTPServerRequest &request) {
-    LOGGER->info("Request from " + request.clientAddress().toString() + ": " +
+    LOGGER->debug("Request from " + request.clientAddress().toString() + ": " +
                  request.getMethod() + " " + request.getURI() + " " +
                  request.getVersion());
 
-    for (HTTPServerRequest::ConstIterator it = request.begin();
-         it != request.end(); ++it) {
-      LOGGER->info(it->first + ": " + it->second);
+    if (LOGGER->should_log(spdlog::level::debug)) {
+      for (HTTPServerRequest::ConstIterator it = request.begin();
+          it != request.end(); ++it) {
+        LOGGER->debug(it->first + ": " + it->second);
+      }
+
     }
 
     if (request.find("Upgrade") != request.end() &&
@@ -297,6 +329,7 @@ void Server::start(ServerContext &context, bool pidlocked) {
     _httpserver = std::unique_ptr<HTTPServer>(new HTTPServer(
         new RequestHandlerFactory(context), svs, t_pServerParams));
     _httpserver->start();
+    _baseurl = fmt::format("http://{}:{}", context.host(), context.port());
     LOGGER->info("Started server on {}:{}", context.host(), context.port());
 
   } catch (...) {
@@ -305,6 +338,10 @@ void Server::start(ServerContext &context, bool pidlocked) {
     }
     throw;
   }
+}
+
+std::string Server::getNotificationURL() const {
+  return _baseurl + "/notify";
 }
 
 void Server::terminate() {

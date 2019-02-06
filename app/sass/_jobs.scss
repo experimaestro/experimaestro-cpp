@@ -163,6 +163,7 @@ ul.buttons {
 .status.progressbar-container {
     position: relative;
     background: lightgreen;
+    z-index: -2;
 }
 
 .progressbar {
@@ -170,6 +171,7 @@ ul.buttons {
     top: 0;
     left: 0;
     bottom: 0;
+    z-index: -1;
     background: green;
 }
 

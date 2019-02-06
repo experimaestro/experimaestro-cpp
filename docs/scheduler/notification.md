@@ -21,33 +21,3 @@ from experimaestro import progress
 # Report progress of 10%
 progress(.1)
 ```
-
-# Lua
-
-```lua
-
--- Create a notification function
-
-xpm_url = os.getenv("XPM_NOTIFICATION_URL")
-
-if xpm_url ~= nil then
-  local http = require("socket.http")
-  http.TIMEOUT = 0.01 -- set timeout to a low value
-  local last_value = -1
-  function notify_progress(progress)
-    local value = string.format("%s/progress/%.3f", xpm_url, progress)
-    if last ~= value then
-      local t = coroutine.create(function () http.request(value) end)
-      coroutine.resume(t)
-      last_value = value
-    end
-  end
-else
-  function notify_progress(progress)
-  end
-end
-
--- Notifies
-notify_progress(0.01)
-
-```

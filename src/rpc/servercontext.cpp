@@ -154,11 +154,14 @@ MainServerContext::MainServerContext() {
 }
 
 
-void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {
-    
+void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {   
 }
+void MainServerContext::jobStatusNotification(std::string const & jobId, std::string status) {}
 
 
+
+
+// --- Experiment server context
 
 ExperimentServerContext::ExperimentServerContext(Workspace & workspace, std::string const & host, int port, std::string const & htdocs) : _workspace(workspace) {
     _port = port;
@@ -169,6 +172,8 @@ ExperimentServerContext::ExperimentServerContext(Workspace & workspace, std::str
 void ExperimentServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {
     _workspace.refresh(*emitter);
 }
+
+void ExperimentServerContext::jobStatusNotification(std::string const & jobId, std::string status) {}
 
 
 

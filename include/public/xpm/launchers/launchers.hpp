@@ -118,6 +118,10 @@ public:
   inline std::shared_ptr<Connector> connector() { return _connector; }
   inline Environment const & environment() { return _environment; }
 
+  /// Set the notification URL
+  std::string const & notificationURL() const;
+  void notificationURL(std::string const &);
+
   /// Get the default launcher
   static std::shared_ptr<Launcher> defaultLauncher();
 

@@ -30,6 +30,7 @@ class ServerContext;
 class Server : public Poco::Util::ServerApplication {
   std::unique_ptr<Poco::Net::HTTPServer> _httpserver;
   std::unique_ptr<Poco::File> _pidfile;
+  std::string _baseurl;
 public:
   /// Close the server
   Server();
@@ -46,6 +47,9 @@ public:
 
   /// Close
   void terminate();
+
+  /// Get the notification URL
+  std::string getNotificationURL() const;
 };
 
 } // namespace xpm::rpc

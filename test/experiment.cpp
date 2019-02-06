@@ -6,6 +6,7 @@
 #include <xpm/common.hpp>
 #include <xpm/cpp.hpp>
 #include <xpm/logging.hpp>
+#include <xpm/rpc/server.hpp>
 #include <xpm/workspace.hpp>
 #include <xpm/xpm.hpp>
 
@@ -24,7 +25,13 @@ struct TypeA : public CppObject<TypeA> {
   void run() override {
     std::cerr << "Running !!!\n";
     std::chrono::seconds duration(sleep);
-    std::this_thread::sleep_for(duration);
+
+    size_t N = 100;
+    for(size_t i = 0; i < N; ++i) {
+      std::this_thread::sleep_for(duration / 100.);
+      progress((float)i / (float)N);
+    }    
+
     if (failure) throw std::runtime_error("failed as you wished");
   }
 
@@ -56,11 +63,16 @@ int main(int argc, const char **argv) {
     _run->add_option("workdir", workdir, "The working directory")
         ->required(true);
 
+      
+
     _run->set_callback([&]() {
       auto ws = mkptr<Workspace>(workdir);
       ws->experiment("test");
-      if (port > 0)
-        ws->server(port, ".");
+      auto launcher = Launcher::defaultLauncher();
+      if (port > 0) {
+        auto server = ws->server(port, ".");
+        launcher->notificationURL(server->getNotificationURL());
+      }
       
       // Will always be empty
       std::vector<std::shared_ptr<Dependency>> dependencies;
@@ -74,7 +86,7 @@ int main(int argc, const char **argv) {
 
         currentRegister()
             ->getTask(Typename("task.a"))
-            ->submit(ws, nullptr, v, dependencies);
+            ->submit(ws, launcher, v, dependencies);
 
         auto v2 = Value::create(*currentRegister(),
           {{"$type", "TypeA"}, {"sleep", a}, {"failure", false}})
@@ -83,7 +95,7 @@ int main(int argc, const char **argv) {
 
         currentRegister()
             ->getTask(Typename("task.a"))
-            ->submit(ws, nullptr, v2, dependencies);
+            ->submit(ws, launcher, v2, dependencies);
       }
       Workspace::waitUntilTaskCompleted();
     });

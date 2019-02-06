@@ -45,6 +45,13 @@ ptr<Launcher> Launcher::defaultLauncher() {
   return DEFAULT_LAUNCHER;
 }
 
+std::string const & Launcher::notificationURL() const {
+  return _notificationURL;
+}
+void Launcher::notificationURL(std::string const & notificationURL) {
+  _notificationURL = notificationURL;
+}
+
 
 DirectLauncher::DirectLauncher(ptr<Connector> const & connector) : Launcher(connector) {}
 
@@ -55,7 +62,9 @@ ptr<ProcessBuilder> DirectLauncher::processBuilder() {
 }
 
 std::shared_ptr<ScriptBuilder> DirectLauncher::scriptBuilder() {
-  return mkptr<ShScriptBuilder>();
+  auto builder = mkptr<ShScriptBuilder>();
+  builder->notificationURL = notificationURL();
+  return builder;
 }
 
 

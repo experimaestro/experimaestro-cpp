@@ -87,8 +87,6 @@ std::shared_ptr<Lock> Dependency::lock() {
 // --- Resource
 
 Resource::Resource() {
-    static size_t RESOURCE_ID = 0;
-    _resourceId = ++RESOURCE_ID;
 }
 Resource::~Resource() {}
 void Resource::init() {}
@@ -117,7 +115,7 @@ void Resource::dependencyChanged(Dependency &dependency,
 }
 
 void Resource::output(std::ostream &out) const {
-  out << _resourceId;
+  // do nothing
 }
 
 
@@ -251,6 +249,10 @@ nlohmann::json Job::toJson() const  {
   nlohmann::json j = {};
   j["locator"] = _locator.toString();
   return j;
+}
+
+std::string const & Job::getJobId() const {
+  return _jobId;
 }
 
 JobState Job::state() const { return _state; }
@@ -630,7 +632,7 @@ void Workspace::waitUntilTaskCompleted() {
  
 }
 
-void Workspace::server(int port, std::string const & htdocs) {
+std::shared_ptr<rpc::Server> Workspace::server(int port, std::string const & htdocs) {
   if (_serverContext) throw new std::runtime_error("Server already started");
 
   LOGGER->info("Trying to run server on http://{}:{}", "127.0.0.1", port);
@@ -638,6 +640,7 @@ void Workspace::server(int port, std::string const & htdocs) {
   _server = mkptr<rpc::Server>();
   _server->start(*_serverContext, false);
   LOGGER->info("Started server http://{}:{}", "127.0.0.1", port);
+  return _server;
 }
 
 void Workspace::refresh(xpm::rpc::Emitter & emitter) {

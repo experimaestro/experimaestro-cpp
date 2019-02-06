@@ -28,7 +28,7 @@ class Client {
         store.dispatch({ type: "CONNECTED", payload: false });
     }
 
-    message = (event: any) => {        
+    message = (event: any) => {    
         store.dispatch(JSON.parse(event.data));
     }
 

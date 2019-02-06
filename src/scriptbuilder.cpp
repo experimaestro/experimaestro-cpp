@@ -101,8 +101,9 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
 
   // Adds notification URL to script
   if (!notificationURL.empty()) {
-    out << "export %s=\"" << protect_quoted(notificationURL) << "/"
-        << job.getId() << std::endl;
+    out << "export XPM_NOTIFICATION_URL=\""
+        << protect_quoted(notificationURL) << "/" << job.getJobId() << "\"" 
+        << std::endl;
   }
 
   out << "cd \"" << protect_quoted(connector.resolve(directory)) << "\"" << std::endl;
@@ -143,7 +144,7 @@ Path ShScriptBuilder::write(Workspace & ws, Connector const &connector, Path con
   // Notify if possible
   if (!notificationURL.empty()) {
     out << " wget --tries=1 --connect-timeout=1 --read-timeout=1 --quiet -O "
-      << "/dev/null \"$XPM_NOTIFICATION_URL/eoj\"" << std::endl;
+      << "/dev/null \"$XPM_NOTIFICATION_URL?status=eoj\"" << std::endl;
   }
 
   // Kills remaining processes

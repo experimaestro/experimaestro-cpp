@@ -4396,13 +4396,15 @@ ul.buttons {
 
 .status.progressbar-container {
   position: relative;
-  background: lightgreen; }
+  background: lightgreen;
+  z-index: -2; }
 
 .progressbar {
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
+  z-index: -1;
   background: green; }
 
 .status div.status-running {

@@ -147,6 +147,31 @@ foreach(xpmlib experimaestro_shared)
 
 endforeach()
 
+# ---- Web app
+
+set(WEBAPPDIR ${CMAKE_SOURCE_DIR}/app/build)
+set(WEBAPPINDEX ${WEBAPPDIR}/index.html)
+set(WEBAPP_SOURCES 
+    ${CMAKE_SOURCE_DIR}/app/src/App.js
+    ${CMAKE_SOURCE_DIR}/app/src/Tasks.jsx
+    ${CMAKE_SOURCE_DIR}/app/src/Experiments.jsx
+
+    ${CMAKE_SOURCE_DIR}/app/src/index.js
+    ${CMAKE_SOURCE_DIR}/app/src/store.js
+    ${CMAKE_SOURCE_DIR}/app/src/client.js
+
+    ${CMAKE_SOURCE_DIR}/app/sass/_jobs.scss
+    ${CMAKE_SOURCE_DIR}/app/sass/App.scss
+)
+message(STATUS "Target ${WEBAPPINDEX} / ${CMAKE_SOURCE_DIR}/app/src / ${WEBAPP_SOURCEAS}")
+add_custom_command(
+    OUTPUT ${WEBAPPINDEX}
+    COMMAND npm run build
+    DEPENDS ${WEBAPP_SOURCES}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/app
+)
+add_custom_target(webapp DEPENDS ${WEBAPPINDEX})
+
 # ---- experimaestro executable
 
 add_executable(experimaestro experimaestro/main.cpp)
@@ -254,7 +279,7 @@ if (true)
     install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
 
     install(FILES ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/app/build/ COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION}/htdocs)
+    install(DIRECTORY ${WEBAPPDIR}/ COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION}/htdocs)
     add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
@@ -265,39 +290,11 @@ if (true)
 
 	# Add install target
 	add_custom_target(install-experimaestro-python
-	  DEPENDS _experimaestro_python
+	  DEPENDS _experimaestro_python webapp
 	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   	)
 
 endif ()
-
-
-# --- Java support
-
-# FIND_PACKAGE(JNI REQUIRED)
-
-# set(JAVA_XPM_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/src/main/java/net/bpiwowar")
-# set(CMAKE_SWIG_FLAGS -c++ -package net.bpiwowar)
-# set(CMAKE_SWIG_OUTDIR "${JAVA_XPM_OUTDIR}")
-
-# set(SWIG_MODULE_experimaestro_java_EXTRA_DEPS ${PUBLIC_HEADERS} swig/ignores.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-# swig_add_module(experimaestro_java java swig/xpm.i)
-
-# foreach(swigtargetlist "experimaestro;experimaestro" "experimaestro_rpc;rpc")
-#     # set(swigtargetlist ${swigtarget})
-#     list(GET swigtargetlist 0 swigtargetname)
-#     list(GET swigtargetlist 1 swigpythonname)
-#     set_target_properties("${swigtargetname}_java" PROPERTIES
-# 			MACOSX_RPATH TRUE
-# 			INSTALL_RPATH "@loader_path"
-# 			CXX_STANDARD 11
-#     )
-#     target_include_directories("${swigtargetname}_java" PUBLIC ${JNI_INCLUDE_DIRS})
-#     swig_link_libraries("${swigtargetname}_java" ${JAVA_JVM_LIBRARY} experimaestro_shared)
-# endforeach()
-
-# add_dependencies(experimaestro_java documentation experimaestro_rpc_java)
-
 
 export(PACKAGE experimaestro)
 export(TARGETS experimaestro experimaestro_shared FILE ${CMAKE_CURRENT_BINARY_DIR}/experimaestro.cmake EXPORT_LINK_INTERFACE_LIBRARIES)

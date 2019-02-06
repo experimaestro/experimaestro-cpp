@@ -14,6 +14,9 @@ type Experiment = {
 }
 
 export type Job = {
+    jobId: string;
+    taskId: string;
+
     locator: string;
     status: "running" | "done" | "error" | "waiting";
 
@@ -21,9 +24,6 @@ export type Job = {
     end: string;
     submitted: string;
     progress: number;
-
-    jobId: string;
-    taskId: string;
 }
 export type Jobs = {
     byId: { [string]: Job },
@@ -56,28 +56,6 @@ type Action =
 
 
 // --- Reducer
-
-// const fakeJobs = {
-//         byId: { 
-//             "1": {
-//                 locator: "/a/b/c1",
-//                 end: "",
-//                 start: "",
-//                 submitted: "",
-//                 status: "running",
-//                 progress: 0.2
-//             }, 
-//             "2": {
-//                 locator: "/a/b/c2",
-//                 end: "",
-//                 start: "",
-//                 submitted: "",
-//                 status: "error",
-//                 progress: 1
-//             }
-//         },
-//         ids: [ "1", "2" ]
-// }
 
 const initialState : State = {
     connected: false,
@@ -112,16 +90,16 @@ const reducer : Reducer<State,Action> =
                 break;
 
             case "JOB_ADD":
-                if (draft.jobs.byId[action.payload.locator] === undefined) {
-                    draft.jobs.ids.push(action.payload.locator);
+                if (draft.jobs.byId[action.payload.jobId] === undefined) {
+                    draft.jobs.ids.push(action.payload.jobId);
                 }
-                draft.jobs.byId[action.payload.locator] = action.payload;
+                draft.jobs.byId[action.payload.jobId] = action.payload;
                 break;
 
             case "JOB_UPDATE":
-                if (draft.jobs.byId[action.payload.locator] === undefined) {
+                if (draft.jobs.byId[action.payload.jobId] === undefined) {
                 } else {
-                    _.merge(draft.jobs.byId[action.payload.locator], action.payload);
+                    _.merge(draft.jobs.byId[action.payload.jobId], action.payload);
                 }
                 break;
 
