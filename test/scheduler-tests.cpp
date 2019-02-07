@@ -49,6 +49,8 @@ public:
    Job(d.locator / fmt::format("job{}", ++COUNTER), nullptr), jobId(COUNTER), duration(duration) {};
   virtual ~FakeJob() {}
 
+  virtual void kill() {}
+
   friend std::ostream & operator<<(std::ostream &out, FakeJob const & job);
 
   virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override {
