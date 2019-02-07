@@ -83,6 +83,8 @@ int main(int argc, const char **argv) {
                     {{"$type", "TypeA"}, {"sleep", a}, {"failure", false}})
                     ->asMap();
 
+        v->addTag("sleep", a);
+
 
         currentRegister()
             ->getTask(Typename("task.a"))
@@ -92,6 +94,7 @@ int main(int argc, const char **argv) {
           {{"$type", "TypeA"}, {"sleep", a}, {"failure", false}})
         ->asMap();
         v2->set("parent", v);
+        v2->addTag("dep", true);
 
         currentRegister()
             ->getTask(Typename("task.a"))

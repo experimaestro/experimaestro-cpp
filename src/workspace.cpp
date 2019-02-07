@@ -1,5 +1,7 @@
 #include <csignal>
 #include <condition_variable>
+#include <ctime>
+#include <chrono>
 
 #include <xpm/workspace.hpp>
 #include <xpm/commandline.hpp>
@@ -21,6 +23,14 @@ DEFINE_LOGGER("xpm.workspace");
 
 
 namespace {
+  // Current workspace
+  std::shared_ptr<xpm::Workspace> CURRENT_WORKSPACE;
+  
+  // Use to notify a changed in job status
+  std::mutex JOB_CHANGED_MUTEX;
+  std::condition_variable JOB_CHANGED;
+
+
   /**
    *
    * Comments about the locking:
@@ -29,6 +39,55 @@ namespace {
    * (2) start: [acquire resources] - run - [release resources]
    */
   std::mutex WORKSPACE_MUTEX;
+
+  enum class ExitMode {
+    NONE,
+    WAITING,
+    STOPPING
+  };
+
+  ExitMode registerExitHandler();
+  
+  /** 
+   * Exit signal 
+   * 
+   * The policy is to stop launching jobs first
+   * If two SIGINTs are received in a short interval, then exit ASAP
+   */
+  ExitMode exitMode = ExitMode::NONE;
+  static const auto DOUBLE_EXIT_INTERVAL = std::chrono::seconds(5);
+  auto lastSignal = std::chrono::system_clock::now() - DOUBLE_EXIT_INTERVAL;
+
+  void sigexitHandler(int) {
+    switch(exitMode) {
+      case ExitMode::NONE: 
+        exitMode = ExitMode::WAITING; 
+        lastSignal = std::chrono::system_clock::now();
+        LOGGER->warn("Received SIGINT signal: not launching any other process. Press control-C again to exit.");
+        break;
+      case ExitMode::WAITING:
+        if (lastSignal < (std::chrono::system_clock::now() + DOUBLE_EXIT_INTERVAL)) {
+          exitMode = ExitMode::STOPPING;
+          JOB_CHANGED.notify_all();
+          LOGGER->warn("Will stop as soon as possible");
+        } else {
+          LOGGER->warn("Received SIGINT signal: not launching any other process. Press control-C again to exit.");
+          lastSignal = std::chrono::system_clock::now();
+        }
+        break;
+      case ExitMode::STOPPING:
+        LOGGER->warn("Already stopping... please wait a bit!");
+        break;
+
+    }
+  }
+
+  ExitMode registerExitHandler() {
+    LOGGER->info("Registered exit signal handler");
+    std::signal(SIGINT, &sigexitHandler);
+    return ExitMode::NONE;
+  }
+
 }
 
 namespace xpm {
@@ -272,7 +331,7 @@ nlohmann::json Job::getJsonState() const {
     { "end", endTime() },
     { "submitted", submissionTime() },
     { "status", state() },
-    { "tags", {} }
+    { "tags", nlohmann::json::array() }
   };
   return payload;
 }
@@ -329,6 +388,12 @@ void Job::jobCompleted() {
 }
 
 void Job::start() {
+  if (exitMode != ExitMode::NONE) {
+    LOGGER->info("Not starting job: exit signal received");
+    std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
+    state(JobState::ERROR);
+    return;
+  }
   std::thread([this]() {
     std::vector<std::shared_ptr<Lock>> locks;
     
@@ -419,9 +484,11 @@ void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<pt
   Path directory = _locator.parent();
   _launcher->connector()->mkdirs(directory, true, false);
 
+  // Lock
   auto lockPath = pathTo(LOCK_PATH);
-
   auto lock = _launcher->connector()->lock(lockPath);
+
+  // Check again if done (now that we have locked everything)
   if (check()) return;
   
   // Now we can write the script
@@ -463,7 +530,7 @@ nlohmann::json CommandLineJob::getJsonState() const {
 
   auto &tags = j["tags"];
   for(auto &entry: _parameters->tags()) {
-    tags[entry.first] = entry.second.toJson();
+    tags.push_back(nlohmann::json::array({ entry.first, entry.second.toJson() }));
   }
   return j;
 }
@@ -471,15 +538,6 @@ nlohmann::json CommandLineJob::getJsonState() const {
 // -- Workspace
 
 std::unordered_set<Workspace *> Workspace::activeWorkspaces;
-
-namespace {
-  std::shared_ptr<Workspace> CURRENT_WORKSPACE;
-  
-  // Use to notify a changed in job status
-  std::mutex JOB_CHANGED_MUTEX;
-  std::condition_variable JOB_CHANGED;
-}
-
 
 
 bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
@@ -495,6 +553,7 @@ Workspace::Workspace() : Workspace("") {
 
 Workspace::Workspace(std::string const &path) : _path(path) {
   activeWorkspaces.insert(this);
+  registerExitHandler();
 }
 
 Workspace::~Workspace() {
@@ -504,6 +563,10 @@ Workspace::~Workspace() {
 
 void Workspace::submit(ptr<Job> const &job) {
   {
+    if (exitMode != ExitMode::NONE) {
+      LOGGER->warn("Not registering job: application received exit signal");
+    }
+
     std::lock_guard<std::mutex> lock(WORKSPACE_MUTEX);
 
     // Skip if same path exists
@@ -630,17 +693,8 @@ void Workspace::experiment(std::string const & name) {
   _experiment = name;
 }
 
-namespace {
-  bool exitSignal;
-  void sigexitHandler(int) {
-    LOGGER->warn("Got SIGINT");
-    exitSignal = true;
-  }
-}
 
 void Workspace::waitUntilTaskCompleted() {
-  std::signal(SIGINT, &sigexitHandler);
-
   // Go through all the workspaces
   size_t count = 0;
   do {
@@ -655,7 +709,7 @@ void Workspace::waitUntilTaskCompleted() {
       LOGGER->info("Waiting for {} job(s) to complete", count);
       JOB_CHANGED.wait(lock);
     }
-  } while (count > 0 && !exitSignal);
+  } while (count > 0 && exitMode != ExitMode::STOPPING);
  
 }
 

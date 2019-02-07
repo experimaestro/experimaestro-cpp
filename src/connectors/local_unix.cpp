@@ -249,17 +249,16 @@ public:
   virtual int exitCode() override {
     int exit_status;
     auto code = waitpid(pid, &exit_status, 0);
-    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", WEXITSTATUS(exit_status), WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
 
     if (code == -1) {
-      LOGGER->error("Error with waitpid: {} - waiting with -PID", strerror(errno));
-
-      code = waitpid(-pid, &exit_status, 0);
-      if (code == -1) {
-        LOGGER->error("Error with waitpid {}", strerror(errno));
-        throw std::runtime_error("waitpid error could not be handled");
-      }
+      LOGGER->error("Error with waitpid: returning failure");
+      return -1;
     }
+
+    auto exit_code = WEXITSTATUS(exit_status);
+    auto signaled = WIFSIGNALED(exit_status);
+    auto stopped = WIFSTOPPED(exit_status);
+    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", exit_code, WIFEXITED(exit_status), signaled, stopped);
 
     // Signals that the process ended
     {
@@ -268,9 +267,8 @@ public:
     }
     close_fds();
 
-    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", WEXITSTATUS(exit_status),
-      WIFEXITED(exit_status), WIFSIGNALED(exit_status), WIFSTOPPED(exit_status));
-
+    if (signaled) return -2;
+    if (stopped) return -3;
     return WEXITSTATUS(exit_status);
   }
 

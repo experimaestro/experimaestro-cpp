@@ -24,7 +24,7 @@ export type Job = {
     end: string;
     submitted: string;
 
-    tags: {[string]: number|string|boolean};
+    tags: Array<[string, number|string|boolean]>;
 
     progress: number;
 }
