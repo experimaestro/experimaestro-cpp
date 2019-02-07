@@ -6,14 +6,12 @@ import inspect
 import os.path as op
 import os
 import logging
-import pathlib
-from pathlib import Path as PPath
+from pathlib import Path as BasePath, PosixPath
 
-# Import C++ library
-from .experimaestro import *
+# --- Initialization
 
 logger = logging.getLogger("xpm")
-modulepath = PPath(__file__).parent
+modulepath = BasePath(__file__).parent
 
 # --- Import C bindings
 
@@ -42,7 +40,7 @@ class JSONEncoder(json.JSONEncoder):
         if type(o) == Typename:
             return str(o)
 
-        if isinstance(o, pathlib.PosixPath):
+        if isinstance(o, BasePath):
             return {"$type": "path", "$value": str(o.resolve())}
 
         return json.JSONEncoder.default(self, o)
@@ -435,7 +433,7 @@ class RegisterTask(RegisterType):
             self.scriptpath = op.join(
                 op.dirname(inspect.getfile(t)), self.scriptpath)
 
-        self.scriptpath = PPath(self.scriptpath).absolute()
+        self.scriptpath = BasePath(self.scriptpath).absolute()
 
         logger.debug("Task %s command: %s %s", t, self.pythonpath,
                      self.scriptpath)
@@ -590,7 +588,7 @@ def experiment(path, name):
     :param name: The name of the experiment
     """
     global workspace
-    if isinstance(path, PPath):
+    if isinstance(path, BasePath):
         path = path.absolute()
     workspace = Workspace(str(path))
     workspace.current()
@@ -631,7 +629,7 @@ def tags(value):
 
 def tagspath(value: PyObject):
     """Return the tags associated with a value"""
-    p = PPath()
+    p = BasePath()
     for key, value in value.__xpm__.sv.tags().items():
         p /= "%s=%s" % (key.replace("/","-"), value)
     return p
