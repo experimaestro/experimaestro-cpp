@@ -10,7 +10,7 @@ jobs:
           name: Installing packages
           command: |
             apt-get update
-            apt-get install -y libpoco-dev git g++ cmake libssh-dev swig ninja-build doxygen python3-dev pkg-config
+            apt-get install -y libpoco-dev git g++ cmake libssh-dev ninja-build doxygen python3-dev pkg-config
       - run:
           name: "Pull Submodules"
           command: |

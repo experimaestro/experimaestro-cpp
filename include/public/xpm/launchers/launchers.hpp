@@ -116,7 +116,7 @@ public:
   virtual std::shared_ptr<ScriptBuilder> scriptBuilder() = 0;
 
   inline std::shared_ptr<Connector> connector() { return _connector; }
-  inline Environment const & environment() { return _environment; }
+  inline Environment & environment() { return _environment; }
 
   /// Set the notification URL
   std::string const & notificationURL() const;

@@ -78,21 +78,21 @@ def value2python(sv):
 
 """XPM type to Python"""
 TYPE2PYTHON = {
-    str(BooleanType): bool,
-    str(IntegerType): int,
-    str(StringType): str,
-    str(RealType): float,
-    str(PathType): Path
+    lib.type_tostring(lib.BOOLEAN_TYPE): bool,
+    lib.type_tostring(lib.INTEGER_TYPE): int,
+    lib.type_tostring(lib.STRING_TYPE): str,
+    lib.type_tostring(lib.REAL_TYPE): float,
+    lib.type_tostring(lib.PATH_TYPE): BasePath
 }
 
 
 """Dictionary of converteres"""
 VALUECONVERTERS = {
-    str(BooleanType): lambda v: v.asScalar().asBoolean(),
-    str(IntegerType): lambda v: v.asScalar().asInteger(),
-    str(StringType): lambda v: v.asScalar().asString(),
-    str(RealType): lambda v: v.asScalar().asReal(),
-    str(PathType): lambda v: v.asScalar().asPath()
+    lib.type_tostring(lib.BOOLEAN_TYPE): lambda v: v.asScalar().asBoolean(),
+    lib.type_tostring(lib.INTEGER_TYPE): lambda v: v.asScalar().asInteger(),
+    lib.type_tostring(lib.STRING_TYPE): lambda v: v.asScalar().asString(),
+    lib.type_tostring(lib.REAL_TYPE): lambda v: v.asScalar().asReal(),
+    lib.type_tostring(lib.PATH_TYPE): lambda v: v.asScalar().asPath()
 }
 
 # --- From Python to C++ types
@@ -135,10 +135,10 @@ def checknullsv(sv):
 
 # --- XPM Objects
 
-class XPMObject(Object):
+class XPMObject:
     """Holds XPM information for a PyObject"""
     def __init__(self, pyobject, sv=None):
-        super().__init__()
+        self.ptr = ffi.gc(lib.object_new(self.setValue), lib.workspace_free)
         self.pyobject = pyobject
 
         if sv is None:
@@ -177,6 +177,7 @@ class XPMObject(Object):
         finally:
             self.setting = False
 
+    @ffi.callback
     def setValue(self, key, sv):
         """Called by XPM when value has been validated"""
         if self.setting: return
@@ -268,7 +269,7 @@ def submit(*args, **kwargs):
     PyObject.submit(*args, **kwargs)
 
 # Defines a class property
-PyObject.__xpmtype__ = AnyType
+PyObject.__xpmtype__ = lib.ANY_TYPE
 
 class TypeProxy: pass
 
@@ -289,18 +290,18 @@ class Choice(TypeProxy):
         return cvar.StringType
 
 
-class PythonRegister(Register):
+class PythonRegister:
     """The register contains a reference"""
     def __init__(self):
         # Initialize the base class
-        Register.__init__(self)
+        self.ptr = ffi.gc(lib.register_new(), lib.register_free)
 
         self.builtins = {
-            int: cvar.IntegerType,
-            bool: cvar.BooleanType,
-            str: cvar.StringType,
-            float: cvar.RealType,
-            Path: PathType
+            int: lib.INTEGER_TYPE,
+            bool: lib.BOOLEAN_TYPE,
+            str: lib.STRING_TYPE,
+            float: lib.REAL_TYPE,
+            BasePath: lib.PATH_TYPE
         }
 
         self.registered = {}
@@ -334,6 +335,9 @@ class PythonRegister(Register):
         if isinstance(key, PyObject):
             return key.__class__.__xpmtype__
         return None
+
+    def getTask(self, name):
+        lib.register_getTask()
 
 
     def runTask(self, task, sv):

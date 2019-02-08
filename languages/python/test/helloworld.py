@@ -1,7 +1,7 @@
 # --- Task and types definitions
 
 import logging
-from experimaestro import TypeArgument, RegisterTask
+from experimaestro import TypeArgument, RegisterTask, setLogLevel, LogLevel_DEBUG, Typename
 
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
 setLogLevel("xpm", LogLevel_DEBUG)

@@ -5,11 +5,9 @@ project(experimaestro)
 set(LINKED_LIBRARIES "")
 set(INCLUDE_DIRECTORIES "")
 
-include(UseSWIG)
 include(CMakeHelpers)
 include(CMakeFindExtensions)
 
-find_package(SWIG REQUIRED)
 find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 
@@ -185,63 +183,35 @@ add_subdirectory(test)
 
 # --- Generate documentation
 
-find_package(Doxygen REQUIRED)
+# add_custom_command(
+#         OUTPUT xml/index.xml
+#         COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
+#         COMMAND touch xml/index.xml # Necessary when doxygen does not update the documentation
+#         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#         COMMENT "Generating XML documentation with Doxygen" VERBATIM
+#         DEPENDS ${SWIG_PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+# )
 
-set(DOXYGEN_INPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 
-add_custom_command(
-        OUTPUT xml/index.xml
-        COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-        COMMAND touch xml/index.xml # Necessary when doxygen does not update the documentation
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating XML documentation with Doxygen" VERBATIM
-        DEPENDS ${SWIG_PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-)
-add_custom_target(documentation_index DEPENDS xml/index.xml)
 
-add_custom_command(
-        OUTPUT documentation.i
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxy2swig.py
-            --function-signature --type-info --overloaded-functions --attribute-list --constructor-list
-            ${CMAKE_CURRENT_BINARY_DIR}/xml/index.xml ${CMAKE_CURRENT_BINARY_DIR}/documentation.i
-        DEPENDS documentation_index
-        COMMENT "Generating Swig documentation" VERBATIM
-)
-
-add_custom_target(documentation DEPENDS documentation.i)
-
-# --- General SWIG configuration
-
-set_source_files_properties(languages/swig/xpm.i PROPERTIES CPLUSPLUS ON)
 
 # --- Python support
 
 
 if (true)
-    FIND_PACKAGE(PythonLibs 3 REQUIRED)
-    set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/python/experimaestro")
-	if(NOT PYTHON_INSTALL_LOCATION)
+    set(XPM_PYTHON_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/python/experimaestro")
+
+    if(NOT PYTHON_INSTALL_LOCATION)
 		set(PYTHON_INSTALL_LOCATION ${CMAKE_INSTALL_PREFIX}/python/experimaestro)
 	else()
 		set(PYTHON_INSTALL_LOCATION ${PYTHON_INSTALL_LOCATION}/experimaestro)
-	endif()
-    file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
-    message(STATUS "Python library will be built in ${CMAKE_SWIG_OUTDIR} and installed in ${PYTHON_INSTALL_LOCATION}."
+    endif()
+  
+    file(MAKE_DIRECTORY ${XPM_PYTHON_BUILD_DIR})
+    message(STATUS "Python library will be built in ${XPM_PYTHON_BUILD_DIR} and installed in ${PYTHON_INSTALL_LOCATION}."
         " Use PYTHON_INSTALL_LOCATION configuration to change this setting."
         " Note: install prefix was ${CMAKE_INSTALL_PREFIX}")
 
-    include_directories(${PYTHON_INCLUDE_PATH})
-
-    set(CMAKE_SWIG_FLAGS "-builtin;-threads")
-
-    # Build module experimaestro
-    set(SWIG_MODULE_experimaestro_python_EXTRA_DEPS ${PUBLIC_HEADERS} languages/python/xpm.i ${CMAKE_CURRENT_BINARY_DIR}/documentation.i)
-    if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
-        swig_add_module(experimaestro_python python languages/swig/xpm.i)
-    else()
-        swig_add_library(experimaestro_python LANGUAGE python SOURCES languages/swig/xpm.i)
-    endif()
 
     # Determine appropriate loader path
     if(APPLE)
@@ -250,29 +220,7 @@ if (true)
         set(XPM_LOADER_PATH "$ORIGIN")
     endif()
 
-    # Set output name and path
-    foreach(swigtargetlist "experimaestro;experimaestro")
-        # set(swigtargetlist ${swigtarget})
-        list(GET swigtargetlist 0 swigtargetname)
-        list(GET swigtargetlist 1 swigpythonname)
-        message(STATUS "${swigtargetname} and ${swigpythonname}")
-        set_target_properties("_${swigtargetname}_python" PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SWIG_OUTDIR}"
-                LIBRARY_OUTPUT_NAME "_${swigpythonname}"
-				MACOSX_RPATH TRUE
-				INSTALL_RPATH "${XPM_LOADER_PATH}"
-                CXX_STANDARD 17
-        )
-        target_compile_definitions("_${swigtargetname}_python" PUBLIC "SWIG_DIRECTOR_NO_UEH")
-        target_compile_options("_${swigtargetname}_python" PUBLIC "-Wno-unused-label" "-Wno-dynamic-class-memaccess")
-        swig_link_libraries("${swigtargetname}_python" ${PYTHON_LIBRARIES} experimaestro_shared)
-
-		install(FILES "${CMAKE_SWIG_OUTDIR}/${swigpythonname}.py" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-        install(TARGETS "_${swigtargetname}_python" COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-        # install(TARGETS yaml-cpp-targets COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-
-    endforeach()
-    configure_file(languages/python/__init__.py ${CMAKE_SWIG_OUTDIR}/__init__.py COPYONLY)
+    configure_file(languages/python/__init__.py ${XPM_PYTHON_BUILD_DIR}/__init__.py COPYONLY)
 	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
@@ -280,17 +228,28 @@ if (true)
 
     install(FILES ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(DIRECTORY ${WEBAPPDIR}/ COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION}/htdocs)
-    add_dependencies(_experimaestro_python documentation)
 
     # Test examples (compilation only)
     #    add_dependencies(run-tests DEPENDS _experimaestro_python)
 
 #    add_test(python_test ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/test/python/test.py")
-#    set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_SWIG_OUTDIR}")
+#    set_tests_properties(python_test PROPERTIES ENVIRONMENT "PYTHONPATH=${XPM_PYTHON_BUILD_DIR}")
+
+    # Copy libraries in the right place
+    set(XPM_PYTHON_SHAREDLIB ${XPM_PYTHON_BUILD_DIR}/libexperimaestro.so)
+    add_custom_command(
+        OUTPUT ${XPM_PYTHON_SHAREDLIB}
+        COMMAND ${CMAKE_COMMAND} -E copy  $<TARGET_FILE:experimaestro_shared> ${XPM_PYTHON_BUILD_DIR}
+        DEPENDS experimaestro_shared
+    )
+
+    add_custom_target(experimaestro-python 
+        DEPENDS ${XPM_PYTHON_SHAREDLIB}
+    )
 
 	# Add install target
 	add_custom_target(install-experimaestro-python
-	  DEPENDS _experimaestro_python webapp
+	  DEPENDS experimaestro_shared webapp
 	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   	)
 

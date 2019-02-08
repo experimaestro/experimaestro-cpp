@@ -56,7 +56,7 @@ class Typename {
   /** Returns a typename prefix by this */
   Typename operator()(std::string const &localname) const;
 
-  std::string toString() const;
+  std::string const & toString() const;
 
   Typename array() const;
 

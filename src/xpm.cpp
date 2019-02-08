@@ -71,7 +71,7 @@ void Outputable::output(std::ostream &out) const {
 
 Typename::Typename(std::string const &name) : name(name) {}
 
-std::string Typename::toString() const {
+std::string const & Typename::toString() const {
   return name;
 }
 
