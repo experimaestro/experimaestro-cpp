@@ -1,9 +1,10 @@
 # --- Task and types definitions
 
 import logging
-from experimaestro import TypeArgument, RegisterTask, setLogLevel, LogLevel_DEBUG, Typename
 
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
+
+from experimaestro import *
 setLogLevel("xpm", LogLevel_DEBUG)
 
 # Namespace
@@ -61,5 +62,9 @@ xp_parser.add_argument("workdir", type=str, help="Working directory")
 xp_parser.set_defaults(func=xp)
 
 args = parser.parse_args()
-args.func(args)
+
+if "func" in args:
+    args.func(args)
+else:
+    parser.print_help()
 

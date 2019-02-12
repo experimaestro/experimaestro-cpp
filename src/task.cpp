@@ -18,9 +18,10 @@ using nlohmann::json;
 bool Task::_running = false;
 
 Task::Task(Typename const &typeName, ptr<Type> const &type) : _identifier(typeName), _type(type) {
+  if (!type) throw std::invalid_argument("Type should not be null when constructing a task");
 }
 
-Task::Task(ptr<Type> const &type) : _identifier(type->name()), _type(type) {
+Task::Task(ptr<Type> const &type) : Task(type->name(), type) {
 }
 
 Typename Task::name() const { return _type->name(); }

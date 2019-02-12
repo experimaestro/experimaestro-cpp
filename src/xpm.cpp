@@ -70,6 +70,8 @@ void Outputable::output(std::ostream &out) const {
 // ---
 
 Typename::Typename(std::string const &name) : name(name) {}
+Typename::Typename(Typename const & parent, std::string const &localname) : name(parent.name + "." + localname) {
+}
 
 std::string const & Typename::toString() const {
   return name;
@@ -769,16 +771,17 @@ std::shared_ptr<Object> MapValue::createObjects(xpm::Register &xpmRegister) {
   Value::createObjects(xpmRegister);
   
   _object = xpmRegister.createObject(shared_from_this());
-  if (_object) {
-    // Set the values
-    for(auto &kv: _map) {
-      LOGGER->debug("Setting value {}", kv.first);
-      setObjectValue(kv.first, kv.second);
-    }
+  if (!_object) throw assertion_error("Object is null");
+
+  // Set the values
+  for(auto &kv: _map) {
+    LOGGER->debug("Setting value {}", kv.first);
+    setObjectValue(kv.first, kv.second);
   }
-  
+
   // Perform further initialization
   _object->init();
+  
   return _object;
 }
 
