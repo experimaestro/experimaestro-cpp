@@ -220,7 +220,6 @@ if (true)
         set(XPM_LOADER_PATH "$ORIGIN")
     endif()
 
-    configure_file(languages/python/__init__.py ${XPM_PYTHON_BUILD_DIR}/__init__.py COPYONLY)
 	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
@@ -239,12 +238,17 @@ if (true)
     set(XPM_PYTHON_SHAREDLIB ${XPM_PYTHON_BUILD_DIR}/libexperimaestro.so)
     add_custom_command(
         OUTPUT ${XPM_PYTHON_SHAREDLIB}
-        COMMAND ${CMAKE_COMMAND} -E copy  $<TARGET_FILE:experimaestro_shared> ${XPM_PYTHON_BUILD_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h $<TARGET_FILE:experimaestro_shared> ${XPM_PYTHON_BUILD_DIR}
         DEPENDS experimaestro_shared
+    )
+    add_custom_command(
+        OUTPUT  ${XPM_PYTHON_BUILD_DIR}/__init__.py
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/languages/python/__init__.py ${XPM_PYTHON_BUILD_DIR}/__init__.py
+        DEPENDS ${CMAKE_SOURCE_DIR}/languages/python/__init__.py
     )
 
     add_custom_target(experimaestro-python 
-        DEPENDS ${XPM_PYTHON_SHAREDLIB}
+        DEPENDS ${XPM_PYTHON_SHAREDLIB} ${XPM_PYTHON_BUILD_DIR}/__init__.py
     )
 
 	# Add install target

@@ -25,10 +25,13 @@ typedef struct Dependency Dependency;
 typedef struct DependencyArray DependencyArray;
 typedef struct DirectConnector LocalConnector;
 typedef struct DirectLauncher DirectLauncher;
+typedef struct Generator Generator;
+typedef struct Job Job;
 typedef struct Launcher Launcher;
 typedef struct MapValue MapValue;
 typedef struct Object Object;
 typedef struct Path Path;
+typedef struct PathGenerator PathGenerator;
 typedef struct Register Register;
 typedef struct ScalarValue ScalarValue;
 typedef struct String String;
@@ -84,6 +87,7 @@ CString string_ptr(String *);
 
 // --- Value
 
+void value_free(Value *);
 Type * value_gettype(Value *);
 MapValue * value_asmap(Value *);
 ScalarValue * value_asscalar(Value *);
@@ -92,7 +96,7 @@ bool value_ismap(Value *);
 String * value_tostring(Value *);
 
 ScalarValue * scalarvalue_fromreal(double value);
-ScalarValue * scalarvalue_frombool(bool value);
+ScalarValue * scalarvalue_fromboolean(bool value);
 ScalarValue * scalarvalue_frominteger(long value);
 ScalarValue * scalarvalue_frompath(Path * value);
 ScalarValue * scalarvalue_fromstring(CString value);
@@ -107,13 +111,22 @@ String * scalarvalue_asstring(ScalarValue *);
 ArrayValue * arrayvalue_new();
 void arrayvalue_free(ArrayValue *);
 void arrayvalue_add(ArrayValue *, Value *);
+size_t arrayvalue_size(ArrayValue *);
+Value * arrayvalue_get(ArrayValue *, size_t);
 
 MapValue * mapvalue_new();
 void mapvalue_free(MapValue *);
 void mapvalue_setobject(MapValue *, Object *);
 void * mapvalue_getobjecthandle(MapValue *);
+Job * mapvalue_getjob(MapValue *);
 void mapvalue_settype(MapValue *, Type *);
 void mapvalue_set(MapValue *, CString, Value *);
+
+// --- Job
+
+void job_free(Job *);
+Path * job_stdoutpath(Job *);
+Path * job_stderrpath(Job *);
 
 // --- Object
 
@@ -123,12 +136,22 @@ typedef int (*object_setvalue_callback)(void * handle, CString, Value *);
 Object * object_new(void * handle, object_init_callback, object_delete_callback, object_setvalue_callback);
 void object_free(Object *);
 
+// --- Generator
+
+PathGenerator * pathgenerator_new(CString);
+void pathgenerator_free(PathGenerator *);
+
 // --- Argument
 
 Argument * argument_new(CString name);
 void argument_free(Argument *);
 void argument_settype(Argument *, Type *);
 void argument_sethelp(Argument *, CString);
+void argument_setrequired(Argument *, bool);
+void argument_setignored(Argument *, bool);
+void argument_setdefault(Argument *, Value *);
+void argument_setconstant(Argument *, Value *);
+void argument_setgenerator(Argument *, Generator *);
 
 // --- Command
 
@@ -174,6 +197,7 @@ void task_submit(Task *, Workspace *, Launcher * launcher, Value *, DependencyAr
 Path * path_new(CString path);
 void path_free(Path *);
 String * path_string(Path *);
+String * path_localpath(Path *);
 
 // --- Register
 
@@ -214,16 +238,10 @@ void workspace_waitUntilTaskCompleted();
 
 // --- Connectors
 
-
-
-
 LocalConnector * localconnector_new();
 void localconnector_free(LocalConnector *);
 
 // --- Launchers
-
-
-
 
 
 DirectLauncher * directlauncher_new(Connector *);

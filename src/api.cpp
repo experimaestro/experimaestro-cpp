@@ -23,17 +23,17 @@ namespace {
 
 template<typename T> struct C_API_HELPER {};
 
-#define DECLARE_XPM_COBJECT(CLASS, CPPCLASS) \
+#define DECLARE_XPM_COBJECT(NAME, CLASS, CPPCLASS) \
     template<> struct C_API_HELPER<CPPCLASS> { \
         typedef CLASS CObject; \
     }; \
     template<> struct C_API_HELPER<CLASS> { \
         typedef CPPCLASS Object; \
-    };
+    }; \
+    extern "C" void NAME ## _free(CLASS * c_ptr) { freecptr(c_ptr); } \
 
 #define XPM_CUSTOM_COBJECT(NAME, CLASS, CPPCLASS, ...) \
-    DECLARE_XPM_COBJECT(CLASS, CPPCLASS) \
-    extern "C" void NAME ## _free(CLASS * c_ptr) { freecptr<CPPCLASS, CLASS>(c_ptr); } \
+    DECLARE_XPM_COBJECT(NAME, CLASS, CPPCLASS) \
     extern "C" CLASS * NAME ## _new (__VA_ARGS__) 
 
 
@@ -54,7 +54,8 @@ inline typename C_API_HELPER<T>::CObject * mkcptr(Args&&... args) {
     return reinterpret_cast<typename C_API_HELPER<T>::CObject *>(c_ptr);
 }
 
-template<class T, class U> void freecptr(U *c_ptr) {
+template<class U> void freecptr(U *c_ptr) {
+    typedef typename C_API_HELPER<U>::Object T;
     auto s_ptr = reinterpret_cast<std::shared_ptr<T>*>(c_ptr);
     delete s_ptr;
 }
@@ -113,6 +114,15 @@ struct ApiObject : public xpm::Object {
 
 } // unnamed
 
+// Abstract classes
+
+DECLARE_XPM_COBJECT(connector, Connector, xpm::Connector);
+DECLARE_XPM_COBJECT(value, Value, xpm::Value);
+DECLARE_XPM_COBJECT(complexvalue, ComplexValue, xpm::ComplexValue);
+DECLARE_XPM_COBJECT(launcher, Launcher, xpm::Launcher);
+DECLARE_XPM_COBJECT(generator, Generator, xpm::Generator);
+DECLARE_XPM_COBJECT(job, Job, xpm::Job);
+DECLARE_XPM_COBJECT(abstractcommandcomponent, AbstractCommandComponent, xpm::AbstractCommandComponent);
 
 
 XPM_COBJECT(typename, Typename, CString name) {
@@ -160,19 +170,12 @@ XPM_COBJECT(argument, Argument, CString c_str) {
 }
 
 
-DECLARE_XPM_COBJECT(AbstractCommandComponent, xpm::AbstractCommandComponent);
-
 XPM_CUSTOM_COBJECT(object, Object, ApiObject, void * handle,
      object_init_callback init_cb, object_delete_callback delete_cb, 
         object_setvalue_callback setvalue_cb) {
     return mkcptr<ApiObject>(handle, init_cb, delete_cb, setvalue_cb);
 }
 
-
-DECLARE_XPM_COBJECT(Connector, xpm::Connector);
-DECLARE_XPM_COBJECT(Value, xpm::Value);
-DECLARE_XPM_COBJECT(ComplexValue, xpm::ComplexValue);
-DECLARE_XPM_COBJECT(Launcher, xpm::Launcher);
 
 XPM_COBJECT(directlauncher, DirectLauncher, Connector *c_connector) {
     return mkcptr<xpm::DirectLauncher>(c2sptr(c_connector));
@@ -186,7 +189,9 @@ XPM_COBJECT(mapvalue, MapValue) {
     return mkcptr<xpm::MapValue>();
 }
 
-
+XPM_COBJECT(pathgenerator, PathGenerator, CString path) {
+    return mkcptr<xpm::PathGenerator>(path);
+}
 
 XPM_COBJECT(arrayvalue, ArrayValue) {
     return mkcptr<xpm::ArrayValue>();
@@ -229,7 +234,8 @@ public:
     virtual void runTask(std::shared_ptr<xpm::Task> const & task, std::shared_ptr<xpm::Value> const & value) {
         auto _task = std::const_pointer_cast<xpm::Task>(task);
         auto _value = std::const_pointer_cast<xpm::Value>(value);
-        run_callback(handle, reinterpret_cast<Task*>(&_task), reinterpret_cast<Value*>(&_value));
+        auto error = run_callback(handle, reinterpret_cast<Task*>(&_task), reinterpret_cast<Value*>(&_value));
+        if (error) throw std::runtime_error("Error while running task");
     }
 
     virtual std::shared_ptr<xpm::Object> createObject(std::shared_ptr<xpm::Value> const & value) {
@@ -281,9 +287,35 @@ extern "C" {
         c2ref(argument).help(str);
     }
 
+    void argument_setrequired(Argument * argument, bool required) {
+        c2ref(argument).required(required);
+    }
+
+    void argument_setignored(Argument * argument, bool ignored) {
+        c2ref(argument).ignored(ignored);
+    }
+
+    void argument_setdefault(Argument * argument, Value * value) {
+        c2ref(argument).defaultValue(c2sptr(value));
+    }
+
+    void argument_setconstant(Argument * argument, Value * value) {
+        c2ref(argument).constant(c2sptr(value));
+    }
+
+    void argument_setgenerator(Argument * argument, Generator * generator) {
+        c2ref(argument).generator(c2sptr(generator));
+    }
+
 
     void arrayvalue_add(ArrayValue * array, Value * value) {
         c2ref(array).push_back(c2sptr(value));
+    }
+    size_t arrayvalue_size(ArrayValue * array) {
+        return c2ref(array).size();
+    }
+    Value * arrayvalue_get(ArrayValue * array, size_t index) {
+        return newcptr(c2ref(array)[index]);
     }
 
 
@@ -295,6 +327,12 @@ extern "C" {
         c2ref(commandline).add(c2sptr(command));
     }
 
+    Path * job_stdoutpath(Job * job) {
+        return mkcptr<xpm::Path>(c2ref(job).stdoutPath());
+    }
+    Path * job_stderrpath(Job * job) {
+        return mkcptr<xpm::Path>(c2ref(job).stderrPath());        
+    }
 
     void * mapvalue_getobjecthandle(MapValue * value) {
         auto object = c2ref(value).object();
@@ -305,6 +343,12 @@ extern "C" {
         API_ERROR(ERROR_CAST, "Cannot cast Object to ApiObject");
         return nullptr;
     }
+
+    Job * mapvalue_getjob(MapValue * value) {
+        auto sptr = c2ref(value).job();
+        return sptr ? newcptr(sptr) : nullptr;
+    }
+
 
     void mapvalue_set(MapValue * mapvalue, CString key, Value * value) {
         c2ref(mapvalue).set(key, c2sptr(value));
@@ -322,6 +366,15 @@ extern "C" {
         return mkcptr<std::string>(c2ref(path).toString());
     }
 
+    String * path_localpath(Path * path) {
+        try {
+            auto local = c2ref(path).localpath();
+            return mkcptr<std::string>(local);
+        } catch(...) {
+            // not a local path
+        }
+        return nullptr;
+    }
 
     void register_addType(Register * c_register, Type * c_type) {
         c2ref(c_register).addType(c2sptr(c_type));
@@ -336,7 +389,7 @@ extern "C" {
     ScalarValue * scalarvalue_fromreal(double value) {
         return mkcptr<xpm::ScalarValue>(value);
     }
-    ScalarValue * scalarvalue_frombool(bool value) {
+    ScalarValue * scalarvalue_fromboolean(bool value) {
         return mkcptr<xpm::ScalarValue>(value);
     }
     ScalarValue * scalarvalue_frominteger(long value) {
@@ -346,7 +399,7 @@ extern "C" {
         return mkcptr<xpm::ScalarValue>(c2ref(value));
     }
     ScalarValue * scalarvalue_fromstring(CString value) {
-        return mkcptr<xpm::ScalarValue>(value);
+        return mkcptr<xpm::ScalarValue>(std::string(value));
     }
 
     double scalarvalue_asreal(ScalarValue * value) {

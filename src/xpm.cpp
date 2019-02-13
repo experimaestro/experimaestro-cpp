@@ -623,7 +623,7 @@ void MapValue::_validate() {
         }
       } else {
         // Sets the value
-        LOGGER->debug("Checking value of {} [type {} vs {}]...", argument.name(), *argument.type(), *value->type());
+        LOGGER->debug("Checking value of {} [type {} vs value type {}]...", argument.name(), *argument.type(), *value->type());
         
         // Check if the declared type corresponds to the value type
         if (!entry.second->type()->accepts(value->type())) {
