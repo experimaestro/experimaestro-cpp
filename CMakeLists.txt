@@ -21,6 +21,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
 
 # ---
 
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 add_definitions("-Wall -Werror=return-type")
 
 enable_testing()
@@ -127,18 +128,22 @@ include_directories(${INCLUDE_DIRECTORIES})
 
 # --- experimaestro library
 
+if (UNIX)
+    # Sets the default search path to be the origin
+    SET(CMAKE_INSTALL_RPATH "\$ORIGIN")
+endif()
+
 add_library(experimaestro_shared SHARED ${SOURCES})
 install(TARGETS experimaestro_shared LIBRARY DESTINATION lib)
 install(DIRECTORY include/xpm DESTINATION include)
 
-foreach(xpmlib experimaestro_shared)
-    target_link_libraries(${xpmlib} ${LINKED_LIBRARIES})
-    target_include_directories(${xpmlib}  PRIVATE ${LIBSSH_INCLUDE_DIR})
-    set_target_properties(${xpmlib} PROPERTIES 
-        CXX_STANDARD 17
-        OUTPUT_NAME experimaestro)
-
-endforeach()
+target_link_libraries(experimaestro_shared ${LINKED_LIBRARIES})
+target_include_directories(experimaestro_shared  PRIVATE ${LIBSSH_INCLUDE_DIR})
+set_target_properties(experimaestro_shared PROPERTIES 
+    CXX_STANDARD 17
+    OUTPUT_NAME experimaestro
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
 
 # ---- Web app
 
@@ -159,6 +164,7 @@ set(WEBAPP_SOURCES
 message(STATUS "Target ${WEBAPPINDEX} / ${CMAKE_SOURCE_DIR}/app/src / ${WEBAPP_SOURCEAS}")
 add_custom_command(
     OUTPUT ${WEBAPPINDEX}
+    COMMAND npm install
     COMMAND npm run build
     DEPENDS ${WEBAPP_SOURCES}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/app
@@ -203,9 +209,9 @@ if (true)
     endif()
 
 	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
-    install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION} RUNTIME DESTINATION ${PYTHON_INSTALL_LOCATION})
 
     install(FILES ${CMAKE_SOURCE_DIR}/include/public/xpm/api.h COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(DIRECTORY ${WEBAPPDIR}/ COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION}/htdocs)
@@ -228,14 +234,14 @@ if (true)
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/languages/python/__init__.py ${XPM_PYTHON_BUILD_DIR}/__init__.py
         DEPENDS ${CMAKE_SOURCE_DIR}/languages/python/__init__.py
     )
-
+    
     add_custom_target(experimaestro-python 
         DEPENDS ${XPM_PYTHON_SHAREDLIB} ${XPM_PYTHON_BUILD_DIR}/__init__.py
     )
 
 	# Add install target
 	add_custom_target(install-experimaestro-python
-	  DEPENDS experimaestro_shared webapp
+	  DEPENDS experimaestro-python webapp
 	  COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=python -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   	)
 
