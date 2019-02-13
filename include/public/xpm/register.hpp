@@ -80,10 +80,8 @@ class Register {
   /// Create object
   virtual std::shared_ptr<Object> createObject(std::shared_ptr<Value> const & sv);
 
-#ifndef SWIG
   /// Load new definitions from YAML
   void load(YAML::Node const &j);
-#endif
 
   /// Load new definitions from YAML
   void loadYAML(Path const &j);

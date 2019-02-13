@@ -11,12 +11,6 @@
 #include <iostream>
 #include <vector>
 
-#ifndef SWIG
-  #define NOSWIG(...) __VA_ARGS__
-#else
-  #define NOSWIG(x) 
-#endif
-
 namespace xpm {
 
 // SHA-1 digest lenght
@@ -123,8 +117,6 @@ class lock_error : public exception {
 }
 
 
-#ifndef SWIG
-
 #include <cxxabi.h>
 template<typename T>
 std::string demangle(T const & t) {
@@ -144,7 +136,5 @@ std::string demangle(std::shared_ptr<T> const & t) {
   }
 }
 
-
-#endif
 
 #endif //PROJECT_COMMON_HPP

@@ -69,10 +69,8 @@ class Scalar {
 
   inline Scalar(char const *value) : Scalar(std::string(value)) {}
 
-#ifndef SWIG
   Scalar(nlohmann::json const &jsonValue);
   virtual YAML::Node toYAML() const;
-#endif
 
   Scalar(Scalar const &other);
   Scalar &operator=(Scalar const &other);
@@ -126,7 +124,7 @@ class Scalar {
 
   /** @} */
 
-  NOSWIG(void updateDigest(Digest &) const);
+  void updateDigest(Digest &) const;
 
   /// A constant
   static const Scalar NONE;

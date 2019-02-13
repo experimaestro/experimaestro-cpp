@@ -9,21 +9,13 @@
 
 namespace xpm {
 
-#ifdef SWIG
-#define SWIG_MUTABLE %mutable;
-#define SWIG_IMMUTABLE %immutable;
-#else
-#define SWIG_MUTABLE
-#define SWIG_IMMUTABLE
-#endif
-
 
 class Type;
 class Object;
 class Argument;
 class Value;
 
-SWIG_IMMUTABLE;
+;
 extern std::shared_ptr<Type> IntegerType;
 extern std::shared_ptr<Type> RealType;
 extern std::shared_ptr<Type> StringType;
@@ -34,7 +26,6 @@ extern std::shared_ptr<Type> PathType;
 extern const std::string KEY_TYPE;
 extern const std::string KEY_TASK;
 extern const std::string KEY_VALUE;
-SWIG_MUTABLE;
 
 
 // ---
@@ -75,18 +66,15 @@ class Typename {
   }
 };
 
-SWIG_IMMUTABLE;
 extern const Typename STRING_TYPE;
 extern const Typename BOOLEAN_TYPE;
 extern const Typename INTEGER_TYPE;
 extern const Typename REAL_TYPE;
 extern const Typename ANY_TYPE;
 extern const Typename PATH_TYPE;
-SWIG_MUTABLE;
 
 }
 
-#ifndef SWIG
 namespace std {
 /** Hash of type name */
 template<>
@@ -94,7 +82,6 @@ struct hash<xpm::Typename> {
   inline size_t operator()(xpm::Typename const &typeName) const { return typeName.hash(); }
 };
 }
-#endif
 
 namespace xpm {
   
@@ -108,7 +95,7 @@ namespace xpm {
  * <li>A parent type</li>
  * </ul>
  */
-class Type NOSWIG(: public std::enable_shared_from_this<Type>) {
+class Type : public std::enable_shared_from_this<Type> {
   friend class Register;
  public:
   typedef std::shared_ptr<Type> Ptr;
@@ -244,7 +231,6 @@ public:
 
 } // namespace xpm
 
-#ifndef SWIG
 namespace std {
 /** Hash of type */
 template<>
@@ -252,8 +238,6 @@ struct hash<xpm::Type> {
   inline size_t operator()(xpm::Type const &type) const { return type.name().hash(); }
 };
 }
-#endif
-
 
 
 #endif

@@ -346,8 +346,8 @@ class sftpstreambuf : public std::basic_streambuf<cT, traits> {
   SFTPSession sftp;
 
   bool flush() {
-    auto size = sizeof(typename traits::char_type) * offset;
-    auto wsize = sftp_write(file, (void *)buffer.data(), size);
+    ssize_t size = sizeof(typename traits::char_type) * offset;
+    ssize_t wsize = sftp_write(file, (void *)buffer.data(), size);
     offset = 0;
     LOGGER->debug("Wrote {} bytes to file ({})", wsize, size);
     if (wsize < 0) {

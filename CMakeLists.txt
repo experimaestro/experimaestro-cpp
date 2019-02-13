@@ -23,37 +23,34 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/ext/yaml-cpp EXCLUDE_FROM_ALL)
 
 add_definitions("-Wall -Werror=return-type")
 
-# Enables PIC (position independent code)
 enable_testing()
-set(SWIG_PUBLIC_HEADERS
-        include/public/xpm/commandline.hpp
-        include/public/xpm/cpp.hpp 
-        include/public/xpm/filesystem.hpp
-        include/public/xpm/json.hpp
-        include/public/xpm/logging.hpp
-        include/public/xpm/register.hpp
-        include/public/xpm/task.hpp
-        include/public/xpm/type.hpp 
-        include/public/xpm/scalar.hpp
-        include/public/xpm/workspace.hpp
-        include/public/xpm/xpm.hpp
-        
-        include/public/xpm/connectors/connectors.hpp
-        include/public/xpm/connectors/ssh.hpp
-        include/public/xpm/connectors/local.hpp
-
-        include/public/xpm/launchers/launchers.hpp
-        include/public/xpm/launchers/oar.hpp
-
-)
 
 set(PUBLIC_HEADERS
-    ${SWIG_PUBLIC_HEADERS}
-    
+    include/public/xpm/commandline.hpp
+    include/public/xpm/cpp.hpp 
+    include/public/xpm/filesystem.hpp
+    include/public/xpm/json.hpp
+    include/public/xpm/logging.hpp
+    include/public/xpm/register.hpp
+    include/public/xpm/task.hpp
+    include/public/xpm/type.hpp 
+    include/public/xpm/scalar.hpp
+    include/public/xpm/workspace.hpp
+    include/public/xpm/xpm.hpp
+
+    include/public/xpm/connectors/connectors.hpp
+    include/public/xpm/connectors/ssh.hpp
+    include/public/xpm/connectors/local.hpp
+
+    include/public/xpm/launchers/launchers.hpp
+    include/public/xpm/launchers/oar.hpp
+
     include/public/xpm/rpc/client.hpp
     include/public/xpm/rpc/jsonrpcclient.hpp
     include/public/xpm/rpc/server.hpp
     include/public/xpm/rpc/servercontext.hpp
+
+    include/public/xpm/api.h
 )
 
 set(PRIVATE_HEADERS
@@ -65,8 +62,6 @@ set(PRIVATE_HEADERS
 set(SOURCES
         # Include files
         ${PUBLIC_HEADERS} 
-        # Exclude from public to avoid SWIG recompilation
-        include/public/xpm/api.h
 
         ${PRIVATE_HEADERS}
 
@@ -180,19 +175,6 @@ set_property(TARGET experimaestro PROPERTY CXX_STANDARD 17)
 # --- Add googletest
 
 add_subdirectory(test)
-
-# --- Generate documentation
-
-# add_custom_command(
-#         OUTPUT xml/index.xml
-#         COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-#         COMMAND touch xml/index.xml # Necessary when doxygen does not update the documentation
-#         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#         COMMENT "Generating XML documentation with Doxygen" VERBATIM
-#         DEPENDS ${SWIG_PUBLIC_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-# )
-
-
 
 
 # --- Python support

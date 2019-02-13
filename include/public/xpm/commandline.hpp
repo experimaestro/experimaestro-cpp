@@ -21,7 +21,7 @@ struct CommandContext;
 class Workspace;
 
 /** Base class for all command related classes */
-class CommandPart NOSWIG(: public std::enable_shared_from_this<CommandPart>) {
+class CommandPart : public std::enable_shared_from_this<CommandPart> {
 public:
   virtual void forEach(std::function<void(CommandPart &)> f);
   virtual void output(CommandContext & context, std::ostream & out) const = 0;
@@ -147,8 +147,6 @@ struct NamedPipeRedirections {
   std::vector<Path> errorRedirections;
 };
 
-#ifndef SWIG
-
 /**
  * Context of a command used to generate the actual command line instructions
  */
@@ -178,8 +176,6 @@ struct CommandContext {
       Redirect const & outputRedirect, std::vector<Path> const & outputRedirects);
 
 };
-
-#endif // SWIG
 
 }
 

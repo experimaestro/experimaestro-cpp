@@ -32,9 +32,8 @@ public:
   /// Constructs a path from a triplet (share, path)
   Path(std::string const &share, std::string const &path);
 
-#ifndef SWIG
+  /// Construct with various parameters
   Path(Path const &parent, std::initializer_list<std::string> const &relative);
-#endif
 
   /// Construct relatively to a path
   Path(Path const &parent, std::vector<std::string> const &relative);
@@ -118,8 +117,6 @@ public:
 
 }
 
-#ifndef SWIG
-
 namespace std {
   template<>
   struct hash<xpm::Path> {
@@ -128,6 +125,5 @@ namespace std {
     }
   };
 }
-#endif
 
 #endif //PROJECT_FILESYSTEM_H

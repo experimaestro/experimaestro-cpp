@@ -43,7 +43,7 @@ public:
 
 
 /** Access to a host and command line process */
-class Connector NOSWIG(: public std::enable_shared_from_this<Connector>) {
+class Connector : public std::enable_shared_from_this<Connector> {
   struct Mapping {
     std::string serverpath;
     std::string localpath;
@@ -98,20 +98,18 @@ public:
   /**
    * Create a lock file
    */
-  NOSWIG(virtual std::unique_ptr<Lock> lock(Path const &path) const = 0;)
+  virtual std::unique_ptr<Lock> lock(Path const &path) const = 0;
 
   /**
    * Delete a file / directory
    */
   virtual void remove(Path const &path, bool recursive=false) const = 0;
 
-#ifndef SWIG
   /** Get an output stream */
   virtual std::unique_ptr<std::ostream> ostream(Path const &path) const = 0;
 
   /** Get an output stream */
   virtual std::unique_ptr<std::istream> istream(Path const &path) const = 0;
-#endif
 };
 
 } // namespace xpm

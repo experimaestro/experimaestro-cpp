@@ -29,7 +29,7 @@ namespace xpm {
     
     virtual void createFile(Path const &path, bool errorIfExists) const override;
     virtual void remove(Path const &path, bool recursive=false) const override;
-    NOSWIG(virtual std::unique_ptr<Lock> lock(Path const &path) const override;)
+    virtual std::unique_ptr<Lock> lock(Path const &path) const override;
 
     std::unique_ptr<std::ostream> ostream(Path const & path) const override;
     std::unique_ptr<std::istream> istream(Path const & path) const override;

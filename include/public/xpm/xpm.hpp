@@ -75,7 +75,7 @@ public:
  * - a value (optional)
  * - an object
  */
-class Value NOSWIG(: public std::enable_shared_from_this<Value>) {
+class Value : public std::enable_shared_from_this<Value> {
 public:
   typedef uint8_t Flags;
   enum class Flag : Flags {
@@ -91,10 +91,8 @@ public:
   /// Default constructor
   Value();
 
-#ifndef SWIG
   /// Constructor from JSON
   static std::shared_ptr<Value> create(Register &xpmRegister, nlohmann::json const &jsonValue);
-#endif
 
   /// Destructor
   virtual ~Value();
@@ -182,7 +180,7 @@ public:
   virtual std::shared_ptr<Object> createObjects(xpm::Register &xpmRegister);
 
   /// Output JSON
-  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const = 0);
+  virtual void outputJson(std::ostream &out, CommandContext & context) const = 0;
 
   /// Convert to map or throw an exception
   std::shared_ptr<MapValue> asMap();
@@ -294,7 +292,7 @@ public:
   virtual std::shared_ptr<Type> type() const override;
 
   virtual bool equals(Value const &other) const override;
-  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
 
   virtual nlohmann::json toJson() const override;
   virtual std::shared_ptr<Value> copy() override;
@@ -355,7 +353,7 @@ public:
   std::shared_ptr<Value> operator[](size_t index);
 
   virtual bool equals(Value const &other) const override;
-  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
   virtual nlohmann::json toJson() const override;
   virtual void updateDigest(Digest & digest) const override;
   virtual std::shared_ptr<Value> copy() override;
@@ -426,7 +424,7 @@ public:
   ScalarType valueType() const;
 
   virtual bool equals(Value const &other) const override;
-  NOSWIG(virtual void outputJson(std::ostream &out, CommandContext & context) const override);
+  virtual void outputJson(std::ostream &out, CommandContext & context) const override;
   virtual void updateDigest(Digest & digest) const override;
   
   virtual std::shared_ptr<Value> copy() override;
@@ -454,8 +452,6 @@ private:
 // --- Type and parser
 // ---
 
-#ifndef SWIG
-
 struct GeneratorLock {
   GeneratorLock(GeneratorContext * context, Value * configuration);
   inline operator bool() { return true; }
@@ -473,7 +469,6 @@ public:
     return GeneratorLock(this, configuration);
   }
 };
-#endif
 
 /**
  * Generator for values

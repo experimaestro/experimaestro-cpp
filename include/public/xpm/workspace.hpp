@@ -50,7 +50,7 @@ enum class DependencyStatus {
 /**
  * A dependency between resources
  */
-class Dependency : NOSWIG(public std::enable_shared_from_this<Dependency>,) public Outputable {
+class Dependency : public std::enable_shared_from_this<Dependency>, public Outputable {
 public:
   Dependency(std::shared_ptr<Resource> const & origin);
   virtual ~Dependency();
@@ -92,7 +92,7 @@ private:
 };
 
 /// Base class for any resource
-class Resource : NOSWIG(public std::enable_shared_from_this<Resource>,) public Outputable {
+class Resource : public std::enable_shared_from_this<Resource>, public Outputable {
 public:
   Resource();
   ~Resource();
@@ -193,7 +193,6 @@ enum struct JobState {
   DONE
 };
 
-#ifndef SWIG
 NLOHMANN_JSON_SERIALIZE_ENUM(JobState, {
     {JobState::WAITING, "waiting"},
     {JobState::READY, "ready"},
@@ -201,7 +200,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(JobState, {
     {JobState::ERROR, "error"},
     {JobState::DONE, "done"}
 });
-#endif 
 
 /// String representation of a job state
 std::ostream &operator<<(std::ostream & out, JobState const & state);
@@ -354,7 +352,7 @@ struct JobPriorityComparator {
 /** 
  * Workspace tracking resources, jobs and scheduling
  */
-class Workspace NOSWIG(: public std::enable_shared_from_this<Workspace>) {
+class Workspace : public std::enable_shared_from_this<Workspace> {
 public:
   /// Creates a work space
   Workspace();
@@ -369,7 +367,7 @@ public:
   void submit(std::shared_ptr<Job> const & job);
 
   /// Get an iterator for a key
-  NOSWIG(std::map<std::string, std::string>::const_iterator find(std::string const &key) const;)
+  std::map<std::string, std::string>::const_iterator find(std::string const &key) const;
 
   /// Get the basepath
   Path const workdir() const;

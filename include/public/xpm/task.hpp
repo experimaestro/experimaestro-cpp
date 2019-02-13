@@ -14,11 +14,7 @@ class Dependency;
 /**
  * A task can be executed and has an associated type
  */
-class Task
-#ifndef SWIG
-    : public std::enable_shared_from_this<Task>
-#endif
-{
+class Task : public std::enable_shared_from_this<Task> {
  public:
   /**
    * Defines a new task with a specific identifier
