@@ -62,6 +62,7 @@ template<class U> void freecptr(U *c_ptr) {
 
 template<class T> auto newcptr(std::shared_ptr<T> const & sptr) {
     typedef typename C_API_HELPER<T>::CObject U;
+    if (!sptr) return (U*)nullptr;
 
     std::shared_ptr<T> * c_ptr = new std::shared_ptr<T>(sptr);
     return reinterpret_cast<U *>(c_ptr);
@@ -112,21 +113,51 @@ struct ApiObject : public xpm::Object {
     }
 };
 
+typedef typename std::map<std::string, xpm::Scalar> TagValueMap;
+
+struct TagValueIteratorCpp {
+    TagValueMap map;
+    TagValueMap::const_iterator iterator;
+    std::string key;
+    xpm::Scalar scalar;
+    
+    TagValueIteratorCpp(TagValueMap && map) : map(map) {
+        iterator = this->map.begin();
+    }
+    bool next() {
+        if (map.end() == iterator) {
+            scalar = xpm::Scalar();
+            return false;
+        }
+        key = iterator->first;
+        scalar = iterator->second;
+        ++iterator;
+        return true;
+    }
+};
+
 } // unnamed
 
 // Abstract classes
 
 DECLARE_XPM_COBJECT(connector, Connector, xpm::Connector);
 DECLARE_XPM_COBJECT(value, Value, xpm::Value);
+DECLARE_XPM_COBJECT(token, Token, xpm::Token);
 DECLARE_XPM_COBJECT(complexvalue, ComplexValue, xpm::ComplexValue);
 DECLARE_XPM_COBJECT(launcher, Launcher, xpm::Launcher);
 DECLARE_XPM_COBJECT(generator, Generator, xpm::Generator);
+DECLARE_XPM_COBJECT(dependency, Dependency, xpm::Dependency);
 DECLARE_XPM_COBJECT(job, Job, xpm::Job);
 DECLARE_XPM_COBJECT(abstractcommandcomponent, AbstractCommandComponent, xpm::AbstractCommandComponent);
+DECLARE_XPM_COBJECT(tagvalueiterator, TagValueIterator, TagValueIteratorCpp);
 
 
 XPM_COBJECT(typename, Typename, CString name) {
     return mkcptr<xpm::Typename>(name);
+}
+
+XPM_COBJECT(countertoken, CounterToken, int tokens) {
+    return mkcptr<xpm::CounterToken>(tokens);
 }
 
 XPM_COBJECT(type, Type, Typename * typeName, Type * parentTypeOrNull) {
@@ -221,6 +252,8 @@ XPM_CUSTOM_COBJECT(string, String, std::string, CString str) {
     return mkcptr<std::string>(str);
 }
 
+
+
 namespace {
 
 class ApiRegister : public xpm::Register {
@@ -278,6 +311,18 @@ extern "C" {
     #define API_ERROR(CODE, MESSAGE) lasterror_string = MESSAGE; lasterror = CODE;
     #define API_NO_ERROR() API_ERROR(ERROR_NONE, "")
     
+    CString argument_getname(Argument * argument) {
+        return c2ref(argument).name().c_str();
+    }
+    Type * argument_gettype(Argument * argument) {
+        return newcptr(c2ref(argument).type());
+    }
+    Value * argument_getdefaultvalue(Argument * argument) {
+        return newcptr(c2ref(argument).defaultValue());
+    }
+    CString argument_gethelp(Argument * argument) {
+        return c2ref(argument).help().c_str();
+    }
 
     void argument_settype(Argument * argument, Type * type) {
         c2ref(argument).type(c2sptr(type));
@@ -327,11 +372,24 @@ extern "C" {
         c2ref(commandline).add(c2sptr(command));
     }
 
+    void complexvalue_settagcontext(ComplexValue * value, CString key) {
+        c2ref(value).setTagContext(key);
+    }
+
+    Dependency * countertoken_createdependency(CounterToken * token, int count) {
+        return newcptr(c2ref(token).createDependency(count));
+    }
+
+
     Path * job_stdoutpath(Job * job) {
         return mkcptr<xpm::Path>(c2ref(job).stdoutPath());
     }
     Path * job_stderrpath(Job * job) {
         return mkcptr<xpm::Path>(c2ref(job).stderrPath());        
+    }
+
+    void mapvalue_addtag(MapValue * value, CString key, ScalarValue * scalar) {
+        c2ref(value).addTag(key, c2ref(scalar).value());
     }
 
     void * mapvalue_getobjecthandle(MapValue * value) {
@@ -385,6 +443,10 @@ extern "C" {
     bool register_parse(Register * ptr, StringArray * arguments, bool tryParse) {
         return c2ref(ptr).parse(c2ref(arguments), tryParse);
     }
+
+    Value * register_build(Register * r, CString str) {
+        return newcptr(c2ref(r).build(str));
+    }
     
     ScalarValue * scalarvalue_fromreal(double value) {
         return mkcptr<xpm::ScalarValue>(value);
@@ -398,9 +460,20 @@ extern "C" {
     ScalarValue * scalarvalue_frompath(Path * value) {
         return mkcptr<xpm::ScalarValue>(c2ref(value));
     }
+    ScalarValue * scalarvalue_frompathstring(CString value) {
+        return mkcptr<xpm::ScalarValue>(xpm::Path(value));
+    }
     ScalarValue * scalarvalue_fromstring(CString value) {
         return mkcptr<xpm::ScalarValue>(std::string(value));
     }
+    void scalarvalue_tag(ScalarValue * value, CString key) {
+        c2ref(value).tag(key);
+    }
+
+    bool scalarvalue_isnull(ScalarValue * scalar) {
+        return c2ref(scalar).null();
+    }
+
 
     double scalarvalue_asreal(ScalarValue * value) {
         return c2ref(value).asReal();
@@ -408,7 +481,7 @@ extern "C" {
     bool scalarvalue_asbool(ScalarValue * value) {
         return c2ref(value).asBoolean();
     }
-    int scalarvalue_asint(ScalarValue * value) {
+    int scalarvalue_asinteger(ScalarValue * value) {
         return c2ref(value).asInteger();
     }
     Path * scalarvalue_aspath(ScalarValue * value) {
@@ -446,6 +519,11 @@ extern "C" {
     void type_addargument(Type * type, Argument * argument) {
         c2ref(type).addArgument(c2sptr(argument));
     }
+    Argument * type_getargument(Type * type, CString key) {
+        auto arg = c2ref(type).argument(key);
+        return arg ? newcptr(arg) : nullptr;
+    }
+
     bool type_isarray(Type * type) {
         return c2ref(type).array();
     }
@@ -465,6 +543,15 @@ extern "C" {
     void launcher_setenv(Launcher *c_ptr, CString key, CString value) {
         c2ref(c_ptr).environment()[key] = value;
     }
+
+    Launcher * launcher_defaultlauncher() {
+        return newcptr(xpm::Launcher::defaultLauncher());
+    }
+
+    void launcher_setnotificationURL(Launcher * launcher, CString url) {
+        c2ref(launcher).notificationURL(url);
+    }
+
 
     Type * value_gettype(Value * value) {
         return newcptr(c2ref(value).type());
@@ -491,6 +578,20 @@ extern "C" {
         return mkcptr<std::string>(c2ref(value).toString());
     }
 
+    TagValueIterator * value_tags(Value * value) {
+        return mkcptr<TagValueIteratorCpp>(std::move(c2ref(value).tags()));
+    }
+    bool tagvalueiterator_next(TagValueIterator * iterator) {
+        return c2ref(iterator).next();
+    }
+    CString tagvalueiterator_key(TagValueIterator * iterator) {
+        return c2ref(iterator).key.c_str();
+    }
+    ScalarValue * tagvalueiterator_value(TagValueIterator * iterator) {
+        return mkcptr<xpm::ScalarValue>(c2ref(iterator).scalar);
+    }
+
+
     void workspace_current(Workspace *c_ws) {
         c2ref(c_ws).current();
     }
@@ -512,11 +613,16 @@ extern "C" {
     void setLogLevel(CString key, LogLevel c_level) {
         xpm::LogLevel level = xpm::LogLevel::INFO;
         switch(c_level) {
+            case LogLevel_WARN: level = xpm::LogLevel::WARN; break;
             case LogLevel_DEBUG: level = xpm::LogLevel::DEBUG; break;
             case LogLevel_INFO: level = xpm::LogLevel::INFO; break;
         }
 
         xpm::setLogLevel(key, level);
+    }
+
+    void progress(float value) {
+        xpm::progress(value);
     }
 
 } // extern "C"

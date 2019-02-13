@@ -901,6 +901,10 @@ std::string ScalarValue::toString() const{
   return _value.asString();
 } 
 
+Scalar const & ScalarValue::value() {
+  return _value;
+}
+
 
 /// Returns the string
 std::string ScalarValue::asString() const {

@@ -47,17 +47,29 @@ class FFIObject:
         return ffi.cast(f"{cls.__name__} *", self.ptr)
 
     @classmethod
-    def fromcptr(cls, ptr, managed=True):
+    def fromcptr(cls, ptr, managed=True, notnull=False):
         """Wraps a returned pointer into an object"""
+        if ptr == ffi.NULL:
+            if notnull:
+                raise ValueError("Null pointer")
+            else:
+                return None
         self = cls.__new__(cls)
-        self.ptr = ffi.gc(ptr, getattr(lib, "%s_free" % cls.__name__.lower())) if managed else ptr
+        self.ptr = cls._wrap(ptr) if managed else ptr
         return self
+
+    @classmethod
+    def _wrap(cls, ptr):
+        return ffi.gc(ptr, getattr(lib, "%s_free" % cls.__name__.lower()))
 
 class Typename(FFIObject):
     def __init__(self, name: str):
         self.ptr = ffi.gc(lib.typename_new(cstr(name)), lib.typename_free)
 
     def __getattr__(self, key):
+        return self(key)
+
+    def __call__(self, key):
         tn = Typename.__new__(Typename)
         tn.ptr = ffi.gc(lib.typename_sub(self.ptr, cstr(key)), lib.typename_free)
         return tn
@@ -87,6 +99,9 @@ class Type(FFIObject):
     def addArgument(self, argument: "Argument"):
         lib.type_addargument(Type._ptr(self), argument.ptr)
 
+    def getArgument(self, key: str):
+        return Argument.fromcptr(lib.type_getargument(Type._ptr(self), cstr(key)))
+
     def isArray(self):
         return lib.type_isarray(Type._ptr(self))
 
@@ -94,34 +109,39 @@ class Type(FFIObject):
     def frompython(pythontype):
         if pythontype is None:
             return Type.fromcptr(lib.ANY_TYPE, managed=False)
-        
         return Type.PYTHON2XPM.get(pythontype, None)
+
+    def topython(self):
+        return Type.XPM2PYTHON.get(self.name()).pythontypes[0]
 
 class ArrayType(Type):  
     def __init__(self, type: Type):
         self.ptr = ffi.gc(lib.arraytype_new(Type._ptr(type)), lib.arraytype_free)      
 
 class PredefinedType(Type):
-    def __init__(self, ptr, pythontype, topython, frompython):
+    def __init__(self, ptr, pythontypes, topython, frompython):
         self.ptr = ptr
-        self.pythontype = pythontype
+        self.pythontypes = pythontypes
         self.topython = topython
         self.frompython = frompython
 
         Type.XPM2PYTHON[str(self)] = self
-        Type.PYTHON2XPM[pythontype] = self
+        for pythontype in pythontypes:
+            Type.PYTHON2XPM[pythontype] = self
 
-BooleanType = PredefinedType(lib.BOOLEAN_TYPE, bool,
+BooleanType = PredefinedType(lib.BOOLEAN_TYPE, [bool],
     lambda v: v.asScalar().asBoolean(), lib.scalarvalue_fromboolean)
-StringType = PredefinedType(lib.STRING_TYPE, str,
+StringType = PredefinedType(lib.STRING_TYPE, [str],
     lambda v: v.asScalar().asString(), lambda s: lib.scalarvalue_fromstring(cstr(s)))
-IntegerType = PredefinedType(lib.INTEGER_TYPE, int,
+IntegerType = PredefinedType(lib.INTEGER_TYPE, [int],
     lambda v: v.asScalar().asInteger(), lib.scalarvalue_frominteger)
-RealType = PredefinedType(lib.REAL_TYPE, float,
+RealType = PredefinedType(lib.REAL_TYPE, [float],
     lambda v: v.asScalar().asInteger(), lib.scalarvalue_fromreal)
-PathType = PredefinedType(lib.PATH_TYPE, BasePath,
-    lambda v: PPath(v.asScalar().asPath()), lambda p: lib.scalarvalue_frompath(cstr(str(p.absolute()))))
+PathType = PredefinedType(lib.PATH_TYPE, [BasePath, PosixPath],
+    lambda v: v.asScalar().asPath(), 
+    lambda p: lib.scalarvalue_frompathstring(cstr(str(p.absolute()))))
 
+AnyType = Type.fromcptr(lib.ANY_TYPE, managed=False)
 
 class Path(FFIObject):
     def __init__(self, path: str):
@@ -239,6 +259,18 @@ class Value(FFIObject):
             raise ValueError("Value is not a scalar: %s" % self)
         return ScalarValue.fromcptr(ptr)
 
+    def isNull(self):
+        return lib.scalarvalue_isnull(ScalarValue._ptr(self))
+
+    def tags(self):
+        iterator = ffi.gc(lib.value_tags(Value._ptr(self)), lib.tagvalueiterator_free)
+        m = {}
+        while lib.tagvalueiterator_next(iterator):
+            key = fromcstr(lib.tagvalueiterator_key(iterator))
+            value = ScalarValue.fromcptr(lib.tagvalueiterator_value(iterator))
+            m[key] = value.toPython()
+        return m
+
     def toPython(self):
         """Converts a value into a Python object"""
 
@@ -256,7 +288,9 @@ class Value(FFIObject):
                 r.append(array[i].toPython())
             return r
 
-        return Type.XPM2PYTHON.get(str(svtype), checknullsv).topython(self)
+        if self.isNull(): return None
+
+        return Type.XPM2PYTHON.get(str(svtype), None).topython(self)
 
     @staticmethod
     def frompython(value):
@@ -285,7 +319,10 @@ class Value(FFIObject):
         # For anything else, we try to convert it to a value
         return ScalarValue(value)
 
-class ComplexValue(Value): pass
+class ComplexValue(Value):
+    def setTagContext(self, key: str):
+        lib.complexvalue_settagcontext(ComplexValue._ptr(self), cstr(key))
+
 
 
 class MapValue(ComplexValue):
@@ -318,6 +355,9 @@ class MapValue(ComplexValue):
     def type(self, type: Type):
         return lib.mapvalue_settype(self.ptr, Type._ptr(type))
 
+    def addTag(self, key, value):
+        lib.mapvalue_addtag(self.ptr, cstr(key), Value.frompython(value).ptr)
+
 class ScalarValue(Value):
     def __init__(self, value):
         if value is None:
@@ -340,7 +380,10 @@ class ScalarValue(Value):
         s = String.fromcptr(lib.scalarvalue_asstring(self.ptr))
         return str(s)
     def asPath(self):
-        return BasePath(str(Path.fromcptr(lib.scalarvalue_aspath(self.ptr))))
+        return Path.fromcptr(lib.scalarvalue_aspath(self.ptr))
+
+    def tag(self, key:str):
+        lib.scalarvalue_tag(self.ptr, cstr(key))
         
 
 class ArrayValue(Value):
@@ -372,10 +415,30 @@ class Launcher(FFIObject):
     def setenv(self, key: str, value: str):
         lib.launcher_setenv(Launcher._ptr(self), cstr(key), cstr(value))
 
+    def setNotificationURL(self, url: str):
+        lib.launcher_setnotificationURL(Launcher._ptr(self), cstr(url))
+
+    @staticmethod
+    def defaultLauncher():
+        return Launcher.fromcptr(lib.launcher_defaultlauncher())
+
 class DirectLauncher(Launcher):
     def __init__(self, connector: Connector):
         self.ptr = ffi.gc(lib.directlauncher_new(Connector._ptr(connector)), lib.directlauncher_free)
 
+class Generator(FFIObject): pass
+
+class PathGenerator(Generator):
+    def __init__(self, path: str):
+        self.ptr = PathGenerator._wrap(lib.pathgenerator_new(cstr(path)))
+
+class Dependency(FFIObject): pass
+class Token(FFIObject): pass
+class CounterToken(Token):
+    def __init__(self, tokens: int):
+        self.ptr = CounterToken._wrap(lib.countertoken_new(tokens))
+    def createDependency(self, count: int):
+        Dependency.fromcptr(lib.countertoken_createdependency(self.ptr, count))
 
 # --- Utilities and constants
 
@@ -399,14 +462,6 @@ SUBMIT_TASKS = True
 
 # Default launcher
 DEFAULT_LAUNCHER = None
-
-
-
-def checknullsv(sv):
-    """Returns either None or the sv"""
-    return None if sv.isScalar() and sv.asScalar().null() else sv
-
-
 
 
 # --- XPM Objects
@@ -563,13 +618,14 @@ class PyObject:
         """Helper class method: adds a click option corresponding to the named argument"""
         import click
         xpmtype = cls.__xpmtype__
-        a = cls.__xpmtype__.argument(option_name)
+        a = cls.__xpmtype__.getArgument(option_name)
         if a is None:
             raise Exception("No argument with name %s in %s" % (option_name, xpmtype))
 
-        name = "--%s" % a.name().replace("_", "-")
-        ptype = TYPE2PYTHON[str(a.type())]
-        default = Value.frompython(a.defaultValue()) if a.defaultValue() else None
+        name = "--%s" % a.name.replace("_", "-")
+        
+        ptype = Type.topython(a.type)
+        default = Value.toPython(a.defaultvalue) if a.defaultvalue else None
         return click.option(name, help=a.help, type=ptype)
 
 
@@ -596,7 +652,7 @@ class Choice(TypeProxy):
         self.choices = args
 
     def __call__(self, register):
-        return cvar.StringType
+        return StringType
 
 import traceback as tb
 @ffi.callback("Object * (void * handle, Value *)")
@@ -681,6 +737,9 @@ class Register(FFIObject):
     def runTask(self, task: Task, value: Value):
         logger.info("Running %s", task)
         value.asMap().object.run()
+
+    def build(self, string: str):
+        return Value.fromcptr(lib.register_build(self.ptr, cstr(string)))
 
     def createObject(self, sv: Value):
         type = self.registered.get(sv.type().name(), PyObject)
@@ -810,7 +869,7 @@ class RegisterTask(RegisterType):
         return t
 
 
-class Argument:
+class Argument(FFIObject):
     """Abstract class for all arguments (standard, path, etc.)"""
 
     def __init__(self, name: str, argtype, help=""):
@@ -829,6 +888,21 @@ class Argument:
         xpminfo.addArgument(self)
         return t
 
+    @property
+    def name(self):
+        return fromcstr(lib.argument_getname(self.ptr))
+    
+    @property
+    def type(self):
+        return Type.fromcptr(lib.argument_gettype(self.ptr))
+    
+    @property
+    def help(self):
+        return fromcstr(lib.argument_gethelp(self.ptr))
+    
+    @property
+    def defaultvalue(self):
+        return Value.fromcptr(lib.argument_getdefaultvalue(self.ptr))
 
 class TypeArgument(Argument):
     """Defines an argument for an experimaestro type"""
@@ -842,8 +916,9 @@ class TypeArgument(Argument):
             raise Exception("Argument is required but default value is given")
 
         lib.argument_setignored(self.ptr, ignored)
+        
         required = (default is None) if required is None else required
-        lib.argument_setrequired(self.ptr, ignored)
+        lib.argument_setrequired(self.ptr, required)
         if default is not None:
             value = Value.frompython(default)
             lib.argument_setdefault(self.ptr, Value._ptr(value))
@@ -859,7 +934,7 @@ class PathArgument(Argument):
         """
         Argument.__init__(self, name, PathType, help=help)
         generator = PathGenerator(path)
-        lib.argument_setgenerator(self.ptr, generator)
+        lib.argument_setgenerator(self.ptr, Generator._ptr(generator))
 
 class ConstantArgument(Argument):
     """
@@ -869,7 +944,7 @@ class ConstantArgument(Argument):
         value = Value.frompython(value)
         xpmtype = register.getType(value)
         super().__init__(name, xpmtype, help=help)
-        lib.argument_setconstant(Value._ptr(value))
+        lib.argument_setconstant(self.ptr, Value._ptr(value))
 
 
 # --- Export some useful functions
@@ -962,7 +1037,7 @@ def tag(name: str, x, object:PyObject=None, context=None):
     """Tag a value"""
     if object:
         if not hasattr(object, "__xpm__"):
-            object = sv = Value.frompython(object)
+            object = sv = Value.frompython(object).asMap()
         else:
             sv = object.__xpm__.sv # type: MapValue
         sv.addTag(name, x)
@@ -1010,5 +1085,10 @@ def handleExit():
 
 
 LogLevel_DEBUG = lib.LogLevel_DEBUG
+LogLevel_INFO = lib.LogLevel_INFO
+LogLevel_WARN = lib.LogLevel_WARN
 def setLogLevel(key: str, level):
     lib.setLogLevel(cstr(key), level)
+
+def progress(value: float):
+    lib.progress(value)

@@ -420,6 +420,7 @@ public:
   /// Tag this value
   void tag(std::string const &name);
 
+  Scalar const & value();
   nlohmann::json toJson() const override;
   ScalarType valueType() const;
 
