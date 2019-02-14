@@ -221,6 +221,8 @@ public:
   CounterDependency(ptr<CounterToken> const & counter, CounterToken::Value value) 
     : Dependency(counter), _counter(counter), _value(value) {}
 
+  virtual ~CounterDependency() {}
+  
   std::shared_ptr<xpm::Lock> _lock() override { 
     return mkptr<Lock>(std::dynamic_pointer_cast<CounterDependency>(shared_from_this()));
   }
