@@ -12,13 +12,21 @@
 #include <unordered_set>
 #include <vector>
 #include <mutex>
-
+#include <thread>
 #include <xpm/json.hpp>
 #include <xpm/common.hpp>
 #include <xpm/filesystem.hpp>
 
 
 namespace xpm {
+
+struct MutexLock {
+  std::unique_lock<std::mutex> lock;
+  MutexLock(std::mutex & mutex);
+  void unlock();
+  ~MutexLock();
+};
+
 
 class Launcher;
 class Resource;
@@ -101,7 +109,7 @@ public:
   virtual void init();
 
   void addDependent(std::shared_ptr<Dependency> const & dependency);
-  void removeDependent(std::shared_ptr<Dependency> const & dependency);
+  void removeDependent(Dependency const * dependency);
 
   /**
    * Create a simple dependency from this resource
@@ -118,7 +126,7 @@ public:
 
 protected:
   /// Resource that depend on this one to be completed
-  std::vector<std::weak_ptr<Dependency>> _dependents;
+  std::map<Dependency const *, std::weak_ptr<Dependency>> _dependents;
 
   /// Signals a change in a dependency
   virtual void dependencyChanged(Dependency & dependency, 
@@ -275,7 +283,7 @@ protected:
   friend struct JobPriorityComparator;
 
   /// Run the job (called by start)
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) = 0;
+  virtual void run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) = 0;
 
   /// Set the current state
   JobState state(JobState newState);
@@ -336,7 +344,7 @@ public:
   void kill() override;
 
 protected:
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override;
+  virtual void run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) override;
 private:
   std::shared_ptr<CommandLine> _command;
   std::shared_ptr<Value> _parameters;

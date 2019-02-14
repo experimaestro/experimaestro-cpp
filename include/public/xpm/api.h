@@ -109,7 +109,7 @@ ScalarValue * scalarvalue_new(); // null value
 void scalarvalue_tag(ScalarValue *, CString key);
 void scalarvalue_free(ScalarValue *);
 double scalarvalue_asreal(ScalarValue *);
-bool scalarvalue_asbool(ScalarValue *);
+bool scalarvalue_asboolean(ScalarValue *);
 int scalarvalue_asinteger(ScalarValue *);
 Path * scalarvalue_aspath(ScalarValue *);
 String * scalarvalue_asstring(ScalarValue *);

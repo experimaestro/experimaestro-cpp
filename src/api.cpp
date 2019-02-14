@@ -51,16 +51,16 @@ inline typename C_API_HELPER<T>::CObject * mkcptr(Args&&... args) {
     std::shared_ptr<T> s_ptr = std::make_shared<T>(std::forward<Args>(args)...);
      
     std::shared_ptr<T> * c_ptr = new std::shared_ptr<T>(s_ptr);
-    std::cerr << "Created shared pointer " << demangle(*s_ptr) << "/" << (void*)s_ptr.get() 
-        << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
+    // std::cerr << "Created shared pointer " << demangle(*s_ptr) << "/" << (void*)s_ptr.get() 
+    //     << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
     return reinterpret_cast<typename C_API_HELPER<T>::CObject *>(c_ptr);
 }
 
 template<class U> void freecptr(U *c_ptr) {
     typedef typename C_API_HELPER<U>::Object T;
     auto s_ptr = reinterpret_cast<std::shared_ptr<T>*>(c_ptr);
-    std::cerr << "Freeing shared pointer reference " << demangle(*s_ptr) << "/" << (void*)s_ptr->get()
-        << "/" << s_ptr->use_count() << " with " << (void*) c_ptr << std::endl;
+    // std::cerr << "Freeing shared pointer reference " << demangle(*s_ptr) << "/" << (void*)s_ptr->get()
+    //     << "/" << s_ptr->use_count() << " with " << (void*) c_ptr << std::endl;
     delete s_ptr;
 }
 
@@ -69,8 +69,8 @@ template<class T> auto newcptr(std::shared_ptr<T> const & s_ptr) {
     if (!s_ptr) return (U*)nullptr;
 
     std::shared_ptr<T> * c_ptr = new std::shared_ptr<T>(s_ptr);
-    std::cerr << "Copyied shared pointer " << demangle(s_ptr) << "/" << (void*)s_ptr.get() 
-        << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
+    // std::cerr << "Copyied shared pointer " << demangle(s_ptr) << "/" << (void*)s_ptr.get() 
+    //     << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
     return reinterpret_cast<U *>(c_ptr);
 }
 
@@ -386,6 +386,9 @@ extern "C" {
         return newcptr(c2ref(token).createDependency(count));
     }
 
+    void dependencyarray_add(DependencyArray * array, Dependency * dependency) {
+        c2ref(array).push_back(c2sptr(dependency));
+    }
 
     Path * job_stdoutpath(Job * job) {
         return mkcptr<xpm::Path>(c2ref(job).stdoutPath());
@@ -484,7 +487,7 @@ extern "C" {
     double scalarvalue_asreal(ScalarValue * value) {
         return c2ref(value).asReal();
     }
-    bool scalarvalue_asbool(ScalarValue * value) {
+    bool scalarvalue_asboolean(ScalarValue * value) {
         return c2ref(value).asBoolean();
     }
     int scalarvalue_asinteger(ScalarValue * value) {

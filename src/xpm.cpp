@@ -123,7 +123,7 @@ public:
   }
   virtual ~DummyJob() {}
   virtual void kill() {}
-  virtual void run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) override { 
+  virtual void run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) override { 
     throw cast_error("This is dummy job - it cannot be run!"); 
   }
 };

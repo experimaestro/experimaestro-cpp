@@ -91,6 +91,23 @@ namespace {
 }
 
 namespace xpm {
+MutexLock::MutexLock(std::mutex & mutex) {
+  std::cerr << "[" << std::this_thread::get_id() << "] Trying to lock " << &mutex << std::endl;
+  std::unique_lock l(mutex);
+  lock.swap(l);
+  std::cerr << "[" << std::this_thread::get_id() << "] Taking " << (void*)lock.mutex() << std::endl;
+}
+void MutexLock::unlock() {
+  if (lock.owns_lock()) {
+    std::cerr << "[" << std::this_thread::get_id() << "] Releasing " << (void*)lock.mutex() << std::endl;
+    lock.unlock();
+  }
+}
+MutexLock::~MutexLock() {
+  if (lock.owns_lock()) {
+    std::cerr << "[" << std::this_thread::get_id() << "] Releasing " << (void*)lock.mutex() << std::endl;
+  }
+}
 
 std::ostream & operator<<(std::ostream &out, DependencyStatus s) {
   switch(s) {
@@ -113,7 +130,7 @@ Dependency::Dependency(ptr<Resource> const & origin) :
   _origin(origin), _oldStatus(DependencyStatus::WAIT) {}
 Dependency::~Dependency() {
   if (_origin) {
-    _origin->removeDependent(shared_from_this());
+    _origin->removeDependent(this);
   }
 }
 
@@ -151,18 +168,15 @@ Resource::~Resource() {}
 void Resource::init() {}
 
 void Resource::addDependent(ptr<Dependency> const & dependency) {
-  _dependents.push_back(dependency);
+  _dependents[dependency.get()] = dependency;
 }
 
-void Resource::removeDependent(ptr<Dependency> const & dependency) {
-  for(auto it = _dependents.begin(); it != _dependents.end(); ++it) {
-    auto ptr= it->lock();
-    if (!ptr) {
-      _dependents.erase(it);
-    } else if (ptr == dependency) {
-      _dependents.erase(it);
-      return;
-    }
+void Resource::removeDependent(Dependency const * dependency) {
+  auto it = _dependents.find(dependency);
+  if (it == _dependents.end()) {
+    LOGGER->warn("Dependent not found");
+  } else {
+    _dependents.erase(it);
   }
 }
 
@@ -213,7 +227,7 @@ class CounterDependency : public Dependency {
       LOGGER->info("Release: used tokens {}/{}", _counter->_usedTokens, _counter->_limit);
     }
     for(auto & d: _counter->_dependents) {
-      d.lock()->check();
+      d.second.lock()->check();
     }
   }
 
@@ -385,14 +399,14 @@ void Job::jobCompleted() {
 
   // Notify dependents 
   for (auto &entry : this->_dependents) {
-    entry.lock()->check();
+    entry.second.lock()->check();
   }
 }
 
 void Job::start() {
   if (exitMode != ExitMode::NONE) {
     LOGGER->info("Not starting job: exit signal received");
-    std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
+    MutexLock jobLock(WORKSPACE_MUTEX);
     state(JobState::ERROR);
     return;
   }
@@ -402,7 +416,7 @@ void Job::start() {
     {
       // Lock while we require all the dependencies
       LOGGER->info("Starting job {}", *this);
-      std::unique_lock<std::mutex> jobLock(WORKSPACE_MUTEX);
+      MutexLock jobLock(WORKSPACE_MUTEX);
 
       // (1) Lock all the dependencies
       for(auto dependency: _dependencies) {
@@ -427,7 +441,7 @@ void Job::start() {
 
     // (3) release resources
     
-    std::unique_lock<std::mutex> jobLockRelease(WORKSPACE_MUTEX);
+    MutexLock jobLockRelease(WORKSPACE_MUTEX);
 
     // Mark this job as completed
     this->jobCompleted();
@@ -457,7 +471,7 @@ void CommandLineJob::init() {
   _parameters->addDependencies(*this, false);
 }
 
-void CommandLineJob::run(std::unique_lock<std::mutex> && jobLock, std::vector<ptr<Lock>> & locks) {
+void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
   // Run uses a thread
   LOGGER->info("Running job {}...", *this);
 
@@ -702,14 +716,14 @@ void Workspace::waitUntilTaskCompleted() {
   do {
     // Count the number of jobs
     count = 0;
-    std::unique_lock<std::mutex> lock(JOB_CHANGED_MUTEX);
+    MutexLock lock(JOB_CHANGED_MUTEX);
     for(auto *ws: activeWorkspaces) {
       count += ws->waitingJobs.size();
     }
 
     if (count > 0) {
       LOGGER->info("Waiting for {} job(s) to complete", count);
-      JOB_CHANGED.wait(lock);
+      JOB_CHANGED.wait(lock.lock);
     }
   } while (count > 0 && exitMode != ExitMode::STOPPING);
  

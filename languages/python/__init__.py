@@ -136,7 +136,7 @@ StringType = PredefinedType(lib.STRING_TYPE, [str],
 IntegerType = PredefinedType(lib.INTEGER_TYPE, [int],
     lambda v: v.asScalar().asInteger(), lib.scalarvalue_frominteger)
 RealType = PredefinedType(lib.REAL_TYPE, [float],
-    lambda v: v.asScalar().asInteger(), lib.scalarvalue_fromreal)
+    lambda v: v.asScalar().asReal(), lib.scalarvalue_fromreal)
 PathType = PredefinedType(lib.PATH_TYPE, [BasePath, PosixPath],
     lambda v: v.asScalar().asPath(), 
     lambda p: lib.scalarvalue_frompathstring(cstr(str(p.absolute()))))
@@ -186,11 +186,14 @@ class CommandLine(Command):
     def add(self, command: Command):
         lib.commandline_add(self.ptr, Command._ptr(command))
 
-class Dependency: pass
+class Dependency(FFIObject): pass
 
 class DependencyArray:
     def __init__(self):
         self.ptr = ffi.gc(lib.dependencyarray_new(), lib.dependencyarray_free)
+
+    def add(self, dependency: Dependency):
+        lib.dependencyarray_add(self.ptr, Dependency._ptr(dependency))
 
 class StringArray:
     def __init__(self):
@@ -432,13 +435,12 @@ class PathGenerator(Generator):
     def __init__(self, path: str):
         self.ptr = PathGenerator._wrap(lib.pathgenerator_new(cstr(path)))
 
-class Dependency(FFIObject): pass
 class Token(FFIObject): pass
 class CounterToken(Token):
     def __init__(self, tokens: int):
         self.ptr = CounterToken._wrap(lib.countertoken_new(tokens))
     def createDependency(self, count: int):
-        Dependency.fromcptr(lib.countertoken_createdependency(self.ptr, count))
+        return Dependency.fromcptr(lib.countertoken_createdependency(self.ptr, count))
 
 # --- Utilities and constants
 
