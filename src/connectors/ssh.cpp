@@ -427,7 +427,7 @@ SSHConnector & SSHConnector::addIdentity(std::string const & localpath) {
   return *this;
 }
 
-std::unique_ptr<Lock> SSHConnector::lock(Path const &path) const {
+std::unique_ptr<Lock> SSHConnector::lock(Path const &path, std::chrono::seconds const & duration) const {
   NOT_IMPLEMENTED();  
 }
 

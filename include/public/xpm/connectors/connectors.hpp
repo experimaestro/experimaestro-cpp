@@ -1,6 +1,7 @@
 #ifndef EXPERIMAESTRO_CONNECTORS_HPP
 #define EXPERIMAESTRO_CONNECTORS_HPP
 
+#include <chrono>
 #include <map>
 
 #include <xpm/common.hpp>
@@ -98,7 +99,7 @@ public:
   /**
    * Create a lock file
    */
-  virtual std::unique_ptr<Lock> lock(Path const &path) const = 0;
+  virtual std::unique_ptr<Lock> lock(Path const &path, std::chrono::seconds const &) const = 0;
 
   /**
    * Delete a file / directory
@@ -114,4 +115,4 @@ public:
 
 } // namespace xpm
 
-#endif
+#endif 

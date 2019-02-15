@@ -473,7 +473,6 @@ def callback(args):
     def wrapper(function):
         def _wrapped(*args, **kwargs):
             try:
-                logger.info("COUCOU")
                 function(*args, **kwargs)
                 return 0
             except Exception:

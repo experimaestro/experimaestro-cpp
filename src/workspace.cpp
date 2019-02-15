@@ -30,6 +30,7 @@ namespace {
   std::mutex JOB_CHANGED_MUTEX;
   std::condition_variable JOB_CHANGED;
 
+  constexpr auto LOCKFILE_WAIT_DURATION = std::chrono::seconds(5);
 
   /**
    *
@@ -92,20 +93,20 @@ namespace {
 
 namespace xpm {
 MutexLock::MutexLock(std::mutex & mutex) {
-  std::cerr << "[" << std::this_thread::get_id() << "] Trying to lock " << &mutex << std::endl;
+  LOGGER->debug("[{}] Trying to lock {}", std::this_thread::get_id(), (void*)&mutex);
   std::unique_lock l(mutex);
   lock.swap(l);
-  std::cerr << "[" << std::this_thread::get_id() << "] Taking " << (void*)lock.mutex() << std::endl;
+  LOGGER->debug("[{}] Locked {}", std::this_thread::get_id(), (void*)&mutex);
 }
 void MutexLock::unlock() {
   if (lock.owns_lock()) {
-    std::cerr << "[" << std::this_thread::get_id() << "] Releasing " << (void*)lock.mutex() << std::endl;
+    LOGGER->debug("[{}] Releasing {}", std::this_thread::get_id(), (void*)lock.mutex());
     lock.unlock();
   }
 }
 MutexLock::~MutexLock() {
   if (lock.owns_lock()) {
-    std::cerr << "[" << std::this_thread::get_id() << "] Releasing " << (void*)lock.mutex() << std::endl;
+    LOGGER->debug("[{}] Releasing {}", std::this_thread::get_id(), (void*)lock.mutex());
   }
 }
 
@@ -502,7 +503,12 @@ void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
 
   // Lock
   auto lockPath = pathTo(LOCK_PATH);
-  auto lock = _launcher->connector()->lock(lockPath);
+  auto lock = _launcher->connector()->lock(lockPath, LOCKFILE_WAIT_DURATION);
+  if (!lock) {
+    // FIXME: put on hold for a while
+    LOGGER->warn("Could not lock {}", _locator);
+    return;
+  }
 
   // Check again if done (now that we have locked everything)
   if (check()) return;
@@ -511,7 +517,11 @@ void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
   scriptBuilder->command = _command;
   scriptBuilder->lockFiles.push_back(lockPath);
   Path scriptPath = scriptBuilder->write(*_workspace, connector, _locator, *this);
-  auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH));
+  auto startlock = _launcher->connector()->lock(pathTo(LOCK_START_PATH), LOCKFILE_WAIT_DURATION);
+  if (!startlock) {
+    LOGGER->warn("Could not lock start file {}", _locator);
+    return;
+  }
   
   LOGGER->info("Starting job {}", _locator);
   processBuilder->environment = _launcher->environment();

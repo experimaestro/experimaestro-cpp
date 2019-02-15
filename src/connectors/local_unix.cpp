@@ -5,6 +5,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <chrono>
 
 #include <cstdlib>
 #include <dirent.h>
@@ -369,7 +370,7 @@ struct DeleteListener {
   }
 };
 
-std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
+std::unique_ptr<Lock> LocalConnector::lock(Path const &path, std::chrono::seconds const & duration) const {
   // Loop until the lock is taken
   LOGGER->debug("Trying to lock {}", path);
   while (!FileDescriptor(open(path.localpath().c_str(), O_CREAT | O_EXCL, S_IRWXU))) {
@@ -387,11 +388,17 @@ std::unique_ptr<Lock> LocalConnector::lock(Path const &path) const {
     std::unique_lock<std::mutex> lock(listener.mutex);
 
     LOGGER->debug("Waiting for lock file {} to be removed", path);
-    listener.cv.wait(lock, [&] { 
-      return listener.deleted; 
-    });
+    auto f = [&] { return listener.deleted; };
+    if (duration.count() == 0) {
+      listener.cv.wait(lock, f);
+    } else {
+      if (!listener.cv.wait_for(lock, duration, f)) {
+        return nullptr;
+      }
+    }
   }
 
+  LOGGER->debug("Locked {}", path);
   return std::unique_ptr<Lock>(new FileLock(
       const_cast<LocalConnector *>(this)->shared_from_this(), path));
 }
