@@ -287,7 +287,7 @@ Launcher * launcher_defaultlauncher();
 
 // --- Misc function
 
-enum LogLevel { LogLevel_DEBUG, LogLevel_INFO, LogLevel_WARN };
+enum LogLevel { LogLevel_TRACE, LogLevel_DEBUG, LogLevel_INFO, LogLevel_WARN, LogLevel_ERROR };
 
 void setLogLevel(CString key, enum LogLevel level);
 
@@ -296,3 +296,6 @@ void setLogLevel(CString key, enum LogLevel level);
  * @param value A float between 0 and 1
  */
 void progress(float value);
+
+/// Useful to avoid callbacks when not available anymore
+void stopping();

@@ -19,6 +19,7 @@ DEFINE_LOGGER("api");
 using xpm::mkptr;
 namespace {
     std::string lasterror_string;
+    bool STOPPING = false;
 }
 
 template<typename T> struct C_API_HELPER {};
@@ -51,16 +52,16 @@ inline typename C_API_HELPER<T>::CObject * mkcptr(Args&&... args) {
     std::shared_ptr<T> s_ptr = std::make_shared<T>(std::forward<Args>(args)...);
      
     std::shared_ptr<T> * c_ptr = new std::shared_ptr<T>(s_ptr);
-    std::cerr << "Created shared pointer " << demangle(*s_ptr) << "/" << (void*)s_ptr.get() 
-        << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
+    LOGGER->debug("Created shared pointer {} at {} (count={}) : pointer {}", 
+        demangle(*s_ptr), (void*)s_ptr.get(), s_ptr.use_count(), (void*) c_ptr);
     return reinterpret_cast<typename C_API_HELPER<T>::CObject *>(c_ptr);
 }
 
 template<class U> void freecptr(U *c_ptr) {
     typedef typename C_API_HELPER<U>::Object T;
     auto s_ptr = reinterpret_cast<std::shared_ptr<T>*>(c_ptr);
-    std::cerr << "Freeing shared pointer reference " << demangle(*s_ptr) << "/" << (void*)s_ptr->get()
-        << "/" << s_ptr->use_count() << " with " << (void*) c_ptr << std::endl;
+    LOGGER->debug("Freeing shared pointer {} at {} (count={}) : pointer {}", 
+        demangle(*s_ptr), (void*)s_ptr->get(), s_ptr->use_count(), (void*) c_ptr);
     delete s_ptr;
 }
 
@@ -69,8 +70,8 @@ template<class T> auto newcptr(std::shared_ptr<T> const & s_ptr) {
     if (!s_ptr) return (U*)nullptr;
 
     std::shared_ptr<T> * c_ptr = new std::shared_ptr<T>(s_ptr);
-    std::cerr << "Copyied shared pointer " << demangle(s_ptr) << "/" << (void*)s_ptr.get() 
-        << "/" << s_ptr.use_count() << " with " << (void*) c_ptr << std::endl;
+    LOGGER->debug("Copied shared pointer {} at {} (count={}) : pointer {}", 
+        demangle(*s_ptr), (void*)s_ptr.get(), s_ptr.use_count(), (void*) c_ptr);
     return reinterpret_cast<U *>(c_ptr);
 }
 
@@ -98,21 +99,29 @@ struct ApiObject : public xpm::Object {
 
     ApiObject(void * self, object_init_callback init_cb, object_delete_callback delete_cb, 
         object_setvalue_callback setvalue_cb)
-         : self(self), init_cb(init_cb), delete_cb(delete_cb), setvalue_cb(setvalue_cb) {}
+         : self(self), init_cb(init_cb), delete_cb(delete_cb), setvalue_cb(setvalue_cb) {
+        LOGGER->debug("Created API object with handle {}", self);
+    }
 
     virtual ~ApiObject() {
-        auto error = delete_cb(self);
-        if (error) {
-            LOGGER->error("Error while calling object::delete");
+        // TODO: maybe do something better?
+        if (!STOPPING) {
+            LOGGER->debug("Deleting API object with handle {}", self);
+            auto error = init_cb(self);
+            if (error) {
+                LOGGER->error("Error while calling object::delete");
+            }
         }
     }
     
     virtual void init() override {
+        LOGGER->debug("Init API object with handle {}", self);
         auto error = init_cb(self);
         if (error) throw std::runtime_error("Error while calling object::init");
     }
 
     virtual void setValue(std::string const & name, xpm::ptr<xpm::Value> const & value) override {            
+        LOGGER->debug("Set value {} for API object with handle {}", name, self);
         auto p = std::const_pointer_cast<xpm::Value>(value);
         auto error = setvalue_cb(self, name.c_str(), reinterpret_cast<Value *>(&p));
         if (error) throw std::runtime_error("Error while calling object::setvalue");
@@ -622,9 +631,11 @@ extern "C" {
     void setLogLevel(CString key, LogLevel c_level) {
         xpm::LogLevel level = xpm::LogLevel::INFO;
         switch(c_level) {
-            case LogLevel_WARN: level = xpm::LogLevel::WARN; break;
+            case LogLevel_TRACE: level = xpm::LogLevel::TRACE; break;
             case LogLevel_DEBUG: level = xpm::LogLevel::DEBUG; break;
             case LogLevel_INFO: level = xpm::LogLevel::INFO; break;
+            case LogLevel_WARN: level = xpm::LogLevel::WARN; break;
+            case LogLevel_ERROR: level = xpm::LogLevel::ERROR; break;
         }
 
         xpm::setLogLevel(key, level);
@@ -632,6 +643,10 @@ extern "C" {
 
     void progress(float value) {
         xpm::progress(value);
+    }
+
+    void stopping() {
+        STOPPING = true;
     }
 
 } // extern "C"

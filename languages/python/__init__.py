@@ -213,6 +213,7 @@ class Task(FFIObject):
         lib.task_commandline(self.ptr, commandline.ptr)
 
     def submit(self, workspace, launcher, value, dependencies: DependencyArray):
+        Workspace.SUBMITTED = True
         lib.task_submit(self.ptr, workspace.ptr, Launcher._ptr(launcher), Value._ptr(value), dependencies.ptr)
 
     @classmethod
@@ -472,6 +473,7 @@ def callback(args):
     def wrapper(function):
         def _wrapped(*args, **kwargs):
             try:
+                logger.info("COUCOU")
                 function(*args, **kwargs)
                 return 0
             except Exception:
@@ -490,6 +492,7 @@ def object_init_cb(handle):
 
 @callback("int(void *)")
 def object_delete_cb(handle):
+    logging.info("Deleting object")
     object = ffi.from_handle(handle)
     logging.debug("Deleting object of type %s [%s]", object.pyobject.__class__.__name__, object)
     del XPMObject.OBJECTS[handle]
@@ -501,8 +504,9 @@ class XPMObject(FFIObject):
     def __init__(self, pyobject, sv=None):
         handle = ffi.new_handle(self)
         self.ptr = ffi.gc(lib.object_new(handle, object_init_cb, object_delete_cb, object_setvalue_cb), lib.object_free)
-        # FIXME: memory leak?
+        # Keep a copy of the handle
         XPMObject.OBJECTS[handle] = self
+
         self.pyobject = pyobject
         logging.debug("Created object of type %s [%s]", self.pyobject.__class__.__name__, handle)
 
@@ -856,7 +860,7 @@ class RegisterTask(RegisterType):
         register.addTask(task)
 
         command = Command()
-        command.add(CommandPath(op.realpath(self.pythonpath)))
+        command.add(CommandPath(self.pythonpath))
         command.add(CommandPath(op.realpath(self.scriptpath)))
         for arg in self.prefix_args:
             command.add(CommandString(arg))
@@ -991,6 +995,9 @@ def checkexception():
 class Workspace():
     DEFAULT = None
 
+    """True if a job was submitted"""
+    SUBMITTED = False
+
     """An experimental workspace"""
     def __init__(self, path):
         # Initialize the base class
@@ -1082,13 +1089,17 @@ signal.signal(signal.SIGQUIT, handleKill)
 
 @atexit.register
 def handleExit():
-    logger.info("End of script: waiting for jobs to be completed")
-    lib.workspace_waitUntilTaskCompleted()
+    if Workspace.SUBMITTED:
+        logger.info("End of script: waiting for jobs to be completed")
+        lib.workspace_waitUntilTaskCompleted()
+    lib.stopping()
 
 
+LogLevel_TRACE = lib.LogLevel_TRACE
 LogLevel_DEBUG = lib.LogLevel_DEBUG
 LogLevel_INFO = lib.LogLevel_INFO
 LogLevel_WARN = lib.LogLevel_WARN
+LogLevel_ERROR = lib.LogLevel_ERROR
 def setLogLevel(key: str, level):
     lib.setLogLevel(cstr(key), level)
 

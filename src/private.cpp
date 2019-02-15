@@ -11,7 +11,6 @@
 namespace xpm {
 namespace {
 ptr<spdlog::sinks::ansicolor_stderr_sink_mt> sink;
-std::unordered_map<std::string, ptr<spdlog::logger>> loggers;
 
 void initLogging() {
   static bool initialized = false;
@@ -64,8 +63,8 @@ void setLogLevel(std::string const &loggername, LogLevel level) {
   initLogging();
 
   auto l = logger(loggername);
-  
   l->set_level(convert(level));
+  l->log(convert(level), "Setting {} to level {}", loggername, (int)level);
 }
 
 }
