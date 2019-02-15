@@ -61,8 +61,15 @@ public:
 
   void handleJobNotification(std::string jobId, Poco::URI &uri, HTTPServerResponse &response) {
     auto query = uri.getQueryParameters();
+    
+    LOGGER->debug("Sending response...");
+    std::ostream &ostr = response.send();
+    ostr << "OK" << std::endl;
+    response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
+
     for(auto & p: query) {
       if (p.first == "progress") {
+        LOGGER->debug("Notifying listeners...");
         float progress = std::atof(p.second.c_str());
         _context.forEach([&](auto &l) {
           l.send({ { "type", "JOB_UPDATE" }, { "payload", {
@@ -74,8 +81,7 @@ public:
         _context.jobStatusNotification(jobId, p.second);
       }
     }
-
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_ACCEPTED);
+    LOGGER->debug("Done");
   }
 
   void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {

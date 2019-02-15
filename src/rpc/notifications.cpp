@@ -104,15 +104,12 @@ struct Progress {
       std::unique_lock<std::mutex> lk(mx);
 
       // Wait for a maximum of time_threshold - or if enough progress has been made
-      cv.wait_for(lk, time_threshold,  [&] {
+      bool b = cv.wait_for(lk, time_threshold,  [&] {
         return progress - last_progress > threshold;
       });
 
-      // just outputs
-      bool b = progress - last_progress > threshold;
-      bool logging_b = progress - last_progress > logging_threshold;
+      // Notify
       last_progress = progress;
-
       float value = float(last_progress) / MAX_PROGRESS;
       LOGGER->debug("Notify progress {} [{}]...", value * 100, b);
 
@@ -127,15 +124,15 @@ struct Progress {
    */
   void notify(float value) {
     try {
+
         Poco::Net::HTTPClientSession session(hostname, port);
         session.setTimeout(Poco::Timespan(1, 0)); // 1s timeout
         Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, 
-           fmt::format("{}?progress={:.3f}", path, value), Poco::Net::HTTPMessage::HTTP_1_1);
+           fmt::format("{}?progress={:.3f}", path, value), Poco::Net::HTTPMessage::HTTP_1_0);
         // Poco::Net::HTTPResponse response;
         session.sendRequest(request);
-
       } catch(std::exception &e) {
-        LOGGER->info("Caught exception while reporting progress: {}", e.what());
+        LOGGER->info("Caught exception while reporting progress on http://{}:{}{}?progress={:.3f}: {}", hostname, port, path, value, e.what());
       }
   }
 
