@@ -18,12 +18,12 @@ void initLogging() {
   if (!initialized) {
     initialized = true;
 
-    spdlog::set_pattern("[%x %H:%M:%S/%n] %v");
     // spdlog::set_async_mode(8192);
 
     // auto errsink = spdlog::sinks::stderr_sink_mt::instance();
     sink = std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>();
     sink->set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%x %H:%M:%S] (%t) [%n] %v");
   }
 }
 
