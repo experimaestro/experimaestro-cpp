@@ -25,7 +25,7 @@ class Tasks extends Component<Props> {
                     {
                         job.status == "running" ?
                         <React.Fragment>
-                            <span className="status progressbar-container">
+                            <span className="status progressbar-container" title={`${job.progress*100}%`}>
                                 <span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div>
                             </span> 
                             <i className="fa fa-skull-crossbones action" onClick={() => this.kill(jobId) }/>
@@ -34,7 +34,7 @@ class Tasks extends Component<Props> {
                         <span className={`status status-${job.status}`}>{job.status}</span>
                     }
                     <span className="task-id">{job.taskId}</span>
-                    {/* <span className="job-id">{job.jobId}</span> */}
+                    <span className="job-id">{job.jobId}</span>
                     {
                         job.tags.map((tv) => {
                             return <span className="tag">

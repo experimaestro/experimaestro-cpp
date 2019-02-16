@@ -13,12 +13,14 @@ type Experiment = {
     name: string;
 }
 
+type JobStatus = "running" | "done" | "error" | "waiting";
+
 export type Job = {
     jobId: string;
     taskId: string;
 
     locator: string;
-    status: "running" | "done" | "error" | "waiting";
+    status: JobStatus;
 
     start: string;
     end: string;
@@ -70,6 +72,26 @@ const initialState : State = {
     experiment: null
 }
 
+
+const status2int = (status: JobStatus) : number => {
+    switch(status) {
+        case "running": return 5;
+        case "error": return 2;
+        case "waiting": return 2;
+        case "done": return 1;
+        default: return 0;
+    }
+}
+const jobComparator = (jobs: {[string]: Job}) => {
+    return (id1: string, id2: string) : number => {
+        let j1 = jobs[id1];
+        let j2 = jobs[id2];
+        let z =  status2int(j2.status) - status2int(j1.status);
+        if (z != 0) return z;
+        return id1.localeCompare(id2);
+    }
+}
+
 const reducer : Reducer<State,Action> =
     produce((draft: State, action: Action) : void => {
         switch (action.type) {
@@ -97,6 +119,7 @@ const reducer : Reducer<State,Action> =
                     draft.jobs.ids.push(action.payload.jobId);
                 }
                 draft.jobs.byId[action.payload.jobId] = action.payload;
+                draft.jobs.ids.sort(jobComparator(draft.jobs.byId));
                 break;
 
             case "JOB_UPDATE":
@@ -104,6 +127,7 @@ const reducer : Reducer<State,Action> =
                 } else {
                     _.merge(draft.jobs.byId[action.payload.jobId], action.payload);
                 }
+                draft.jobs.ids.sort(jobComparator(draft.jobs.byId));
                 break;
 
             default: 

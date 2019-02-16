@@ -4414,13 +4414,20 @@ readers do not read off random characters that represent icons */
   display: none; }
 
 .resource .tag {
-  border: 1px solid lightgray;
-  padding: 3px; }
+  display: inline-block;
+  padding: 0px;
+  margin: 2px;
+  color: white;
+  line-height: 1.2rem; }
   .resource .tag .name {
-    background: lightgray;
-    padding: 2px; }
-  .resource .tag .value {
+    border-radius: 5px 0 0 5px;
+    background: #1976d2;
     padding: 3px; }
+  .resource .tag .value {
+    border-radius: 0 5px 5px 0;
+    padding: 3px;
+    background: #2196f3;
+    font-weight: bold; }
 
 body {
   font-size: 1rem; }
