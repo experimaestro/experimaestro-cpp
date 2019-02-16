@@ -2,8 +2,12 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import client from './client'
+import Clipboard from 'react-clipboard.js';
+import { toast } from 'react-toastify';
+
 import { type State, type Jobs } from './store'
+import confirm from 'util/confirm';
+import client from './client'
 
 type StateProps = {
     jobs: Jobs
@@ -13,7 +17,11 @@ type Props = StateProps;
 
 class Tasks extends Component<Props> {
     kill = (jobId: string) => {
-        client.send({ type: "kill", payload: jobId}, "cannot kill job " + jobId)
+        confirm('Are you sure to kill this job?').then(() => {
+            client.send({ type: "kill", payload: jobId}, "cannot kill job " + jobId)
+        }, () => {
+            toast.info("Action cancelled");
+        });
     }
 
     render() {
@@ -23,7 +31,7 @@ class Tasks extends Component<Props> {
                 let job = jobs.byId[jobId];
                 return <div className="resource" key={jobId}>
                     {
-                        job.status == "running" ?
+                        job.status === "running" ?
                         <React.Fragment>
                             <span className="status progressbar-container" title={`${job.progress*100}%`}>
                                 <span style={{right: `${(1-job.progress)*100}%`}} className="progressbar"></span><div className="status-running">{job.status}</div>
@@ -33,11 +41,11 @@ class Tasks extends Component<Props> {
                         :
                         <span className={`status status-${job.status}`}>{job.status}</span>
                     }
-                    <span className="task-id">{job.taskId}</span>
-                    <span className="job-id">{job.jobId}</span>
+                    <i className="fas fa-eye action" onClick={() => {}}/>
+                    <span className="job-id"><Clipboard className="clipboard" data-clipboard-text={`${job.taskId}/${job.jobId}`} onSuccess={() => toast.success(`Job path copied`)}>{job.taskId}</Clipboard></span>
                     {
                         job.tags.map((tv) => {
-                            return <span className="tag">
+                            return <span key={tv[0]} className="tag">
                                 <span className="name">{tv[0]}</span>
                                 <span className="value">{tv[1]}</span>
                             </span>

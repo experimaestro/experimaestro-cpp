@@ -49,4 +49,24 @@ body {
   
 .action {
   cursor: pointer;
+  color: gray;
+  padding: 3px;
+  &:hover {
+    color: black;
+  }
+}
+
+button.clipboard {
+  border: none;
+  background: inherit;
+  position: relative;
+  &:hover::before {
+    position: absolute;
+    @extend %fa-icon;
+    @extend .fas;
+    font-size: 1.5rem;
+    color: gray;
+    width: 100%;
+    content: fa-content($fa-var-clipboard);
+  }
 }

@@ -13,7 +13,7 @@ type Experiment = {
     name: string;
 }
 
-type JobStatus = "running" | "done" | "error" | "waiting";
+type JobStatus = "running" | "done" | "error" | "ready" | "waiting";
 
 export type Job = {
     jobId: string;
@@ -78,7 +78,8 @@ const status2int = (status: JobStatus) : number => {
         case "running": return 5;
         case "error": return 2;
         case "waiting": return 2;
-        case "done": return 1;
+        case "ready": return 1;
+        case "done": return 0;
         default: return 0;
     }
 }
@@ -87,7 +88,7 @@ const jobComparator = (jobs: {[string]: Job}) => {
         let j1 = jobs[id1];
         let j2 = jobs[id2];
         let z =  status2int(j2.status) - status2int(j1.status);
-        if (z != 0) return z;
+        if (z !== 0) return z;
         return id1.localeCompare(id2);
     }
 }

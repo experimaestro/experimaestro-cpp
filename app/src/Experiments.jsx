@@ -13,7 +13,7 @@ type Props = { ...DispatchProps,
 
 class Experiments extends Component<Props> {
     render() {
-        let { experiment } = this.props;
+        // let { experiment } = this.props;
         return <div>
             </div>;
     }
