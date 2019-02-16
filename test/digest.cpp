@@ -73,3 +73,19 @@ TEST(Digest, default) {
   auto v1 = r->build(R"({ "a": { "$value": 1 }, "b": { "$value": 2 }, "$type": "default" })");
   EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
 }
+
+TEST(Digest, newdefault) {
+  auto r0 = mkptr<CppRegister>();
+  SimpleCppTypeBuilder("default", r0)
+    .argument<int>("a").required(true)
+    .argument<int>("c").defaultValue(2);
+  auto v0 = r0->build(R"({ "a": 1, "$type": "default" })");
+
+  auto r1 = mkptr<CppRegister>();
+  SimpleCppTypeBuilder("default", r1)
+    .argument<int>("a").required(true)
+    .argument<int>("b").required(true).defaultValue(2);
+
+  auto v1 = r1->build(R"({ "a": { "$value": 1 }, "b": { "$value": 2 }, "$type": "default" })");
+  EXPECT_EQ(v0->uniqueIdentifier(), v1->uniqueIdentifier());
+}
