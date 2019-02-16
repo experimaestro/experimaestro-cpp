@@ -435,6 +435,12 @@ std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
   return std::make_shared<SSHProcessBuilder>(_session);
 }
 
+ptr<Process> SSHConnector::getProcess(pid_t pid) const {
+  // TODO: implement getProcess for SSHConnector
+  NOT_IMPLEMENTED();
+}
+
+
 void SSHConnector::setExecutable(Path const &path, bool flag) const {
   std::string localpath = resolve(path);
   _session->connect();

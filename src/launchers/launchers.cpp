@@ -1,6 +1,7 @@
 #include <xpm/launchers/launchers.hpp>
 #include <__xpm/scriptbuilder.hpp>
 #include <xpm/connectors/local.hpp>
+#include <xpm/workspace.hpp>
 
 namespace xpm {
 
@@ -65,6 +66,19 @@ std::shared_ptr<ScriptBuilder> DirectLauncher::scriptBuilder() {
   auto builder = mkptr<ShScriptBuilder>();
   builder->notificationURL = notificationURL();
   return builder;
+}
+
+ptr<Process> DirectLauncher::check(Job const & job) const {
+  auto pidPath = job.pathTo(PID_PATH);
+  if (connector()->fileType(pidPath) != FileType::FILE) {
+    return nullptr;
+  }
+
+  auto istream = connector()->istream(pidPath);
+  long pid;
+  *istream >> pid;
+
+  return connector()->getProcess(pid);
 }
 
 

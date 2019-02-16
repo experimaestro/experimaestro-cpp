@@ -23,6 +23,7 @@ namespace xpm {
 
     ~SSHConnector();
     virtual std::shared_ptr<ProcessBuilder> processBuilder() const override;
+    virtual ptr<Process> getProcess(pid_t pid) const override;
     virtual void setExecutable(Path const & path, bool flag) const override;
     virtual void mkdir(Path const & path) const override;
     virtual FileType fileType(Path const & path) const override;

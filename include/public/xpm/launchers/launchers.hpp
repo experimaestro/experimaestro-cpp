@@ -18,6 +18,7 @@ namespace xpm {
 // Foward declarations
 class ScriptBuilder;
 class Connector;
+class Job;
 
 // Type definitions
 typedef std::map<std::string, std::string> Environment;
@@ -116,6 +117,7 @@ public:
   virtual std::shared_ptr<ScriptBuilder> scriptBuilder() = 0;
 
   inline std::shared_ptr<Connector> connector() { return _connector; }
+  inline std::shared_ptr<Connector const> connector() const { return _connector; }
   inline Environment & environment() { return _environment; }
 
   /// Set the notification URL
@@ -124,6 +126,9 @@ public:
 
   /// Get the default launcher
   static std::shared_ptr<Launcher> defaultLauncher();
+
+  /// Check if the job is running
+  virtual ptr<Process> check(Job const &) const = 0;
 
 private:
   static std::shared_ptr<Launcher> DEFAULT_LAUNCHER;
@@ -150,6 +155,8 @@ public:
   DirectLauncher(std::shared_ptr<Connector> const &connector);
   virtual std::shared_ptr<ProcessBuilder> processBuilder() override;
   virtual std::shared_ptr<ScriptBuilder> scriptBuilder() override;
+  virtual ptr<Process> check(Job const &) const override;
+
 };
 
 } // namespace xpm

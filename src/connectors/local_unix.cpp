@@ -30,6 +30,30 @@ DEFINE_LOGGER("xpm.local");
 namespace {
 // TODO: promote to parameter?
 const size_t buffer_size = 8192;
+
+int waitProcess(pid_t pid) {
+  int exit_status;
+  auto code = waitpid(pid, &exit_status, 0);
+
+  if (code == -1) {
+    if (errno == ECHILD) {
+      // No such process
+      throw xpm::exited_error();
+    }
+
+    LOGGER->error("Error with waitpid, code {} ({}): returning failure", errno, strerror(errno));
+    return -1;
+  }
+
+  auto exit_code = WEXITSTATUS(exit_status);
+  auto signaled = WIFSIGNALED(exit_status);
+  auto stopped = WIFSTOPPED(exit_status);
+  LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", exit_code, WIFEXITED(exit_status), signaled, stopped);
+  if (signaled) return -2;
+  if (stopped) return -3;
+  return WEXITSTATUS(exit_status);
+}
+
 } // namespace
 
 namespace xpm {
@@ -248,18 +272,7 @@ public:
 
   /// Exit code
   virtual int exitCode() override {
-    int exit_status;
-    auto code = waitpid(pid, &exit_status, 0);
-
-    if (code == -1) {
-      LOGGER->error("Error with waitpid: returning failure");
-      return -1;
-    }
-
-    auto exit_code = WEXITSTATUS(exit_status);
-    auto signaled = WIFSIGNALED(exit_status);
-    auto stopped = WIFSTOPPED(exit_status);
-    LOGGER->info("Local unix process exit status is {} (exited={}, signaled={}, stopped={})", exit_code, WIFEXITED(exit_status), signaled, stopped);
+    int exit_status = ::waitProcess(pid);
 
     // Signals that the process ended
     {
@@ -268,9 +281,7 @@ public:
     }
     close_fds();
 
-    if (signaled) return -2;
-    if (stopped) return -3;
-    return WEXITSTATUS(exit_status);
+    return exit_status;
   }
 
   void close_fds() noexcept {
@@ -441,6 +452,45 @@ void LocalConnector::remove(Path const &path, bool recursive) const {
     }
 
   }
+}
+
+
+ptr<Process> LocalConnector::getProcess(pid_t pid) const {
+  class ExternalProcess : public Process {
+    pid_t _pid;
+  public:
+    ExternalProcess(pid_t pid): _pid(pid) {}
+
+    virtual ~ExternalProcess() {}
+
+    virtual bool isRunning() {
+      // From https://stackoverflow.com/questions/9152979/check-if-process-exists-given-its-pid
+      return ::kill(_pid, 0) == 0 || errno != ESRCH;
+    }
+
+    /// Exit code 
+    virtual int exitCode() {
+      return ::waitProcess(_pid);
+    }
+
+    /// Kill
+    virtual void kill(bool force) {
+      if (force)
+        ::kill(_pid, SIGTERM);
+      else
+        ::kill(_pid, SIGINT);
+    }
+
+    virtual long write(void * s, long count) { 
+      throw std::runtime_error("Cannot write to an external process");
+    }
+
+    virtual void eof() {
+      throw std::runtime_error("Cannot close the input stream of an external process");
+    }
+  };
+  
+  return mkptr<ExternalProcess>(pid);
 }
 
 } // namespace xpm

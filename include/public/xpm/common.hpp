@@ -62,6 +62,13 @@ class sealed_error : public exception {
   sealed_error();
 };
 
+
+/** Thrown when a process has exited before the exit value could be read */
+class exited_error : public exception {
+ public:
+  exited_error();
+};
+
 /** Thrown when the argument is invalid */
 class argument_error : public exception {
  public:

@@ -13,6 +13,7 @@ argument_error::argument_error(const std::string &message) : exception(message) 
 cast_error::cast_error(const std::string &message) : exception(message) {}
 assertion_error::assertion_error(const std::string &message) : exception(message) {}
 io_error::io_error(const std::string &message) : exception(message) {}
+exited_error::exited_error() {}
 lock_error::lock_error(const std::string &message) : exception(message) {}
 not_implemented_error::not_implemented_error(const std::string &message,
                                              const std::string &file, int line) : exception(

@@ -22,6 +22,8 @@ public:
   virtual void remove(Path const &path, bool recursive=false) const override;
   virtual std::unique_ptr<Lock> lock(Path const &path, std::chrono::seconds const &) const override;
 
+  virtual ptr<Process> getProcess(pid_t pid) const override;
+
   std::unique_ptr<std::ostream> ostream(Path const & path) const override;
   std::unique_ptr<std::istream> istream(Path const & path) const override;
 };

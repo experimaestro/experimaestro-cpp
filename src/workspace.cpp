@@ -482,6 +482,24 @@ void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
   auto & connector = *_launcher->connector();
   auto const donePath = pathTo(DONE_PATH);
 
+  auto waitUntilFinished = [&] {
+    LOGGER->info("Waiting for job {} to finish", _locator);
+    int exitCode = -1;
+    try {
+      exitCode = _process->exitCode();
+    } catch(exited_error &) {
+      // Could not read the exit value, fallback
+      LOGGER->info("Process exited before wait process was in place, reading from file");
+      auto codePath = pathTo(EXIT_CODE_PATH);
+      auto istream = connector.istream(codePath);
+      *istream >> exitCode;
+    } catch(...) {
+      LOGGER->warn("Unhandled exception while waiting for job to finish: setting state to fail");
+    }
+    state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
+    LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
+  };
+  
   // Check if already done
   auto check = [&] {
     if (connector.fileType(donePath) == FileType::FILE) {
@@ -490,10 +508,18 @@ void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
       jobCompleted();
       return true;
     }
+
+    // check if done
+    _process =  this->_launcher->check(*this);
+    if (_process) {
+      waitUntilFinished();
+      return true;
+    }
+
     return false;
   };
 
-  // check if done
+  
   if (check()) return;
 
   // Lock the job and check done again (just in case)
@@ -541,10 +567,7 @@ void CommandLineJob::run(MutexLock && jobLock, std::vector<ptr<Lock>> & locks) {
   jobLock.unlock();
 
   // Wait for end of execution
-  LOGGER->info("Waiting for job {} to finish", _locator);
-  int exitCode = _process->exitCode();
-  state(exitCode == 0 ? JobState::DONE : JobState::ERROR);
-  LOGGER->info("Job {} finished with exit code {} (state {})", _locator, exitCode, state());
+  waitUntilFinished();
 }
 
 void CommandLineJob::kill() {
