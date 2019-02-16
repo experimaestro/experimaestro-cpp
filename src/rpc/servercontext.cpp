@@ -171,7 +171,6 @@ MainServerContext::MainServerContext() {
 
 void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {   
 }
-void MainServerContext::jobStatusNotification(std::string const & jobId, std::string status) {}
 
 void MainServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {}
 
@@ -189,8 +188,21 @@ void ExperimentServerContext::refresh(std::shared_ptr<Emitter> const & emitter) 
     _workspace.refresh(*emitter);
 }
 
-void ExperimentServerContext::jobStatusNotification(std::string const & jobId, std::string status) {
-    // TODO: implement (useful when restarting)
+void ExperimentServerContext::jobCreation(Job const & job) {
+  nlohmann::json j = { { "type", "JOB_ADD" }, { "payload", job.getJsonState() } };
+  forEach([&j](auto & l) { l.send(j); });
+}
+
+void ExperimentServerContext::jobStatus(Job const & job) {
+    nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
+      { "locator", job.locator().toString() },
+      { "status", job.state() }
+    }}};
+    
+    forEach([&j](auto & l) { l.send(j); });
+}
+
+void ExperimentServerContext::jobProgress(Job const & job) {
 }
 
 void ExperimentServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {

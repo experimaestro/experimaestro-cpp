@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Wait for file to be created
+
+echo "Watching $1"
+while ! test -f "$1"; do
+    sleep 0.01
+done

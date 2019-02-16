@@ -4,9 +4,13 @@
 #include <spdlog/fmt/fmt.h>
 #include <unistd.h>
 
+#include <config.h>
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
+#include <xpm/commandline.hpp>
+#include <xpm/connectors/local.hpp>
 #include <xpm/workspace.hpp>
+#include <xpm/xpm.hpp>
 
 #include "date.h"
 
@@ -21,7 +25,7 @@ public:
   ptr<LocalConnector> connector;
 
   TemporaryDirectory() {
-    char t[] = "xpmtests-XXXXXX";
+    char t[] = "/tmp/xpmtests-XXXXXX";
     locator = Path(mkdtemp(t));
     connector = mkptr<LocalConnector>();
     LOGGER->info("Creating directory {}", t);
@@ -116,5 +120,66 @@ TEST_F(SchedulerTest, Token) {
 
     EXPECT_TRUE(job1->end < job2->start || job2->end < job1->start)
       << job1 << " and " << job2 << " did overlap";
+
+}
+
+// WorkspaceRestart - when an experiment is restarted,
+// already running jobs should be picked up and watched
+namespace {
+ const std::string WAITFILE = XPM_TEST_SOURCEDIR "/scripts/waitfile";
+} 
+
+
+TEST_F(SchedulerTest, WorkspaceRestart) {
+  
+  auto jobpath = directory.locator / "restart";
+  auto wakeuppath = jobpath / "wakeup";
+
+  auto commandline = mkptr<CommandLine>();
+  auto command = mkptr<Command>();
+  commandline->add(command);
+  command->add(mkptr<CommandPath>(Path(WAITFILE)));
+  command->add(mkptr<CommandPath>(wakeuppath));
+
+  // Submit job
+  auto job = mkptr<CommandLineJob>(jobpath, Launcher::defaultLauncher(), commandline);
+  job->parameters(mkptr<MapValue>());
+  ws->submit(job);
+
+  // Wait for job to be started
+
+  struct Listener : WorkspaceListener {
+    std::condition_variable cv;
+    std::mutex cv_m;
+    std::unique_lock<std::mutex> lock;
+    
+    Listener() : lock(cv_m) {}
+    
+    void jobStatus(Job const &job) {
+      cv.notify_all();
+    }
+  };
+
+  auto listener = mkptr<Listener>();
+  ws->addListener(listener);
+  
+  auto success = listener->cv.wait_for(listener->lock, std::chrono::seconds(1), [&] { return job->state() == JobState::RUNNING; });
+  ASSERT_TRUE(success); //, "Job was not started within 1s");
+
+  // Launch same job on another workspace and wait for completion detection
+
+  auto ws2 = mkptr<Workspace>(directory.locator.localpath());
+  auto job2 = mkptr<CommandLineJob>(jobpath, Launcher::defaultLauncher(), commandline);
+  job2->parameters(mkptr<MapValue>());
+  ws2->submit(job2);
+
+  auto listener2 = mkptr<Listener>();
+  ws->addListener(listener2);
+
+  LocalConnector connector;
+  connector.createFile(wakeuppath);
+  success =  listener2->cv.wait_for(listener2->lock, std::chrono::seconds(1), [&] { return job2->state() == JobState::DONE; });
+
+  ASSERT_TRUE(success); //, "Job was not finished within 1s");
 
 }

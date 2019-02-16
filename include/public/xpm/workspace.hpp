@@ -357,6 +357,15 @@ struct JobPriorityComparator {
 
 };
 
+/// Listen to events
+struct WorkspaceListener {
+  virtual ~WorkspaceListener();
+
+  virtual void jobCreation(Job const & job);
+  virtual void jobStatus(Job const & job);
+  virtual void jobProgress(Job const & job);
+};
+
 /** 
  * Workspace tracking resources, jobs and scheduling
  */
@@ -422,6 +431,9 @@ public:
   /// Refresh
   void refresh(xpm::rpc::Emitter &);
 
+  /// Add listener
+  void addListener(ptr<WorkspaceListener> const & listener);
+
 private:
   /// Working directory path
   Path _path;
@@ -442,8 +454,10 @@ private:
   std::map<std::string, std::string> _variables;
 
   /// The server context, if any
-  std::shared_ptr<rpc::ExperimentServerContext> _serverContext;
   std::shared_ptr<rpc::Server> _server;
+
+  /// Listeners
+  std::vector<ptr<WorkspaceListener>> _listeners;
 };
 
 

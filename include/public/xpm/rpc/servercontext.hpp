@@ -7,6 +7,7 @@
 #include <memory>
 #include <unordered_set>
 
+#include <xpm/workspace.hpp>
 #include <xpm/json.hpp>
 #include <Poco/File.h>
 
@@ -34,7 +35,7 @@ struct Emitter {
 };
 
 
-class ServerContext {
+class ServerContext : public WorkspaceListener {
 protected:
     int _port;
     std::string _hostname;
@@ -55,7 +56,6 @@ public:
     void forEach(std::function<void(Emitter&)> );
 
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) = 0;
-    virtual void jobStatusNotification(std::string const & jobId, std::string status) = 0;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) = 0;
 };
 
@@ -64,9 +64,8 @@ public:
     MainServerContext();
     virtual ~MainServerContext();
     
-    virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
-    virtual void jobStatusNotification(std::string const & jobId, std::string status) override;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+    virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
 
 private:
   std::unique_ptr<Poco::Data::Session> session;
@@ -77,8 +76,10 @@ public:
     ExperimentServerContext(Workspace & workspace, std::string const & host, int port, std::string const & htdocs);
 
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
-    virtual void jobStatusNotification(std::string const & jobId, std::string status) override;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+    virtual void jobCreation(Job const & job) override;
+    virtual void jobStatus(Job const & job) override;
+    virtual void jobProgress(Job const & job) override;
 private:
     Workspace & _workspace;
 };

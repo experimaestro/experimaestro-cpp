@@ -78,7 +78,7 @@ public:
           }}});
         });
       } else if (p.first == "status") {
-        _context.jobStatusNotification(jobId, p.second);
+        // _context.jobStatusNotification(jobId, p.second);
       }
     }
     LOGGER->debug("Done");

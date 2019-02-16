@@ -565,6 +565,10 @@ nlohmann::json CommandLineJob::getJsonState() const {
 
 std::unordered_set<Workspace *> Workspace::activeWorkspaces;
 
+WorkspaceListener::~WorkspaceListener() {}
+void WorkspaceListener::jobCreation(Job const & job) {}
+void WorkspaceListener::jobStatus(Job const & job) {}
+void WorkspaceListener::jobProgress(Job const & job) {}
 
 bool JobPriorityComparator::operator()(ptr<Job> const &lhs,
                                        ptr<Job> const &rhs) const {
@@ -616,9 +620,8 @@ void Workspace::submit(ptr<Job> const &job) {
     }
   }
 
-  if (_serverContext) {
-    nlohmann::json j = { { "type", "JOB_ADD" }, { "payload", job->getJsonState() } };
-    _serverContext->forEach([&j](auto & l) { l.send(j); });
+  for(auto & l: _listeners) {
+    l->jobCreation(*job); 
   }
 
   // Check if ready
@@ -627,26 +630,23 @@ void Workspace::submit(ptr<Job> const &job) {
   }
 }
 
+void Workspace::addListener(ptr<WorkspaceListener> const & listener) {
+  _listeners.push_back(listener);
+}
+
 void Workspace::jobStarted(Job const & job) {
-  if (_serverContext) {
-    nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
-      { "locator", job.locator().toString() },
-      { "status", job.state() }
-    }}};
-    _serverContext->forEach([&j](auto & l) { l.send(j); });
+  for(auto & l: _listeners) {
+    l->jobStatus(job); 
   }
 }
 
 void Workspace::jobFinished(Job const & job) {
   std::lock_guard<std::mutex> lock(JOB_CHANGED_MUTEX);
   waitingJobs.erase(&job);
-  if (_serverContext) {
-    nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
-      { "jobId", job.getJobId() },
-      { "status", job.state() }
-    }}};
-    _serverContext->forEach([&j](auto & l) { l.send(j); });
+  for(auto & l: _listeners) {
+    l->jobStatus(job); 
   }
+
   JOB_CHANGED.notify_all();
 }
 
@@ -740,12 +740,13 @@ void Workspace::waitUntilTaskCompleted() {
 }
 
 std::shared_ptr<rpc::Server> Workspace::server(int port, std::string const & htdocs) {
-  if (_serverContext) throw new std::runtime_error("Server already started");
+  if (_server) throw new std::runtime_error("Server already started");
 
   LOGGER->info("Trying to run server on http://{}:{}", "127.0.0.1", port);
-  _serverContext = mkptr<rpc::ExperimentServerContext>(*this, "127.0.0.1", port, htdocs);
+  auto context = mkptr<rpc::ExperimentServerContext>(*this, "127.0.0.1", port, htdocs);
   _server = mkptr<rpc::Server>();
-  _server->start(*_serverContext, false);
+  _server->start(*context, false);
+  _listeners.push_back(context);
   LOGGER->info("Started server http://{}:{}", "127.0.0.1", port);
   return _server;
 }
