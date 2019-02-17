@@ -57,6 +57,7 @@ public:
 
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) = 0;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) = 0;
+    virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) = 0;
 };
 
 class MainServerContext : public ServerContext {
@@ -66,6 +67,7 @@ public:
     
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
+    virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
 
 private:
   std::unique_ptr<Poco::Data::Session> session;
@@ -77,6 +79,8 @@ public:
 
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+    virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+
     virtual void jobCreation(Job const & job) override;
     virtual void jobStatus(Job const & job) override;
     virtual void jobProgress(Job const & job) override;

@@ -404,6 +404,11 @@ void Job::jobCompleted() {
   }
 }
 
+std::vector<std::shared_ptr<Dependency>> const & Job::dependencies() const{
+  return _dependencies;
+}
+
+
 void Job::start() {
   if (exitMode != ExitMode::NONE) {
     LOGGER->info("Not starting job: exit signal received");
@@ -740,6 +745,12 @@ bool Workspace::has(std::string const &key) const {
 
 void Workspace::experiment(std::string const & name) {
   _experiment = name;
+}
+
+ptr<Job const> Workspace::getJob(std::string const & jobId) const {
+  auto it = _jobs.find(jobId);
+  if (it == _jobs.end()) return nullptr;
+  return it->second;
 }
 
 

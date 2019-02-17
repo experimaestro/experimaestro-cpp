@@ -24,6 +24,10 @@ class Tasks extends Component<Props> {
         });
     }
 
+    details = (jobId: string) => {
+        client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId)        
+    }
+
     render() {
         let { jobs } = this.props;
         return <div id="resources">{
@@ -41,7 +45,7 @@ class Tasks extends Component<Props> {
                         :
                         <span className={`status status-${job.status}`}>{job.status}</span>
                     }
-                    <i className="fas fa-eye action" onClick={() => {}}/>
+                    <i className="fas fa-eye action" title="Details" onClick={() => this.details(jobId)}/>
                     <span className="job-id"><Clipboard className="clipboard" data-clipboard-text={`${job.taskId}/${job.jobId}`} onSuccess={() => toast.success(`Job path copied`)}>{job.taskId}</Clipboard></span>
                     {
                         job.tags.map((tv) => {

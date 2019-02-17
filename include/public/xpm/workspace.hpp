@@ -278,6 +278,8 @@ public:
    */
   void start();
 
+  std::vector<std::shared_ptr<Dependency>> const & dependencies() const;
+
 protected:
   friend class Workspace;
   friend struct JobPriorityComparator;
@@ -433,6 +435,9 @@ public:
 
   /// Add listener
   void addListener(ptr<WorkspaceListener> const & listener);
+
+  /// Get job
+  ptr<Job const> getJob(std::string const &) const;
 
 private:
   /// Working directory path

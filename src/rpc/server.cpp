@@ -69,7 +69,6 @@ public:
 
     for(auto & p: query) {
       if (p.first == "progress") {
-        LOGGER->debug("Notifying listeners...");
         float progress = std::atof(p.second.c_str());
         _context.forEach([&](auto &l) {
           l.send({ { "type", "JOB_UPDATE" }, { "payload", {

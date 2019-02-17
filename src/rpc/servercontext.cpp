@@ -45,6 +45,12 @@ nlohmann::json ServerContext::handle(std::shared_ptr<Emitter> const & emitter, n
             return nullptr;
         }
 
+        if (type == "details") {
+            std::string jobId = message["payload"];
+            protectThread(emitter, [this, emitter, jobId]() { this->jobDetails(emitter, jobId); });                       
+            return nullptr;
+        }
+
         throw std::runtime_error("Cannot handle action " + type);
     }
     throw std::runtime_error("No type in message");
@@ -170,10 +176,19 @@ MainServerContext::MainServerContext() {
 
 
 void MainServerContext::refresh(std::shared_ptr<Emitter> const & emitter) {   
+  // TODO: implement refresh
+  NOT_IMPLEMENTED();
 }
 
-void MainServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {}
+void MainServerContext::kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {
+  // TODO: implement kill
+  NOT_IMPLEMENTED();
+}
 
+void MainServerContext::jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {
+  // TODO: implement jobDetails
+  NOT_IMPLEMENTED();
+}
 
 
 // --- Experiment server context
@@ -209,5 +224,26 @@ void ExperimentServerContext::kill(std::shared_ptr<Emitter> const & emitter, std
     _workspace.kill(jobId);
 }
 
+void ExperimentServerContext::jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) {
+  auto job = _workspace.getJob(jobId);
+  if (job) {
+    nlohmann::json dependencies;
+    for(auto resource: job->dependencies()) {
+      dependencies.push_back(job->getJobId());
+    }
+    nlohmann::json j = {
+      { "type", "JOB_UPDATE" }, { "payload", {
+        { "start", job->startTime() },
+        { "end", job->endTime() },
+        { "dependencies", dependencies },
+        { "status", job->state() },
+        { "locator", job->locator().toString() }
+      }}
+    };
+    emitter->send(j);
+  } else {
+    throw argument_error("Could not find job");
+  }
+}
 
 } // namespace xpm::rpc
