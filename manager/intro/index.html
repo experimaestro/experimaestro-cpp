@@ -2,7 +2,7 @@
 
 
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
   <head>
     
@@ -34,7 +34,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.1.0">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.0.1">
     
     
       
@@ -42,9 +42,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/application.11e41852.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/application.982221ab.css">
       
-        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.22915126.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.224b79ff.css">
       
       
         
@@ -53,7 +53,7 @@
       
     
     
-      <script src="../../assets/javascripts/modernizr.20ef595d.js"></script>
+      <script src="../../assets/javascripts/modernizr.1f0bcf2b.js"></script>
     
     
       
@@ -66,6 +66,9 @@
     
     
       <link rel="stylesheet" href="../../xpm.css">
+    
+    
+      
     
     
   </head>
@@ -124,22 +127,19 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           
-            
-              <span class="md-header-nav__topic">
-                experimaestro
-              </span>
-              <span class="md-header-nav__topic">
-                Intro
-              </span>
-            
+            <span class="md-header-nav__topic">
+              experimaestro
+            </span>
+            <span class="md-header-nav__topic">
+              Intro
+            </span>
           
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
         
+          <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
           
-            <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
-            
 <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
@@ -162,7 +162,6 @@
     </div>
   </div>
 </div>
-          
         
       </div>
       
@@ -173,20 +172,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
           </div>
         </div>
       
@@ -275,20 +272,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
     </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -668,20 +663,20 @@ directly in the host language. Available bindings are:</p>
 <div class="admonition example">
 <p class="admonition-title">Example</p>
 <p>The following <code>YAML</code> code defines two types, one</p>
-<div class="codehilite"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">my.model.abstract</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">{}</span>
+<div class="codehilite"><pre><span></span><span class="nt">my.model.abstract</span><span class="p">:</span> <span class="p p-Indicator">{}</span>
 
-<span class="l l-Scalar l-Scalar-Plain">my.model</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">parent</span><span class="p p-Indicator">:</span> <span class="s">&quot;my.model.abstract&quot;</span>
-  <span class="l l-Scalar l-Scalar-Plain">arguments</span><span class="p p-Indicator">:</span>
+<span class="nt">my.model</span><span class="p">:</span>
+  <span class="nt">parent</span><span class="p">:</span> <span class="s">&quot;my.model.abstract&quot;</span>
+  <span class="nt">arguments</span><span class="p">:</span>
     <span class="l l-Scalar l-Scalar-Plain">parameters</span>
       <span class="l l-Scalar l-Scalar-Plain">count</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">default</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">10</span>
-        <span class="l l-Scalar l-Scalar-Plain">help</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Number of nuggets to include</span>
-        <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">integer</span>
-    <span class=" -Error">  </span><span class="l l-Scalar l-Scalar-Plain">$seed</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">defaut</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
-        <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">int</span>
-        <span class="l l-Scalar l-Scalar-Plain">help</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Seed for the model parameters</span>
+        <span class="nt">default</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10</span>
+        <span class="nt">help</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Number of nuggets to include</span>
+        <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">integer</span>
+    <span class=" -Error">  </span><span class="nt">$seed</span><span class="p">:</span>
+        <span class="nt">defaut</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+        <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">int</span>
+        <span class="nt">help</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Seed for the model parameters</span>
 </pre></div>
 
 </div>
@@ -700,15 +695,15 @@ directly in the host language. Available bindings are:</p>
 <h2 id="tasks">Tasks</h2>
 <p>A task extends a type by associating it with 
 command to run.</p>
-<div class="codehilite"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">tasks</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">indri.index</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.index</span>
-    <span class="l l-Scalar l-Scalar-Plain">command</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pathref</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.PYTHON_PATH</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pathref</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.MAIN_PY</span>
+<div class="codehilite"><pre><span></span><span class="nt">tasks</span><span class="p">:</span>
+  <span class="nt">indri.index</span><span class="p">:</span>
+    <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.index</span>
+    <span class="nt">command</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">pathref</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.PYTHON_PATH</span>
+      <span class="p p-Indicator">-</span> <span class="nt">pathref</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">indri.MAIN_PY</span>
       <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">run</span>
       <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">indri.index</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">parameters</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">parameters</span>
 </pre></div>
                 
                   
@@ -773,22 +768,17 @@ command to run.</p>
           Material for MkDocs</a>
       </div>
       
-        
-      
     </div>
   </div>
 </footer>
       
     </div>
     
-      <script src="../../assets/javascripts/application.9e1f3b71.js"></script>
+      <script src="../../assets/javascripts/application.b806dc00.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:"../.."}})</script>
       
         <script src="../../xpm.js"></script>
-      
-    
-    
       
     
   </body>

@@ -2,7 +2,7 @@
 
 
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
   <head>
     
@@ -34,7 +34,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.1.0">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.0.1">
     
     
       
@@ -42,9 +42,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/application.11e41852.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/application.982221ab.css">
       
-        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.22915126.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.224b79ff.css">
       
       
         
@@ -53,7 +53,7 @@
       
     
     
-      <script src="../../assets/javascripts/modernizr.20ef595d.js"></script>
+      <script src="../../assets/javascripts/modernizr.1f0bcf2b.js"></script>
     
     
       
@@ -66,6 +66,9 @@
     
     
       <link rel="stylesheet" href="../../xpm.css">
+    
+    
+      
     
     
   </head>
@@ -124,22 +127,19 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           
-            
-              <span class="md-header-nav__topic">
-                experimaestro
-              </span>
-              <span class="md-header-nav__topic">
-                Notification
-              </span>
-            
+            <span class="md-header-nav__topic">
+              experimaestro
+            </span>
+            <span class="md-header-nav__topic">
+              Notification
+            </span>
           
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
         
+          <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
           
-            <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
-            
 <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
@@ -162,7 +162,6 @@
     </div>
   </div>
 </div>
-          
         
       </div>
       
@@ -173,20 +172,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
           </div>
         </div>
       
@@ -275,20 +272,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
     </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -566,32 +561,6 @@ value between 0 and 1 is allowed)</p>
 <span class="c1"># Report progress of 10%</span>
 <span class="n">progress</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
-
-<h1 id="lua">Lua</h1>
-<div class="codehilite"><pre><span></span><span class="c1">-- Create a notification function</span>
-
-<span class="n">xpm_url</span> <span class="o">=</span> <span class="nb">os.getenv</span><span class="p">(</span><span class="s2">&quot;XPM_NOTIFICATION_URL&quot;</span><span class="p">)</span>
-
-<span class="kr">if</span> <span class="n">xpm_url</span> <span class="o">~=</span> <span class="kc">nil</span> <span class="kr">then</span>
-  <span class="kd">local</span> <span class="n">http</span> <span class="o">=</span> <span class="nb">require</span><span class="p">(</span><span class="s2">&quot;socket.http&quot;</span><span class="p">)</span>
-  <span class="n">http</span><span class="p">.</span><span class="n">TIMEOUT</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="c1">-- set timeout to a low value</span>
-  <span class="kd">local</span> <span class="n">last_value</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-  <span class="kr">function</span> <span class="nf">notify_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">)</span>
-    <span class="kd">local</span> <span class="n">value</span> <span class="o">=</span> <span class="nb">string.format</span><span class="p">(</span><span class="s2">&quot;%s/progress/%.3f&quot;</span><span class="p">,</span> <span class="n">xpm_url</span><span class="p">,</span> <span class="n">progress</span><span class="p">)</span>
-    <span class="kr">if</span> <span class="n">last</span> <span class="o">~=</span> <span class="n">value</span> <span class="kr">then</span>
-      <span class="kd">local</span> <span class="n">t</span> <span class="o">=</span> <span class="nb">coroutine.create</span><span class="p">(</span><span class="kr">function</span> <span class="p">()</span> <span class="n">http</span><span class="p">.</span><span class="n">request</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="kr">end</span><span class="p">)</span>
-      <span class="nb">coroutine.resume</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
-      <span class="n">last_value</span> <span class="o">=</span> <span class="n">value</span>
-    <span class="kr">end</span>
-  <span class="kr">end</span>
-<span class="kr">else</span>
-  <span class="kr">function</span> <span class="nf">notify_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">)</span>
-  <span class="kr">end</span>
-<span class="kr">end</span>
-
-<span class="c1">-- Notifies</span>
-<span class="n">notify_progress</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
-</pre></div>
                 
                   
                 
@@ -655,22 +624,17 @@ value between 0 and 1 is allowed)</p>
           Material for MkDocs</a>
       </div>
       
-        
-      
     </div>
   </div>
 </footer>
       
     </div>
     
-      <script src="../../assets/javascripts/application.9e1f3b71.js"></script>
+      <script src="../../assets/javascripts/application.b806dc00.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:"../.."}})</script>
       
         <script src="../../xpm.js"></script>
-      
-    
-    
       
     
   </body>

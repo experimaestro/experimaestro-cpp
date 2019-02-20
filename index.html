@@ -2,7 +2,7 @@
 
 
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
   <head>
     
@@ -34,7 +34,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.1.0">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.0.1">
     
     
       
@@ -42,9 +42,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/application.11e41852.css">
+      <link rel="stylesheet" href="assets/stylesheets/application.982221ab.css">
       
-        <link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
+        <link rel="stylesheet" href="assets/stylesheets/application-palette.224b79ff.css">
       
       
         
@@ -53,7 +53,7 @@
       
     
     
-      <script src="assets/javascripts/modernizr.20ef595d.js"></script>
+      <script src="assets/javascripts/modernizr.1f0bcf2b.js"></script>
     
     
       
@@ -66,6 +66,9 @@
     
     
       <link rel="stylesheet" href="xpm.css">
+    
+    
+      
     
     
   </head>
@@ -124,22 +127,19 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           
-            
-              <span class="md-header-nav__topic">
-                experimaestro
-              </span>
-              <span class="md-header-nav__topic">
-                Basics
-              </span>
-            
+            <span class="md-header-nav__topic">
+              experimaestro
+            </span>
+            <span class="md-header-nav__topic">
+              Basics
+            </span>
           
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
         
+          <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
           
-            <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
-            
 <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
@@ -162,7 +162,6 @@
     </div>
   </div>
 </div>
-          
         
       </div>
       
@@ -173,20 +172,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
           </div>
         </div>
       
@@ -275,20 +272,18 @@
 
   
 
-
-  <a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
-    
-      <div class="md-source__icon">
-        <svg viewBox="0 0 24 24" width="24" height="24">
-          <use xlink:href="#__github" width="24" height="24"></use>
-        </svg>
-      </div>
-    
-    <div class="md-source__repository">
-      GitHub
+<a href="https://github.com/bpiwowar/experimaestro/" title="Go to repository" class="md-source" data-md-source="github">
+  
+    <div class="md-source__icon">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
     </div>
-  </a>
-
+  
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
     </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -591,23 +586,19 @@
                 
                   <h1>Basics</h1>
                 
-                <p>Tired to <strong>manually</strong> manage your experiments? Experimaestro manager
-gives you a systematic way to write and run experiments where parameters varies.</p>
-<p>The overall goals of the experimaestro manager are to:</p>
+                <p>The overall goals of the experimaestro manager are to:</p>
 <ul>
 <li>Decompose experiments into a set of parameterizable tasks</li>
 <li>Schedule tasks and handle dependencies between tasks</li>
 <li>Avoids to re-run the same task two times by computing unique task IDs dependending on the parameters</li>
 </ul>
-<p>Documentation </p>
-<p>Experimaestro is in an <strong>alpha</strong> state.</p>
 <h2 id="example">Example</h2>
 <div class="codehilite"><pre><span></span><span class="c1"># --- Task and types definitions</span>
 
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">click</span>
 <span class="kn">from</span> <span class="nn">experimaestro</span> <span class="kn">import</span> <span class="o">*</span>
-
-<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="s2">&quot;[</span><span class="si">%(asctime)-15s</span><span class="s2">] [</span><span class="si">%(name)s</span><span class="s2">] [</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="n">setLogLevel</span><span class="p">(</span><span class="s2">&quot;xpm&quot;</span><span class="p">,</span> <span class="n">LogLevel_DEBUG</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">experimaestro.click</span> <span class="kn">import</span> <span class="n">cli</span><span class="p">,</span> <span class="n">RegisterTask</span>
 
 <span class="c1"># Namespace</span>
 <span class="n">hw</span> <span class="o">=</span> <span class="n">Typename</span><span class="p">(</span><span class="s2">&quot;helloworld&quot;</span><span class="p">)</span>
@@ -616,14 +607,14 @@ gives you a systematic way to write and run experiments where parameters varies.
 <span class="c1"># - There is one experimental parameter (word)</span>
 <span class="c1"># - the task identifier is hw.say</span>
 <span class="nd">@TypeArgument</span><span class="p">(</span><span class="s2">&quot;word&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Word to generate&quot;</span><span class="p">)</span>
-<span class="nd">@RegisterTask</span><span class="p">(</span><span class="n">hw</span><span class="o">.</span><span class="n">say</span><span class="p">,</span> <span class="n">prefix_args</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;xpm&quot;</span><span class="p">,</span> <span class="s2">&quot;--&quot;</span><span class="p">])</span>
+<span class="nd">@RegisterTask</span><span class="p">(</span><span class="n">hw</span><span class="o">.</span><span class="n">say</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Say</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">upper</span><span class="p">(),)</span>
 
 <span class="c1"># Definition of the &quot;concat&quot; task</span>
-<span class="nd">@TypeArgument</span><span class="p">(</span><span class="s2">&quot;strings&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">ArrayOf</span><span class="p">(</span><span class="n">Say</span><span class="p">))</span>
-<span class="nd">@RegisterTask</span><span class="p">(</span><span class="n">hw</span><span class="o">.</span><span class="n">concat</span><span class="p">,</span> <span class="n">prefix_args</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;xpm&quot;</span><span class="p">,</span> <span class="s2">&quot;--&quot;</span><span class="p">])</span>
+<span class="nd">@TypeArgument</span><span class="p">(</span><span class="s2">&quot;strings&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">ArrayOf</span><span class="p">(</span><span class="n">Say</span><span class="p">),</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Strings to concat&quot;</span><span class="p">)</span>
+<span class="nd">@RegisterTask</span><span class="p">(</span><span class="n">hw</span><span class="o">.</span><span class="n">concat</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Concat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># We access the file where standard output was stored</span>
@@ -635,9 +626,11 @@ gives you a systematic way to write and run experiments where parameters varies.
 
 
 <span class="c1"># --- Defines the experiment</span>
-<span class="k">def</span> <span class="nf">xp</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="nd">@click.argument</span><span class="p">(</span><span class="s2">&quot;workdir&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+<span class="nd">@cli.command</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">xp</span><span class="p">(</span><span class="n">workdir</span><span class="p">):</span>
     <span class="c1"># Sets the working directory and the name of the xp</span>
-    <span class="n">experiment</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="p">,</span> <span class="s2">&quot;helloworld&quot;</span><span class="p">)</span>
+    <span class="n">experiment</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="s2">&quot;helloworld&quot;</span><span class="p">)</span>
 
     <span class="c1"># Submit the tasks</span>
     <span class="n">hello</span> <span class="o">=</span> <span class="n">Say</span><span class="p">(</span><span class="n">word</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
@@ -646,25 +639,7 @@ gives you a systematic way to write and run experiments where parameters varies.
     <span class="c1"># Concat will depend on the two first tasks</span>
     <span class="n">Concat</span><span class="p">(</span><span class="n">strings</span><span class="o">=</span><span class="p">[</span><span class="n">hello</span><span class="p">,</span> <span class="n">world</span><span class="p">])</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>
 
-
-<span class="c1"># --- Parse the command line</span>
-
-<span class="kn">import</span> <span class="nn">argparse</span>
-
-<span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-
-<span class="n">subparsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">()</span>
-
-<span class="n">xpm_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;xpm&quot;</span><span class="p">)</span>
-<span class="n">xpm_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;*&quot;</span><span class="p">)</span>
-<span class="n">xpm_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="p">(</span><span class="k">lambda</span> <span class="n">args</span><span class="p">:</span> <span class="n">register</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">args</span><span class="p">)))</span>
-
-<span class="n">xp_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;xp&quot;</span><span class="p">)</span>
-<span class="n">xp_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;workdir&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Working directory&quot;</span><span class="p">)</span>
-<span class="n">xp_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">xp</span><span class="p">)</span>
-
-<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-<span class="n">args</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<span class="n">cli</span><span class="p">(</span>
 </pre></div>
                 
                   
@@ -715,22 +690,17 @@ gives you a systematic way to write and run experiments where parameters varies.
           Material for MkDocs</a>
       </div>
       
-        
-      
     </div>
   </div>
 </footer>
       
     </div>
     
-      <script src="assets/javascripts/application.9e1f3b71.js"></script>
+      <script src="assets/javascripts/application.b806dc00.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:"."}})</script>
       
         <script src="xpm.js"></script>
-      
-    
-    
       
     
   </body>
