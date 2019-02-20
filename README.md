@@ -10,4 +10,4 @@ The overall goals of the experimaestro manager are to:
 * Avoids to re-run the same task two times by computing unique task IDs dependending on the parameters
 * Handle experimental parameters through tags
 
-Experimaestro is in an **beta** state. There is an [associated documentation](http://experimastro.github.io/experimaestro/).
+Experimaestro is in an **beta** state. There is an [associated documentation](http://experimaestro.github.io/experimaestro/).
