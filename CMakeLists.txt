@@ -188,6 +188,7 @@ add_subdirectory(test)
 
 if (true)
     set(XPM_PYTHON_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/python/experimaestro")
+    set(XPM_PYTHON_SRC_DIR "${CMAKE_SOURCE_DIR}/languages/python")
 
     if(NOT PYTHON_INSTALL_LOCATION)
 		set(PYTHON_INSTALL_LOCATION ${CMAKE_INSTALL_PREFIX}/python/experimaestro)
@@ -208,7 +209,8 @@ if (true)
         set(XPM_LOADER_PATH "$ORIGIN")
     endif()
 
-	install(FILES languages/python/__init__.py COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
+    set(PY_FILES ${XPM_PYTHON_SRC_DIR}/experimaestro/__init__.py ${XPM_PYTHON_SRC_DIR}/experimaestro/click.py)
+	install(FILES ${PY_FILES} COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(FILES $<TARGET_SONAME_FILE:yaml-cpp> COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION})
     install(TARGETS experimaestro_shared COMPONENT python DESTINATION ${PYTHON_INSTALL_LOCATION} RUNTIME DESTINATION ${PYTHON_INSTALL_LOCATION})
@@ -231,8 +233,8 @@ if (true)
     )
     add_custom_command(
         OUTPUT  ${XPM_PYTHON_BUILD_DIR}/__init__.py
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/languages/python/__init__.py ${XPM_PYTHON_BUILD_DIR}/__init__.py
-        DEPENDS ${CMAKE_SOURCE_DIR}/languages/python/__init__.py
+        COMMAND ${CMAKE_COMMAND} -E copy ${PY_FILES} ${XPM_PYTHON_BUILD_DIR}/
+        DEPENDS ${PY_FILES}
     )
     
     add_custom_target(experimaestro-python 

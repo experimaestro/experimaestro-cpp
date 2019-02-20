@@ -618,22 +618,6 @@ class PyObject:
         self.__xpm__.dependencies.add(dependency)
 
 
-    @classmethod
-    def clickoption(cls, option_name):
-        """Helper class method: adds a click option corresponding to the named argument"""
-        import click
-        xpmtype = cls.__xpmtype__
-        a = cls.__xpmtype__.getArgument(option_name)
-        if a is None:
-            raise Exception("No argument with name %s in %s" % (option_name, xpmtype))
-
-        name = "--%s" % a.name.replace("_", "-")
-        
-        ptype = Type.topython(a.type)
-        default = Value.toPython(a.defaultvalue) if a.defaultvalue else None
-        return click.option(name, help=a.help, type=ptype)
-
-
 # Another way to submit if the method is overriden
 def submit(*args, **kwargs):
     PyObject.submit(*args, **kwargs)

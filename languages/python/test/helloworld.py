@@ -1,41 +1,39 @@
 # --- Task and types definitions
 
 import logging
-
-logging.basicConfig(level=logging.DEBUG, format="[%(asctime)-15s] [%(name)s] [%(levelname)s] %(message)s")
-
+import click
 from experimaestro import *
-setLogLevel("xpm", LogLevel_DEBUG)
+from experimaestro.click import cli, CliRegisterTask
 
-# Namespace
+# --- Define the tasks
+
 hw = Typename("helloworld")
 
-# Register a class as a task: 
-# - There is one experimental parameter (word)
-# - the task identifier is hw.say
 @TypeArgument("word", type=str, required=True, help="Word to generate")
-@RegisterTask(hw.say, prefix_args=["xpm", "--"])
-class Say(object):
+@CliRegisterTask(hw.say)
+class Say:
     def execute(self):
         print(self.word.upper(),)
 
-# Definition of the "concat" task
-@TypeArgument("strings", type=ArrayOf(Say))
-@RegisterTask(hw.concat, prefix_args=["xpm", "--"])
-class Concat(object):
+@TypeArgument("strings", type=ArrayOf(Say), help="Strings to concat")
+@CliRegisterTask(hw.concat)
+class Concat:
     def execute(self):
         # We access the file where standard output was stored
-        s = ""
+        says = []
         for string in self.strings:
             with open(string._stdout()) as fp:
-                s += " " + fp.read().strip()
-        print(s)
+                says.append(fp.read().strip())
+        print(" ".join(says))
 
 
 # --- Defines the experiment
-def xp(args):
+
+@click.argument("workdir", type=str)
+@cli.command()
+def xp(workdir):
     # Sets the working directory and the name of the xp
-    experiment(args.workdir, "helloworld")
+    experiment(workdir, "helloworld")
 
     # Submit the tasks
     hello = Say(word="hello").submit()
@@ -44,27 +42,5 @@ def xp(args):
     # Concat will depend on the two first tasks
     Concat(strings=[hello, world]).submit()
 
-
-# --- Parse the command line
-
-import argparse
-
-parser = argparse.ArgumentParser()
-
-subparsers = parser.add_subparsers()
-
-xpm_parser = subparsers.add_parser("xpm")
-xpm_parser.add_argument("args", nargs="*")
-xpm_parser.set_defaults(func=(lambda args: register.parse(args.args)))
-
-xp_parser = subparsers.add_parser("xp")
-xp_parser.add_argument("workdir", type=str, help="Working directory")
-xp_parser.set_defaults(func=xp)
-
-args = parser.parse_args()
-
-if "func" in args:
-    args.func(args)
-else:
-    parser.print_help()
+cli()
 

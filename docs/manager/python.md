@@ -26,7 +26,7 @@ A task is a special type that can be:
 from experimaestro import *
 
 @TypeArgument("epochs", type=int, default=100)
-@TypeArgument("model, type=Model, required=True)
+@TypeArgument("model", type=Model, required=True)
 @RegisterTask("model.learn")
 class ModelLearn:
     def _init(self):
@@ -49,8 +49,9 @@ Easily define arguments with click
 
 @TypeArgument("epochs", type=int, default=100, help="Number of learning epochs")
 @RegisterType("mymodel")
+class MyModel: ...
 
-@MyModel.clickoption("epochs")
+@forwardoption(MyModel, "epochs")
 @main.command()
 def experiments(epochs):
     pass

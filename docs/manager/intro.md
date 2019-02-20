@@ -11,10 +11,8 @@ Types and tasks can be defined in a `YAML` file, or, when bindings exist,
 directly in the host language. Available bindings are:
 
 - [Python](python.md)
-- [Java](java.md)
 
 ## Types
-
 
 
 A type is defined by:
