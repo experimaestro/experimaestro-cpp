@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/bpiwowar/experimaestro.svg?style=svg)](https://circleci.com/gh/bpiwowar/experimaestro)
+[![CircleCI](https://circleci.com/gh/experimaestro/experimaestro.svg?style=svg)](https://circleci.com/gh/experimaestro/experimaestro)
 
 Tired to **manually** manage your experiments? Experimaestro manager
 gives you a systematic way to write and run experiments where parameters varies.
