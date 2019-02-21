@@ -435,7 +435,7 @@ std::shared_ptr<ProcessBuilder> SSHConnector::processBuilder() const {
   return std::make_shared<SSHProcessBuilder>(_session);
 }
 
-ptr<Process> SSHConnector::getProcess(pid_t pid) const {
+ptr<Process> SSHConnector::getProcess(Job const &, pid_t pid) const {
   // TODO: implement getProcess for SSHConnector
   NOT_IMPLEMENTED();
 }

@@ -24,6 +24,7 @@
 
 #include <__xpm/common.hpp>
 #include <xpm/connectors/local.hpp>
+#include <xpm/workspace.hpp>
 
 DEFINE_LOGGER("xpm.local");
 
@@ -455,11 +456,13 @@ void LocalConnector::remove(Path const &path, bool recursive) const {
 }
 
 
-ptr<Process> LocalConnector::getProcess(pid_t pid) const {
+ptr<Process> LocalConnector::getProcess(Job const & job, pid_t pid) const {
   class ExternalProcess : public Process {
     pid_t _pid;
+    Path _exitCodePath;
   public:
-    ExternalProcess(pid_t pid): _pid(pid) {}
+    ExternalProcess(Path const &exitCodePath, pid_t pid): 
+      _pid(pid), _exitCodePath(exitCodePath) {}
 
     virtual ~ExternalProcess() {}
 
@@ -470,7 +473,18 @@ ptr<Process> LocalConnector::getProcess(pid_t pid) const {
 
     /// Exit code 
     virtual int exitCode() {
-      return ::waitProcess(_pid);
+      using namespace std::chrono_literals;
+
+      while (isRunning()) {
+        // Check every second
+        std::this_thread::sleep_for(1s);
+      }
+
+      // Get the exit code
+      std::ifstream input(_exitCodePath.toString());
+      int code;
+      input >> code;
+      return code;
     }
 
     /// Kill
@@ -490,7 +504,7 @@ ptr<Process> LocalConnector::getProcess(pid_t pid) const {
     }
   };
   
-  return mkptr<ExternalProcess>(pid);
+  return mkptr<ExternalProcess>(job.pathTo(EXIT_CODE_PATH), pid);
 }
 
 } // namespace xpm

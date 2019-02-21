@@ -3,6 +3,9 @@
 
 namespace xpm {
 
+using namespace std::chrono_literals;
+const std::chrono::seconds LocalProcessBuilder::POLLING_INTERVAL = 1s;
+
 ptr<ProcessBuilder> LocalConnector::processBuilder() const {
     return std::make_shared<LocalProcessBuilder>();
 }

@@ -82,7 +82,7 @@ ptr<Process> DirectLauncher::check(Job const & job) const {
   long pid;
   *istream >> pid;
 
-  return connector()->getProcess(pid);
+  return connector()->getProcess(job, pid);
 }
 
 

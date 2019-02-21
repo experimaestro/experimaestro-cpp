@@ -3,6 +3,8 @@
 #ifndef EXPERIMAESTRO__LOCAL_HPP
 #define EXPERIMAESTRO__LOCAL_HPP
 
+#include <chrono>
+
 #include <xpm/connectors/connectors.hpp>
 #include <xpm/launchers/launchers.hpp>
 
@@ -22,7 +24,7 @@ public:
   virtual void remove(Path const &path, bool recursive=false) const override;
   virtual std::unique_ptr<Lock> lock(Path const &path, std::chrono::seconds const &) const override;
 
-  virtual ptr<Process> getProcess(pid_t pid) const override;
+  virtual ptr<Process> getProcess(Job const &, pid_t pid) const override;
 
   std::unique_ptr<std::ostream> ostream(Path const & path) const override;
   std::unique_ptr<std::istream> istream(Path const & path) const override;
@@ -30,6 +32,7 @@ public:
 
 class LocalProcessBuilder : public ProcessBuilder {
 public:
+  static const std::chrono::seconds POLLING_INTERVAL;
   virtual std::shared_ptr<Process> start() override;
   friend class LocalProcess;
 

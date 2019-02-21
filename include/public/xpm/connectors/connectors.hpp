@@ -12,6 +12,7 @@ namespace xpm {
 class ProcessBuilder;
 class Connector;
 class Process;
+class Job;
 
 enum struct FileType { UNEXISTING, FILE, DIRECTORY, PIPE, OTHER };
 
@@ -59,7 +60,7 @@ public:
   virtual std::shared_ptr<ProcessBuilder> processBuilder() const = 0;
 
   /** Get a process given its PID */
-  virtual ptr<Process> getProcess(pid_t pid) const = 0;
+  virtual ptr<Process> getProcess(Job const &, pid_t pid) const = 0;
 
   /** Resolve a path so it is relative to the connector */
   std::string resolve(Path const &path) const;

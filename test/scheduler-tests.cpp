@@ -179,7 +179,8 @@ TEST_F(SchedulerTest, WorkspaceRestart) {
   LocalConnector connector;
   connector.createFile(wakeuppath);
   std::cerr << "Creating " << wakeuppath.toString() << "\n";
-  success =  listener2->cv.wait_for(listener2->lock, std::chrono::seconds(1), [&] { return job2->state() == JobState::DONE; });
+  // Check is every 1s, so wait 3s
+  success =  listener2->cv.wait_for(listener2->lock, 3 * LocalProcessBuilder::POLLING_INTERVAL, [&] { return job2->state() == JobState::DONE; });
 
   ASSERT_TRUE(success); //, "Job was not finished within 1s");
 
