@@ -36,7 +36,8 @@ markdown_extensions:
   # https://pypi.org/project/markdown-include
   - markdown_include.include:
        base_path: .
-  - codehilite
+  - codehilite:
+        linenums: true
   - admonition
   - pymdownx.superfences
 
