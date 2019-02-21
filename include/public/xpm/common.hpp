@@ -117,7 +117,11 @@ class lock_error : public exception {
   lock_error(std::string const &message);
 };
 
-
+/** Thrown if an argument value was not acceptable */
+class illegal_argument_error : public exception {
+ public:
+  illegal_argument_error(std::string const &message);
+};
 
 #define NOT_IMPLEMENTED() throw not_implemented_error(__func__, __FILE__, __LINE__)
 

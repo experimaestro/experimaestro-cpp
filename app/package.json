@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@material-ui/core": "^3.9.2",
     "flow-bin": "^0.92.1",
     "http-proxy-middleware": "^0.19.1",
     "immer": "^2.0.0",

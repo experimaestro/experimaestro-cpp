@@ -76,6 +76,9 @@ public:
             { "progress", progress }
           }}});
         });
+
+        // Reports job progress
+        _context.jobProgress(jobId, progress);
       } else if (p.first == "status") {
         // _context.jobStatusNotification(jobId, p.second);
       }

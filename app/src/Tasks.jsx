@@ -4,18 +4,53 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import Clipboard from 'react-clipboard.js';
 import { toast } from 'react-toastify';
+import { withStyles } from '@material-ui/core/styles';
+
+import TextField from '@material-ui/core/TextField';
 
 import { type State, type Jobs } from './store'
 import confirm from 'util/confirm';
-import client from './client'
+import client from 'client'
+import Theme from 'theme'
 
 type StateProps = {
     jobs: Jobs
 };
 
 type Props = StateProps;
+type OwnState = {
+    searchtask: string;
+    searchtagstring: string;
+    searchtags: Array<{tag: string, value: string}>
+}
 
-class Tasks extends Component<Props> {
+const styles = theme => ({
+  container: {
+    display: 'flex',
+    flexWrap: 'wrap',
+  },
+  textField: {
+    marginLeft: theme.spacing.unit,
+    marginRight: theme.spacing.unit,
+    width: 200,
+    padding: 10
+  },
+  dense: {
+    marginTop: 19,
+  },
+  menu: {
+    width: 200,
+  },
+});
+
+
+class Tasks extends Component<Props, OwnState> {
+    state = {
+        searchtask: "",
+        searchtagstring: "",
+        searchtags: []
+    }
+
     kill = (jobId: string) => {
         confirm('Are you sure to kill this job?').then(() => {
             client.send({ type: "kill", payload: jobId}, "cannot kill job " + jobId)
@@ -28,11 +63,67 @@ class Tasks extends Component<Props> {
         client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId)        
     }
 
+    handleChange = name => event => {
+        this.setState({ ...this.state, 
+            [name]: event.target.value
+        });
+    };
+
+    handleTagChange = event => {
+        let tag = event.target.value;
+        let re = /(\S+):(?:([^"]\S*)|"([^"]+)")\s*/g;
+        var match = [];
+        var tags = [];
+        while ((match = re.exec(tag)) !== null) {
+            tags.push({ tag: match[1], value: match[2] });
+        }
+        this.setState({ ...this.state,
+            searchtagstring: tag,
+            searchtags: tags
+        })
+    }
+
     render() {
         let { jobs } = this.props;
-        return <div id="resources">{
-            jobs.ids.map((jobId) => {
+        let { searchtask, searchtags } = this.state;
+
+        return <div id="resources">
+            <Theme>
+            <div className="search">
+                <TextField
+                    label="Task"
+                    className="textField"
+                    value={this.state.searchtask}
+                    onChange={this.handleChange('searchtask')}                
+                    margin="normal"
+                    helperText="Task contains..."
+                />
+                <TextField
+                    label="Tags"
+                    className="textField"
+                    value={this.state.searchtagstring}
+                    onChange={this.handleTagChange}
+                    margin="normal"
+                    helperText="Search tags (format tag:value)"
+                />
+
+            </div>
+            {
+            jobs.ids.map(jobId => {
                 let job = jobs.byId[jobId];
+
+                if (searchtask !== "" && job.taskId.search(searchtask) === -1) {
+                    return null;
+                }
+
+                mainloop: for(let {tag, value} of searchtags) {
+                    for(let tv of job.tags) {
+                        if (tv[0].search(tag) !== -1 && tv[1].toString().search(value) !== -1)
+                            continue mainloop;
+                    }
+                    return null;
+                }
+
                 return <div className="resource" key={jobId}>
                     {
                         job.status === "running" ?
@@ -57,11 +148,11 @@ class Tasks extends Component<Props> {
                     }
                 </div>
             })
-        }</div>;
+        }</Theme></div>;
     }
 }
 
 const mapStateToProps = (state: State) : StateProps => ({
     jobs: state.jobs
 })
-export default connect(mapStateToProps)(Tasks);
+export default connect(mapStateToProps)(withStyles(styles)(Tasks));

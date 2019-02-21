@@ -55,6 +55,9 @@ public:
     void remove(Emitter *);
     void forEach(std::function<void(Emitter&)> );
 
+    /// Called when a job 
+    virtual void jobProgress(std::string const & jobId, float progress) = 0;
+
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) = 0;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) = 0;
     virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) = 0;
@@ -68,6 +71,7 @@ public:
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
     virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+    virtual void jobProgress(std::string const & jobId, float progress) override;
 
 private:
   std::unique_ptr<Poco::Data::Session> session;
@@ -80,7 +84,9 @@ public:
     virtual void refresh(std::shared_ptr<Emitter> const & emitter) override;
     virtual void kill(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
     virtual void jobDetails(std::shared_ptr<Emitter> const & emitter, std::string const & jobId) override;
+    virtual void jobProgress(std::string const & jobId, float progress) override;
 
+    // Workspace listener methods
     virtual void jobCreation(Job const & job) override;
     virtual void jobStatus(Job const & job) override;
     virtual void jobProgress(Job const & job) override;

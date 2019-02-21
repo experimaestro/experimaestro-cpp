@@ -75,6 +75,8 @@ void ServerContext::forEach(std::function<void(Emitter&)> f) {
     }
 }
 
+void MainServerContext::jobProgress(std::string const & jobId, float progress) {}
+
 
 
 MainServerContext::~MainServerContext() {}
@@ -203,6 +205,13 @@ void ExperimentServerContext::refresh(std::shared_ptr<Emitter> const & emitter) 
     _workspace.refresh(*emitter);
 }
 
+void ExperimentServerContext::jobProgress(std::string const & jobId, float progress) {
+  auto job = _workspace.getJob(jobId);
+  if (job) {
+    const_cast<Job&>(*job).progress(progress);
+  }
+}
+
 void ExperimentServerContext::jobCreation(Job const & job) {
   nlohmann::json j = { { "type", "JOB_ADD" }, { "payload", job.getJsonState() } };
   forEach([&j](auto & l) { l.send(j); });
@@ -211,11 +220,13 @@ void ExperimentServerContext::jobCreation(Job const & job) {
 void ExperimentServerContext::jobStatus(Job const & job) {
     nlohmann::json j = { { "type", "JOB_UPDATE" }, { "payload", {
       { "locator", job.locator().toString() },
-      { "status", job.state() }
+      { "status", job.state() },
+      { "progress", job.progress() }
     }}};
     
     forEach([&j](auto & l) { l.send(j); });
 }
+
 
 void ExperimentServerContext::jobProgress(Job const & job) {
 }

@@ -19,6 +19,7 @@ namespace xpm {
 class ScriptBuilder;
 class Connector;
 class Job;
+enum class JobState;
 
 // Type definitions
 typedef std::map<std::string, std::string> Environment;
@@ -70,6 +71,9 @@ public:
    * Closes standard in
    */
   virtual void eof() = 0;
+
+  /// External Notification
+  virtual void notify(JobState const &);
 };
 
 /**

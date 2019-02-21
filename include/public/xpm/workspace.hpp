@@ -270,6 +270,10 @@ public:
   /// Get the path to the lock start path
   Path pathTo(std::function<Path(Path const &)> f) const;
 
+  /// Progress reported externally
+  void progress(float progress);
+  float progress() const;
+
   /** 
    * Starts the job:
    * 
@@ -326,9 +330,17 @@ protected:
 
   /// Job ID (hash)
   std::string _jobId;
+
+  /// Current job progress (between 0 and 1)
+  float _progress;
+
+  /// Job process (if any)
+  std::shared_ptr<Process> _process;
+
 private:
   /// Resource state
   JobState _state;
+
 };
 
 /// A command line job
@@ -350,7 +362,6 @@ protected:
 private:
   std::shared_ptr<CommandLine> _command;
   std::shared_ptr<Value> _parameters;
-  std::shared_ptr<Process> _process;
 };
 
 /// Defines the priority between two jobs

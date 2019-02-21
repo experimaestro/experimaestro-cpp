@@ -5,6 +5,10 @@
 
 namespace xpm {
 
+void Process::notify(JobState const &) {
+  // do nothing
+}
+
 Redirect::Redirect() : type(Redirection::INHERIT) {}
 
 Redirect::Redirect(Redirection r) : type(r) {}

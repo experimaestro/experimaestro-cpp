@@ -408,6 +408,16 @@ std::vector<std::shared_ptr<Dependency>> const & Job::dependencies() const{
   return _dependencies;
 }
 
+float Job::progress() const {
+  return _progress;
+}
+
+void Job::progress(float progress) {
+  _progress = progress;
+  if (_process) {
+    _process->notify(JobState::RUNNING);
+  }
+}
 
 void Job::start() {
   if (exitMode != ExitMode::NONE) {
