@@ -3,7 +3,8 @@ version: 2
 jobs:
   build:
     docker:
-      - image: "bpiwowar/experimaestro-test-main"
+      - image: bpiwowar/experimaestro-test-main
+      - image: bpiwowar/experimaestro-test-remote
     steps:
       - checkout
       - run:
@@ -23,4 +24,4 @@ jobs:
           name: Test
           # TODO: run SSH server to test remote calls
           command: |
-            GTEST_FILTER="-SshTest.*" CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
+            CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
