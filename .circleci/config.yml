@@ -22,6 +22,7 @@ jobs:
             ninja -j 2 -C build experimaestro-tests
       - run:
           name: Test
-          # TODO: run SSH server to test remote calls
           command: |
+            # Protect the directory so that ssh does not complain
+            chmod og-rwx docker/remote/userdir/.ssh
             CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test

@@ -18,6 +18,7 @@ RUN useradd -ms /bin/bash testuser
 # Copy start files
 COPY run.sh /root
 COPY ssh_defaults /etc/default/ssh
+COPY userdir /home/testuser
 
 # Expose testuser volume
 VOLUME ["/home/testuser"]
