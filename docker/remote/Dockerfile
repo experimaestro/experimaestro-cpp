@@ -23,4 +23,7 @@ COPY ssh_defaults /etc/default/ssh
 VOLUME ["/home/testuser"]
 
 # Expose port
-EXPOSE 22
+EXPOSE 2200
+
+# Entry point
+ENTRYPOINT ["/root/run.sh"]

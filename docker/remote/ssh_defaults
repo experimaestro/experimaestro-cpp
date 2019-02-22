@@ -1,1 +1,1 @@
-SSHD_OPTS="-E /var/log/ssh.log -o LogLevel=DEBUG"
+SSHD_OPTS="-E /var/log/ssh.log -o LogLevel=DEBUG -p 2200"
