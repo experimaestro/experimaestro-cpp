@@ -2,6 +2,8 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
+import produce from "immer"
+
 import Clipboard from 'react-clipboard.js';
 import { toast } from 'react-toastify';
 import { withStyles } from '@material-ui/core/styles';
@@ -19,6 +21,7 @@ type StateProps = {
 
 type Props = StateProps;
 type OwnState = {
+    jobId: ?string;
     searchtask: string;
     searchtagstring: string;
     searchtags: Array<{tag: string, value: string}>
@@ -48,7 +51,8 @@ class Tasks extends Component<Props, OwnState> {
     state = {
         searchtask: "",
         searchtagstring: "",
-        searchtags: []
+        searchtags: [],
+        jobId: null
     }
 
     kill = (jobId: string) => {
@@ -60,7 +64,8 @@ class Tasks extends Component<Props, OwnState> {
     }
 
     details = (jobId: string) => {
-        client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId)        
+        client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId);
+        this.setState({ ...this.state, jobId: jobId});
     }
 
     handleChange = name => event => {
@@ -85,7 +90,14 @@ class Tasks extends Component<Props, OwnState> {
 
     render() {
         let { jobs } = this.props;
-        let { searchtask, searchtags } = this.state;
+        let { searchtask, searchtags, jobId } = this.state;
+
+        if (jobId) {
+            let job = jobs.byId[jobId];
+            return <div>
+                <h2>Detail of {job.taskId} </h2>
+            </div>;
+        }
 
         return <div id="resources">
             <Theme>

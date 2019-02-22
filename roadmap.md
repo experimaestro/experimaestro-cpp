@@ -16,7 +16,7 @@ The goal is to be able to launch experiments without running a server first.
 
 ### Medium term: external
 
-- [x] SSH file system (`SSHConnector`, `SSHProcessBuilder`)
-- [ ] OAR launcher (OARLauncher)
+- [beta] SSH file system (`SSHConnector`, `SSHProcessBuilder`)
+- [alpha] OAR launcher (OARLauncher)
 - [ ] Basic RPC server for global settings (e.g. token)
 - [ ] Implement basic tools to manage

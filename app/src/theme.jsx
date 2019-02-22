@@ -9,7 +9,7 @@ import getMuiTheme from 'material-ui/styles/getMuiTheme';
 
 const Theme = (props) => (
   <MuiThemeProvider muiTheme={getMuiTheme(lightBaseTheme)}>
-    { props.children }
+    <React.Fragment>{ props.children }</React.Fragment>
   </MuiThemeProvider>
 );
 
