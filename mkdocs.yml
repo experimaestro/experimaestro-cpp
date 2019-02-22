@@ -17,7 +17,6 @@ pages:
     - Definitions: manager/definitions.md
     - Output: manager/json.md
     - Java: manager/java.md
-    - Python: manager/python.md
 
 - Developing: developing.md
 
@@ -47,4 +46,4 @@ extra_javascript:
 extra_css:
     - xpm.css
 
-repo_url: 'https://github.com/bpiwowar/experimaestro'
+repo_url: 'https://github.com/experimaestro/experimaestro'
