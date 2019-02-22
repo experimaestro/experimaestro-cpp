@@ -3,14 +3,9 @@ version: 2
 jobs:
   build:
     docker:
-      - image: "debian:buster"
+      - image: "bpiwowar/experimaestro-test-main"
     steps:
       - checkout
-      - run:
-          name: Installing packages
-          command: |
-            apt-get update
-            apt-get install -y libpoco-dev git g++ cmake libssh-dev ninja-build doxygen python3-dev pkg-config
       - run:
           name: "Pull Submodules"
           command: |
