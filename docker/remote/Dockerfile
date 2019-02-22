@@ -1,7 +1,7 @@
 FROM debian:jessie
 
 # Install packages (SSH)
-RUN apt-get update && apt-get install -yq --no-install-recommends debconf-utils openssh-server && apt-get -y clean
+RUN apt-get update && apt-get install -yq --no-install-recommends debconf-utils openssh-server net-tools && apt-get -y clean
 
 # Allow servers to start
 RUN sed -i "s/^exit 101$/exit 0/" /usr/sbin/policy-rc.d
