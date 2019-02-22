@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { type State } from './store'
+import { type State } from './reducer'
 
 
 type DispatchProps = {

@@ -6,7 +6,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
 
 import './App.css';
-import { type State } from './store';
+import { type State } from './reducer';
 import Tasks from './Tasks'
 import Experiments from './Experiments'
 

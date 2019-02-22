@@ -2,7 +2,6 @@
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import produce from "immer"
 
 import Clipboard from 'react-clipboard.js';
 import { toast } from 'react-toastify';
@@ -10,10 +9,11 @@ import { withStyles } from '@material-ui/core/styles';
 
 import TextField from '@material-ui/core/TextField';
 
-import { type State, type Jobs } from './store'
+import { type State, type Jobs } from './reducer'
 import confirm from 'util/confirm';
 import client from 'client'
 import Theme from 'theme'
+import { DateTime } from 'luxon'
 
 type StateProps = {
     jobs: Jobs
@@ -63,8 +63,10 @@ class Tasks extends Component<Props, OwnState> {
         });
     }
 
-    details = (jobId: string) => {
-        client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId);
+    details = (jobId: ?string) => {
+        if (jobId) {
+            client.send({ type: "details", payload: jobId}, "cannot get details for job " + jobId);
+        }
         this.setState({ ...this.state, jobId: jobId});
     }
 
@@ -80,6 +82,7 @@ class Tasks extends Component<Props, OwnState> {
         var match = [];
         var tags = [];
         while ((match = re.exec(tag)) !== null) {
+            // $FlowFixMe
             tags.push({ tag: match[1], value: match[2] });
         }
         this.setState({ ...this.state,
@@ -96,6 +99,15 @@ class Tasks extends Component<Props, OwnState> {
             let job = jobs.byId[jobId];
             return <div>
                 <h2>Detail of {job.taskId} </h2>
+                <div onClick={() => this.details(null)} style={{
+                    display: "inline-block",
+                    position: "absolute", 
+                    right: "1rem"
+                }}><i className="far fa-times-circle action"/></div>
+                <dl>
+                    <dt>Submitted</dt><dd>{DateTime.fromMillis(1000 * job.submitted).toString()}</dd>
+                    <dt>Start</dt><dd>{job.start}</dd>
+                </dl>
             </div>;
         }
 
