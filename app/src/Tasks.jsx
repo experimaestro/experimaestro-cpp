@@ -13,7 +13,7 @@ import { type State, type Jobs } from './reducer'
 import confirm from 'util/confirm';
 import client from 'client'
 import Theme from 'theme'
-import { DateTime } from 'luxon'
+import TaskDetail from './TaskDetail'
 
 type StateProps = {
     jobs: Jobs
@@ -97,18 +97,7 @@ class Tasks extends Component<Props, OwnState> {
 
         if (jobId) {
             let job = jobs.byId[jobId];
-            return <div>
-                <h2>Detail of {job.taskId} </h2>
-                <div onClick={() => this.details(null)} style={{
-                    display: "inline-block",
-                    position: "absolute", 
-                    right: "1rem"
-                }}><i className="far fa-times-circle action"/></div>
-                <dl>
-                    <dt>Submitted</dt><dd>{DateTime.fromMillis(1000 * job.submitted).toString()}</dd>
-                    <dt>Start</dt><dd>{job.start}</dd>
-                </dl>
-            </div>;
+            return <TaskDetail job={job} handleClose={() => this.setState({...this.state, jobId: null})}/>;
         }
 
         return <div id="resources">
