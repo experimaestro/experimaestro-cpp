@@ -1,24 +1,21 @@
 site_name: experimaestro
 site_description: experimaestro Computer science experiments manager and scheduler
 
-pages:
+nav:
+    - Basics: 
+        - Basics: 'index.md'
+        - Main concepts: 'main concepts.md'
 
-- Basics: 
-    - Basics: 'index.md'
-    - Main concepts: 'main concepts.md'
-    - Installing: 'installing.md'
+    - Scheduler:
+        - Home: scheduler/index.md
+        - "Connectors & Launchers": scheduler/connectors.md
+        - Notification: scheduler/notification.md
+    - Manager:
+        - Intro: manager/intro.md
+        - Definitions: manager/definitions.md
+        - Output: manager/json.md
 
-- Scheduler:
-    - Home: scheduler/index.md
-    - "Connectors & Launchers": scheduler/connectors.md
-    - Notification: scheduler/notification.md
-- Manager:
-    - Intro: manager/intro.md
-    - Definitions: manager/definitions.md
-    - Output: manager/json.md
-    - Java: manager/java.md
-
-- Developing: developing.md
+    - Developing: developing.md
 
 theme: 
     name: material

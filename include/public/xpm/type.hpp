@@ -87,6 +87,8 @@ namespace xpm {
   
 /**
  * Object type definition
+ * 
+ * TODO: cleanup by using a base type common for all the others, and creating a MapType
  *
  * An object type is composed of:
  * <ul>
