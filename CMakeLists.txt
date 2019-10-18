@@ -8,7 +8,6 @@ set(INCLUDE_DIRECTORIES "")
 include(CMakeHelpers)
 include(CMakeFindExtensions)
 
-find_package(OpenSSL REQUIRED)
 find_package(libssh REQUIRED)
 find_package(Poco REQUIRED COMPONENTS NetSSL SQLite)
 
@@ -121,8 +120,7 @@ list(APPEND INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/asio/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include"
     "${LIBSSH_INCLUDE_DIR}"
-    ${OPENSSL_INCLUDE_DIR}
-    ${Poco_INCLUDE_DIRS}
+    "${Poco_INCLUDE_DIRS}"
     "${Poco_INCLUDE_DIR}/include"
 )
 include_directories(${INCLUDE_DIRECTORIES})

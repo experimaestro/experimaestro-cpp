@@ -48,7 +48,7 @@ typedef struct Workspace Workspace;
 
 // --- Error
 
-enum Error { ERROR_NONE, ERROR_UNKNOWN, ERROR_GENERIC, ERROR_RUNTIME, ERROR_CAST };
+enum Error { ERROR_NONE, ERROR_NULL, ERROR_UNKNOWN, ERROR_GENERIC, ERROR_RUNTIME, ERROR_CAST };
 
 enum Error lasterror_code();
 const char * lasterror_message();

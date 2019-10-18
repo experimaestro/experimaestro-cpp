@@ -325,6 +325,7 @@ extern "C" {
 
     #define API_ERROR(CODE, MESSAGE) lasterror_string = MESSAGE; lasterror = CODE;
     #define API_NO_ERROR() API_ERROR(ERROR_NONE, "")
+    #define CATCHALL(INSTR) catch(...) { API_ERROR(ERROR_UNKNOWN, "Caught exception in C++ code"); INSTR }
     
     CString argument_getname(Argument * argument) {
         return c2ref(argument).name().c_str();
