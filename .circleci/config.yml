@@ -25,4 +25,5 @@ jobs:
           command: |
             # Protect the directory so that ssh does not complain
             chmod og-rwx docker/remote/userdir/.ssh
-            CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
+            # TODO: include SSH tests on circle-ci
+            GTEST_FILTER="-SshTest:*" CTEST_OUTPUT_ON_FAILURE=1 ninja -C build test
