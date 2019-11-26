@@ -467,6 +467,11 @@ void Job::start() {
   }).detach();
 }
 
+
+void Job::wait() {
+  _workspace->waitJobCompleted(*this);
+}
+
 // --- Command line job
 
 CommandLineJob::CommandLineJob(xpm::Path const &locator,
@@ -782,6 +787,21 @@ void Workspace::waitUntilTaskCompleted() {
   } while (count > 0 && exitMode != ExitMode::STOPPING);
  
 }
+
+void Workspace::waitJobCompleted(Job const & job) {
+  do {
+    MutexLock lock(JOB_CHANGED_MUTEX);
+
+    if (job.state() == JobState::DONE || job.state() == JobState::ERROR) {
+      break;
+    }
+    
+    JOB_CHANGED.wait(lock.lock);
+
+  } while (exitMode != ExitMode::STOPPING);
+ 
+}
+
 
 std::shared_ptr<rpc::Server> Workspace::server(int port, std::string const & htdocs) {
   if (_server) throw new std::runtime_error("Server already started");

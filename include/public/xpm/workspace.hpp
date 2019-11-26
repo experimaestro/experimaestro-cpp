@@ -282,6 +282,10 @@ public:
    */
   void start();
 
+
+  /// Wait that a job finishes
+  void wait();
+
   std::vector<std::shared_ptr<Dependency>> const & dependencies() const;
 
 protected:
@@ -431,6 +435,9 @@ public:
 
   /// Wait that all tasks are completed
   static void waitUntilTaskCompleted();
+
+  /// Wait that a job finishes
+  void waitJobCompleted(Job const & job);
 
   /// Notify that a job start
   void jobStarted(Job const &job);

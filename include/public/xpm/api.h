@@ -49,7 +49,6 @@ typedef struct Workspace Workspace;
 // --- Error
 
 enum Error { ERROR_NONE, ERROR_NULL, ERROR_UNKNOWN, ERROR_GENERIC, ERROR_RUNTIME, ERROR_CAST };
-
 enum Error lasterror_code();
 const char * lasterror_message();
 
@@ -152,7 +151,13 @@ Dependency * countertoken_createdependency(CounterToken *, int);
 
 // --- Job
 
+enum JobState { JOB_WAITING, JOB_READY, JOB_RUNNING, JOB_ERROR, JOB_DONE, JOB_UNKNOWN };
+
 void job_free(Job *);
+enum JobState job_wait(Job *);
+enum JobState job_state(Job *);
+int job_exitcode(Job *);
+Path * job_codepath(Job *);
 Path * job_stdoutpath(Job *);
 Path * job_stderrpath(Job *);
 

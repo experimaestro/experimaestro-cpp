@@ -400,6 +400,26 @@ extern "C" {
         c2ref(array).push_back(c2sptr(dependency));
     }
 
+    JobState job_state(Job * job) {
+        switch(c2ref(job).state()) {
+            case xpm::JobState::WAITING: return JOB_WAITING;
+            case xpm::JobState::READY: return JOB_READY;
+            case xpm::JobState::RUNNING: return JOB_RUNNING;
+            case xpm::JobState::DONE: return JOB_DONE;
+            case xpm::JobState::ERROR: return JOB_ERROR;
+        }
+        return JOB_UNKNOWN;
+    }
+
+    JobState job_wait(Job * job) {
+        c2ref(job).wait();
+        return job_state(job);
+    }
+
+    Path * job_codepath(Job * job) {
+        return mkcptr<xpm::Path>(c2ref(job).pathTo(xpm::EXIT_CODE_PATH));
+    }
+
     Path * job_stdoutpath(Job * job) {
         return mkcptr<xpm::Path>(c2ref(job).stdoutPath());
     }
