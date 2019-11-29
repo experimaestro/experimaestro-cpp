@@ -705,8 +705,8 @@ void Workspace::kill(std::string const & jobId) {
 }
 
 
-void Workspace::current() {
-  CURRENT_WORKSPACE = shared_from_this();
+void Workspace::current(ptr<Workspace> const & workspace) {
+  CURRENT_WORKSPACE = workspace;
 }
 
 std::shared_ptr<Workspace> Workspace::currentWorkspace() {

@@ -632,7 +632,7 @@ extern "C" {
 
 
     void workspace_current(Workspace *c_ws) {
-        c2ref(c_ws).current();
+        xpm::Workspace::current(c2sptr(c_ws));
     }
     void workspace_experiment(Workspace *c_ws, CString path) {
         c2ref(c_ws).experiment(std::string(path));

@@ -422,7 +422,7 @@ public:
   bool has(std::string const &key) const;
 
   /// Set the current workspace
-  void current();
+  static void current(std::shared_ptr<Workspace> const &);
 
   /// Current workspace 
   static std::shared_ptr<Workspace> currentWorkspace();
