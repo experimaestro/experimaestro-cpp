@@ -129,6 +129,8 @@ void * mapvalue_getobjecthandle(MapValue *);
 Job * mapvalue_getjob(MapValue *);
 void mapvalue_settype(MapValue *, Type *);
 void mapvalue_set(MapValue *, CString, Value *);
+/// Use default value to set unset values 
+void mapvalue_set_unsets(MapValue *);
 void mapvalue_addtag(MapValue *, CString, ScalarValue *);
 
 

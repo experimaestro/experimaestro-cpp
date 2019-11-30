@@ -278,6 +278,9 @@ public:
   std::shared_ptr<Task> task();
 
 
+  /** Set (in the underlying object) unset values */
+  void setUnsets();
+
   /// Checks whether a key exists
   bool hasKey(std::string const &key) const;
 

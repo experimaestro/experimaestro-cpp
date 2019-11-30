@@ -785,6 +785,21 @@ std::shared_ptr<Object> MapValue::createObjects(xpm::Register &xpmRegister) {
   return _object;
 }
 
+void MapValue::setUnsets() {
+  if (_object) {
+    for (auto type = _type; type; type = type->parentType()) {
+      for (auto entry : type->arguments()) {
+        auto defaultValue = entry.second->defaultValue();
+        if (defaultValue) {
+          if (_map.find(entry.first) == _map.end()) {
+            _object->setValue(entry.first, defaultValue);    
+          }
+        }
+      }
+    }
+
+  }
+}
 
 void MapValue::setObjectValue(std::string const &name, ptr<Value> const &value) {
   if (_object) {

@@ -451,6 +451,9 @@ extern "C" {
         c2ref(mapvalue).set(key, c2sptr(value));
     }
 
+    void mapvalue_set_unsets(MapValue * mapvalue) {
+        c2ref(mapvalue).setUnsets();
+    }
 
     void mapvalue_setobject(MapValue * value, Object * object) {
         c2ref(value).object(c2sptr(object));
