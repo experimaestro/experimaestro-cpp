@@ -13,8 +13,3 @@ The overall goals of the experimaestro manager are to:
 * Handle experimental parameters through tags
 
 Experimaestro is in an **beta** state. There is an [associated documentation](http://experimaestro.github.io/experimaestro/).
-
-## Language support
-
-- C/C++ (direct)
-- Python: [experimaestro-python](https://github.com/experimaestro/experimaestro-python)
